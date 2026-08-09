@@ -422,6 +422,11 @@ impl Page {
             {
                 let xobjects_clone = xobjects.clone();
                 let mut resolved_xobjects = crate::pdf_objects::Dictionary::new();
+                // Shared across every XObject on the page so a stream referenced
+                // by more than one image (e.g. a common ICCBased profile) is
+                // resolved once, not once per referrer.
+                let mut nested_memo: HashMap<(u32, u16), crate::pdf_objects::Object> =
+                    HashMap::new();
 
                 for (xobj_name, xobj_obj) in xobjects_clone.iter() {
                     let resolved = match xobj_obj {
@@ -439,6 +444,17 @@ impl Page {
                         }
                         _ => xobj_obj.clone(),
                     };
+                    // #465: the top-level XObject is now resolved, but any
+                    // indirect reference *nested inside* it still points into
+                    // the source document's object table — an image's `/SMask`
+                    // and reference-form `/Mask`, an ICCBased colour space, a
+                    // form XObject's `/Resources` streams. Left alone, the
+                    // writer emits those as dangling references and the target
+                    // stream is never written (transparency lost). Inline them
+                    // so the writer externalizes each as a fresh indirect
+                    // object.
+                    let resolved =
+                        Self::resolve_nested_stream_refs(resolved, document, 0, &mut nested_memo);
                     resolved_xobjects.set(xobj_name.clone(), resolved);
                 }
 
@@ -830,6 +846,142 @@ impl Page {
         }
 
         unified_dict
+    }
+
+    /// Reference-chain depth bound for [`resolve_nested_stream_refs`]. Real
+    /// documents nest at most a couple of levels (image → `/SMask` → its own
+    /// colour-space stream; form XObject → `/Resources` → nested XObject). A
+    /// small bound keeps a malformed or cyclic document from recursing without
+    /// end while covering every legitimate shape.
+    const NESTED_STREAM_MAX_DEPTH: usize = 8;
+
+    /// Inlines indirect references that resolve to *streams* anywhere inside a
+    /// resolved XObject (#465).
+    ///
+    /// [`from_parsed_with_content`](Self::from_parsed_with_content) resolves
+    /// only the top-level `/XObject/<name>` reference. A stream reference nested
+    /// inside — an image's `/SMask` or reference-form `/Mask`, an ICCBased
+    /// colour-space stream, a form XObject's `/Resources` streams — is left
+    /// pointing into the *source* document's object table, which is meaningless
+    /// in the output: the writer emits a dangling reference and the target
+    /// stream (e.g. the soft mask) is never written, so transparency is lost.
+    ///
+    /// This walks the owned object graph and replaces every reference that
+    /// resolves to a stream with that stream inline, recursing into it so its
+    /// own nested stream references are pulled in too. References that resolve
+    /// to non-stream objects (shared colour spaces, value dictionaries) are
+    /// left untouched — the per-category resolution above already handles the
+    /// ones that matter, and inlining them would needlessly duplicate shared
+    /// data. `depth` is incremented only when a reference is followed, so the
+    /// bound applies to reference chains, not to owned nesting.
+    ///
+    /// `memo` maps an already-resolved stream's source id to its inlined form.
+    /// It serves two purposes on adversarial input: it collapses a *shared*
+    /// object graph (one ICCBased profile referenced by every image) to a
+    /// single resolution instead of `O(fan-out^depth)` re-walks, and — via an
+    /// in-progress placeholder inserted before recursing — it breaks reference
+    /// *cycles* at the back-edge, so the depth bound is only a backstop, never
+    /// the primary cycle guard.
+    fn resolve_nested_stream_refs<R: std::io::Read + std::io::Seek>(
+        obj: crate::pdf_objects::Object,
+        document: &crate::parser::document::PdfDocument<R>,
+        depth: usize,
+        memo: &mut HashMap<(u32, u16), crate::pdf_objects::Object>,
+    ) -> crate::pdf_objects::Object {
+        use crate::pdf_objects::{Object, Stream};
+
+        match obj {
+            Object::Stream(stream) => {
+                let dict =
+                    Self::resolve_nested_stream_refs_in_dict(stream.dict, document, depth, memo);
+                Object::Stream(Stream::new(dict, stream.data))
+            }
+            Object::Dictionary(dict) => Object::Dictionary(
+                Self::resolve_nested_stream_refs_in_dict(dict, document, depth, memo),
+            ),
+            Object::Array(arr) => {
+                let mut out = crate::pdf_objects::Array::new();
+                for item in arr.iter() {
+                    out.push(Self::resolve_nested_stream_refs(
+                        item.clone(),
+                        document,
+                        depth,
+                        memo,
+                    ));
+                }
+                Object::Array(out)
+            }
+            Object::Reference(id) => {
+                let key = (id.number(), id.generation());
+                // Already resolved through another path (shared node), or the
+                // in-progress placeholder of a cycle back-edge: reuse it.
+                if let Some(cached) = memo.get(&key) {
+                    return cached.clone();
+                }
+                // Chain too deep (malformed input): degrade to a plain
+                // reference rather than serializing a half-resolved object
+                // whose own fields still point into the *source* document's
+                // object table.
+                if depth >= Self::NESTED_STREAM_MAX_DEPTH {
+                    return Object::Reference(id);
+                }
+                match document.get_object(id.number(), id.generation()) {
+                    Ok(resolved_obj) => {
+                        let unified = Self::convert_parser_object_to_unified(&resolved_obj);
+                        if matches!(unified, Object::Stream(_)) {
+                            // Mark in-progress so a cyclic back-edge to this
+                            // stream resolves to a plain reference instead of
+                            // recursing until the depth cap.
+                            memo.insert(key, Object::Reference(id));
+                            let resolved = Self::resolve_nested_stream_refs(
+                                unified,
+                                document,
+                                depth + 1,
+                                memo,
+                            );
+                            memo.insert(key, resolved.clone());
+                            resolved
+                        } else {
+                            // Non-stream target: leave as a reference (shared
+                            // value object; not our class of bug here).
+                            Object::Reference(id)
+                        }
+                    }
+                    // Unresolvable reference: leave as-is rather than drop it.
+                    // This is the path that leaves a dangling reference in the
+                    // output, so log it to aid diagnosing a silently missing
+                    // nested stream (e.g. a soft mask) on a malformed source.
+                    Err(e) => {
+                        tracing::debug!(
+                            "resolve_nested_stream_refs: cannot resolve {} {} R: {e}",
+                            id.number(),
+                            id.generation()
+                        );
+                        Object::Reference(id)
+                    }
+                }
+            }
+            other => other,
+        }
+    }
+
+    /// Applies [`resolve_nested_stream_refs`](Self::resolve_nested_stream_refs)
+    /// to every value of a dictionary. Kept separate so the `Stream` and
+    /// `Dictionary` arms share one implementation.
+    fn resolve_nested_stream_refs_in_dict<R: std::io::Read + std::io::Seek>(
+        dict: crate::pdf_objects::Dictionary,
+        document: &crate::parser::document::PdfDocument<R>,
+        depth: usize,
+        memo: &mut HashMap<(u32, u16), crate::pdf_objects::Object>,
+    ) -> crate::pdf_objects::Dictionary {
+        let mut out = crate::pdf_objects::Dictionary::new();
+        for (key, value) in dict.iter() {
+            out.set(
+                key.clone(),
+                Self::resolve_nested_stream_refs(value.clone(), document, depth, memo),
+            );
+        }
+        out
     }
 
     /// Converts a parser PdfObject to unified Object

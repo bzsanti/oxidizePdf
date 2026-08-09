@@ -2311,21 +2311,39 @@ impl TextExtractor {
         resources: &PdfDictionary,
         document: &PdfDocument<R>,
     ) {
-        let font_dict = match resources.get("Font") {
-            Some(PdfObject::Dictionary(dict)) => Some(dict.clone()),
-            Some(PdfObject::Reference(num, gen)) => match document.get_object(*num, *gen) {
-                Ok(PdfObject::Dictionary(dict)) => Some(dict),
-                _ => None,
-            },
-            _ => None,
-        };
-
-        if let Some(font_dict) = font_dict {
-            for (font_name, font_obj) in font_dict.0.iter() {
-                if let Some(font_ref) = font_obj.as_reference() {
-                    self.cache_font_by_ref::<R>(&font_name.0, font_ref, document);
+        for (font_name, entry) in
+            crate::text::extraction_cmap::resolve_font_entries(resources, document)
+        {
+            match entry {
+                crate::text::extraction_cmap::FontEntry::Indirect(num, gen) => {
+                    self.cache_font_by_ref::<R>(&font_name, (num, gen), document);
+                }
+                crate::text::extraction_cmap::FontEntry::Inline(font_dict) => {
+                    self.cache_inline_font::<R>(&font_name, &font_dict, document);
                 }
             }
+        }
+    }
+
+    /// Cache a font written directly into the page's resources.
+    ///
+    /// Unlike [`Self::cache_font_by_ref`] this cannot touch the persistent
+    /// cache: an inline dictionary has no object id to key on, and two pages
+    /// may write different fonts under the same name. It is parsed per page.
+    fn cache_inline_font<R: Read + Seek>(
+        &mut self,
+        font_name: &str,
+        font_dict: &PdfDictionary,
+        document: &PdfDocument<R>,
+    ) {
+        let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
+        if let Ok(font_info) = cmap_extractor.extract_font_info(font_dict, document) {
+            tracing::debug!(
+                "Parsed inline font {} (ToUnicode: {})",
+                font_name,
+                font_info.to_unicode.is_some()
+            );
+            self.font_cache.insert(font_name.to_string(), font_info);
         }
     }
 
@@ -3569,7 +3587,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: None,
@@ -3611,7 +3628,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
@@ -3668,7 +3684,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(1),
@@ -3713,7 +3728,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(65), // 'A'
@@ -3754,7 +3768,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
@@ -3790,7 +3803,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
@@ -3825,7 +3837,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
@@ -3859,7 +3870,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(65), // 'A'
@@ -3898,7 +3908,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(105), // 'i'
@@ -3919,7 +3928,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(105),
@@ -3970,7 +3978,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
@@ -4115,7 +4122,7 @@ mod tests {
 
     #[test]
     fn test_parse_kern_table_no_kern_table() {
-        use crate::text::extraction_cmap::extract_truetype_kerning;
+        use crate::text::extraction_cmap::parse_truetype_kern_table;
 
         // TrueType font data WITHOUT a 'kern' table
         // Structure:
@@ -4140,7 +4147,7 @@ mod tests {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ];
 
-        let result = extract_truetype_kerning(&ttf_data);
+        let result = parse_truetype_kern_table(&ttf_data);
         assert!(
             result.is_ok(),
             "Should gracefully handle missing kern table"

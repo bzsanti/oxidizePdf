@@ -489,23 +489,26 @@ impl PlainTextExtractor {
 
         // Get page resources
         if let Some(resources) = page.get_resources() {
-            if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
-                // Extract each font
-                for (font_name, font_obj) in font_dict.0.iter() {
-                    if let Some(font_ref) = font_obj.as_reference() {
-                        if let Ok(PdfObject::Dictionary(font_dict)) =
-                            document.get_object(font_ref.0, font_ref.1)
-                        {
-                            // Create a CMap extractor to use its font extraction logic
-                            let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
-
-                            if let Ok(font_info) =
-                                cmap_extractor.extract_font_info(&font_dict, document)
-                            {
-                                self.font_cache.insert(font_name.0.clone(), font_info);
-                            }
+            // `/Font` and each of its entries may be a reference or a direct
+            // dictionary; reading only the references left the cache empty on
+            // pages with inline fonts, losing `/ToUnicode`.
+            for (font_name, entry) in
+                crate::text::extraction_cmap::resolve_font_entries(resources, document)
+            {
+                let font_dict = match entry {
+                    crate::text::extraction_cmap::FontEntry::Indirect(num, gen) => {
+                        match document.get_object(num, gen) {
+                            Ok(PdfObject::Dictionary(dict)) => dict,
+                            _ => continue,
                         }
                     }
+                    crate::text::extraction_cmap::FontEntry::Inline(dict) => dict,
+                };
+
+                // Create a CMap extractor to use its font extraction logic
+                let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
+                if let Ok(font_info) = cmap_extractor.extract_font_info(&font_dict, document) {
+                    self.font_cache.insert(font_name, font_info);
                 }
             }
         }
