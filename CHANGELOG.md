@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
-## [Unreleased]
+## [4.2.3] - 2026-08-09
 
 ### Fixed
 
@@ -22,6 +22,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   resolution walk memoizes by source object id, so a shared stream resolves once
   and a cyclic or pathologically nested document terminates instead of blowing
   up.
+
+- **Page operations reconstructed the page by redrawing it instead of copying it
+  verbatim** (#453). Split, reorder, page extraction and rotate each ran the
+  content stream through a reconstruction dispatcher that redrew recognised
+  operators and silently dropped the rest — images, XObjects, curves — falling
+  back to `[content reconstruction in progress]` placeholders and remapping
+  fonts to the standard 14. The output was simply wrong. These operations now
+  copy the parsed page content verbatim (the same path `merge` uses), and
+  `rotate` sets the native `/Rotate` entry `(source + angle).rem_euclid(360)`
+  instead of re-rendering.
+
+- **Inline `/Font` resource entries were ignored, producing mojibake on
+  round-trip** (#463). A `/Font` resource entry may be a direct dictionary, not
+  only an indirect reference (ISO 32000-1 §7.3.7, and what this library's own
+  writer emits). All three text extractors cached only the reference form, so an
+  inline font dictionary was dropped, the font cache came up empty and text was
+  decoded byte-by-byte — every document round-tripped through this library
+  (`merge`, the page operations) came back unreadable to the library itself.
+  A shared resolver now handles both the reference and the inline-dictionary
+  form.
 
 ## [4.2.2] - 2026-07-31
 
