@@ -3016,12 +3016,25 @@ impl<W: Write> PdfWriter<W> {
                 for (xobj_name, xobj_obj) in xobjects.iter() {
                     match xobj_obj {
                         Object::Stream(dict, data) => {
+                            // #465: an image XObject's dictionary can carry
+                            // nested streams (a soft mask `/SMask`, a `/Mask`,
+                            // an ICCBased colour space) that `from_parsed_with_content`
+                            // inlined. Per ISO 32000-1 §7.3.8 a stream MUST be an
+                            // indirect object, so a nested inline stream would
+                            // produce invalid PDF; externalize each before
+                            // writing the image itself.
+                            let dict = self.externalize_nested_streams_in_dict(dict)?;
                             let obj_id = self.allocate_object_id();
-                            self.write_object(obj_id, Object::Stream(dict.clone(), data.clone()))?;
+                            self.write_object(obj_id, Object::Stream(dict, data.clone()))?;
                             xobjects_with_refs.set(xobj_name, Object::Reference(obj_id));
                         }
                         Object::Dictionary(dict) => {
-                            // Dictionary XObjects may contain nested streams (e.g., SMask)
+                            // A bare-dictionary XObject is already invalid per
+                            // ISO 32000-1 §8.10 (XObjects must be streams), so it
+                            // cannot legitimately carry the array-/sub-dict-nested
+                            // stream shapes the Stream arm above must handle.
+                            // Top-level externalization is deliberately enough
+                            // here; do not "fix" this into the recursive walk.
                             let externalized = self.externalize_streams_in_dict(dict)?;
                             xobjects_with_refs.set(xobj_name, Object::Dictionary(externalized));
                         }
@@ -3251,6 +3264,50 @@ impl<W: Write> PdfWriter<W> {
         dict: &crate::objects::Dictionary,
     ) -> Result<crate::objects::Dictionary> {
         self.externalize_streams_in_dict_with_font_refs(dict, &HashMap::new())
+    }
+
+    /// Recursively rewrites every inline `Object::Stream` reachable through a
+    /// dictionary — including streams nested inside sub-dictionaries and arrays
+    /// — into an indirect reference, writing each as its own object (#465).
+    ///
+    /// Unlike [`externalize_streams_in_dict`], which only externalizes streams
+    /// at the top level of the dictionary, this walks arrays and nested
+    /// dictionaries too. It is applied to a preserved image XObject's
+    /// dictionary, where `from_parsed_with_content` may have inlined a soft
+    /// mask (`/SMask`), a `/Mask`, or an ICCBased colour-space stream (which
+    /// lives inside a `/ColorSpace` array). Per ISO 32000-1 §7.3.8 a stream
+    /// must be an indirect object, so none may remain inline.
+    fn externalize_nested_streams_in_dict(
+        &mut self,
+        dict: &crate::objects::Dictionary,
+    ) -> Result<crate::objects::Dictionary> {
+        let mut result = crate::objects::Dictionary::new();
+        for (key, value) in dict.iter() {
+            result.set(key, self.externalize_nested_streams_value(value)?);
+        }
+        Ok(result)
+    }
+
+    fn externalize_nested_streams_value(&mut self, value: &Object) -> Result<Object> {
+        match value {
+            Object::Stream(d, data) => {
+                let d = self.externalize_nested_streams_in_dict(d)?;
+                let obj_id = self.allocate_object_id();
+                self.write_object(obj_id, Object::Stream(d, data.clone()))?;
+                Ok(Object::Reference(obj_id))
+            }
+            Object::Dictionary(d) => Ok(Object::Dictionary(
+                self.externalize_nested_streams_in_dict(d)?,
+            )),
+            Object::Array(items) => {
+                let mut out = Vec::with_capacity(items.len());
+                for item in items {
+                    out.push(self.externalize_nested_streams_value(item)?);
+                }
+                Ok(Object::Array(out))
+            }
+            other => Ok(other.clone()),
+        }
     }
 
     /// Same as [`externalize_streams_in_dict`] but also rewrites any

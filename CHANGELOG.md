@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [Unreleased]
+
+### Fixed
+
+- **Verbatim page copy dropped an image's nested `/SMask`, losing transparency**
+  (#465). `Page::from_parsed_with_content` resolved only the top-level
+  `/XObject/<name>` reference; an image's soft-mask stream, referenced from
+  inside that image's own dictionary, kept pointing into the *source* document's
+  object table. The writer then emitted the image with a dangling `/SMask` and
+  never wrote the soft-mask stream, so `merge`, `split`, page extraction and
+  rotate all silently stripped transparency. Nested stream references (`/SMask`,
+  reference-form `/Mask`, ICCBased colour-space streams) are now inlined on read
+  and re-externalized as indirect objects on write, per ISO 32000-1 §7.3.8. The
+  resolution walk memoizes by source object id, so a shared stream resolves once
+  and a cyclic or pathologically nested document terminates instead of blowing
+  up.
+
 ## [4.2.2] - 2026-07-31
 
 ### Fixed
