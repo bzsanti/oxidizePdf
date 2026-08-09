@@ -57,10 +57,11 @@ fn poppler_words(path: &Path, first: u32, last: u32) -> Option<Vec<String>> {
 }
 
 /// Number of raster images (type `image`) poppler finds in a 1-based page
-/// range. Soft masks (type `smask`) are excluded on purpose: preserving an
-/// image XObject's nested `/SMask` stream is a separate resource-embedding gap
-/// in the verbatim-copy path (it affects `merge` too), not part of the
-/// operator-dispatch defect #453 fixes.
+/// range. Soft masks (type `smask`) are counted separately here because they
+/// were a distinct resource-embedding gap in the verbatim-copy path — the
+/// operator-dispatch defect #453 fixes is orthogonal to it. That gap is now
+/// closed by #465; its own regression coverage lives in
+/// `issue_465_smask_preservation_test.rs`.
 fn poppler_image_count(path: &Path, first: u32, last: u32) -> Option<usize> {
     let out = Command::new("pdfimages")
         .args([
