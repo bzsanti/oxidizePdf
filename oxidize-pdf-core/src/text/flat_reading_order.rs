@@ -31,6 +31,11 @@
 /// Coordinates are page space with `/Rotate` already applied by the caller
 /// (§5.3), so the orderer never looks at rotation itself. PDF convention: `y`
 /// grows upward, `min_y` is the bottom edge and `max_y` the top edge.
+///
+/// A well-formed box has `min_x <= max_x` and `min_y <= max_y`. An inverted box
+/// (e.g. from a negative-scale CTM upstream) is not rejected: the orderer
+/// degrades any region it cannot actually divide to stream order, so inverted
+/// input yields a valid permutation rather than a panic or a hang.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct OrderBox {
     /// Left edge.
@@ -115,11 +120,25 @@ fn cut_recursive(boxes: &[OrderBox], indices: &[usize], cfg: &CutConfig, order: 
 
     if choose_column {
         let (left, right) = partition_x(boxes, indices, column.unwrap().split);
+        // A gap can exist yet fail to divide the region when a box center lands
+        // on the far side of the split — an inverted box (min > max, from a
+        // negative-scale CTM upstream) puts its center outside [min, max]. Then
+        // one half equals `indices` and the recursion never shrinks, so degrade
+        // to a leaf. This makes termination unconditional, independent of any
+        // geometric precondition on untrusted input.
+        if left.is_empty() || right.is_empty() {
+            emit_leaf(indices, order);
+            return;
+        }
         // Left column before right column.
         cut_recursive(boxes, &left, cfg, order);
         cut_recursive(boxes, &right, cfg, order);
     } else {
         let (top, bottom) = partition_y(boxes, indices, section.unwrap().split);
+        if top.is_empty() || bottom.is_empty() {
+            emit_leaf(indices, order);
+            return;
+        }
         // Higher-on-the-page section before lower.
         cut_recursive(boxes, &top, cfg, order);
         cut_recursive(boxes, &bottom, cfg, order);

@@ -104,8 +104,16 @@ fn horizontal_threshold_degrades_on_both_sides() {
         horizontal_k: 3.0,
         vertical_k: 1.5,
     };
-    assert_eq!(reading_order(&boxes, &split), vec![1, 0]); // gutter 2x >= 1x
-    assert_eq!(reading_order(&boxes, &no_split), vec![0, 1]); // gutter 2x < 3x
+    assert_eq!(
+        reading_order(&boxes, &split),
+        vec![1, 0],
+        "gutter 2x median glyph clears horizontal_k=1.0, so the columns split"
+    );
+    assert_eq!(
+        reading_order(&boxes, &no_split),
+        vec![0, 1],
+        "gutter 2x median glyph is below horizontal_k=3.0, so stream order stands"
+    );
 }
 
 /// §5.5 guard 5, vertical axis: the section threshold has teeth on both sides
@@ -128,8 +136,16 @@ fn vertical_threshold_degrades_on_both_sides() {
         horizontal_k: 1.0,
         vertical_k: 6.0,
     };
-    assert_eq!(reading_order(&boxes, &split), vec![2, 0, 1]); // 4x >= 1.5x
-    assert_eq!(reading_order(&boxes, &no_split), vec![0, 1, 2]); // 4x < 6x
+    assert_eq!(
+        reading_order(&boxes, &split),
+        vec![2, 0, 1],
+        "section gap 4x median glyph clears vertical_k=1.5, so the blocks split"
+    );
+    assert_eq!(
+        reading_order(&boxes, &no_split),
+        vec![0, 1, 2],
+        "section gap 4x median glyph is below vertical_k=6.0, so stream order stands"
+    );
 }
 
 /// §5.5 guard 6 (adversarial): degenerate inputs must not panic and must still
@@ -188,6 +204,43 @@ fn adversarial_inputs_do_not_panic() {
     ];
     let order = reading_order(&nan, &cfg());
     let mut sorted = order.clone();
+    sorted.sort_unstable();
+    assert_eq!(sorted, vec![0, 1]);
+}
+
+/// §5.5 guard 6: a box with `min > max` (a negative-scale CTM upstream) must not
+/// send the recursion into an infinite loop. The gap/split are computed from
+/// `min`/`max` separately but the partition uses the box center, which for an
+/// inverted box falls outside `[min, max]` — so a naive cut can put every box on
+/// one side and recurse on the same set forever. The orderer must degrade such a
+/// region to a leaf and terminate with a valid permutation.
+#[test]
+fn inverted_boxes_do_not_recurse_forever() {
+    let inverted_x = vec![
+        line(0.0, 0.0, 10.0, 10.0),
+        OrderBox {
+            min_x: 1000.0,
+            max_x: -1000.0,
+            min_y: 0.0,
+            max_y: 10.0,
+            font_size: 10.0,
+        },
+    ];
+    let mut sorted = reading_order(&inverted_x, &cfg());
+    sorted.sort_unstable();
+    assert_eq!(sorted, vec![0, 1]);
+
+    let inverted_y = vec![
+        line(0.0, 0.0, 10.0, 10.0),
+        OrderBox {
+            min_x: 0.0,
+            max_x: 10.0,
+            min_y: 1000.0,
+            max_y: -1000.0,
+            font_size: 10.0,
+        },
+    ];
+    let mut sorted = reading_order(&inverted_y, &cfg());
     sorted.sort_unstable();
     assert_eq!(sorted, vec![0, 1]);
 }
