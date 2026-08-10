@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+
+### Fixed
+
+- **Three of the four legal `/DescendantFonts` spellings decoded CID text to
+  mojibake** (#469). `extract_font_info` read the entry only when it was a
+  direct array whose element is an indirect reference. ISO 32000-1 puts no
+  reference requirement on either the array or its element (Table 121, §7.3.6,
+  §7.3.7 — where the spec wants a reference it says so, as Table 117 does for
+  the CIDFont's FontDescriptor), and producers write the element inline:
+  ReportLab's `UnicodeCIDFont` does. For those files `descendant_font` stayed
+  empty, `decode_text_with_font` skipped its Type0 branch, and the already
+  correct `cid_encoding` (e.g. `UniJIS-UCS2-H` → UTF-16BE) went unused — the
+  text fell through to byte-wise decoding. The same defect class as #463, fixed
+  here for `/DescendantFonts`: the value may now be a direct array or a
+  reference to one, and the CIDFont element a dictionary or a reference.
+
 ## [4.2.3] - 2026-08-09
 
 ### Fixed
