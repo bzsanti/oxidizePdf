@@ -1,11 +1,11 @@
 {
   "t3-stress": {
     "compared": 1695,
-    "content_coverage": 0.9854051588603628,
+    "content_coverage": 0.9859671643695178,
     "denominator": 211815,
-    "numerator": 680,
-    "our_alpha_chars": 4727093,
+    "numerator": 676,
+    "our_alpha_chars": 4729789,
     "pop_alpha_chars": 4797106,
-    "rate": 0.003210348653305951
+    "rate": 0.0031914642494629748
   }
 }

@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [Unreleased]
 
 ### Fixed
 
@@ -21,6 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   text fell through to byte-wise decoding. The same defect class as #463, fixed
   here for `/DescendantFonts`: the value may now be a direct array or a
   reference to one, and the CIDFont element a dictionary or a reference.
+
+- **`Tc`, `Tw` and `Ts` were parsed and stored but never applied to extraction**
+  (#456). The character-spacing (`Tc`) and word-spacing (`Tw`) parameters are
+  now folded into the pen advance and `Ts` (text rise) into the glyph baseline
+  (ISO 32000-1 §9.4.4): `Tc` is added once per glyph, `Tw` once per single-byte
+  space (code 32, §9.3.3), and `Ts` offsets the fragment's y-origin. Because the
+  advance feeds the flat path's space/newline heuristics, documents that set a
+  non-zero `Tc`/`Tw` now get correct separators; the `"` operator, which sets
+  both before showing a line, now takes effect. `Tr` (render mode, including the
+  invisible `Tr 3` OCR-layer case) is unchanged — exposing it on the public
+  `TextFragment` is a breaking change deferred to the next major.
 
 ## [4.2.3] - 2026-08-09
 
