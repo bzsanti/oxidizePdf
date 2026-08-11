@@ -1223,6 +1223,15 @@ impl TextExtractor {
 
                 ContentOperation::ShowTextArray(array) => {
                     if in_text_object {
+                        // True until this `TJ` array draws its first glyph. Only
+                        // on that first text element can a forward pen jump come
+                        // from the operator boundary (a `Tm`, or the previous
+                        // operator's advance); once a glyph is drawn, a later
+                        // forward jump is the array's own kerning, which
+                        // `TextElement::Spacing` already turns into a space. A
+                        // leading kern does NOT clear this (see the Spacing arm).
+                        // See the boundary gate below.
+                        let mut at_array_start = true;
                         for item in array {
                             match item {
                                 TextElement::Text(text_bytes) => {
@@ -1266,10 +1275,39 @@ impl TextExtractor {
                                     let line_wrap = dx < -(self.options.newline_threshold * 2.0)
                                         && (dy > SAME_LINE_EPS || same_y_wrap);
                                     if !skip_text {
-                                        let separator = if !extracted_text.is_empty()
-                                            && (dy > self.options.newline_threshold || line_wrap)
-                                        {
+                                        // Word spacing at the operator boundary.
+                                        // The `Tj` arm turns a forward jump wider
+                                        // than `space_threshold` into a space;
+                                        // this arm used to decide newlines only,
+                                        // so two `TJ` operators drawn side by side
+                                        // on the same line came out glued: a
+                                        // multi-column table cell read as
+                                        // `CellOneCellTwo` (issue #458), and a list
+                                        // bullet 0.75 em from its item text read as
+                                        // `vlarge` (found on preserve_027613.pdf,
+                                        // an IBM manual whose every bullet is a
+                                        // separate `TJ`).
+                                        //
+                                        // Restricted to the array's first element
+                                        // because that is the only jump the
+                                        // boundary owns. Inside the array the jump
+                                        // IS the kern, and `TextElement::Spacing`
+                                        // below already synthesises its space —
+                                        // firing here too would double it. A short
+                                        // forward gap (below the threshold) is left
+                                        // alone: the pen advance is only as
+                                        // accurate as the font widths, so a
+                                        // producer that draws one word as several
+                                        // positioned runs must not be split.
+                                        let boundary_space = at_array_start
+                                            && dx > TJ_BOUNDARY_SPACE_EM * state.font_size
+                                            && !extracted_text.ends_with(' ');
+                                        let separator = if extracted_text.is_empty() {
+                                            None
+                                        } else if dy > self.options.newline_threshold || line_wrap {
                                             Some('\n')
+                                        } else if boundary_space {
+                                            Some(' ')
                                         } else {
                                             None
                                         };
@@ -1319,8 +1357,24 @@ impl TextExtractor {
                                     // (issue #381: a stale `last_y` dropped newlines;
                                     // issue #386: the pen must fold in Tz/CTM scale).
                                     (last_x, last_y) = advance_pen(&mut state, text_width);
+                                    at_array_start = false;
                                 }
                                 TextElement::Spacing(adjustment) => {
+                                    // `at_array_start` is deliberately NOT cleared
+                                    // here. It marks "no glyph drawn yet", not "no
+                                    // item seen yet": a `TJ` array may open with a
+                                    // small intra-word kern while the real
+                                    // operator-boundary jump (a `Tm` to a new
+                                    // column) still lands on the first *text*
+                                    // element. Clearing the flag on the leading
+                                    // kern would suppress the boundary space and
+                                    // re-glue separate columns (issue #458). The
+                                    // kern's own space synthesis below works off
+                                    // `tx` (the kern delta), not `dx` (the full pen
+                                    // jump), so the two checks measure different
+                                    // quantities; the `!ends_with(' ')` guard on
+                                    // each keeps a leading kern that IS wide from
+                                    // producing a double space.
                                     // Text position adjustment (negative = move left,
                                     // i.e. shifts the pen forward). When the synthesised
                                     // forward advance exceeds `tj_space_threshold * font_size`
@@ -2678,6 +2732,39 @@ fn advance_pen(state: &mut TextState, text_width: f64) -> (f64, f64) {
 /// below this epsilon is "the same baseline". The smallest meaningful
 /// leading in real documents is orders of magnitude above it.
 const SAME_LINE_EPS: f64 = 1e-6;
+
+/// Minimum forward pen jump, in em, that reads as a word break at the boundary
+/// between two show-text operators — the first element of a `TJ` array whose
+/// pen jumped forward from the previous operator (a `Tm` reposition, or the
+/// prior operator's advance). Without it, two `TJ` operators drawn side by side
+/// on the same line come out glued: a multi-column table cell reads as
+/// `CellOneCellTwo` (issue #458), and a list bullet 0.75 em from its item text
+/// reads as `vlarge` (found on preserve_027613.pdf, an IBM manual whose every
+/// bullet is a separate `TJ`).
+///
+/// Calibrated on the full `t3-stress` corpus against poppler, with the
+/// reading-order (misplaced) rate as the objective and alignment coverage as
+/// the guard. Recalibrated on the Tc/Tw-corrected pen advance (#456), which
+/// feeds the `dx` this threshold judges:
+///
+/// | em | 0.0 | 0.3 | 0.7 | 1.0 | 2.0 | 3.0 | 6.0 | off |
+/// |---|---|---|---|---|---|---|---|---|
+/// | misplaced rate | .2806 | .2485 | **.2486** | .2486 | .2486 | .2512 | .2702 | .2766 |
+///
+/// Below ~0.3 em the rule splits words a producer draws as several positioned
+/// runs — the pen advance is only as accurate as the font widths, so a short
+/// run inflates the apparent gap, and em=0.0 lands *worse* than not firing at
+/// all. From 0.3 to 2.0 the corpus cannot discriminate (a flat plateau within
+/// 1e-4 of the minimum); above 3 em the rule stops firing on genuine column
+/// gaps and converges back on the un-fixed number.
+///
+/// 0.7 sits inside that plateau with margin on both sides: comfortably above
+/// the word-splitting floor, and below 0.748 em — the narrowest real word gap
+/// verified by hand (the bullet above), which the threshold must stay under to
+/// keep separating. On the corrected advance the fix moves the rate .2766 →
+/// .2486 (vs .2874 → .2714 before #456: an accurate advance lets the boundary
+/// fire more cleanly).
+const TJ_BOUNDARY_SPACE_EM: f64 = 0.7;
 
 /// Backward-jump magnitude, in multiples of the font size, above which a
 /// same-baseline (`dy == 0`) backward pen jump is a line wrap rather than a
