@@ -3,9 +3,9 @@
     "compared": 1053,
     "content_coverage": 0.9937857225137362,
     "denominator": 591792,
-    "numerator": 163717,
+    "numerator": 147110,
     "our_alpha_chars": 4719072,
     "pop_alpha_chars": 4748581,
-    "rate": 0.27664618649795875
+    "rate": 0.2485839619325709
   }
 }
