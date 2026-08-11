@@ -21,11 +21,6 @@
 //!   geometric leaf −13%), and it is what makes the identity permutation
 //!   byte-preserving for the caller (§5.2).
 
-// Staged ahead of its call site: the show-text wiring (§5.8) is a later step
-// that rebases onto #456, so in a non-test build nothing references this module
-// yet. Remove this attribute when the wiring lands and the module is live.
-#![allow(dead_code)]
-
 /// A box the flat-path orderer permutes: one per line group (§5.1).
 ///
 /// Coordinates are page space with `/Rotate` already applied by the caller

@@ -43,16 +43,17 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use oxidize_pdf::parser::{ParseOptions, PdfReader};
-use oxidize_pdf::text::TextExtractor;
+use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 
 const PER_FILE_TIMEOUT_SECS: u64 = 15;
 
-fn ours(path: &Path) -> Option<String> {
+fn ours(path: &Path, reading_order: bool) -> Option<String> {
     let bytes = std::fs::read(path).ok()?;
     let doc = PdfReader::new_with_options(std::io::Cursor::new(bytes), ParseOptions::lenient())
         .ok()?
         .into_document();
-    let mut ex = TextExtractor::new();
+    let mut ex =
+        TextExtractor::with_options(ExtractionOptions::default()).with_reading_order(reading_order);
     let mut out = String::new();
     for i in 0..doc.page_count().unwrap_or(0) {
         if let Ok(p) = ex.extract_from_page(&doc, i) {
@@ -227,14 +228,14 @@ type FileSample = (OrderMetrics, u64, u64);
 
 /// Per-file metrics on a worker thread with a hard timeout, so a slow parse is
 /// excluded rather than fatal. `None` means excluded, never counted as zero.
-fn metrics_for_file(path: &Path) -> Option<FileSample> {
+fn metrics_for_file(path: &Path, reading_order: bool) -> Option<FileSample> {
     let p = path.to_path_buf();
     let (tx, rx) = mpsc::channel();
     let handle = std::thread::Builder::new()
         .stack_size(8 * 1024 * 1024)
         .spawn(move || {
             let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                match (ours(&p), poppler(&p)) {
+                match (ours(&p, reading_order), poppler(&p)) {
                     (Some(o), Some(pop)) => {
                         let m = order_metrics(&o, &pop);
                         // Nothing alignable in this pair (a scanned page, a
@@ -290,8 +291,26 @@ fn the_committed_baseline_is_loadable() {
     }
 }
 
+/// The flat path in stream order (`reading_order = false`): the DEFAULT
+/// extraction. Ratchets against the `t3-stress` baseline.
 #[test]
 fn flat_extraction_does_not_transpose_more_words_than_poppler() {
+    run_order_gate(false, "t3-stress");
+}
+
+/// The opt-in reading-order path (`reading_order = true`, issue #448): the same
+/// corpus and oracle, extracted with the flat-path XY-cut reorder on. Its own
+/// baseline key (`t3-stress-reading-order`), so a regression on the reordered
+/// path is caught independently of the default path — and the two baselines'
+/// rates are directly comparable, since only the option differs.
+#[test]
+fn reading_order_option_does_not_transpose_more_words_than_poppler() {
+    run_order_gate(true, "t3-stress-reading-order");
+}
+
+/// Shared corpus run for both gates. `reading_order` toggles the opt-in reorder;
+/// `key` selects the baseline entry so the two measurements ratchet separately.
+fn run_order_gate(reading_order: bool, key: &str) {
     // Skip cleanly when the independent oracle is unavailable — unless the
     // job declared the measurement mandatory (see ratchet::corpus_required).
     if Command::new("pdftotext").arg("-v").output().is_err() {
@@ -320,7 +339,7 @@ fn flat_extraction_does_not_transpose_more_words_than_poppler() {
     let mut pop_chars = 0u64;
 
     for pdf in &pdfs {
-        match metrics_for_file(pdf) {
+        match metrics_for_file(pdf, reading_order) {
             Some((m, ours_len, pop_len)) => {
                 compared += 1;
                 pop_words_total += m.pop_words;
@@ -363,7 +382,6 @@ fn flat_extraction_does_not_transpose_more_words_than_poppler() {
     let p10 = per_doc.get(per_doc.len() / 10).copied().unwrap_or(0.0);
     let below = per_doc.iter().filter(|f| **f < 0.95).count();
 
-    let key = dir.file_name().and_then(|s| s.to_str()).unwrap_or("corpus");
     let current = ratchet::GateSample {
         compared,
         numerator: misplaced,
