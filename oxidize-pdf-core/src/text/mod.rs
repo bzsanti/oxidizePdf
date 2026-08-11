@@ -4,6 +4,7 @@ pub(crate) mod encoding;
 pub(crate) mod encoding_cmap;
 pub mod extraction;
 mod extraction_cmap;
+pub(crate) mod flat_reading_order;
 mod flow;
 mod font;
 pub mod font_manager;
@@ -24,6 +25,9 @@ pub mod validation;
 
 #[cfg(test)]
 mod cmap_tests;
+
+#[cfg(test)]
+mod flat_reading_order_tests;
 
 #[cfg(feature = "ocr-tesseract")]
 pub mod tesseract_provider;
