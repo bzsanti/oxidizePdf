@@ -10,6 +10,7 @@ use crate::parser::objects::{PdfDictionary, PdfObject};
 use crate::parser::page_tree::ParsedPage;
 use crate::parser::ParseResult;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
+use crate::text::flat_reading_order;
 use crate::text::graphics_state_stack::GraphicsStateStack;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
@@ -432,6 +433,32 @@ struct OpRunState {
     /// accumulation short. Propagates through Form XObject recursion and into
     /// [`ExtractedText::truncated`] (issue #382).
     truncated: bool,
+    /// Closed line groups for the reading-order option (issue #448). Empty and
+    /// untouched unless `ExtractionOptions::reading_order` is on. Each group
+    /// records the byte range of its text in `extracted_text` plus its page-space
+    /// box, so the finalizer can permute groups without rebuilding their text —
+    /// the identity permutation is byte-identical (design §5.2).
+    line_groups: Vec<LineGroupGeom>,
+    /// The group currently being accumulated (opens on the first glyph after a
+    /// newline separator). Flushed into `line_groups` at page end.
+    cur_group: Option<LineGroupGeom>,
+}
+
+/// One flat-path line group for the reading-order option (issue #448): the byte
+/// range of its text within `extracted_text`, and the page-space box the
+/// ordering primitive sees. Byte offsets (not owned text) keep the identity
+/// permutation provably byte-identical — the finalizer joins the recorded
+/// slices with `'\n'`, which is exactly the separator the flat path put between
+/// groups in the first place.
+#[derive(Debug, Clone, Copy)]
+struct LineGroupGeom {
+    start: usize,
+    end: usize,
+    min_x: f64,
+    max_x: f64,
+    min_y: f64,
+    max_y: f64,
+    font_size: f64,
 }
 
 impl Default for TextState {
@@ -529,6 +556,11 @@ fn same_paragraph_style(a: &TextFragment, b: &TextFragment) -> bool {
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
+    /// Reorder the flat `.text` line groups into reading order (issue #448).
+    /// Off by default; set via [`TextExtractor::with_reading_order`]. Held here,
+    /// not on the public [`ExtractionOptions`], so enabling it is a
+    /// non-breaking method addition rather than a breaking struct-field addition.
+    reading_order: bool,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
     /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
@@ -541,6 +573,7 @@ impl TextExtractor {
     pub fn new() -> Self {
         Self {
             options: ExtractionOptions::default(),
+            reading_order: false,
             font_cache: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
@@ -550,9 +583,30 @@ impl TextExtractor {
     pub fn with_options(options: ExtractionOptions) -> Self {
         Self {
             options,
+            reading_order: false,
             font_cache: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
+    }
+
+    /// Enable (or disable) flat-path reading-order reordering (issue #448).
+    ///
+    /// Off by default. When on, the flat `.text` path permutes its line groups
+    /// into reading order (left column before right, top block before bottom)
+    /// using the scale-relative XY-cut primitive; the text inside each group is
+    /// untouched, and the result is byte-identical whenever the stream order is
+    /// already the reading order. Only affects the flat path
+    /// (`ExtractionOptions::preserve_layout = false`, no `reorder_columns`).
+    ///
+    /// Consuming builder, so it chains after the constructors:
+    /// `TextExtractor::with_options(opts).with_reading_order(true)`.
+    ///
+    /// Known ceiling (issue #448 design §5.1): only reorders groups the newline
+    /// heuristic already separated — two columns drawn row-interleaved fall into
+    /// one group. `/Rotate ≠ 0` pages are ordered in unrotated page space.
+    pub fn with_reading_order(mut self, enable: bool) -> Self {
+        self.reading_order = enable;
+        self
     }
 
     /// Run the full fragment-merge chain used by the partition pipeline:
@@ -902,6 +956,8 @@ impl TextExtractor {
             extracted_text,
             fragments,
             truncated: false,
+            line_groups: Vec::new(),
+            cur_group: None,
         };
 
         // Process each content stream
@@ -956,6 +1012,8 @@ impl TextExtractor {
             mut extracted_text,
             mut fragments,
             mut truncated,
+            mut line_groups,
+            cur_group,
             ..
         } = run;
         {
@@ -1008,6 +1066,40 @@ impl TextExtractor {
                 fragments.clear();
             }
 
+            // Flat-path reading order (issue #448): permute the line groups into
+            // reading order with the scale-relative XY-cut primitive. Only the
+            // pure flat path — `preserve_layout` and `reorder_columns` rebuild
+            // `.text` from fragments and own their ordering. Rejoining the
+            // recorded group slices with `'\n'` (the flat path's own inter-group
+            // separator) makes an identity permutation byte-identical (§5.2).
+            if self.reading_order && !self.options.preserve_layout && !self.options.reorder_columns
+            {
+                if let Some(g) = cur_group {
+                    line_groups.push(g);
+                }
+                if line_groups.len() > 1 {
+                    let boxes: Vec<flat_reading_order::OrderBox> = line_groups
+                        .iter()
+                        .map(|g| flat_reading_order::OrderBox {
+                            min_x: g.min_x,
+                            max_x: g.max_x,
+                            min_y: g.min_y,
+                            max_y: g.max_y,
+                            font_size: g.font_size,
+                        })
+                        .collect();
+                    let order = flat_reading_order::reading_order(&boxes, &READING_ORDER_CFG);
+                    let mut rebuilt = String::with_capacity(extracted_text.len());
+                    for (n, &i) in order.iter().enumerate() {
+                        if n > 0 {
+                            rebuilt.push('\n');
+                        }
+                        rebuilt.push_str(&extracted_text[line_groups[i].start..line_groups[i].end]);
+                    }
+                    extracted_text = rebuilt;
+                }
+            }
+
             // Final safety net (issue #382): the layout/reorder reconstruction
             // above rebuilds `.text` with its own separators, so guarantee the
             // `text.len() <= max_extracted_bytes` invariant for every path here.
@@ -1046,6 +1138,8 @@ impl TextExtractor {
             mut extracted_text,
             mut fragments,
             mut truncated,
+            mut line_groups,
+            mut cur_group,
         } = run;
 
         let page_properties: Option<&crate::parser::objects::PdfDictionary> =
@@ -1132,6 +1226,10 @@ impl TextExtractor {
                         let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
 
                         // Add spacing based on position change
+                        // Separator of the run that was actually appended, for the
+                        // reading-order line grouping (issue #448); `None` when the
+                        // run was skipped.
+                        let mut emitted_sep: Option<Option<char>> = None;
                         if !skip_text {
                             let separator = if !extracted_text.is_empty() {
                                 // Baseline-frame deltas (issue #443): identical
@@ -1181,6 +1279,7 @@ impl TextExtractor {
                             ) {
                                 break;
                             }
+                            emitted_sep = Some(separator);
                         }
 
                         // Get font info for accurate width calculation.
@@ -1197,6 +1296,8 @@ impl TextExtractor {
                                 &decoded,
                                 state.font_size,
                                 font_info,
+                                state.char_space,
+                                state.word_space,
                             )
                         };
 
@@ -1212,6 +1313,24 @@ impl TextExtractor {
                             );
                         }
 
+                        // Record the run into the reading-order line groups
+                        // (issue #448) once its width is known.
+                        if self.reading_order {
+                            if let Some(sep) = emitted_sep {
+                                record_line_group(
+                                    &mut line_groups,
+                                    &mut cur_group,
+                                    extracted_text.len(),
+                                    decoded.len(),
+                                    sep,
+                                    x,
+                                    y,
+                                    text_width,
+                                    &state,
+                                );
+                            }
+                        }
+
                         // Advance the text matrix and track the true post-advance
                         // pen point (folds in Tz and CTM scale, issue #386; a
                         // full point so rotated baselines advance y too, #443).
@@ -1221,6 +1340,15 @@ impl TextExtractor {
 
                 ContentOperation::ShowTextArray(array) => {
                     if in_text_object {
+                        // True until this `TJ` array draws its first glyph. Only
+                        // on that first text element can a forward pen jump come
+                        // from the operator boundary (a `Tm`, or the previous
+                        // operator's advance); once a glyph is drawn, a later
+                        // forward jump is the array's own kerning, which
+                        // `TextElement::Spacing` already turns into a space. A
+                        // leading kern does NOT clear this (see the Spacing arm).
+                        // See the boundary gate below.
+                        let mut at_array_start = true;
                         for item in array {
                             match item {
                                 TextElement::Text(text_bytes) => {
@@ -1263,11 +1391,43 @@ impl TextExtractor {
                                         dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
                                     let line_wrap = dx < -(self.options.newline_threshold * 2.0)
                                         && (dy > SAME_LINE_EPS || same_y_wrap);
+                                    // Separator of the run actually appended, for the
+                                    // reading-order line grouping (issue #448).
+                                    let mut emitted_sep: Option<Option<char>> = None;
                                     if !skip_text {
-                                        let separator = if !extracted_text.is_empty()
-                                            && (dy > self.options.newline_threshold || line_wrap)
-                                        {
+                                        // Word spacing at the operator boundary.
+                                        // The `Tj` arm turns a forward jump wider
+                                        // than `space_threshold` into a space;
+                                        // this arm used to decide newlines only,
+                                        // so two `TJ` operators drawn side by side
+                                        // on the same line came out glued: a
+                                        // multi-column table cell read as
+                                        // `CellOneCellTwo` (issue #458), and a list
+                                        // bullet 0.75 em from its item text read as
+                                        // `vlarge` (found on preserve_027613.pdf,
+                                        // an IBM manual whose every bullet is a
+                                        // separate `TJ`).
+                                        //
+                                        // Restricted to the array's first element
+                                        // because that is the only jump the
+                                        // boundary owns. Inside the array the jump
+                                        // IS the kern, and `TextElement::Spacing`
+                                        // below already synthesises its space —
+                                        // firing here too would double it. A short
+                                        // forward gap (below the threshold) is left
+                                        // alone: the pen advance is only as
+                                        // accurate as the font widths, so a
+                                        // producer that draws one word as several
+                                        // positioned runs must not be split.
+                                        let boundary_space = at_array_start
+                                            && dx > TJ_BOUNDARY_SPACE_EM * state.font_size
+                                            && !extracted_text.ends_with(' ');
+                                        let separator = if extracted_text.is_empty() {
+                                            None
+                                        } else if dy > self.options.newline_threshold || line_wrap {
                                             Some('\n')
+                                        } else if boundary_space {
+                                            Some(' ')
                                         } else {
                                             None
                                         };
@@ -1282,6 +1442,7 @@ impl TextExtractor {
                                         ) {
                                             break;
                                         }
+                                        emitted_sep = Some(separator);
                                     }
 
                                     let text_width = {
@@ -1294,6 +1455,8 @@ impl TextExtractor {
                                             &decoded,
                                             state.font_size,
                                             font_info,
+                                            state.char_space,
+                                            state.word_space,
                                         )
                                     };
 
@@ -1310,13 +1473,47 @@ impl TextExtractor {
                                         );
                                     }
 
+                                    // Record the run into the reading-order line
+                                    // groups (issue #448) once its width is known.
+                                    if self.reading_order {
+                                        if let Some(sep) = emitted_sep {
+                                            record_line_group(
+                                                &mut line_groups,
+                                                &mut cur_group,
+                                                extracted_text.len(),
+                                                decoded.len(),
+                                                sep,
+                                                x,
+                                                y,
+                                                text_width,
+                                                &state,
+                                            );
+                                        }
+                                    }
+
                                     // Keep the pen position in sync so a following
                                     // `Tj`/`TJ` measures its gap from the right origin
                                     // (issue #381: a stale `last_y` dropped newlines;
                                     // issue #386: the pen must fold in Tz/CTM scale).
                                     (last_x, last_y) = advance_pen(&mut state, text_width);
+                                    at_array_start = false;
                                 }
                                 TextElement::Spacing(adjustment) => {
+                                    // `at_array_start` is deliberately NOT cleared
+                                    // here. It marks "no glyph drawn yet", not "no
+                                    // item seen yet": a `TJ` array may open with a
+                                    // small intra-word kern while the real
+                                    // operator-boundary jump (a `Tm` to a new
+                                    // column) still lands on the first *text*
+                                    // element. Clearing the flag on the leading
+                                    // kern would suppress the boundary space and
+                                    // re-glue separate columns (issue #458). The
+                                    // kern's own space synthesis below works off
+                                    // `tx` (the kern delta), not `dx` (the full pen
+                                    // jump), so the two checks measure different
+                                    // quantities; the `!ends_with(' ')` guard on
+                                    // each keeps a leading kern that IS wide from
+                                    // producing a double space.
                                     // Text position adjustment (negative = move left,
                                     // i.e. shifts the pen forward). When the synthesised
                                     // forward advance exceeds `tj_space_threshold * font_size`
@@ -1343,6 +1540,14 @@ impl TextExtractor {
                                             &mut truncated,
                                         ) {
                                             break;
+                                        }
+                                        // The synthesised space is intra-group
+                                        // (issue #448): keep it inside the current
+                                        // group's byte range, no new group.
+                                        if self.reading_order {
+                                            if let Some(g) = cur_group.as_mut() {
+                                                g.end = extracted_text.len();
+                                            }
                                         }
 
                                         // Skip the fragment-level emission while an
@@ -1402,6 +1607,7 @@ impl TextExtractor {
 
                         // Mirror the artifact gate (issue #330).
                         let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let mut emitted_sep: Option<Option<char>> = None;
                         if !skip_text {
                             let separator = if extracted_text.is_empty() {
                                 None
@@ -1418,6 +1624,7 @@ impl TextExtractor {
                             ) {
                                 break;
                             }
+                            emitted_sep = Some(separator);
                         }
 
                         let text_width = {
@@ -1430,6 +1637,8 @@ impl TextExtractor {
                                 &decoded,
                                 state.font_size,
                                 font_info,
+                                state.char_space,
+                                state.word_space,
                             )
                         };
 
@@ -1443,6 +1652,23 @@ impl TextExtractor {
                                 &mut state,
                                 self.options.include_artifacts,
                             );
+                        }
+
+                        // Record into the reading-order line groups (issue #448).
+                        if self.reading_order {
+                            if let Some(sep) = emitted_sep {
+                                record_line_group(
+                                    &mut line_groups,
+                                    &mut cur_group,
+                                    extracted_text.len(),
+                                    decoded.len(),
+                                    sep,
+                                    x,
+                                    y,
+                                    text_width,
+                                    &state,
+                                );
+                            }
                         }
 
                         (last_x, last_y) = advance_pen(&mut state, text_width);
@@ -1469,6 +1695,7 @@ impl TextExtractor {
 
                         // Mirror the artifact gate (issue #330).
                         let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let mut emitted_sep: Option<Option<char>> = None;
                         if !skip_text {
                             let separator = if extracted_text.is_empty() {
                                 None
@@ -1485,6 +1712,7 @@ impl TextExtractor {
                             ) {
                                 break;
                             }
+                            emitted_sep = Some(separator);
                         }
 
                         let text_width = {
@@ -1497,6 +1725,8 @@ impl TextExtractor {
                                 &decoded,
                                 state.font_size,
                                 font_info,
+                                state.char_space,
+                                state.word_space,
                             )
                         };
 
@@ -1510,6 +1740,23 @@ impl TextExtractor {
                                 &mut state,
                                 self.options.include_artifacts,
                             );
+                        }
+
+                        // Record into the reading-order line groups (issue #448).
+                        if self.reading_order {
+                            if let Some(sep) = emitted_sep {
+                                record_line_group(
+                                    &mut line_groups,
+                                    &mut cur_group,
+                                    extracted_text.len(),
+                                    decoded.len(),
+                                    sep,
+                                    x,
+                                    y,
+                                    text_width,
+                                    &state,
+                                );
+                            }
                         }
 
                         (last_x, last_y) = advance_pen(&mut state, text_width);
@@ -1753,6 +2000,8 @@ impl TextExtractor {
                                 extracted_text,
                                 fragments,
                                 truncated,
+                                line_groups,
+                                cur_group,
                             };
                             let mut out = self.process_operations(
                                 xobj_ops,
@@ -1773,6 +2022,8 @@ impl TextExtractor {
                             extracted_text = out.extracted_text;
                             fragments = out.fragments;
                             truncated = out.truncated;
+                            line_groups = out.line_groups;
+                            cur_group = out.cur_group;
                         }
                     }
                 }
@@ -1790,6 +2041,8 @@ impl TextExtractor {
             extracted_text,
             fragments,
             truncated,
+            line_groups,
+            cur_group,
         })
     }
 
@@ -2497,6 +2750,73 @@ fn skip_artifact_text(state: &TextState, include_artifacts: bool) -> bool {
     !include_artifacts && state.mc_stack.iter().any(|e| e.is_artifact)
 }
 
+/// Page-space scale factors `(x_scale, y_scale)` of the current text/CTM
+/// combination (issue #262). Converts a text-space width/size into page space,
+/// mirroring the scaling [`emit_text_fragment`] applies, so the reading-order
+/// boxes and the median-font unit that judges their gaps share the page-space
+/// scale of the `x`/`y` origins.
+fn combined_text_scale(state: &TextState) -> (f64, f64) {
+    let combined = multiply_matrix(&state.text_matrix, &state.ctm);
+    let x_scale = (combined[0] * combined[0] + combined[1] * combined[1]).sqrt();
+    let y_scale = (combined[2] * combined[2] + combined[3] * combined[3]).sqrt();
+    (x_scale, y_scale)
+}
+
+/// Record a just-emitted glyph run into the flat-path line groups (issue #448).
+///
+/// Called only when `ExtractionOptions::reading_order` is on, right after a
+/// successful [`append_bounded`], with `text_len` = `extracted_text.len()` after
+/// the append. `width` and `font_size` must already be page-space (scaled via
+/// [`combined_text_scale`]) so the box matches the page-space `x`/`y` origin. A
+/// run whose separator is a newline opens a new group; anything else extends the
+/// current one. The group's byte range excludes the leading newline (a group's
+/// text starts at `text_len - decoded_len`, which is past the separator), so
+/// rejoining slices with `'\n'` reproduces the original exactly.
+#[allow(clippy::too_many_arguments)]
+fn record_line_group(
+    line_groups: &mut Vec<LineGroupGeom>,
+    cur_group: &mut Option<LineGroupGeom>,
+    text_len: usize,
+    decoded_len: usize,
+    separator: Option<char>,
+    x: f64,
+    y: f64,
+    text_width: f64,
+    state: &TextState,
+) {
+    // Convert the text-space advance and font size to page space so the box
+    // matches the page-space `x`/`y` and the median-font unit is on the same
+    // scale as the gaps it judges (issue #262).
+    let (x_scale, y_scale) = combined_text_scale(state);
+    let width = text_width * x_scale;
+    let font_size = state.font_size * y_scale;
+    let run_start = text_len.saturating_sub(decoded_len);
+    let (rx0, rx1) = (x.min(x + width), x.max(x + width));
+    let (ry0, ry1) = (y.min(y + font_size), y.max(y + font_size));
+    let opens = matches!(separator, Some('\n')) || cur_group.is_none();
+    if opens {
+        if let Some(g) = cur_group.take() {
+            line_groups.push(g);
+        }
+        *cur_group = Some(LineGroupGeom {
+            start: run_start,
+            end: text_len,
+            min_x: rx0,
+            max_x: rx1,
+            min_y: ry0,
+            max_y: ry1,
+            font_size,
+        });
+    } else if let Some(g) = cur_group.as_mut() {
+        g.end = text_len;
+        g.min_x = g.min_x.min(rx0);
+        g.max_x = g.max_x.max(rx1);
+        g.min_y = g.min_y.min(ry0);
+        g.max_y = g.max_y.max(ry1);
+        g.font_size = g.font_size.max(font_size);
+    }
+}
+
 /// Append an optional `separator` plus `decoded` to `acc`, honouring the
 /// per-page byte budget `limit` (issue #382).
 ///
@@ -2643,7 +2963,10 @@ fn emit_text_fragment(
 /// or pure-translation matrix; non-uniform CTM scaling produced wrong origins.
 fn text_origin(state: &TextState) -> (f64, f64) {
     let combined = multiply_matrix(&state.text_matrix, &state.ctm);
-    transform_point(0.0, 0.0, &combined)
+    // Text rise (`Ts`) shifts the glyph origin up the text-space y-axis before
+    // the text/CTM transform (ISO 32000-1 §9.4.4). For an axis-aligned matrix
+    // this moves the user-space y by exactly `Ts`.
+    transform_point(0.0, state.text_rise, &combined)
 }
 
 /// Advance the text matrix by one shown glyph run of unscaled width
@@ -2667,6 +2990,58 @@ fn advance_pen(state: &mut TextState, text_width: f64) -> (f64, f64) {
 /// below this epsilon is "the same baseline". The smallest meaningful
 /// leading in real documents is orders of magnitude above it.
 const SAME_LINE_EPS: f64 = 1e-6;
+
+/// Scale-relative cut thresholds for the flat-path reading-order option
+/// (issue #448), in multiples of a region's median glyph size: a horizontal gap
+/// is a column gutter past `horizontal_k`, a vertical gap a section break past
+/// `vertical_k`.
+///
+/// Validated against the opt-in differential order gate on the full `t3-stress`
+/// corpus (`t3-stress-reading-order` baseline): with the option on, the
+/// misplaced-word rate drops 0.2486 → 0.2255 (−9.3%) versus the default flat
+/// path, at identical alignment coverage — the gain is reordering, not dropped
+/// text. That clears the design probe's ceiling estimate (~0.2375), so these
+/// values are kept rather than sweeping for a marginal further gain. (An
+/// earlier, geometrically wrong build that fed the cut un-CTM-scaled boxes
+/// scored a hair better here, 0.2226, purely because the corpus is
+/// identity-CTM-dominated; the correct page-space geometry is kept.)
+const READING_ORDER_CFG: flat_reading_order::CutConfig = flat_reading_order::CutConfig {
+    horizontal_k: 1.0,
+    vertical_k: 1.5,
+};
+
+/// Minimum forward pen jump, in em, that reads as a word break at the boundary
+/// between two show-text operators — the first element of a `TJ` array whose
+/// pen jumped forward from the previous operator (a `Tm` reposition, or the
+/// prior operator's advance). Without it, two `TJ` operators drawn side by side
+/// on the same line come out glued: a multi-column table cell reads as
+/// `CellOneCellTwo` (issue #458), and a list bullet 0.75 em from its item text
+/// reads as `vlarge` (found on preserve_027613.pdf, an IBM manual whose every
+/// bullet is a separate `TJ`).
+///
+/// Calibrated on the full `t3-stress` corpus against poppler, with the
+/// reading-order (misplaced) rate as the objective and alignment coverage as
+/// the guard. Recalibrated on the Tc/Tw-corrected pen advance (#456), which
+/// feeds the `dx` this threshold judges:
+///
+/// | em | 0.0 | 0.3 | 0.7 | 1.0 | 2.0 | 3.0 | 6.0 | off |
+/// |---|---|---|---|---|---|---|---|---|
+/// | misplaced rate | .2806 | .2485 | **.2486** | .2486 | .2486 | .2512 | .2702 | .2766 |
+///
+/// Below ~0.3 em the rule splits words a producer draws as several positioned
+/// runs — the pen advance is only as accurate as the font widths, so a short
+/// run inflates the apparent gap, and em=0.0 lands *worse* than not firing at
+/// all. From 0.3 to 2.0 the corpus cannot discriminate (a flat plateau within
+/// 1e-4 of the minimum); above 3 em the rule stops firing on genuine column
+/// gaps and converges back on the un-fixed number.
+///
+/// 0.7 sits inside that plateau with margin on both sides: comfortably above
+/// the word-splitting floor, and below 0.748 em — the narrowest real word gap
+/// verified by hand (the bullet above), which the threshold must stay under to
+/// keep separating. On the corrected advance the fix moves the rate .2766 →
+/// .2486 (vs .2874 → .2714 before #456: an accurate advance lets the boundary
+/// fire more cleanly).
+const TJ_BOUNDARY_SPACE_EM: f64 = 0.7;
 
 /// Backward-jump magnitude, in multiples of the font size, above which a
 /// same-baseline (`dy == 0`) backward pen jump is a line wrap rather than a
@@ -2901,20 +3276,38 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 /// `decoded` is the already-decoded text for this run; it is only consulted for
 /// composite (Type0) fonts, whose multi-byte codes cannot be indexed byte-wise
 /// and whose width path is unchanged here to avoid regressing CJK extraction.
+/// Unscaled text-space advance of a run (before `Th`), including the text-state
+/// spacing parameters (ISO 32000-1 §9.4.4): the glyph displacement is
+/// `w0/1000 * Tfs + Tc + Tw`, so `char_space` (`Tc`) is added once per glyph and
+/// `word_space` (`Tw`) once per *single-byte* space (code 32, §9.3.3). Both are
+/// unscaled text-space units, added directly (not multiplied by the font size);
+/// the caller's `advance_pen` applies `Th`.
 fn calculate_text_width_from_codes(
     codes: &[u8],
     decoded: &str,
     font_size: f64,
     font_info: Option<&FontInfo>,
+    char_space: f64,
+    word_space: f64,
 ) -> f64 {
     // Composite (Type0) fonts use multi-byte codes; a single byte is not a code,
     // so byte-indexed width lookup is invalid. Preserve the existing decoded-based
-    // behavior for them.
+    // behavior for them, adding `Tc` per glyph. `Tw` applies only to the
+    // single-byte code 32 (§9.3.3), which a multi-byte code can never be, so it
+    // does not apply here.
     let is_composite =
         font_info.is_some_and(|f| f.font_type == "Type0" || f.descendant_font.is_some());
     if is_composite {
-        return calculate_text_width(decoded, font_size, font_info);
+        let glyphs = decoded.chars().count() as f64;
+        return calculate_text_width(decoded, font_size, font_info) + char_space * glyphs;
     }
+
+    // `Tc` on every byte-code, `Tw` on every space byte. Shared by the metric
+    // and no-metric branches below.
+    let spacing = |codes: &[u8]| -> f64 {
+        char_space * codes.len() as f64
+            + word_space * codes.iter().filter(|&&b| b == b' ').count() as f64
+    };
 
     if let Some(font) = font_info {
         if let Some(ref widths) = font.metrics.widths {
@@ -2946,12 +3339,12 @@ fn calculate_text_width_from_codes(
                 }
             }
 
-            return total_width;
+            return total_width + spacing(codes);
         }
     }
 
     // No metrics: one fallback width per code (byte), the simple-font glyph count.
-    codes.len() as f64 * font_size * 0.5
+    codes.len() as f64 * font_size * 0.5 + spacing(codes)
 }
 
 /// Sanitize extracted text by removing or replacing control characters.
@@ -3697,7 +4090,8 @@ mod tests {
 
         let codes = [1u8, 2u8];
         let decoded = "mi"; // what decode_text produced for these codes
-        let width = calculate_text_width_from_codes(&codes, decoded, 10.0, Some(&font_info));
+        let width =
+            calculate_text_width_from_codes(&codes, decoded, 10.0, Some(&font_info), 0.0, 0.0);
         let expected = (1000.0 + 100.0) / 1000.0 * 10.0; // 11.0
         assert!(
             (width - expected).abs() < 1e-6,

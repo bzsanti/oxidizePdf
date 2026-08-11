@@ -6,6 +6,63 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [Unreleased]
+
+## [4.3.0] - 2026-08-11
+
+### Fixed
+
+- **Three of the four legal `/DescendantFonts` spellings decoded CID text to
+  mojibake** (#469). `extract_font_info` read the entry only when it was a
+  direct array whose element is an indirect reference. ISO 32000-1 puts no
+  reference requirement on either the array or its element (Table 121, §7.3.6,
+  §7.3.7 — where the spec wants a reference it says so, as Table 117 does for
+  the CIDFont's FontDescriptor), and producers write the element inline:
+  ReportLab's `UnicodeCIDFont` does. For those files `descendant_font` stayed
+  empty, `decode_text_with_font` skipped its Type0 branch, and the already
+  correct `cid_encoding` (e.g. `UniJIS-UCS2-H` → UTF-16BE) went unused — the
+  text fell through to byte-wise decoding. The same defect class as #463, fixed
+  here for `/DescendantFonts`: the value may now be a direct array or a
+  reference to one, and the CIDFont element a dictionary or a reference.
+
+- **`Tc`, `Tw` and `Ts` were parsed and stored but never applied to extraction**
+  (#456). The character-spacing (`Tc`) and word-spacing (`Tw`) parameters are
+  now folded into the pen advance and `Ts` (text rise) into the glyph baseline
+  (ISO 32000-1 §9.4.4): `Tc` is added once per glyph, `Tw` once per single-byte
+  space (code 32, §9.3.3), and `Ts` offsets the fragment's y-origin. Because the
+  advance feeds the flat path's space/newline heuristics, documents that set a
+  non-zero `Tc`/`Tw` now get correct separators; the `"` operator, which sets
+  both before showing a line, now takes effect. `Tr` (render mode, including the
+  invisible `Tr 3` OCR-layer case) is unchanged — exposing it on the public
+  `TextFragment` is a breaking change deferred to the next major.
+
+- **Two `TJ` operators drawn side by side on one line were glued together**
+  (#458). The `Tj` arm turns a forward pen jump wider than the threshold into a
+  space, but the `TJ` arm used the same delta only to decide newlines, so
+  adjacent multi-column table cells extracted as `CellOneCellTwo` and a list
+  bullet welded onto its item text as `vlarge`. A boundary space now fires on
+  the first glyph of a `TJ` array when the pen jumped forward past
+  `0.7 em` (calibrated on the Tc/Tw-corrected advance from #456; a leading kern
+  no longer masks the jump). On the `t3-stress` corpus this cut word fusions
+  0.0032 → 0.0014 and reading-order misplacement 0.2766 → 0.2486. An external
+  corpus of 421 real-world PDFs (contributor @oshtivi) measured regressed
+  detections dropping 177 → 125 with this fix, the largest single-fix drop of
+  the cycle.
+
+### Added
+
+- **Opt-in reading-order reorder for the flat text path** (#448), via
+  `TextExtractor::with_reading_order(true)`. Off by default (the flat path stays
+  byte-identical); when on, the flat `.text` line groups are permuted into
+  reading order — left column before right, top block before bottom — using a
+  scale-relative XY-cut whose gap thresholds are multiples of the region's
+  median glyph size, so column detection is font-size-relative rather than an
+  absolute point gap. The text inside each group is untouched. On the
+  `t3-stress` corpus this cut reading-order misplacement 0.2486 → 0.2255 at
+  identical coverage. It reorders only groups the newline heuristic already
+  separated (columns drawn row-interleaved fall in one group), and orders
+  `/Rotate ≠ 0` pages in unrotated page space.
+
 ## [4.2.3] - 2026-08-09
 
 ### Fixed

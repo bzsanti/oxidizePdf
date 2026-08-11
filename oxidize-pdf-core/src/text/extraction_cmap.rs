@@ -177,15 +177,44 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
 
         // Handle Type0 (composite) fonts
         if font_type.as_str() == "Type0" {
-            if let Some(PdfObject::Array(descendant_array)) = font_dict.get("DescendantFonts") {
-                if let Some(desc_ref) = descendant_array.0.first().and_then(|o| o.as_reference()) {
-                    if let Ok(PdfObject::Dictionary(desc_dict)) =
-                        document.get_object(desc_ref.0, desc_ref.1)
-                    {
-                        let descendant = self.extract_font_info(&desc_dict, document)?;
-                        font_info.descendant_font = Some(Box::new(descendant));
+            // The DescendantFonts value and the CIDFont element inside it may
+            // each be written inline or as an indirect reference: ISO 32000-1
+            // Table 121 types the entry as "array" with no reference
+            // requirement, §7.3.6 lets array elements be dictionaries, and
+            // §7.3.7 lets a dictionary value be any kind of object — where
+            // the spec wants a reference it says so (Table 117 marks the
+            // CIDFont's FontDescriptor "shall be an indirect reference"), and
+            // the DescendantFonts row carries no such words. The same argument
+            // as #463, which fixed this for /Font resource entries. Producers
+            // do use the inline form (ReportLab's UnicodeCIDFont writes the
+            // CIDFont as a direct dictionary). Reading only the
+            // reference-inside-direct-array combination left `descendant_font`
+            // empty, which silently skipped the `cid_encoding` branch in
+            // `decode_text_with_font` and fell back to byte-wise decoding.
+            let resolved_array;
+            let descendant_fonts = match font_dict.get("DescendantFonts") {
+                Some(PdfObject::Array(array)) => Some(array),
+                Some(PdfObject::Reference(num, gen)) => match document.get_object(*num, *gen) {
+                    Ok(PdfObject::Array(array)) => {
+                        resolved_array = array;
+                        Some(&resolved_array)
                     }
-                }
+                    _ => None,
+                },
+                _ => None,
+            };
+            let descendant = match descendant_fonts.and_then(|array| array.0.first()) {
+                Some(PdfObject::Dictionary(dict)) => Some(self.extract_font_info(dict, document)?),
+                Some(PdfObject::Reference(num, gen)) => match document.get_object(*num, *gen) {
+                    Ok(PdfObject::Dictionary(dict)) => {
+                        Some(self.extract_font_info(&dict, document)?)
+                    }
+                    _ => None,
+                },
+                _ => None,
+            };
+            if let Some(descendant) = descendant {
+                font_info.descendant_font = Some(Box::new(descendant));
             }
         }
 
