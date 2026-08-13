@@ -49,9 +49,50 @@ fn test_collapse_multiple_spaces() {
 
 #[test]
 fn test_preserve_allowed_whitespace() {
-    // Tab, newline, carriage return should be preserved
+    // Tab and newline should be preserved. A bare `\r` (no following `\n`)
+    // is normalized to a space rather than passed through -- see issue
+    // #476 and the dedicated `test_stray_cr_*` cases below.
     let input = "line1\nline2\ttab\rcarriage";
-    let expected = "line1\nline2\ttab\rcarriage";
+    let expected = "line1\nline2\ttab carriage";
+    assert_eq!(sanitize_extracted_text(input), expected);
+}
+
+#[test]
+fn test_stray_cr_mid_word_becomes_space() {
+    // Issue #476: a literal CR embedded inside a PDF text-showing
+    // operator's string (producer noise, not a structural line break)
+    // should not survive verbatim -- it silently splits the word
+    // otherwise, e.g. "rating-aaa" -> "rating-aa\ra".
+    let input = "rating-aa\ra-exp-sf";
+    let expected = "rating-aa a-exp-sf";
+    assert_eq!(sanitize_extracted_text(input), expected);
+}
+
+#[test]
+fn test_crlf_pair_collapses_to_single_newline() {
+    // A genuine CRLF pair (e.g. a Windows line ending that made it into
+    // the PDF's own text content) should collapse to a single `\n`, not
+    // become a newline plus a leading space on the next line.
+    let input = "line one\r\nline two";
+    let expected = "line one\nline two";
+    assert_eq!(sanitize_extracted_text(input), expected);
+}
+
+#[test]
+fn test_multiple_stray_cr_collapse_like_spaces() {
+    // Consecutive bare CRs should collapse to a single space, matching
+    // how consecutive NULs and regular spaces already collapse.
+    let input = "word\r\r\ranother";
+    let expected = "word another";
+    assert_eq!(sanitize_extracted_text(input), expected);
+}
+
+#[test]
+fn test_cr_at_end_of_string_with_no_following_char() {
+    // A trailing bare CR (no following char at all, not just no `\n`)
+    // must not panic and should still normalize to a space.
+    let input = "word\r";
+    let expected = "word ";
     assert_eq!(sanitize_extracted_text(input), expected);
 }
 

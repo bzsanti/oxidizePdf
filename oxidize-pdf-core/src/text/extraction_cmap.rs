@@ -525,10 +525,12 @@ pub(crate) fn parse_truetype_kern_table(font_data: &[u8]) -> ParseResult<HashMap
     Ok(kerning_pairs)
 }
 
-/// The whitespace `sanitize_extracted_text` keeps downstream. `decode_is_usable`
+/// The whitespace `sanitize_extracted_text` treats as real text downstream
+/// (kept as-is, or normalized to a space/absorbed into a newline -- never
+/// deleted to nothing; see #476 for `\r`'s normalization). `decode_is_usable`
 /// uses the same set on purpose: accepting a decode that the next stage then
-/// deletes would turn "usable" into an empty string — worse than the guessed
-/// fallback it was accepted over.
+/// deletes entirely would turn "usable" into an empty string — worse than the
+/// guessed fallback it was accepted over.
 fn is_preservable_whitespace(c: char) -> bool {
     matches!(c, ' ' | '\t' | '\n' | '\r')
 }

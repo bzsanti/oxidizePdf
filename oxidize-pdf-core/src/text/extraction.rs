@@ -3350,16 +3350,20 @@ fn calculate_text_width_from_codes(
 /// Sanitize extracted text by removing or replacing control characters.
 ///
 /// This function addresses Issue #116 where extracted text contains NUL bytes (`\0`)
-/// and ETX characters (`\u{3}`) where spaces should appear.
+/// and ETX characters (`\u{3}`) where spaces should appear, and Issue #476 where a
+/// stray literal `\r` embedded in a PDF's own text content survives verbatim into
+/// the extracted string.
 ///
 /// # Behavior
 ///
 /// - Replaces `\0\u{3}` sequences with a single space (common word separator pattern)
 /// - Replaces standalone `\0` (NUL) with space
-/// - Removes other ASCII control characters (0x01-0x1F) except:
-///   - `\t` (0x09) - Tab
-///   - `\n` (0x0A) - Line feed
-///   - `\r` (0x0D) - Carriage return
+/// - Preserves `\t` (0x09) and `\n` (0x0A) as-is
+/// - Normalizes `\r` (0x0D): a `\r\n` pair collapses to a single `\n`; any other
+///   bare `\r` becomes a space, since a raw CR inside a PDF text-showing operator's
+///   string is not a structural line break -- it is producer noise (see #476) and,
+///   left alone, can silently split a word in the extracted output
+/// - Removes other ASCII control characters (0x01-0x1F)
 /// - Collapses multiple consecutive spaces into a single space
 ///
 /// # Examples
@@ -3374,6 +3378,14 @@ fn calculate_text_width_from_codes(
 /// // Standalone NUL becomes space
 /// let with_nul = "word\0another";
 /// assert_eq!(sanitize_extracted_text(with_nul), "word another");
+///
+/// // Issue #476: a stray CR mid-word becomes a space instead of splitting it
+/// let stray_cr = "rating-aa\ra-exp-sf";
+/// assert_eq!(sanitize_extracted_text(stray_cr), "rating-aa a-exp-sf");
+///
+/// // A genuine CRLF pair collapses to a single LF
+/// let crlf = "line one\r\nline two";
+/// assert_eq!(sanitize_extracted_text(crlf), "line one\nline two");
 ///
 /// // Clean text passes through unchanged
 /// let clean = "Normal text";
@@ -3410,10 +3422,31 @@ pub fn sanitize_extracted_text(text: &str) -> String {
             }
 
             // Preserve allowed whitespace
-            '\t' | '\n' | '\r' => {
+            '\t' | '\n' => {
                 result.push(ch);
                 // Reset space tracking on newlines but not tabs
                 last_was_space = ch == '\t';
+            }
+
+            // Carriage return: a genuine `\r\n` pair (e.g. a Windows line
+            // ending that made it into the PDF's own text content) is a
+            // real line break, so drop the CR and let the following `\n`
+            // arm above handle it normally. A bare `\r` with no following
+            // `\n` is not a structural line break -- PDF content-stream
+            // text-showing operators (`Tj`/`TJ`/`'`/`"`) draw glyphs, and a
+            // stray CR byte inside one is producer noise (e.g. a generator
+            // that copied CRLF-terminated source text directly into a
+            // string without normalizing it) rather than an intentional
+            // separator. Treat it the same as NUL just above: collapse to
+            // a single space rather than passing it through, so it can no
+            // longer split a word in half (issue #476).
+            '\r' => {
+                if chars.peek() == Some(&'\n') {
+                    // Let the next iteration's '\n' arm emit the newline.
+                } else if !last_was_space {
+                    result.push(' ');
+                    last_was_space = true;
+                }
             }
 
             // Regular space - collapse multiples
@@ -3424,7 +3457,8 @@ pub fn sanitize_extracted_text(text: &str) -> String {
                 }
             }
 
-            // Other control characters (0x01-0x1F except tab/newline/CR) - remove
+            // Other control characters (0x01-0x1F except tab/newline, and CR
+            // which is handled above) - remove
             c if c.is_ascii_control() => {
                 // Skip control characters
             }
