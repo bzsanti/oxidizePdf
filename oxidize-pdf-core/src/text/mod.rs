@@ -34,7 +34,8 @@ pub mod tesseract_provider;
 
 pub use encoding::{escape_pdf_string_literal, TextEncoding};
 pub use extraction::{
-    sanitize_extracted_text, ExtractedText, ExtractionOptions, TextExtractor, TextFragment,
+    sanitize_extracted_text, sanitize_extracted_text_with_policy, CarriageReturnHandling,
+    ExtractedText, ExtractionOptions, TextExtractor, TextFragment,
 };
 pub use flow::{TextAlign, TextFlowContext};
 pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};

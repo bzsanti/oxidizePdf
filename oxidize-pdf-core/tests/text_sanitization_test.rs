@@ -5,7 +5,9 @@
 //!
 //! These tests follow TDD methodology - written BEFORE implementation.
 
-use oxidize_pdf::text::extraction::sanitize_extracted_text;
+use oxidize_pdf::text::extraction::{
+    sanitize_extracted_text, sanitize_extracted_text_with_policy, CarriageReturnHandling,
+};
 
 #[test]
 fn test_sanitize_nul_etx_sequence() {
@@ -48,11 +50,39 @@ fn test_collapse_multiple_spaces() {
 }
 
 #[test]
-fn test_preserve_allowed_whitespace() {
-    // Tab, newline, carriage return should be preserved
-    let input = "line1\nline2\ttab\rcarriage";
-    let expected = "line1\nline2\ttab\rcarriage";
+fn test_default_normalizes_carriage_returns() {
+    let input = "unix\nwindows\r\nclassic-mac\rend";
+    let expected = "unix\nwindows\nclassic-mac\nend";
     assert_eq!(sanitize_extracted_text(input), expected);
+}
+
+#[test]
+fn test_remove_carriage_returns() {
+    let input = "rating-aa\ra-exp\r\nnext";
+    let expected = "rating-aaa-exp\nnext";
+    assert_eq!(
+        sanitize_extracted_text_with_policy(input, CarriageReturnHandling::Remove),
+        expected
+    );
+}
+
+#[test]
+fn test_replace_carriage_returns_with_space() {
+    let input = "rating-aa\ra-exp\r\nnext";
+    let expected = "rating-aa a-exp\nnext";
+    assert_eq!(
+        sanitize_extracted_text_with_policy(input, CarriageReturnHandling::ReplaceWithSpace),
+        expected
+    );
+}
+
+#[test]
+fn test_carriage_return_space_replacement_collapses_adjacent_spaces() {
+    let input = "before \r  after";
+    assert_eq!(
+        sanitize_extracted_text_with_policy(input, CarriageReturnHandling::ReplaceWithSpace),
+        "before after"
+    );
 }
 
 #[test]
