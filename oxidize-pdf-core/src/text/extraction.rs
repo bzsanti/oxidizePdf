@@ -15,6 +15,24 @@ use crate::text::graphics_state_stack::GraphicsStateStack;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
+/// Controls how carriage returns decoded from PDF text-showing strings are
+/// represented in extracted plain text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CarriageReturnHandling {
+    /// Remove each standalone carriage return.
+    Remove,
+    /// Replace each standalone carriage return with a collapsible `U+0020` space.
+    ReplaceWithSpace,
+    /// Normalize both standalone CR and CRLF sequences to one line feed.
+    NormalizeLineEnding,
+}
+
+impl Default for CarriageReturnHandling {
+    fn default() -> Self {
+        Self::NormalizeLineEnding
+    }
+}
+
 /// Text extraction options
 #[derive(Debug, Clone)]
 pub struct ExtractionOptions {
@@ -561,6 +579,10 @@ pub struct TextExtractor {
     /// not on the public [`ExtractionOptions`], so enabling it is a
     /// non-breaking method addition rather than a breaking struct-field addition.
     reading_order: bool,
+    /// Policy for CR bytes decoded from text-showing strings. Held outside the
+    /// public `ExtractionOptions` so adding it does not break exhaustive struct
+    /// literals in downstream crates.
+    carriage_return_handling: CarriageReturnHandling,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
     /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
@@ -574,6 +596,7 @@ impl TextExtractor {
         Self {
             options: ExtractionOptions::default(),
             reading_order: false,
+            carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
@@ -584,6 +607,7 @@ impl TextExtractor {
         Self {
             options,
             reading_order: false,
+            carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
@@ -606,6 +630,15 @@ impl TextExtractor {
     /// one group. `/Rotate ≠ 0` pages are ordered in unrotated page space.
     pub fn with_reading_order(mut self, enable: bool) -> Self {
         self.reading_order = enable;
+        self
+    }
+
+    /// Select how standalone carriage returns decoded from PDF text strings
+    /// are represented. CRLF is always normalized to one line feed.
+    ///
+    /// The default is [`CarriageReturnHandling::NormalizeLineEnding`].
+    pub fn with_carriage_return_handling(mut self, handling: CarriageReturnHandling) -> Self {
+        self.carriage_return_handling = handling;
         self
     }
 
@@ -2656,9 +2689,11 @@ impl TextExtractor {
                     // or garbage). Whitespace counts as meaningful: a decode
                     // that is exactly a space is a space, not a failed decode
                     // (#438). See `decode_is_usable`.
-                    if crate::text::extraction_cmap::decode_is_usable(&decoded) {
-                        // Apply sanitization to remove control characters (Issue #116)
-                        let sanitized = sanitize_extracted_text(&decoded);
+                    let sanitized = sanitize_extracted_text_with_policy(
+                        &decoded,
+                        self.carriage_return_handling,
+                    );
+                    if crate::text::extraction_cmap::decode_is_usable(&sanitized) {
                         tracing::debug!(
                             "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
                             font_name,
@@ -2701,7 +2736,8 @@ impl TextExtractor {
 
         let fallback_result = encoding.decode(text);
         // Apply sanitization to remove control characters (Issue #116)
-        let sanitized = sanitize_extracted_text(&fallback_result);
+        let sanitized =
+            sanitize_extracted_text_with_policy(&fallback_result, self.carriage_return_handling);
         tracing::debug!(
             "Fallback encoding decoding: {:?} -> \"{}\"",
             text,
@@ -3359,7 +3395,7 @@ fn calculate_text_width_from_codes(
 /// - Removes other ASCII control characters (0x01-0x1F) except:
 ///   - `\t` (0x09) - Tab
 ///   - `\n` (0x0A) - Line feed
-///   - `\r` (0x0D) - Carriage return
+/// - Normalizes `\r` and `\r\n` to `\n`
 /// - Collapses multiple consecutive spaces into a single space
 ///
 /// # Examples
@@ -3380,6 +3416,14 @@ fn calculate_text_width_from_codes(
 /// assert_eq!(sanitize_extracted_text(clean), "Normal text");
 /// ```
 pub fn sanitize_extracted_text(text: &str) -> String {
+    sanitize_extracted_text_with_policy(text, CarriageReturnHandling::default())
+}
+
+/// Sanitize extracted text using an explicit carriage-return policy.
+pub fn sanitize_extracted_text_with_policy(
+    text: &str,
+    carriage_return_handling: CarriageReturnHandling,
+) -> String {
     if text.is_empty() {
         return String::new();
     }
@@ -3409,10 +3453,33 @@ pub fn sanitize_extracted_text(text: &str) -> String {
                 // Don't emit anything, just skip
             }
 
+            '\r' => {
+                // CRLF is unambiguously one line ending under every policy.
+                if chars.peek() == Some(&'\n') {
+                    chars.next();
+                    result.push('\n');
+                    last_was_space = false;
+                } else {
+                    match carriage_return_handling {
+                        CarriageReturnHandling::Remove => {}
+                        CarriageReturnHandling::ReplaceWithSpace => {
+                            if !last_was_space {
+                                result.push(' ');
+                                last_was_space = true;
+                            }
+                        }
+                        CarriageReturnHandling::NormalizeLineEnding => {
+                            result.push('\n');
+                            last_was_space = false;
+                        }
+                    }
+                }
+            }
+
             // Preserve allowed whitespace
-            '\t' | '\n' | '\r' => {
+            '\t' | '\n' => {
                 result.push(ch);
-                // Reset space tracking on newlines but not tabs
+                // Reset space tracking on newlines but not tabs.
                 last_was_space = ch == '\t';
             }
 
@@ -3424,7 +3491,7 @@ pub fn sanitize_extracted_text(text: &str) -> String {
                 }
             }
 
-            // Other control characters (0x01-0x1F except tab/newline/CR) - remove
+            // Other control characters (0x01-0x1F except tab/newline) - remove
             c if c.is_ascii_control() => {
                 // Skip control characters
             }
@@ -3717,6 +3784,10 @@ mod tests {
         assert!(!options.detect_columns);
         assert_eq!(options.column_threshold, 50.0);
         assert!(options.merge_hyphenated);
+        assert_eq!(
+            CarriageReturnHandling::default(),
+            CarriageReturnHandling::NormalizeLineEnding
+        );
     }
 
     #[test]

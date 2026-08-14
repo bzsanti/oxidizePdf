@@ -530,7 +530,7 @@ pub(crate) fn parse_truetype_kern_table(font_data: &[u8]) -> ParseResult<HashMap
 /// deletes would turn "usable" into an empty string — worse than the guessed
 /// fallback it was accepted over.
 fn is_preservable_whitespace(c: char) -> bool {
-    matches!(c, ' ' | '\t' | '\n' | '\r')
+    matches!(c, ' ' | '\t' | '\n')
 }
 
 /// Whether a decode produced usable text, or nothing the caller can act on.
