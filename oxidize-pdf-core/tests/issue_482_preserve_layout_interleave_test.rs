@@ -73,6 +73,26 @@ fn extract_preserve_layout(content: &str) -> String {
         .text
 }
 
+fn extract_preserve_layout_fragment_texts(content: &str) -> Vec<String> {
+    let doc = PdfReader::new_with_options(
+        std::io::Cursor::new(build_pdf(content)),
+        ParseOptions::lenient(),
+    )
+    .expect("PDF should parse")
+    .into_document();
+
+    let mut ex = TextExtractor::with_options(ExtractionOptions {
+        preserve_layout: true,
+        ..Default::default()
+    });
+    ex.extract_from_page(&doc, 0)
+        .expect("extraction should succeed")
+        .fragments
+        .into_iter()
+        .map(|fragment| fragment.text)
+        .collect()
+}
+
 #[test]
 fn hyphenated_wrap_survives_an_unrelated_fragment_sorted_between_its_two_lines() {
     // Mirrors the real-world document that motivated #482: a phone-number-like
@@ -140,5 +160,65 @@ fn same_line_hyphen_is_not_treated_as_a_wrap() {
     assert!(
         text.contains("well-known") || text.contains("well- known"),
         "a same-line hyphen must not be silently dropped or merged incorrectly, got: {text:?}"
+    );
+}
+
+#[test]
+fn non_hyphenated_overlay_does_not_interleave_with_an_earlier_flow() {
+    let content = concat!(
+        "BT\n/F1 10 Tf\n",
+        // First emission region: two body/footer lines.
+        "1 0 0 1 100 45 Tm\n(Body first) Tj\n",
+        "1 0 0 1 100 30 Tm\n(Body second) Tj\n",
+        // Second region restarts only 3pt above the preceding baseline: below
+        // the old 0.5em reset threshold, but outside the visual-line tolerance.
+        "1 0 0 1 300 33 Tm\n(Overlay first) Tj\n",
+        "1 0 0 1 300 18 Tm\n(Overlay second) Tj\nET"
+    );
+
+    assert_eq!(
+        extract_preserve_layout_fragment_texts(content),
+        vec![
+            "Body first",
+            "Body second",
+            "Overlay first",
+            "Overlay second"
+        ]
+    );
+}
+
+#[test]
+fn marked_content_regions_do_not_interleave_when_y_ranges_overlap() {
+    let content = concat!(
+        "BT\n/F1 10 Tf\n",
+        "/P <</MCID 7>> BDC\n",
+        "1 0 0 1 100 45 Tm\n(Body first) Tj\n",
+        "1 0 0 1 100 30 Tm\n(Body second) Tj\nEMC\n",
+        // The 3pt upward move is deliberately below the geometric reset
+        // threshold; the MCID transition is the structural boundary.
+        "/Span <</MCID 8>> BDC\n",
+        "1 0 0 1 300 33 Tm\n(Tagged overlay) Tj\nEMC\nET"
+    );
+
+    assert_eq!(
+        extract_preserve_layout_fragment_texts(content),
+        vec!["Body first", "Body second", "Tagged overlay"]
+    );
+}
+
+#[test]
+fn hyphen_prefusion_does_not_cross_an_mcid_region_boundary() {
+    let content = concat!(
+        "BT\n/F1 10 Tf\n",
+        "/P <</MCID 7>> BDC\n",
+        "1 0 0 1 100 45 Tm\n(Body-) Tj\nEMC\n",
+        "/Span <</MCID 8>> BDC\n",
+        "1 0 0 1 300 30 Tm\n(Unrelated overlay) Tj\nEMC\nET"
+    );
+
+    assert_eq!(
+        extract_preserve_layout_fragment_texts(content),
+        vec!["Body-", "Unrelated overlay"],
+        "the pre-sort hyphen mitigation must not fuse distinct MCID regions"
     );
 }

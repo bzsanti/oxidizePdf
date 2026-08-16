@@ -1085,7 +1085,7 @@ impl TextExtractor {
             // this way for `reconstruct_paragraphs`), so it is safe to run here
             // on unsorted emission order.
             if !fragments.is_empty() {
-                fragments = self.merge_close_fragments(&fragments);
+                fragments = self.merge_close_fragments_in_layout_regions(&fragments);
                 fragments = self.merge_hyphenated_line_wraps_in_emission_order(fragments);
             }
 
@@ -2256,19 +2256,21 @@ impl TextExtractor {
             return fragments;
         }
 
-        let mut result: Vec<TextFragment> = Vec::with_capacity(fragments.len());
-        for fragment in fragments {
+        let region_ids = assign_layout_region_ids(&fragments);
+        let mut result: Vec<(u32, TextFragment)> = Vec::with_capacity(fragments.len());
+        for (region_id, fragment) in region_ids.into_iter().zip(fragments) {
             let should_merge = result
                 .last()
-                .map(|prev: &TextFragment| {
-                    prev.text.ends_with('-')
+                .map(|(prev_region, prev)| {
+                    *prev_region == region_id
+                        && prev.text.ends_with('-')
                         && is_line_wrap_geometry(prev, &fragment, self.options.newline_threshold)
                 })
                 .unwrap_or(false);
 
             if should_merge {
                 // Safe: just checked `result.last()` is `Some` above.
-                let prev = result.last_mut().expect("checked non-empty above");
+                let (_, prev) = result.last_mut().expect("checked non-empty above");
                 prev.text.pop(); // drop the trailing hyphen
                 prev.text.push_str(&fragment.text);
                 // Extend the fused fragment's box to cover both lines so
@@ -2284,10 +2286,33 @@ impl TextExtractor {
                 prev.y = y_min;
                 prev.height = y_max - y_min;
             } else {
-                result.push(fragment);
+                result.push((region_id, fragment));
             }
         }
-        result
+        result.into_iter().map(|(_, fragment)| fragment).collect()
+    }
+
+    /// Apply the kerning merge independently inside each layout region.
+    /// Keeping this pre-sort pass region-scoped prevents two adjacent emission
+    /// runs from different marked-content/overlay flows being fused before the
+    /// ordering stage gets a chance to preserve their boundary (#482).
+    fn merge_close_fragments_in_layout_regions(
+        &self,
+        fragments: &[TextFragment],
+    ) -> Vec<TextFragment> {
+        let region_ids = assign_layout_region_ids(fragments);
+        let mut merged = Vec::with_capacity(fragments.len());
+        let mut start = 0usize;
+        while start < fragments.len() {
+            let region = region_ids[start];
+            let mut end = start + 1;
+            while end < fragments.len() && region_ids[end] == region {
+                end += 1;
+            }
+            merged.extend(self.merge_close_fragments(&fragments[start..end]));
+            start = end;
+        }
+        merged
     }
 
     /// Sort text fragments by position and merge them appropriately
@@ -2312,11 +2337,26 @@ impl TextExtractor {
         // font size, not the paragraph-break `newline_threshold`), and order each
         // line left-to-right by X. Ties broken by original index keep it stable.
         let n = fragments.len();
+        // Preserve independent emission regions before applying positional
+        // ordering. A Y-up-jump means the producer finished one top-to-bottom
+        // flow and started another (a new column, overlay, annotation
+        // appearance, etc.). Sorting the whole page by Y discarded that
+        // boundary and could splice the second flow into the first (#482).
+        // `assign_row_ids` already provides this segmentation for paragraph
+        // reconstruction; use the same source-order signal here so every
+        // fragment reconstruction path agrees on region boundaries.
+        let region_ids = assign_layout_region_ids(fragments);
         let mut order: Vec<usize> = (0..n).collect();
-        order.sort_by(|&i, &j| fragments[j].y.total_cmp(&fragments[i].y).then(i.cmp(&j)));
+        order.sort_by(|&i, &j| {
+            region_ids[i]
+                .cmp(&region_ids[j])
+                .then(fragments[j].y.total_cmp(&fragments[i].y))
+                .then(i.cmp(&j))
+        });
 
         let mut line_start = 0usize;
         while line_start < n {
+            let head_region = region_ids[order[line_start]];
             let head_y = fragments[order[line_start]].y;
             let head_h = fragments[order[line_start]].height;
             let mut line_end = line_start + 1;
@@ -2326,7 +2366,7 @@ impl TextExtractor {
                 // Negated `< tol` (not `>= tol`) so a non-finite Y from a
                 // degenerate text matrix forces a line break instead of a
                 // NaN comparison silently swallowing every remaining fragment.
-                if !((head_y - frag.y).abs() < tol) {
+                if region_ids[order[line_end]] != head_region || !((head_y - frag.y).abs() < tol) {
                     break;
                 }
                 line_end += 1;
@@ -2348,12 +2388,13 @@ impl TextExtractor {
         if self.options.detect_columns
             || (self.options.reorder_columns && !self.options.preserve_layout)
         {
-            self.detect_and_sort_columns(fragments);
+            let sorted_region_ids: Vec<u32> = order.iter().map(|&i| region_ids[i]).collect();
+            self.detect_and_sort_columns(fragments, &sorted_region_ids);
         }
     }
 
     /// Detect columns and re-sort fragments accordingly
-    fn detect_and_sort_columns(&self, fragments: &mut [TextFragment]) {
+    fn detect_and_sort_columns(&self, fragments: &mut [TextFragment], region_ids: &[u32]) {
         // `fragments` arrives pre-sorted by `sort_and_merge_fragments` in reading
         // order: top-to-bottom by Y band, left-to-right by X within a band.
         //
@@ -2386,7 +2427,9 @@ impl TextExtractor {
                 // Negated `< tol` (not `>= tol`) so a non-finite Y from a
                 // degenerate text matrix forces a line break rather than swallowing
                 // the whole page into one line.
-                if !((head_y - fragment.y).abs() < tol) {
+                if region_ids[i] != region_ids[current_line[0]]
+                    || !((head_y - fragment.y).abs() < tol)
+                {
                     lines.push(std::mem::take(&mut current_line));
                 }
             }
@@ -2475,7 +2518,8 @@ impl TextExtractor {
                 .copied()
                 .filter(|&p| boundaries.iter().any(|&c| (p - c).abs() < COLUMN_ALIGN_TOL))
                 .collect();
-            if li > 0 && columnar && prev_columnar && row_spaced && !shared.is_empty() {
+            let same_region = li > 0 && region_ids[line[0]] == region_ids[lines[li - 1][0]];
+            if same_region && columnar && prev_columnar && row_spaced && !shared.is_empty() {
                 // Line joins the current block; tighten the anchor to the
                 // corridors that persist, so a boundary must recur consistently
                 // across the whole block to survive.
@@ -3761,6 +3805,39 @@ fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
         "assign_row_ids: output length must equal input length"
     );
     result
+}
+
+/// Assign stable layout-region ids in content-stream emission order.
+///
+/// A region ends when the geometric flow restarts (`assign_row_ids`) or when
+/// marked-content ownership changes. The former covers untagged columns and
+/// overlays; the latter preserves author-supplied logical structure even when
+/// two regions occupy overlapping Y ranges (#482).
+fn assign_layout_region_ids(fragments: &[TextFragment]) -> Vec<u32> {
+    let mut regions = Vec::with_capacity(fragments.len());
+    let mut region = 0u32;
+
+    for i in 0..fragments.len() {
+        if i > 0 {
+            let prev = &fragments[i - 1];
+            let current = &fragments[i];
+            // A new flow may restart only a few points above the preceding
+            // baseline (the real #482 footer/annotation gap is ~2pt), well
+            // below assign_row_ids' superscript-friendly 0.5em threshold.
+            // For layout ordering the relevant boundary is the same visual-line
+            // tolerance used by sorting: an upward move beyond 0.2 line height
+            // starts a new monotonic emission region.
+            let line_tol = prev.height.min(current.height) * 0.2;
+            let flow_restarted = current.y - prev.y > line_tol;
+            let mcid_changed = fragments[i].mcid != fragments[i - 1].mcid
+                && (fragments[i].mcid.is_some() || fragments[i - 1].mcid.is_some());
+            if flow_restarted || mcid_changed {
+                region = region.saturating_add(1);
+            }
+        }
+        regions.push(region);
+    }
+    regions
 }
 
 /// Decide whether a single visual line should be read in emission order.
@@ -5532,5 +5609,76 @@ mod tests {
             "NaN-Y fragment must stay its own line; the finite lines keep \
              top-to-bottom reading order instead of collapsing to X order"
         );
+    }
+
+    #[test]
+    fn sort_and_merge_fragments_keeps_emission_regions_atomic() {
+        let extractor = TextExtractor::with_options(ExtractionOptions::default());
+
+        // Region 0 is a normal top-to-bottom footer. Region 1 is an overlay
+        // emitted later: its first line jumps back up the page, while its
+        // second line falls numerically between the footer's two lines. A
+        // page-wide Y-sort would produce body-1, overlay-1, overlay-2, body-2.
+        let mut fragments = vec![
+            tf("body-1", 50.0, 45.0, 40.0, 10.0),
+            tf("body-2", 50.0, 30.0, 40.0, 10.0),
+            tf("overlay-1", 250.0, 50.0, 60.0, 10.0),
+            tf("overlay-2", 250.0, 35.0, 60.0, 10.0),
+        ];
+
+        extractor.sort_and_merge_fragments(&mut fragments);
+
+        let order: Vec<&str> = fragments.iter().map(|f| f.text.as_str()).collect();
+        assert_eq!(
+            order,
+            vec!["body-1", "body-2", "overlay-1", "overlay-2"],
+            "positional sorting must not interleave independent emission regions"
+        );
+    }
+
+    #[test]
+    fn sort_and_merge_fragments_uses_mcid_as_a_region_boundary() {
+        let extractor = TextExtractor::with_options(ExtractionOptions::default());
+        let mut fragments = vec![
+            tf("body-1", 50.0, 45.0, 40.0, 10.0),
+            tf("body-2", 50.0, 30.0, 40.0, 10.0),
+            // The small Y increase is below assign_row_ids' reset threshold;
+            // MCID ownership must still keep this overlay independent.
+            tf("overlay", 250.0, 33.0, 60.0, 10.0),
+        ];
+        fragments[0].mcid = Some(7);
+        fragments[1].mcid = Some(7);
+        fragments[2].mcid = Some(8);
+
+        extractor.sort_and_merge_fragments(&mut fragments);
+
+        let order: Vec<&str> = fragments.iter().map(|f| f.text.as_str()).collect();
+        assert_eq!(order, vec!["body-1", "body-2", "overlay"]);
+    }
+
+    #[test]
+    fn column_detection_does_not_join_independent_layout_regions() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            detect_columns: true,
+            ..Default::default()
+        });
+        let mut fragments = vec![
+            tf("a1", 0.0, 100.0, 10.0, 10.0),
+            tf("b1", 100.0, 100.0, 10.0, 10.0),
+            tf("a2", 0.0, 80.0, 10.0, 10.0),
+            tf("b2", 100.0, 80.0, 10.0, 10.0),
+            // A later overlay repeats the same column corridor and overlaps
+            // the first region's Y span. Column detection must not combine
+            // both into one column-major block.
+            tf("c1", 0.0, 103.0, 10.0, 10.0),
+            tf("d1", 100.0, 103.0, 10.0, 10.0),
+            tf("c2", 0.0, 83.0, 10.0, 10.0),
+            tf("d2", 100.0, 83.0, 10.0, 10.0),
+        ];
+
+        extractor.sort_and_merge_fragments(&mut fragments);
+
+        let order: Vec<&str> = fragments.iter().map(|f| f.text.as_str()).collect();
+        assert_eq!(order, vec!["a1", "a2", "b1", "b2", "c1", "c2", "d1", "d2"]);
     }
 }
