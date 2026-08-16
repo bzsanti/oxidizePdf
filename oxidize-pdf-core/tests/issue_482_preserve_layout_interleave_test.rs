@@ -170,9 +170,10 @@ fn non_hyphenated_overlay_does_not_interleave_with_an_earlier_flow() {
         // First emission region: two body/footer lines.
         "1 0 0 1 100 45 Tm\n(Body first) Tj\n",
         "1 0 0 1 100 30 Tm\n(Body second) Tj\n",
-        // Second region restarts above the first and overlaps its Y range.
-        "1 0 0 1 300 50 Tm\n(Overlay first) Tj\n",
-        "1 0 0 1 300 35 Tm\n(Overlay second) Tj\nET"
+        // Second region restarts only 3pt above the preceding baseline: below
+        // the old 0.5em reset threshold, but outside the visual-line tolerance.
+        "1 0 0 1 300 33 Tm\n(Overlay first) Tj\n",
+        "1 0 0 1 300 18 Tm\n(Overlay second) Tj\nET"
     );
 
     assert_eq!(
@@ -202,5 +203,22 @@ fn marked_content_regions_do_not_interleave_when_y_ranges_overlap() {
     assert_eq!(
         extract_preserve_layout_fragment_texts(content),
         vec!["Body first", "Body second", "Tagged overlay"]
+    );
+}
+
+#[test]
+fn hyphen_prefusion_does_not_cross_an_mcid_region_boundary() {
+    let content = concat!(
+        "BT\n/F1 10 Tf\n",
+        "/P <</MCID 7>> BDC\n",
+        "1 0 0 1 100 45 Tm\n(Body-) Tj\nEMC\n",
+        "/Span <</MCID 8>> BDC\n",
+        "1 0 0 1 300 30 Tm\n(Unrelated overlay) Tj\nEMC\nET"
+    );
+
+    assert_eq!(
+        extract_preserve_layout_fragment_texts(content),
+        vec!["Body-", "Unrelated overlay"],
+        "the pre-sort hyphen mitigation must not fuse distinct MCID regions"
     );
 }
