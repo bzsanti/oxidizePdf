@@ -23,13 +23,13 @@ pub enum CarriageReturnHandling {
     Remove,
     /// Replace each standalone carriage return with a collapsible `U+0020` space.
     ReplaceWithSpace,
-    /// Normalize both standalone CR and CRLF sequences to one line feed.
+    /// Preserve standalone carriage returns and normalize CRLF to one line feed.
     NormalizeLineEnding,
 }
 
 impl Default for CarriageReturnHandling {
     fn default() -> Self {
-        Self::NormalizeLineEnding
+        Self::Remove
     }
 }
 
@@ -649,7 +649,7 @@ impl TextExtractor {
     /// Select how standalone carriage returns decoded from PDF text strings
     /// are represented. CRLF is always normalized to one line feed.
     ///
-    /// The default is [`CarriageReturnHandling::NormalizeLineEnding`].
+    /// The default is [`CarriageReturnHandling::Remove`].
     pub fn with_carriage_return_handling(mut self, handling: CarriageReturnHandling) -> Self {
         self.carriage_return_handling = handling;
         self
@@ -1339,17 +1339,24 @@ impl TextExtractor {
 
                             // Per-page byte budget (issue #382): stop before the
                             // run that would overshoot; the outer loop guard ends
-                            // extraction on the next iteration.
-                            if !append_bounded(
+                            // extraction on the next iteration. Hyphen-wrap fusion
+                            // (issue #486) may replace the requested `\n` with no
+                            // separator at all — `emitted_sep` must reflect what
+                            // was actually applied, not what was requested, so
+                            // reading-order line grouping below sees the run as a
+                            // continuation rather than a new line.
+                            let outcome = append_bounded(
                                 &mut extracted_text,
                                 separator,
                                 &decoded,
                                 self.options.max_extracted_bytes,
                                 &mut truncated,
-                            ) {
+                                self.options.merge_hyphenated,
+                            );
+                            if !outcome.appended {
                                 break;
                             }
-                            emitted_sep = Some(separator);
+                            emitted_sep = Some(outcome.applied_separator);
                         }
 
                         // Get font info for accurate width calculation.
@@ -1503,16 +1510,23 @@ impl TextExtractor {
                                         };
 
                                         // Per-page byte budget (issue #382).
-                                        if !append_bounded(
+                                        // Hyphen-wrap fusion (issue #486) may
+                                        // replace the requested `\n` with no
+                                        // separator; `emitted_sep` reflects what
+                                        // was actually applied (see the `Tj` arm
+                                        // above for the full rationale).
+                                        let outcome = append_bounded(
                                             &mut extracted_text,
                                             separator,
                                             &decoded,
                                             self.options.max_extracted_bytes,
                                             &mut truncated,
-                                        ) {
+                                            self.options.merge_hyphenated,
+                                        );
+                                        if !outcome.appended {
                                             break;
                                         }
-                                        emitted_sep = Some(separator);
+                                        emitted_sep = Some(outcome.applied_separator);
                                     }
 
                                     let text_width = {
@@ -1602,13 +1616,18 @@ impl TextExtractor {
                                         // Per-page byte budget (issue #382): even
                                         // the synthesised space counts, so the
                                         // `text.len() <= limit` invariant holds.
+                                        // Always a space, never `\n` — hyphen-wrap
+                                        // fusion (issue #486) does not apply here.
                                         if !append_bounded(
                                             &mut extracted_text,
                                             Some(' '),
                                             "",
                                             self.options.max_extracted_bytes,
                                             &mut truncated,
-                                        ) {
+                                            self.options.merge_hyphenated,
+                                        )
+                                        .appended
+                                        {
                                             break;
                                         }
                                         // The synthesised space is intra-group
@@ -1684,17 +1703,26 @@ impl TextExtractor {
                             } else {
                                 Some('\n')
                             };
-                            // Per-page byte budget (issue #382).
-                            if !append_bounded(
+                            // Per-page byte budget (issue #382). Hyphen-wrap
+                            // fusion (issue #486) may replace the requested `\n`
+                            // with no separator; `emitted_sep` reflects what was
+                            // actually applied (see the `Tj` arm for the full
+                            // rationale). `'` (this operator) always requests a
+                            // new line by definition (ISO 32000-1 §9.4.3's
+                            // `T* Tj`), so this is where a hyphen at the end of
+                            // one `'`-delimited line meets the start of the next.
+                            let outcome = append_bounded(
                                 &mut extracted_text,
                                 separator,
                                 &decoded,
                                 self.options.max_extracted_bytes,
                                 &mut truncated,
-                            ) {
+                                self.options.merge_hyphenated,
+                            );
+                            if !outcome.appended {
                                 break;
                             }
-                            emitted_sep = Some(separator);
+                            emitted_sep = Some(outcome.applied_separator);
                         }
 
                         let text_width = {
@@ -1772,17 +1800,24 @@ impl TextExtractor {
                             } else {
                                 Some('\n')
                             };
-                            // Per-page byte budget (issue #382).
-                            if !append_bounded(
+                            // Per-page byte budget (issue #382). Hyphen-wrap
+                            // fusion (issue #486) may replace the requested `\n`
+                            // with no separator; `emitted_sep` reflects what was
+                            // actually applied (see the `Tj` arm for the full
+                            // rationale). `"` (this operator) always requests a
+                            // new line by definition, same as `'` above.
+                            let outcome = append_bounded(
                                 &mut extracted_text,
                                 separator,
                                 &decoded,
                                 self.options.max_extracted_bytes,
                                 &mut truncated,
-                            ) {
+                                self.options.merge_hyphenated,
+                            );
+                            if !outcome.appended {
                                 break;
                             }
-                            emitted_sep = Some(separator);
+                            emitted_sep = Some(outcome.applied_separator);
                         }
 
                         let text_width = {
@@ -1983,13 +2018,21 @@ impl TextExtractor {
                                     // If it would overshoot, drop the fragment and
                                     // stop — a huge override must not escape the
                                     // cap while reporting `truncated = false`.
+                                    // Always `None` separator, never `\n` —
+                                    // hyphen-wrap fusion (issue #486) does not
+                                    // apply here. This site is also only reached
+                                    // under `preserve_layout`/`reorder_columns`
+                                    // (see the gate above), not the flat path.
                                     if !append_bounded(
                                         &mut extracted_text,
                                         None,
                                         &run.text,
                                         self.options.max_extracted_bytes,
                                         &mut truncated,
-                                    ) {
+                                        self.options.merge_hyphenated,
+                                    )
+                                    .appended
+                                    {
                                         break;
                                     }
                                     fragments.push(TextFragment {
@@ -2957,40 +3000,95 @@ fn record_line_group(
     }
 }
 
+/// Outcome of [`append_bounded`]: whether the run was appended, and — when it
+/// was — the separator actually applied. The applied separator can differ
+/// from the one the caller requested when hyphen-wrap fusion (issue #486)
+/// consumes a trailing `-` instead of inserting the requested `\n`; callers
+/// that feed the separator into reading-order line grouping (`record_line_group`)
+/// must use `applied_separator`, not the separator they originally computed,
+/// so a fused run correctly extends its line group instead of opening a new one.
+struct AppendOutcome {
+    appended: bool,
+    applied_separator: Option<char>,
+}
+
 /// Append an optional `separator` plus `decoded` to `acc`, honouring the
-/// per-page byte budget `limit` (issue #382).
+/// per-page byte budget `limit` (issue #382), with optional hyphen-wrap
+/// fusion (issue #486).
 ///
-/// Returns `true` when the run was appended. Returns `false` — appending
-/// nothing and setting `*truncated` — when the combined bytes would exceed
-/// `limit`. The separator is counted against the budget so the invariant
-/// `acc.len() <= limit` holds *exactly*, and because whole runs are the unit of
-/// truncation a multi-byte UTF-8 character is never split (undershoot
-/// semantics). A `None` limit always appends and never truncates, keeping the
-/// no-limit path byte-identical to before. Once `*truncated` is set the helper
-/// is a no-op, so a caller that keeps calling it after the budget is reached
-/// simply accumulates nothing further.
+/// Returns [`AppendOutcome`] with `appended: true` when the run was appended.
+/// Returns `appended: false` — appending nothing and setting `*truncated` —
+/// when the combined bytes would exceed `limit`. The separator is counted
+/// against the budget so the invariant `acc.len() <= limit` holds *exactly*,
+/// and because whole runs are the unit of truncation a multi-byte UTF-8
+/// character is never split (undershoot semantics). A `None` limit always
+/// appends and never truncates, keeping the no-limit path byte-identical to
+/// before. Once `*truncated` is set the helper is a no-op, so a caller that
+/// keeps calling it after the budget is reached simply accumulates nothing
+/// further.
+///
+/// When `merge_hyphenated` is set and the caller requests a `'\n'` separator
+/// (a genuine line wrap) while `acc` already ends with `-`, the hyphen is
+/// producer noise from a hyphenated word/number wrapping across two lines,
+/// not a real word boundary (issue #486: `merge_hyphenated` had no effect on
+/// this flat/default extraction path, unlike `preserve_layout`'s
+/// `reconstruct_text_from_fragments` and `reconstruct_paragraphs`'s
+/// `merge_into_paragraphs`, both of which already apply this same rule). The
+/// trailing hyphen is popped and `decoded` is appended directly with no
+/// separator, fusing the wrapped token into one word instead of splitting it
+/// on a newline — e.g. `"...3016-"` + `"0900"` becomes `"...30160900"`
+/// instead of `"...3016-\n0900"`. `separator` is only ever `'\n'` here when
+/// `acc` is already non-empty (every call site gates on that), so the pop is
+/// always into at least one existing byte.
 fn append_bounded(
     acc: &mut String,
     separator: Option<char>,
     decoded: &str,
     limit: Option<usize>,
     truncated: &mut bool,
-) -> bool {
+    merge_hyphenated: bool,
+) -> AppendOutcome {
     if *truncated {
-        return false;
+        return AppendOutcome {
+            appended: false,
+            applied_separator: None,
+        };
     }
+
+    let hyphen_fusion = merge_hyphenated && separator == Some('\n') && acc.ends_with('-');
+    let separator = if hyphen_fusion { None } else { separator };
+
     if let Some(max) = limit {
+        // Popping the hyphen frees one byte before the new run is added, so
+        // account against the post-pop length — otherwise a run that fits
+        // once the hyphen is dropped could be wrongly rejected as
+        // over-budget by one byte.
+        let base_len = if hyphen_fusion {
+            acc.len() - 1
+        } else {
+            acc.len()
+        };
         let add = separator.map_or(0, char::len_utf8) + decoded.len();
-        if acc.len() + add > max {
+        if base_len + add > max {
             *truncated = true;
-            return false;
+            return AppendOutcome {
+                appended: false,
+                applied_separator: None,
+            };
         }
+    }
+
+    if hyphen_fusion {
+        acc.pop();
     }
     if let Some(sep) = separator {
         acc.push(sep);
     }
     acc.push_str(decoded);
-    true
+    AppendOutcome {
+        appended: true,
+        applied_separator: separator,
+    }
 }
 
 /// Defensive final clamp of a page's text to the byte budget (issue #382).
@@ -3559,8 +3657,21 @@ pub fn sanitize_extracted_text_with_policy(
 
             '\r' => {
                 // CRLF is unambiguously one line ending under every policy.
-                if chars.peek() == Some(&'\n') {
-                    chars.next();
+                // Ignore controls that sanitization would remove between the
+                // pair, otherwise a first pass could create CRLF and a second
+                // pass would change it again (for example `"\r\u{1}\n"`).
+                let removed_controls_before_lf = chars
+                    .clone()
+                    .take_while(|next| {
+                        next.is_ascii_control() && !matches!(next, '\0' | '\t' | '\n' | '\r')
+                    })
+                    .count();
+                let followed_by_lf = chars.clone().nth(removed_controls_before_lf) == Some('\n');
+
+                if followed_by_lf {
+                    for _ in 0..=removed_controls_before_lf {
+                        chars.next();
+                    }
                     result.push('\n');
                     last_was_space = false;
                 } else {
@@ -3573,7 +3684,10 @@ pub fn sanitize_extracted_text_with_policy(
                             }
                         }
                         CarriageReturnHandling::NormalizeLineEnding => {
-                            result.push('\n');
+                            // A standalone CR is valid input and is not
+                            // equivalent to LF. Only the CRLF sequence above
+                            // is normalized as a line ending.
+                            result.push('\r');
                             last_was_space = false;
                         }
                     }
@@ -3771,8 +3885,8 @@ mod tests {
     fn test_append_bounded_no_limit_always_appends() {
         let mut s = String::new();
         let mut trunc = false;
-        assert!(append_bounded(&mut s, None, "hello", None, &mut trunc));
-        assert!(append_bounded(&mut s, Some(' '), "world", None, &mut trunc));
+        assert!(append_bounded(&mut s, None, "hello", None, &mut trunc, true).appended);
+        assert!(append_bounded(&mut s, Some(' '), "world", None, &mut trunc, true).appended);
         assert_eq!(s, "hello world");
         assert!(!trunc, "no limit never truncates");
     }
@@ -3782,19 +3896,13 @@ mod tests {
         // "abcd" (4) is at budget 5; a Some('\n') + "x" would need 2 more → over.
         let mut s = String::from("abcd");
         let mut trunc = false;
-        assert!(!append_bounded(
-            &mut s,
-            Some('\n'),
-            "x",
-            Some(5),
-            &mut trunc
-        ));
+        assert!(!append_bounded(&mut s, Some('\n'), "x", Some(5), &mut trunc, true).appended);
         assert_eq!(s, "abcd", "nothing appended when it would overshoot");
         assert!(trunc, "budget hit sets truncated");
         // Exactly-fits case: "e" alone (1 byte, no separator) reaches 5.
         let mut s2 = String::from("abcd");
         let mut t2 = false;
-        assert!(append_bounded(&mut s2, None, "e", Some(5), &mut t2));
+        assert!(append_bounded(&mut s2, None, "e", Some(5), &mut t2, true).appended);
         assert_eq!(s2, "abcde");
         assert!(!t2);
         assert!(s2.len() <= 5, "invariant: len <= limit exactly");
@@ -3804,7 +3912,7 @@ mod tests {
     fn test_append_bounded_zero_limit_truncates_immediately() {
         let mut s = String::new();
         let mut trunc = false;
-        assert!(!append_bounded(&mut s, None, "a", Some(0), &mut trunc));
+        assert!(!append_bounded(&mut s, None, "a", Some(0), &mut trunc, true).appended);
         assert!(s.is_empty());
         assert!(trunc);
     }
@@ -3813,14 +3921,82 @@ mod tests {
     fn test_append_bounded_is_noop_once_truncated() {
         let mut s = String::from("kept");
         let mut trunc = true; // already truncated
-        assert!(!append_bounded(
-            &mut s,
-            None,
-            "more",
-            Some(1_000),
-            &mut trunc
-        ));
+        assert!(!append_bounded(&mut s, None, "more", Some(1_000), &mut trunc, true).appended);
         assert_eq!(s, "kept", "no further accumulation after truncation");
+    }
+
+    // ── issue #486: flat-path hyphen-wrap fusion ─────────────────────────────
+
+    #[test]
+    fn test_append_bounded_fuses_hyphen_wrap_when_enabled() {
+        // Real-world shape: a hyphen-wrapped phone number split across two
+        // lines, e.g. "...3016-" / "0900" must reconstruct as "...30160900".
+        let mut s = String::from("+55 11 3016-");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "0900", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(
+            outcome.applied_separator, None,
+            "hyphen fusion applies no separator, not the requested '\\n'"
+        );
+        assert_eq!(s, "+55 11 30160900", "hyphen popped, halves fused");
+    }
+
+    #[test]
+    fn test_append_bounded_no_fusion_without_a_trailing_hyphen() {
+        let mut s = String::from("hello world");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "next line", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(
+            outcome.applied_separator,
+            Some('\n'),
+            "no trailing hyphen: requested separator applies unchanged"
+        );
+        assert_eq!(s, "hello world\nnext line");
+    }
+
+    #[test]
+    fn test_append_bounded_does_not_fuse_when_merge_hyphenated_disabled() {
+        let mut s = String::from("rating-");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "aa-exp-sf", None, &mut trunc, false);
+        assert!(outcome.appended);
+        assert_eq!(outcome.applied_separator, Some('\n'));
+        assert_eq!(s, "rating-\naa-exp-sf", "no fusion: split as requested");
+    }
+
+    #[test]
+    fn test_append_bounded_does_not_fuse_a_space_separator() {
+        // Only a requested '\n' is a wrap candidate; a same-line space must
+        // never trigger hyphen fusion even if the accumulator ends in '-'.
+        let mut s = String::from("well-");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some(' '), "known", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(outcome.applied_separator, Some(' '));
+        assert_eq!(s, "well- known");
+    }
+
+    #[test]
+    fn test_append_bounded_hyphen_fusion_respects_budget() {
+        // "rating-" (7 bytes, trailing hyphen) minus the popped hyphen (6)
+        // plus fused "aa-exp" (6 bytes, no separator) = 12.
+        // Budget 12 must fit; budget 11 must not (would need to drop the
+        // hyphen-adjusted run, not silently truncate mid-word).
+        let mut s = String::from("rating-");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "aa-exp", Some(12), &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(s, "ratingaa-exp");
+        assert!(!trunc);
+
+        let mut s2 = String::from("rating-");
+        let mut trunc2 = false;
+        let outcome2 = append_bounded(&mut s2, Some('\n'), "aa-exp", Some(11), &mut trunc2, true);
+        assert!(!outcome2.appended);
+        assert_eq!(s2, "rating-", "nothing appended when over budget");
+        assert!(trunc2);
     }
 
     #[test]
@@ -3890,7 +4066,7 @@ mod tests {
         assert!(options.merge_hyphenated);
         assert_eq!(
             CarriageReturnHandling::default(),
-            CarriageReturnHandling::NormalizeLineEnding
+            CarriageReturnHandling::Remove
         );
     }
 

@@ -17,18 +17,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   annotation's appearance text) happened to sit at a Y-coordinate between the
   two halves of a hyphen-wrapped word elsewhere on the page, the sort spliced
   it in between them, and the hyphen got joined to the wrong fragment —
-  corrupting both the wrapped word and the unrelated text at once. Fixed by
+  corrupting both the wrapped word and the unrelated text at once. This case is
+  mitigated by
   fusing a hyphen-ended fragment with its wrap continuation while fragments
   are still in emission (content-stream) order, before the Y-sort runs, so
   the wrapped token becomes a single atomic fragment nothing can be spliced
-  into afterward.
+  into afterward. Structural region-aware ordering remains follow-up work.
+
+- **`merge_hyphenated` had no effect on the flat (default) extraction path**
+  (#486). It was only wired into `reconstruct_text_from_fragments`
+  (`preserve_layout: true`) and `merge_into_paragraphs`
+  (`reconstruct_paragraphs: true`); every text-showing operator on the flat
+  path (`Tj`, `TJ`, `'`, `"`) independently decided a `'\n'` separator via
+  the shared `append_bounded` helper without ever checking for a trailing
+  hyphen, so a hyphenated word or number wrapping across two lines extracted
+  with a raw newline in place of the hyphen — e.g. a phone number split as
+  `"...3016-"` / `"0900"` came out `"...3016-\n0900"` instead of
+  `"...30160900"`. `append_bounded` now pops the trailing `-` and fuses the
+  next run with no separator when the caller requested `'\n'` and
+  `merge_hyphenated` is enabled (the default); the actual separator applied
+  is threaded back to callers so reading-order line grouping (#448) treats a
+  fused run as a continuation rather than opening a new line.
 
 - **Literal carriage returns in decoded text strings leaked into extracted
   plain text** (#476). `TextExtractor::with_carriage_return_handling` now lets
-  callers remove standalone CR bytes, replace them with a space, or normalize
-  them as line endings without adding a field to the public extraction-options
-  struct. The default normalizes standalone CR and CRLF to one `\n`; CRLF is
-  treated as one line ending under every policy.
+  callers remove standalone CR bytes, replace them with a space, or preserve
+  them while normalizing CRLF without adding a field to the public
+  extraction-options struct. The default removes standalone CR so producer
+  noise does not split words or URLs; CRLF is treated as one line ending under
+  every policy. `NormalizeLineEnding` preserves a standalone CR because it is
+  not equivalent to LF (#481).
 
 ## [4.3.0] - 2026-08-11
 
