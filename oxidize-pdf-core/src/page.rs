@@ -2029,6 +2029,39 @@ impl Page {
         Ok(mcid)
     }
 
+    /// Begins a marked content sequence with an `/ActualText` replacement.
+    ///
+    /// `/ActualText` supplies the logical text used by copy/paste, search,
+    /// accessibility tools, and text extraction while the enclosed drawing
+    /// operators retain their visual representation. The value is serialized
+    /// as UTF-16BE with a byte-order mark so every Unicode scalar is preserved.
+    ///
+    /// The returned MCID can be attached to a structure element in the same way
+    /// as the value returned by [`Page::begin_marked_content`]. This makes the
+    /// method useful both for lightweight semantic spans and for fully tagged
+    /// documents.
+    pub fn begin_marked_content_with_actual_text(
+        &mut self,
+        tag: &str,
+        actual_text: &str,
+    ) -> Result<u32> {
+        let mcid = self.next_mcid;
+        self.next_mcid += 1;
+
+        let utf16be_hex: String = actual_text
+            .encode_utf16()
+            .map(|unit| format!("{unit:04X}"))
+            .collect();
+        let bdc_op = format!(
+            "/{} <</MCID {} /ActualText <FEFF{}>>> BDC\n",
+            tag, mcid, utf16be_hex
+        );
+        self.text_context.append_raw_operation(&bdc_op);
+        self.marked_content_stack.push(tag.to_string());
+
+        Ok(mcid)
+    }
+
     /// Ends the current marked content sequence
     ///
     /// This adds an EMC (End Marked Content) operator to close the most recently
