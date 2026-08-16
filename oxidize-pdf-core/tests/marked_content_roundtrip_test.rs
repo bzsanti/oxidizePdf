@@ -159,3 +159,43 @@ fn writer_actual_text_roundtrips_unicode_and_replaces_visual_glyphs() {
         "visual glyphs must not leak into logical extraction"
     );
 }
+
+#[test]
+fn writer_actual_text_is_emitted_by_flat_extraction() {
+    let mut page = Page::a4();
+    page.begin_marked_content_with_actual_text("Span", "H_{2}O")
+        .expect("begin ActualText span");
+    page.text()
+        .set_font(Font::Helvetica, 9.0)
+        .at(100.0, 705.0)
+        .write("H2O")
+        .expect("write visual glyphs");
+    page.end_marked_content().expect("end ActualText span");
+
+    let mut doc = Document::new();
+    doc.add_page(page);
+    let bytes = doc.to_bytes().expect("serialize PDF");
+    let reader = PdfReader::new(Cursor::new(bytes)).expect("read generated PDF");
+    let document = PdfDocument::new(reader);
+    let mut extractor = TextExtractor::new();
+    let extracted = extractor
+        .extract_from_page(&document, 0)
+        .expect("flat extraction succeeds");
+
+    assert_eq!(extracted.text, "H_{2}O");
+    assert!(!extracted.text.contains("H2O"));
+}
+
+#[test]
+fn writer_rejects_invalid_marked_content_tags_without_consuming_mcid() {
+    let mut page = Page::a4();
+    assert!(page
+        .begin_marked_content_with_actual_text("Span /P", "unsafe")
+        .is_err());
+    assert!(page.begin_marked_content("also invalid").is_err());
+
+    let mcid = page
+        .begin_marked_content_with_actual_text("Span", "safe")
+        .expect("valid tag");
+    assert_eq!(mcid, 0, "invalid tags must not consume an MCID");
+}

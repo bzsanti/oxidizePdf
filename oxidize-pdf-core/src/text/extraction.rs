@@ -1293,7 +1293,8 @@ impl TextExtractor {
                         // `.text` and `.fragments` stay consistent for pages
                         // wrapped in an `/Artifact` marked-content scope —
                         // issue #330.
-                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts)
+                            || state.pending_actualtext.is_some();
 
                         // Add spacing based on position change
                         // Separator of the run that was actually appended, for the
@@ -1378,7 +1379,10 @@ impl TextExtractor {
                             )
                         };
 
-                        if self.options.preserve_layout || self.options.reorder_columns {
+                        if self.options.preserve_layout
+                            || self.options.reorder_columns
+                            || state.pending_actualtext.is_some()
+                        {
                             emit_text_fragment(
                                 &mut fragments,
                                 &decoded,
@@ -1434,7 +1438,8 @@ impl TextExtractor {
                                     // so `.text` and `.fragments` stay consistent
                                     // for Artifact scopes (issue #330).
                                     let skip_text =
-                                        skip_artifact_text(&state, self.options.include_artifacts);
+                                        skip_artifact_text(&state, self.options.include_artifacts)
+                                            || state.pending_actualtext.is_some();
 
                                     // Pen origin in user space = (CTM × text_matrix)(0, 0).
                                     let (x, y) = text_origin(&state);
@@ -1544,7 +1549,9 @@ impl TextExtractor {
                                         )
                                     };
 
-                                    if self.options.preserve_layout || self.options.reorder_columns
+                                    if self.options.preserve_layout
+                                        || self.options.reorder_columns
+                                        || state.pending_actualtext.is_some()
                                     {
                                         emit_text_fragment(
                                             &mut fragments,
@@ -1695,7 +1702,8 @@ impl TextExtractor {
                         let (x, y) = text_origin(&state);
 
                         // Mirror the artifact gate (issue #330).
-                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts)
+                            || state.pending_actualtext.is_some();
                         let mut emitted_sep: Option<Option<char>> = None;
                         if !skip_text {
                             let separator = if extracted_text.is_empty() {
@@ -1740,7 +1748,10 @@ impl TextExtractor {
                             )
                         };
 
-                        if self.options.preserve_layout || self.options.reorder_columns {
+                        if self.options.preserve_layout
+                            || self.options.reorder_columns
+                            || state.pending_actualtext.is_some()
+                        {
                             emit_text_fragment(
                                 &mut fragments,
                                 &decoded,
@@ -1792,7 +1803,8 @@ impl TextExtractor {
                         let (x, y) = text_origin(&state);
 
                         // Mirror the artifact gate (issue #330).
-                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts)
+                            || state.pending_actualtext.is_some();
                         let mut emitted_sep: Option<Option<char>> = None;
                         if !skip_text {
                             let separator = if extracted_text.is_empty() {
@@ -1835,7 +1847,10 @@ impl TextExtractor {
                             )
                         };
 
-                        if self.options.preserve_layout || self.options.reorder_columns {
+                        if self.options.preserve_layout
+                            || self.options.reorder_columns
+                            || state.pending_actualtext.is_some()
+                        {
                             emit_text_fragment(
                                 &mut fragments,
                                 &decoded,
@@ -2003,9 +2018,7 @@ impl TextExtractor {
                         // If we just closed the scope that opened the pending run, flush it.
                         if pending.stack_depth + 1 == popped_depth {
                             let run = state.pending_actualtext.take().unwrap();
-                            if run.populated
-                                && (self.options.preserve_layout || self.options.reorder_columns)
-                            {
+                            if run.populated {
                                 // The ActualText owner has just been popped, so
                                 // retain its structural identity explicitly
                                 // instead of accidentally inheriting the parent.
@@ -2027,9 +2040,7 @@ impl TextExtractor {
                                     // cap while reporting `truncated = false`.
                                     // Always `None` separator, never `\n` —
                                     // hyphen-wrap fusion (issue #486) does not
-                                    // apply here. This site is also only reached
-                                    // under `preserve_layout`/`reorder_columns`
-                                    // (see the gate above), not the flat path.
+                                    // apply here.
                                     if !append_bounded(
                                         &mut extracted_text,
                                         None,
@@ -2042,21 +2053,24 @@ impl TextExtractor {
                                     {
                                         break;
                                     }
-                                    fragments.push(TextFragment {
-                                        text: run.text,
-                                        x: run.first_x,
-                                        y: run.first_y,
-                                        width: run.width,
-                                        height: run.font_size,
-                                        font_size: run.font_size,
-                                        font_name: run.font_name,
-                                        is_bold: run.is_bold,
-                                        is_italic: run.is_italic,
-                                        color: run.color,
-                                        space_decisions: Vec::new(),
-                                        mcid,
-                                        struct_tag,
-                                    });
+                                    if self.options.preserve_layout || self.options.reorder_columns
+                                    {
+                                        fragments.push(TextFragment {
+                                            text: run.text,
+                                            x: run.first_x,
+                                            y: run.first_y,
+                                            width: run.width,
+                                            height: run.font_size,
+                                            font_size: run.font_size,
+                                            font_name: run.font_name,
+                                            is_bold: run.is_bold,
+                                            is_italic: run.is_italic,
+                                            color: run.color,
+                                            space_decisions: Vec::new(),
+                                            mcid,
+                                            struct_tag,
+                                        });
+                                    }
                                 }
                             }
                         }

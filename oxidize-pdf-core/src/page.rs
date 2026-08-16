@@ -2015,7 +2015,13 @@ impl Page {
     /// tree.add_child(doc_idx, para).map_err(|e| oxidize_pdf::PdfError::InvalidOperation(e))?;
     /// # Ok::<(), oxidize_pdf::PdfError>(())
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `tag` is not a valid marked-content tag name.
     pub fn begin_marked_content(&mut self, tag: &str) -> Result<u32> {
+        crate::structure::validate_tag(tag)?;
+
         let mcid = self.next_mcid;
         self.next_mcid += 1;
 
@@ -2040,18 +2046,27 @@ impl Page {
     /// as the value returned by [`Page::begin_marked_content`]. This makes the
     /// method useful both for lightweight semantic spans and for fully tagged
     /// documents.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `tag` is not a valid marked-content tag name.
     pub fn begin_marked_content_with_actual_text(
         &mut self,
         tag: &str,
         actual_text: &str,
     ) -> Result<u32> {
+        crate::structure::validate_tag(tag)?;
+
         let mcid = self.next_mcid;
         self.next_mcid += 1;
 
-        let utf16be_hex: String = actual_text
-            .encode_utf16()
-            .map(|unit| format!("{unit:04X}"))
-            .collect();
+        use std::fmt::Write as _;
+
+        let utf16_units = actual_text.encode_utf16();
+        let mut utf16be_hex = String::with_capacity(utf16_units.size_hint().0 * 4);
+        for unit in utf16_units {
+            write!(&mut utf16be_hex, "{unit:04X}").expect("writing to String cannot fail");
+        }
         let bdc_op = format!(
             "/{} <</MCID {} /ActualText <FEFF{}>>> BDC\n",
             tag, mcid, utf16be_hex

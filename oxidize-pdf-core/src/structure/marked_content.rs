@@ -108,7 +108,7 @@ impl MarkedContentProperty {
 ///
 /// Tags must be valid PDF name objects: alphanumeric, underscore, or hyphen.
 /// Maximum length is 127 characters.
-fn validate_tag(tag: &str) -> Result<()> {
+pub(crate) fn validate_tag(tag: &str) -> Result<()> {
     if tag.is_empty() {
         return Err(PdfError::InvalidOperation(
             "Marked content tag cannot be empty".to_string(),
