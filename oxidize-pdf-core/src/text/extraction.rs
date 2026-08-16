@@ -3455,8 +3455,21 @@ pub fn sanitize_extracted_text_with_policy(
 
             '\r' => {
                 // CRLF is unambiguously one line ending under every policy.
-                if chars.peek() == Some(&'\n') {
-                    chars.next();
+                // Ignore controls that sanitization would remove between the
+                // pair, otherwise a first pass could create CRLF and a second
+                // pass would change it again (for example `"\r\u{1}\n"`).
+                let removed_controls_before_lf = chars
+                    .clone()
+                    .take_while(|next| {
+                        next.is_ascii_control() && !matches!(next, '\0' | '\t' | '\n' | '\r')
+                    })
+                    .count();
+                let followed_by_lf = chars.clone().nth(removed_controls_before_lf) == Some('\n');
+
+                if followed_by_lf {
+                    for _ in 0..=removed_controls_before_lf {
+                        chars.next();
+                    }
                     result.push('\n');
                     last_was_space = false;
                 } else {

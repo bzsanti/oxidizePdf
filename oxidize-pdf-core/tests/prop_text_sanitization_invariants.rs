@@ -16,8 +16,10 @@ const POLICIES: [CarriageReturnHandling; 3] = [
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(300))]
 
-    /// Every policy must reach a fixed point. Policies that rewrite standalone
-    /// CR must also remove that representation completely.
+    /// Policies that rewrite standalone CR must remove that representation
+    /// completely and reach a fixed point. `NormalizeLineEnding` deliberately
+    /// preserves standalone CR, so overlapping input such as CR+CRLF cannot be
+    /// globally idempotent: the first pass correctly yields CRLF.
     #[test]
     fn sanitized_text_contains_no_cr_and_is_idempotent(
         input in proptest::collection::vec(any::<char>(), 0..256)
@@ -30,7 +32,9 @@ proptest! {
         if policy != CarriageReturnHandling::NormalizeLineEnding {
             prop_assert!(!once.contains('\r'), "CR leaked for {policy:?}: {once:?}");
         }
-        prop_assert_eq!(once, twice, "sanitization is not idempotent for {:?}", policy);
+        if policy != CarriageReturnHandling::NormalizeLineEnding {
+            prop_assert_eq!(once, twice, "sanitization is not idempotent for {:?}", policy);
+        }
     }
 
     /// A standalone CR between printable, non-whitespace fragments is the only
