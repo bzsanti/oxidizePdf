@@ -34,6 +34,18 @@ fn extract_text(content: &[u8], handling: CarriageReturnHandling) -> String {
         .text
 }
 
+/// Extract page 0's plain text using the default carriage-return policy.
+fn extract_text_with_default(content: &[u8]) -> String {
+    let pdf = build_pdf_with_content_stream(content);
+    let reader = PdfReader::new(Cursor::new(pdf)).expect("synthetic PDF must parse");
+    let document = PdfDocument::new(reader);
+    let mut extractor = TextExtractor::with_options(ExtractionOptions::default());
+    extractor
+        .extract_from_page(&document, 0)
+        .expect("extract page 0")
+        .text
+}
+
 #[test]
 fn a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word() {
     // Content stream containing a literal 0x0D byte inside the `Tj` string,
@@ -41,15 +53,15 @@ fn a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word() {
     // mirrors the real-world pattern found in production documents where
     // "rating-aaa-exp-sf" was extracted as "rating-aa\ra-exp-sf".
     let content = b"BT\n/F1 12 Tf\n100 700 Td\n(rating-aa\ra-exp-sf)Tj\nET\n";
-    let text = extract_text(content, CarriageReturnHandling::ReplaceWithSpace);
+    let text = extract_text_with_default(content);
 
     assert!(
         !text.contains('\r'),
         "a stray CR must not survive into extracted text, got: {text:?}"
     );
     assert!(
-        text.contains("rating-aa a-exp-sf"),
-        "the CR must become a space rather than silently splitting the word, got: {text:?}"
+        text.contains("rating-aaa-exp-sf"),
+        "the default policy must remove the stray CR without splitting the word, got: {text:?}"
     );
 }
 

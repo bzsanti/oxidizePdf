@@ -39,8 +39,8 @@ fn extract(policy: CarriageReturnHandling) -> String {
 }
 
 #[test]
-fn extraction_normalizes_cr_and_crlf_by_default() {
-    assert_eq!(extract_with(TextExtractor::new()), "rating-aa\na-exp\nnext");
+fn extraction_removes_standalone_cr_and_normalizes_crlf_by_default() {
+    assert_eq!(extract_with(TextExtractor::new()), "rating-aaa-exp\nnext");
 }
 
 fn build_cmap_pdf() -> Vec<u8> {
@@ -74,7 +74,7 @@ fn cmap_decoding_applies_the_selected_carriage_return_policy() {
     let document = PdfDocument::new(reader);
 
     for (policy, expected) in [
-        (CarriageReturnHandling::NormalizeLineEnding, "\nA"),
+        (CarriageReturnHandling::NormalizeLineEnding, "\rA"),
         (CarriageReturnHandling::Remove, "A"),
         (CarriageReturnHandling::ReplaceWithSpace, " A"),
     ] {

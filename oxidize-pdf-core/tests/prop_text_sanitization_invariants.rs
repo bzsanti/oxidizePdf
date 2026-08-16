@@ -16,8 +16,8 @@ const POLICIES: [CarriageReturnHandling; 3] = [
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(300))]
 
-    /// Sanitization must remove the ambiguous representation completely and
-    /// reaching the fixed point a second time must not change the output.
+    /// Every policy must reach a fixed point. Policies that rewrite standalone
+    /// CR must also remove that representation completely.
     #[test]
     fn sanitized_text_contains_no_cr_and_is_idempotent(
         input in proptest::collection::vec(any::<char>(), 0..256)
@@ -27,7 +27,9 @@ proptest! {
         let once = sanitize_extracted_text_with_policy(&input, policy);
         let twice = sanitize_extracted_text_with_policy(&once, policy);
 
-        prop_assert!(!once.contains('\r'), "CR leaked for {policy:?}: {once:?}");
+        if policy != CarriageReturnHandling::NormalizeLineEnding {
+            prop_assert!(!once.contains('\r'), "CR leaked for {policy:?}: {once:?}");
+        }
         prop_assert_eq!(once, twice, "sanitization is not idempotent for {:?}", policy);
     }
 
@@ -50,7 +52,7 @@ proptest! {
         );
         prop_assert_eq!(
             sanitize_extracted_text_with_policy(&input, CarriageReturnHandling::NormalizeLineEnding),
-            format!("{left}\n{right}")
+            input
         );
     }
 
@@ -93,7 +95,7 @@ proptest! {
         );
         prop_assert_eq!(
             sanitize_extracted_text_with_policy(&input, CarriageReturnHandling::NormalizeLineEnding),
-            format!("{left}{}{right}", "\n".repeat(count))
+            input
         );
     }
 }

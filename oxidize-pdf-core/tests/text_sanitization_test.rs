@@ -50,10 +50,20 @@ fn test_collapse_multiple_spaces() {
 }
 
 #[test]
-fn test_default_normalizes_carriage_returns() {
+fn test_default_removes_standalone_carriage_returns() {
     let input = "unix\nwindows\r\nclassic-mac\rend";
-    let expected = "unix\nwindows\nclassic-mac\nend";
+    let expected = "unix\nwindows\nclassic-macend";
     assert_eq!(sanitize_extracted_text(input), expected);
+}
+
+#[test]
+fn test_normalize_line_ending_preserves_standalone_carriage_returns() {
+    let input = "unix\nwindows\r\nclassic-mac\rend";
+    let expected = "unix\nwindows\nclassic-mac\rend";
+    assert_eq!(
+        sanitize_extracted_text_with_policy(input, CarriageReturnHandling::NormalizeLineEnding),
+        expected
+    );
 }
 
 #[test]

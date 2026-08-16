@@ -23,13 +23,13 @@ pub enum CarriageReturnHandling {
     Remove,
     /// Replace each standalone carriage return with a collapsible `U+0020` space.
     ReplaceWithSpace,
-    /// Normalize both standalone CR and CRLF sequences to one line feed.
+    /// Preserve standalone carriage returns and normalize CRLF to one line feed.
     NormalizeLineEnding,
 }
 
 impl Default for CarriageReturnHandling {
     fn default() -> Self {
-        Self::NormalizeLineEnding
+        Self::Remove
     }
 }
 
@@ -636,7 +636,7 @@ impl TextExtractor {
     /// Select how standalone carriage returns decoded from PDF text strings
     /// are represented. CRLF is always normalized to one line feed.
     ///
-    /// The default is [`CarriageReturnHandling::NormalizeLineEnding`].
+    /// The default is [`CarriageReturnHandling::Remove`].
     pub fn with_carriage_return_handling(mut self, handling: CarriageReturnHandling) -> Self {
         self.carriage_return_handling = handling;
         self
@@ -3469,7 +3469,10 @@ pub fn sanitize_extracted_text_with_policy(
                             }
                         }
                         CarriageReturnHandling::NormalizeLineEnding => {
-                            result.push('\n');
+                            // A standalone CR is valid input and is not
+                            // equivalent to LF. Only the CRLF sequence above
+                            // is normalized as a line ending.
+                            result.push('\r');
                             last_was_space = false;
                         }
                     }
@@ -3786,7 +3789,7 @@ mod tests {
         assert!(options.merge_hyphenated);
         assert_eq!(
             CarriageReturnHandling::default(),
-            CarriageReturnHandling::NormalizeLineEnding
+            CarriageReturnHandling::Remove
         );
     }
 
