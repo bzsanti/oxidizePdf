@@ -15,6 +15,24 @@ use crate::text::graphics_state_stack::GraphicsStateStack;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
+/// Controls how carriage returns decoded from PDF text-showing strings are
+/// represented in extracted plain text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CarriageReturnHandling {
+    /// Remove each standalone carriage return.
+    Remove,
+    /// Replace each standalone carriage return with a collapsible `U+0020` space.
+    ReplaceWithSpace,
+    /// Preserve standalone carriage returns and normalize CRLF to one line feed.
+    NormalizeLineEnding,
+}
+
+impl Default for CarriageReturnHandling {
+    fn default() -> Self {
+        Self::Remove
+    }
+}
+
 /// Text extraction options
 #[derive(Debug, Clone)]
 pub struct ExtractionOptions {
@@ -553,6 +571,19 @@ fn same_paragraph_style(a: &TextFragment, b: &TextFragment) -> bool {
     (a.font_size - b.font_size).abs() / scale <= PARAGRAPH_STYLE_SIZE_TOLERANCE
 }
 
+/// Whether `next` is plausibly the wrapped continuation of `prev` on a new
+/// line, using the exact same Y-gap test `reconstruct_text_from_fragments`
+/// already uses to decide "new line vs. same line" (`|Δy| > newline_threshold`).
+///
+/// Deliberately mirrors that threshold rather than inventing a stricter one:
+/// this function's only job is to protect an already-correct merge decision
+/// from being corrupted by an unrelated fragment sorting in between the two
+/// halves (issue #482) — not to second-guess which pairs `merge_hyphenated`
+/// would otherwise join. Used by `merge_hyphenated_line_wraps_in_emission_order`.
+fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_threshold: f64) -> bool {
+    (prev.y - next.y).abs() > newline_threshold
+}
+
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
@@ -561,6 +592,10 @@ pub struct TextExtractor {
     /// not on the public [`ExtractionOptions`], so enabling it is a
     /// non-breaking method addition rather than a breaking struct-field addition.
     reading_order: bool,
+    /// Policy for CR bytes decoded from text-showing strings. Held outside the
+    /// public `ExtractionOptions` so adding it does not break exhaustive struct
+    /// literals in downstream crates.
+    carriage_return_handling: CarriageReturnHandling,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
     /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
@@ -574,6 +609,7 @@ impl TextExtractor {
         Self {
             options: ExtractionOptions::default(),
             reading_order: false,
+            carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
@@ -584,6 +620,7 @@ impl TextExtractor {
         Self {
             options,
             reading_order: false,
+            carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
@@ -606,6 +643,15 @@ impl TextExtractor {
     /// one group. `/Rotate ≠ 0` pages are ordered in unrotated page space.
     pub fn with_reading_order(mut self, enable: bool) -> Self {
         self.reading_order = enable;
+        self
+    }
+
+    /// Select how standalone carriage returns decoded from PDF text strings
+    /// are represented. CRLF is always normalized to one line feed.
+    ///
+    /// The default is [`CarriageReturnHandling::Remove`].
+    pub fn with_carriage_return_handling(mut self, handling: CarriageReturnHandling) -> Self {
+        self.carriage_return_handling = handling;
         self
     }
 
@@ -1019,6 +1065,30 @@ impl TextExtractor {
         {
             let _span = tracing::info_span!("layout_finalize").entered();
 
+            // Fuse hyphen-wrapped tokens while fragments are still in emission
+            // order (issue #482), *before* any Y-sort below can interleave an
+            // unrelated fragment between a wrapped line's two halves. Fragments
+            // only exist here for the `preserve_layout`/`reorder_columns` paths
+            // (see the `emit_text_fragment` call sites), both of which feed
+            // `reconstruct_text_from_fragments` further down, so this always
+            // runs ahead of the merge it's protecting.
+            //
+            // `merge_close_fragments` must run first: a word's trailing hyphen
+            // is frequently its own separate glyph-run fragment (e.g. a style
+            // or kerning boundary right at "3016" | "-"), so the hyphen check
+            // below would otherwise fire against that lone "-" fragment (whose
+            // own predecessor is the stranded "6") instead of against the real
+            // "...3016-" line. Coalescing same-line adjacent runs first makes
+            // the trailing-hyphen text end up on one fragment, as the check
+            // assumes. `merge_close_fragments` is a local, order-preserving
+            // pass over adjacent pairs (see its own doc comment on being used
+            // this way for `reconstruct_paragraphs`), so it is safe to run here
+            // on unsorted emission order.
+            if !fragments.is_empty() {
+                fragments = self.merge_close_fragments_in_layout_regions(&fragments);
+                fragments = self.merge_hyphenated_line_wraps_in_emission_order(fragments);
+            }
+
             // Sort and process fragments if requested — but ONLY when we're not
             // going to run merge_into_lines later. merge_into_lines does its
             // own (row_id, y, x) sort that needs pre-sort emission order to
@@ -1269,17 +1339,24 @@ impl TextExtractor {
 
                             // Per-page byte budget (issue #382): stop before the
                             // run that would overshoot; the outer loop guard ends
-                            // extraction on the next iteration.
-                            if !append_bounded(
+                            // extraction on the next iteration. Hyphen-wrap fusion
+                            // (issue #486) may replace the requested `\n` with no
+                            // separator at all — `emitted_sep` must reflect what
+                            // was actually applied, not what was requested, so
+                            // reading-order line grouping below sees the run as a
+                            // continuation rather than a new line.
+                            let outcome = append_bounded(
                                 &mut extracted_text,
                                 separator,
                                 &decoded,
                                 self.options.max_extracted_bytes,
                                 &mut truncated,
-                            ) {
+                                self.options.merge_hyphenated,
+                            );
+                            if !outcome.appended {
                                 break;
                             }
-                            emitted_sep = Some(separator);
+                            emitted_sep = Some(outcome.applied_separator);
                         }
 
                         // Get font info for accurate width calculation.
@@ -1433,16 +1510,23 @@ impl TextExtractor {
                                         };
 
                                         // Per-page byte budget (issue #382).
-                                        if !append_bounded(
+                                        // Hyphen-wrap fusion (issue #486) may
+                                        // replace the requested `\n` with no
+                                        // separator; `emitted_sep` reflects what
+                                        // was actually applied (see the `Tj` arm
+                                        // above for the full rationale).
+                                        let outcome = append_bounded(
                                             &mut extracted_text,
                                             separator,
                                             &decoded,
                                             self.options.max_extracted_bytes,
                                             &mut truncated,
-                                        ) {
+                                            self.options.merge_hyphenated,
+                                        );
+                                        if !outcome.appended {
                                             break;
                                         }
-                                        emitted_sep = Some(separator);
+                                        emitted_sep = Some(outcome.applied_separator);
                                     }
 
                                     let text_width = {
@@ -1532,13 +1616,18 @@ impl TextExtractor {
                                         // Per-page byte budget (issue #382): even
                                         // the synthesised space counts, so the
                                         // `text.len() <= limit` invariant holds.
+                                        // Always a space, never `\n` — hyphen-wrap
+                                        // fusion (issue #486) does not apply here.
                                         if !append_bounded(
                                             &mut extracted_text,
                                             Some(' '),
                                             "",
                                             self.options.max_extracted_bytes,
                                             &mut truncated,
-                                        ) {
+                                            self.options.merge_hyphenated,
+                                        )
+                                        .appended
+                                        {
                                             break;
                                         }
                                         // The synthesised space is intra-group
@@ -1614,17 +1703,26 @@ impl TextExtractor {
                             } else {
                                 Some('\n')
                             };
-                            // Per-page byte budget (issue #382).
-                            if !append_bounded(
+                            // Per-page byte budget (issue #382). Hyphen-wrap
+                            // fusion (issue #486) may replace the requested `\n`
+                            // with no separator; `emitted_sep` reflects what was
+                            // actually applied (see the `Tj` arm for the full
+                            // rationale). `'` (this operator) always requests a
+                            // new line by definition (ISO 32000-1 §9.4.3's
+                            // `T* Tj`), so this is where a hyphen at the end of
+                            // one `'`-delimited line meets the start of the next.
+                            let outcome = append_bounded(
                                 &mut extracted_text,
                                 separator,
                                 &decoded,
                                 self.options.max_extracted_bytes,
                                 &mut truncated,
-                            ) {
+                                self.options.merge_hyphenated,
+                            );
+                            if !outcome.appended {
                                 break;
                             }
-                            emitted_sep = Some(separator);
+                            emitted_sep = Some(outcome.applied_separator);
                         }
 
                         let text_width = {
@@ -1702,17 +1800,24 @@ impl TextExtractor {
                             } else {
                                 Some('\n')
                             };
-                            // Per-page byte budget (issue #382).
-                            if !append_bounded(
+                            // Per-page byte budget (issue #382). Hyphen-wrap
+                            // fusion (issue #486) may replace the requested `\n`
+                            // with no separator; `emitted_sep` reflects what was
+                            // actually applied (see the `Tj` arm for the full
+                            // rationale). `"` (this operator) always requests a
+                            // new line by definition, same as `'` above.
+                            let outcome = append_bounded(
                                 &mut extracted_text,
                                 separator,
                                 &decoded,
                                 self.options.max_extracted_bytes,
                                 &mut truncated,
-                            ) {
+                                self.options.merge_hyphenated,
+                            );
+                            if !outcome.appended {
                                 break;
                             }
-                            emitted_sep = Some(separator);
+                            emitted_sep = Some(outcome.applied_separator);
                         }
 
                         let text_width = {
@@ -1886,7 +1991,8 @@ impl TextExtractor {
 
                 ContentOperation::EndMarkedContent => {
                     let popped_depth = state.mc_stack.len();
-                    if state.mc_stack.pop().is_none() {
+                    let closed_entry = state.mc_stack.pop();
+                    if closed_entry.is_none() {
                         // Unbalanced EMC — log and ignore. Real PDFs occasionally emit
                         // dangling EMC (e.g. from incremental updates). We must not panic.
                         tracing::debug!(
@@ -1900,8 +2006,14 @@ impl TextExtractor {
                             if run.populated
                                 && (self.options.preserve_layout || self.options.reorder_columns)
                             {
-                                let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
-                                let in_artifact = state.mc_stack.iter().any(|e| e.is_artifact);
+                                // The ActualText owner has just been popped, so
+                                // retain its structural identity explicitly
+                                // instead of accidentally inheriting the parent.
+                                let closed_entry = closed_entry.as_ref().unwrap();
+                                let mcid = closed_entry.mcid;
+                                let struct_tag = Some(closed_entry.tag.clone());
+                                let in_artifact = closed_entry.is_artifact
+                                    || state.mc_stack.iter().any(|e| e.is_artifact);
                                 if !in_artifact || self.options.include_artifacts {
                                     // Per-page byte budget (issue #382): the
                                     // `/ActualText` override is this scope's
@@ -1913,13 +2025,21 @@ impl TextExtractor {
                                     // If it would overshoot, drop the fragment and
                                     // stop — a huge override must not escape the
                                     // cap while reporting `truncated = false`.
+                                    // Always `None` separator, never `\n` —
+                                    // hyphen-wrap fusion (issue #486) does not
+                                    // apply here. This site is also only reached
+                                    // under `preserve_layout`/`reorder_columns`
+                                    // (see the gate above), not the flat path.
                                     if !append_bounded(
                                         &mut extracted_text,
                                         None,
                                         &run.text,
                                         self.options.max_extracted_bytes,
                                         &mut truncated,
-                                    ) {
+                                        self.options.merge_hyphenated,
+                                    )
+                                    .appended
+                                    {
                                         break;
                                     }
                                     fragments.push(TextFragment {
@@ -2110,6 +2230,98 @@ impl TextExtractor {
         Some((ops, xobj_res, matrix))
     }
 
+    /// Fuse a hyphen-ended fragment with its line-wrap continuation while
+    /// fragments are still in emission (content-stream) order, before any
+    /// Y-coordinate sort runs.
+    ///
+    /// `sort_and_merge_fragments`'s global Y-sort has no concept of separate
+    /// content regions (issue #482): an unrelated fragment (an annotation's
+    /// appearance stream, a watermark, …) whose Y-coordinate happens to fall
+    /// between two wrapped lines of unrelated body text gets sorted in
+    /// between them, and the hyphen-merge check in `reconstruct_text_from_fragments`
+    /// — which only ever looks at the *immediately preceding* fragment in
+    /// the already-sorted list — then joins the hyphen to the wrong
+    /// fragment, corrupting both regions at once.
+    ///
+    /// Emission order does not have this problem: two fragments that are
+    /// genuinely adjacent lines of the same wrapped text are (barring a
+    /// pathological content stream) emitted consecutively, regardless of
+    /// where an unrelated annotation's text happens to sit on the Y axis.
+    /// Fusing the pair here, before the sort, makes the wrapped token a
+    /// single atomic fragment that nothing can be spliced into afterward.
+    ///
+    /// Uses `is_line_wrap_geometry` (the same Y-gap test
+    /// `reconstruct_text_from_fragments` already applies) to confirm the
+    /// pair actually looks like consecutive lines before merging, so an
+    /// unrelated same-line hyphen (e.g. "well-known" on one line) is not
+    /// fused with whatever fragment happens to follow it in emission order.
+    fn merge_hyphenated_line_wraps_in_emission_order(
+        &self,
+        fragments: Vec<TextFragment>,
+    ) -> Vec<TextFragment> {
+        if !self.options.merge_hyphenated || fragments.len() < 2 {
+            return fragments;
+        }
+
+        let region_ids = assign_layout_region_ids(&fragments);
+        let mut result: Vec<(u32, TextFragment)> = Vec::with_capacity(fragments.len());
+        for (region_id, fragment) in region_ids.into_iter().zip(fragments) {
+            let should_merge = result
+                .last()
+                .map(|(prev_region, prev)| {
+                    *prev_region == region_id
+                        && prev.text.ends_with('-')
+                        && is_line_wrap_geometry(prev, &fragment, self.options.newline_threshold)
+                })
+                .unwrap_or(false);
+
+            if should_merge {
+                // Safe: just checked `result.last()` is `Some` above.
+                let (_, prev) = result.last_mut().expect("checked non-empty above");
+                prev.text.pop(); // drop the trailing hyphen
+                prev.text.push_str(&fragment.text);
+                // Extend the fused fragment's box to cover both lines so
+                // downstream geometry (space/newline decisions keyed on
+                // `x + width`, `y`) still reasons about real coverage
+                // rather than only the first line's box.
+                let x_min = prev.x.min(fragment.x);
+                let x_max = (prev.x + prev.width).max(fragment.x + fragment.width);
+                let y_min = prev.y.min(fragment.y);
+                let y_max = (prev.y + prev.height).max(fragment.y + fragment.height);
+                prev.x = x_min;
+                prev.width = x_max - x_min;
+                prev.y = y_min;
+                prev.height = y_max - y_min;
+            } else {
+                result.push((region_id, fragment));
+            }
+        }
+        result.into_iter().map(|(_, fragment)| fragment).collect()
+    }
+
+    /// Apply the kerning merge independently inside each layout region.
+    /// Keeping this pre-sort pass region-scoped prevents two adjacent emission
+    /// runs from different marked-content/overlay flows being fused before the
+    /// ordering stage gets a chance to preserve their boundary (#482).
+    fn merge_close_fragments_in_layout_regions(
+        &self,
+        fragments: &[TextFragment],
+    ) -> Vec<TextFragment> {
+        let region_ids = assign_layout_region_ids(fragments);
+        let mut merged = Vec::with_capacity(fragments.len());
+        let mut start = 0usize;
+        while start < fragments.len() {
+            let region = region_ids[start];
+            let mut end = start + 1;
+            while end < fragments.len() && region_ids[end] == region {
+                end += 1;
+            }
+            merged.extend(self.merge_close_fragments(&fragments[start..end]));
+            start = end;
+        }
+        merged
+    }
+
     /// Sort text fragments by position and merge them appropriately
     fn sort_and_merge_fragments(&self, fragments: &mut [TextFragment]) {
         // Establish reading order (top-to-bottom, left-to-right) without ever
@@ -2132,11 +2344,26 @@ impl TextExtractor {
         // font size, not the paragraph-break `newline_threshold`), and order each
         // line left-to-right by X. Ties broken by original index keep it stable.
         let n = fragments.len();
+        // Preserve independent emission regions before applying positional
+        // ordering. A Y-up-jump means the producer finished one top-to-bottom
+        // flow and started another (a new column, overlay, annotation
+        // appearance, etc.). Sorting the whole page by Y discarded that
+        // boundary and could splice the second flow into the first (#482).
+        // `assign_row_ids` already provides this segmentation for paragraph
+        // reconstruction; use the same source-order signal here so every
+        // fragment reconstruction path agrees on region boundaries.
+        let region_ids = assign_layout_region_ids(fragments);
         let mut order: Vec<usize> = (0..n).collect();
-        order.sort_by(|&i, &j| fragments[j].y.total_cmp(&fragments[i].y).then(i.cmp(&j)));
+        order.sort_by(|&i, &j| {
+            region_ids[i]
+                .cmp(&region_ids[j])
+                .then(fragments[j].y.total_cmp(&fragments[i].y))
+                .then(i.cmp(&j))
+        });
 
         let mut line_start = 0usize;
         while line_start < n {
+            let head_region = region_ids[order[line_start]];
             let head_y = fragments[order[line_start]].y;
             let head_h = fragments[order[line_start]].height;
             let mut line_end = line_start + 1;
@@ -2146,7 +2373,7 @@ impl TextExtractor {
                 // Negated `< tol` (not `>= tol`) so a non-finite Y from a
                 // degenerate text matrix forces a line break instead of a
                 // NaN comparison silently swallowing every remaining fragment.
-                if !((head_y - frag.y).abs() < tol) {
+                if region_ids[order[line_end]] != head_region || !((head_y - frag.y).abs() < tol) {
                     break;
                 }
                 line_end += 1;
@@ -2168,12 +2395,13 @@ impl TextExtractor {
         if self.options.detect_columns
             || (self.options.reorder_columns && !self.options.preserve_layout)
         {
-            self.detect_and_sort_columns(fragments);
+            let sorted_region_ids: Vec<u32> = order.iter().map(|&i| region_ids[i]).collect();
+            self.detect_and_sort_columns(fragments, &sorted_region_ids);
         }
     }
 
     /// Detect columns and re-sort fragments accordingly
-    fn detect_and_sort_columns(&self, fragments: &mut [TextFragment]) {
+    fn detect_and_sort_columns(&self, fragments: &mut [TextFragment], region_ids: &[u32]) {
         // `fragments` arrives pre-sorted by `sort_and_merge_fragments` in reading
         // order: top-to-bottom by Y band, left-to-right by X within a band.
         //
@@ -2206,7 +2434,9 @@ impl TextExtractor {
                 // Negated `< tol` (not `>= tol`) so a non-finite Y from a
                 // degenerate text matrix forces a line break rather than swallowing
                 // the whole page into one line.
-                if !((head_y - fragment.y).abs() < tol) {
+                if region_ids[i] != region_ids[current_line[0]]
+                    || !((head_y - fragment.y).abs() < tol)
+                {
                     lines.push(std::mem::take(&mut current_line));
                 }
             }
@@ -2295,7 +2525,8 @@ impl TextExtractor {
                 .copied()
                 .filter(|&p| boundaries.iter().any(|&c| (p - c).abs() < COLUMN_ALIGN_TOL))
                 .collect();
-            if li > 0 && columnar && prev_columnar && row_spaced && !shared.is_empty() {
+            let same_region = li > 0 && region_ids[line[0]] == region_ids[lines[li - 1][0]];
+            if same_region && columnar && prev_columnar && row_spaced && !shared.is_empty() {
                 // Line joins the current block; tighten the anchor to the
                 // corridors that persist, so a boundary must recur consistently
                 // across the whole block to survive.
@@ -2656,9 +2887,11 @@ impl TextExtractor {
                     // or garbage). Whitespace counts as meaningful: a decode
                     // that is exactly a space is a space, not a failed decode
                     // (#438). See `decode_is_usable`.
-                    if crate::text::extraction_cmap::decode_is_usable(&decoded) {
-                        // Apply sanitization to remove control characters (Issue #116)
-                        let sanitized = sanitize_extracted_text(&decoded);
+                    let sanitized = sanitize_extracted_text_with_policy(
+                        &decoded,
+                        self.carriage_return_handling,
+                    );
+                    if crate::text::extraction_cmap::decode_is_usable(&sanitized) {
                         tracing::debug!(
                             "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
                             font_name,
@@ -2701,7 +2934,8 @@ impl TextExtractor {
 
         let fallback_result = encoding.decode(text);
         // Apply sanitization to remove control characters (Issue #116)
-        let sanitized = sanitize_extracted_text(&fallback_result);
+        let sanitized =
+            sanitize_extracted_text_with_policy(&fallback_result, self.carriage_return_handling);
         tracing::debug!(
             "Fallback encoding decoding: {:?} -> \"{}\"",
             text,
@@ -2817,40 +3051,95 @@ fn record_line_group(
     }
 }
 
+/// Outcome of [`append_bounded`]: whether the run was appended, and — when it
+/// was — the separator actually applied. The applied separator can differ
+/// from the one the caller requested when hyphen-wrap fusion (issue #486)
+/// consumes a trailing `-` instead of inserting the requested `\n`; callers
+/// that feed the separator into reading-order line grouping (`record_line_group`)
+/// must use `applied_separator`, not the separator they originally computed,
+/// so a fused run correctly extends its line group instead of opening a new one.
+struct AppendOutcome {
+    appended: bool,
+    applied_separator: Option<char>,
+}
+
 /// Append an optional `separator` plus `decoded` to `acc`, honouring the
-/// per-page byte budget `limit` (issue #382).
+/// per-page byte budget `limit` (issue #382), with optional hyphen-wrap
+/// fusion (issue #486).
 ///
-/// Returns `true` when the run was appended. Returns `false` — appending
-/// nothing and setting `*truncated` — when the combined bytes would exceed
-/// `limit`. The separator is counted against the budget so the invariant
-/// `acc.len() <= limit` holds *exactly*, and because whole runs are the unit of
-/// truncation a multi-byte UTF-8 character is never split (undershoot
-/// semantics). A `None` limit always appends and never truncates, keeping the
-/// no-limit path byte-identical to before. Once `*truncated` is set the helper
-/// is a no-op, so a caller that keeps calling it after the budget is reached
-/// simply accumulates nothing further.
+/// Returns [`AppendOutcome`] with `appended: true` when the run was appended.
+/// Returns `appended: false` — appending nothing and setting `*truncated` —
+/// when the combined bytes would exceed `limit`. The separator is counted
+/// against the budget so the invariant `acc.len() <= limit` holds *exactly*,
+/// and because whole runs are the unit of truncation a multi-byte UTF-8
+/// character is never split (undershoot semantics). A `None` limit always
+/// appends and never truncates, keeping the no-limit path byte-identical to
+/// before. Once `*truncated` is set the helper is a no-op, so a caller that
+/// keeps calling it after the budget is reached simply accumulates nothing
+/// further.
+///
+/// When `merge_hyphenated` is set and the caller requests a `'\n'` separator
+/// (a genuine line wrap) while `acc` already ends with `-`, the hyphen is
+/// producer noise from a hyphenated word/number wrapping across two lines,
+/// not a real word boundary (issue #486: `merge_hyphenated` had no effect on
+/// this flat/default extraction path, unlike `preserve_layout`'s
+/// `reconstruct_text_from_fragments` and `reconstruct_paragraphs`'s
+/// `merge_into_paragraphs`, both of which already apply this same rule). The
+/// trailing hyphen is popped and `decoded` is appended directly with no
+/// separator, fusing the wrapped token into one word instead of splitting it
+/// on a newline — e.g. `"...3016-"` + `"0900"` becomes `"...30160900"`
+/// instead of `"...3016-\n0900"`. `separator` is only ever `'\n'` here when
+/// `acc` is already non-empty (every call site gates on that), so the pop is
+/// always into at least one existing byte.
 fn append_bounded(
     acc: &mut String,
     separator: Option<char>,
     decoded: &str,
     limit: Option<usize>,
     truncated: &mut bool,
-) -> bool {
+    merge_hyphenated: bool,
+) -> AppendOutcome {
     if *truncated {
-        return false;
+        return AppendOutcome {
+            appended: false,
+            applied_separator: None,
+        };
     }
+
+    let hyphen_fusion = merge_hyphenated && separator == Some('\n') && acc.ends_with('-');
+    let separator = if hyphen_fusion { None } else { separator };
+
     if let Some(max) = limit {
+        // Popping the hyphen frees one byte before the new run is added, so
+        // account against the post-pop length — otherwise a run that fits
+        // once the hyphen is dropped could be wrongly rejected as
+        // over-budget by one byte.
+        let base_len = if hyphen_fusion {
+            acc.len() - 1
+        } else {
+            acc.len()
+        };
         let add = separator.map_or(0, char::len_utf8) + decoded.len();
-        if acc.len() + add > max {
+        if base_len + add > max {
             *truncated = true;
-            return false;
+            return AppendOutcome {
+                appended: false,
+                applied_separator: None,
+            };
         }
+    }
+
+    if hyphen_fusion {
+        acc.pop();
     }
     if let Some(sep) = separator {
         acc.push(sep);
     }
     acc.push_str(decoded);
-    true
+    AppendOutcome {
+        appended: true,
+        applied_separator: separator,
+    }
 }
 
 /// Defensive final clamp of a page's text to the byte budget (issue #382).
@@ -3359,7 +3648,7 @@ fn calculate_text_width_from_codes(
 /// - Removes other ASCII control characters (0x01-0x1F) except:
 ///   - `\t` (0x09) - Tab
 ///   - `\n` (0x0A) - Line feed
-///   - `\r` (0x0D) - Carriage return
+/// - Normalizes `\r` and `\r\n` to `\n`
 /// - Collapses multiple consecutive spaces into a single space
 ///
 /// # Examples
@@ -3380,6 +3669,14 @@ fn calculate_text_width_from_codes(
 /// assert_eq!(sanitize_extracted_text(clean), "Normal text");
 /// ```
 pub fn sanitize_extracted_text(text: &str) -> String {
+    sanitize_extracted_text_with_policy(text, CarriageReturnHandling::default())
+}
+
+/// Sanitize extracted text using an explicit carriage-return policy.
+pub fn sanitize_extracted_text_with_policy(
+    text: &str,
+    carriage_return_handling: CarriageReturnHandling,
+) -> String {
     if text.is_empty() {
         return String::new();
     }
@@ -3409,10 +3706,49 @@ pub fn sanitize_extracted_text(text: &str) -> String {
                 // Don't emit anything, just skip
             }
 
+            '\r' => {
+                // CRLF is unambiguously one line ending under every policy.
+                // Ignore controls that sanitization would remove between the
+                // pair, otherwise a first pass could create CRLF and a second
+                // pass would change it again (for example `"\r\u{1}\n"`).
+                let removed_controls_before_lf = chars
+                    .clone()
+                    .take_while(|next| {
+                        next.is_ascii_control() && !matches!(next, '\0' | '\t' | '\n' | '\r')
+                    })
+                    .count();
+                let followed_by_lf = chars.clone().nth(removed_controls_before_lf) == Some('\n');
+
+                if followed_by_lf {
+                    for _ in 0..=removed_controls_before_lf {
+                        chars.next();
+                    }
+                    result.push('\n');
+                    last_was_space = false;
+                } else {
+                    match carriage_return_handling {
+                        CarriageReturnHandling::Remove => {}
+                        CarriageReturnHandling::ReplaceWithSpace => {
+                            if !last_was_space {
+                                result.push(' ');
+                                last_was_space = true;
+                            }
+                        }
+                        CarriageReturnHandling::NormalizeLineEnding => {
+                            // A standalone CR is valid input and is not
+                            // equivalent to LF. Only the CRLF sequence above
+                            // is normalized as a line ending.
+                            result.push('\r');
+                            last_was_space = false;
+                        }
+                    }
+                }
+            }
+
             // Preserve allowed whitespace
-            '\t' | '\n' | '\r' => {
+            '\t' | '\n' => {
                 result.push(ch);
-                // Reset space tracking on newlines but not tabs
+                // Reset space tracking on newlines but not tabs.
                 last_was_space = ch == '\t';
             }
 
@@ -3424,7 +3760,7 @@ pub fn sanitize_extracted_text(text: &str) -> String {
                 }
             }
 
-            // Other control characters (0x01-0x1F except tab/newline/CR) - remove
+            // Other control characters (0x01-0x1F except tab/newline) - remove
             c if c.is_ascii_control() => {
                 // Skip control characters
             }
@@ -3476,6 +3812,39 @@ fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
         "assign_row_ids: output length must equal input length"
     );
     result
+}
+
+/// Assign stable layout-region ids in content-stream emission order.
+///
+/// A region ends when the geometric flow restarts (`assign_row_ids`) or when
+/// marked-content ownership changes. The former covers untagged columns and
+/// overlays; the latter preserves author-supplied logical structure even when
+/// two regions occupy overlapping Y ranges (#482).
+fn assign_layout_region_ids(fragments: &[TextFragment]) -> Vec<u32> {
+    let mut regions = Vec::with_capacity(fragments.len());
+    let mut region = 0u32;
+
+    for i in 0..fragments.len() {
+        if i > 0 {
+            let prev = &fragments[i - 1];
+            let current = &fragments[i];
+            // A new flow may restart only a few points above the preceding
+            // baseline (the real #482 footer/annotation gap is ~2pt), well
+            // below assign_row_ids' superscript-friendly 0.5em threshold.
+            // For layout ordering the relevant boundary is the same visual-line
+            // tolerance used by sorting: an upward move beyond 0.2 line height
+            // starts a new monotonic emission region.
+            let line_tol = prev.height.min(current.height) * 0.2;
+            let flow_restarted = current.y - prev.y > line_tol;
+            let mcid_changed = fragments[i].mcid != fragments[i - 1].mcid
+                && (fragments[i].mcid.is_some() || fragments[i - 1].mcid.is_some());
+            if flow_restarted || mcid_changed {
+                region = region.saturating_add(1);
+            }
+        }
+        regions.push(region);
+    }
+    regions
 }
 
 /// Decide whether a single visual line should be read in emission order.
@@ -3600,8 +3969,8 @@ mod tests {
     fn test_append_bounded_no_limit_always_appends() {
         let mut s = String::new();
         let mut trunc = false;
-        assert!(append_bounded(&mut s, None, "hello", None, &mut trunc));
-        assert!(append_bounded(&mut s, Some(' '), "world", None, &mut trunc));
+        assert!(append_bounded(&mut s, None, "hello", None, &mut trunc, true).appended);
+        assert!(append_bounded(&mut s, Some(' '), "world", None, &mut trunc, true).appended);
         assert_eq!(s, "hello world");
         assert!(!trunc, "no limit never truncates");
     }
@@ -3611,19 +3980,13 @@ mod tests {
         // "abcd" (4) is at budget 5; a Some('\n') + "x" would need 2 more → over.
         let mut s = String::from("abcd");
         let mut trunc = false;
-        assert!(!append_bounded(
-            &mut s,
-            Some('\n'),
-            "x",
-            Some(5),
-            &mut trunc
-        ));
+        assert!(!append_bounded(&mut s, Some('\n'), "x", Some(5), &mut trunc, true).appended);
         assert_eq!(s, "abcd", "nothing appended when it would overshoot");
         assert!(trunc, "budget hit sets truncated");
         // Exactly-fits case: "e" alone (1 byte, no separator) reaches 5.
         let mut s2 = String::from("abcd");
         let mut t2 = false;
-        assert!(append_bounded(&mut s2, None, "e", Some(5), &mut t2));
+        assert!(append_bounded(&mut s2, None, "e", Some(5), &mut t2, true).appended);
         assert_eq!(s2, "abcde");
         assert!(!t2);
         assert!(s2.len() <= 5, "invariant: len <= limit exactly");
@@ -3633,7 +3996,7 @@ mod tests {
     fn test_append_bounded_zero_limit_truncates_immediately() {
         let mut s = String::new();
         let mut trunc = false;
-        assert!(!append_bounded(&mut s, None, "a", Some(0), &mut trunc));
+        assert!(!append_bounded(&mut s, None, "a", Some(0), &mut trunc, true).appended);
         assert!(s.is_empty());
         assert!(trunc);
     }
@@ -3642,14 +4005,82 @@ mod tests {
     fn test_append_bounded_is_noop_once_truncated() {
         let mut s = String::from("kept");
         let mut trunc = true; // already truncated
-        assert!(!append_bounded(
-            &mut s,
-            None,
-            "more",
-            Some(1_000),
-            &mut trunc
-        ));
+        assert!(!append_bounded(&mut s, None, "more", Some(1_000), &mut trunc, true).appended);
         assert_eq!(s, "kept", "no further accumulation after truncation");
+    }
+
+    // ── issue #486: flat-path hyphen-wrap fusion ─────────────────────────────
+
+    #[test]
+    fn test_append_bounded_fuses_hyphen_wrap_when_enabled() {
+        // Real-world shape: a hyphen-wrapped phone number split across two
+        // lines, e.g. "...3016-" / "0900" must reconstruct as "...30160900".
+        let mut s = String::from("+55 11 3016-");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "0900", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(
+            outcome.applied_separator, None,
+            "hyphen fusion applies no separator, not the requested '\\n'"
+        );
+        assert_eq!(s, "+55 11 30160900", "hyphen popped, halves fused");
+    }
+
+    #[test]
+    fn test_append_bounded_no_fusion_without_a_trailing_hyphen() {
+        let mut s = String::from("hello world");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "next line", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(
+            outcome.applied_separator,
+            Some('\n'),
+            "no trailing hyphen: requested separator applies unchanged"
+        );
+        assert_eq!(s, "hello world\nnext line");
+    }
+
+    #[test]
+    fn test_append_bounded_does_not_fuse_when_merge_hyphenated_disabled() {
+        let mut s = String::from("rating-");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "aa-exp-sf", None, &mut trunc, false);
+        assert!(outcome.appended);
+        assert_eq!(outcome.applied_separator, Some('\n'));
+        assert_eq!(s, "rating-\naa-exp-sf", "no fusion: split as requested");
+    }
+
+    #[test]
+    fn test_append_bounded_does_not_fuse_a_space_separator() {
+        // Only a requested '\n' is a wrap candidate; a same-line space must
+        // never trigger hyphen fusion even if the accumulator ends in '-'.
+        let mut s = String::from("well-");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some(' '), "known", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(outcome.applied_separator, Some(' '));
+        assert_eq!(s, "well- known");
+    }
+
+    #[test]
+    fn test_append_bounded_hyphen_fusion_respects_budget() {
+        // "rating-" (7 bytes, trailing hyphen) minus the popped hyphen (6)
+        // plus fused "aa-exp" (6 bytes, no separator) = 12.
+        // Budget 12 must fit; budget 11 must not (would need to drop the
+        // hyphen-adjusted run, not silently truncate mid-word).
+        let mut s = String::from("rating-");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "aa-exp", Some(12), &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(s, "ratingaa-exp");
+        assert!(!trunc);
+
+        let mut s2 = String::from("rating-");
+        let mut trunc2 = false;
+        let outcome2 = append_bounded(&mut s2, Some('\n'), "aa-exp", Some(11), &mut trunc2, true);
+        assert!(!outcome2.appended);
+        assert_eq!(s2, "rating-", "nothing appended when over budget");
+        assert!(trunc2);
     }
 
     #[test]
@@ -3717,6 +4148,10 @@ mod tests {
         assert!(!options.detect_columns);
         assert_eq!(options.column_threshold, 50.0);
         assert!(options.merge_hyphenated);
+        assert_eq!(
+            CarriageReturnHandling::default(),
+            CarriageReturnHandling::Remove
+        );
     }
 
     #[test]
@@ -5181,5 +5616,76 @@ mod tests {
             "NaN-Y fragment must stay its own line; the finite lines keep \
              top-to-bottom reading order instead of collapsing to X order"
         );
+    }
+
+    #[test]
+    fn sort_and_merge_fragments_keeps_emission_regions_atomic() {
+        let extractor = TextExtractor::with_options(ExtractionOptions::default());
+
+        // Region 0 is a normal top-to-bottom footer. Region 1 is an overlay
+        // emitted later: its first line jumps back up the page, while its
+        // second line falls numerically between the footer's two lines. A
+        // page-wide Y-sort would produce body-1, overlay-1, overlay-2, body-2.
+        let mut fragments = vec![
+            tf("body-1", 50.0, 45.0, 40.0, 10.0),
+            tf("body-2", 50.0, 30.0, 40.0, 10.0),
+            tf("overlay-1", 250.0, 50.0, 60.0, 10.0),
+            tf("overlay-2", 250.0, 35.0, 60.0, 10.0),
+        ];
+
+        extractor.sort_and_merge_fragments(&mut fragments);
+
+        let order: Vec<&str> = fragments.iter().map(|f| f.text.as_str()).collect();
+        assert_eq!(
+            order,
+            vec!["body-1", "body-2", "overlay-1", "overlay-2"],
+            "positional sorting must not interleave independent emission regions"
+        );
+    }
+
+    #[test]
+    fn sort_and_merge_fragments_uses_mcid_as_a_region_boundary() {
+        let extractor = TextExtractor::with_options(ExtractionOptions::default());
+        let mut fragments = vec![
+            tf("body-1", 50.0, 45.0, 40.0, 10.0),
+            tf("body-2", 50.0, 30.0, 40.0, 10.0),
+            // The small Y increase is below assign_row_ids' reset threshold;
+            // MCID ownership must still keep this overlay independent.
+            tf("overlay", 250.0, 33.0, 60.0, 10.0),
+        ];
+        fragments[0].mcid = Some(7);
+        fragments[1].mcid = Some(7);
+        fragments[2].mcid = Some(8);
+
+        extractor.sort_and_merge_fragments(&mut fragments);
+
+        let order: Vec<&str> = fragments.iter().map(|f| f.text.as_str()).collect();
+        assert_eq!(order, vec!["body-1", "body-2", "overlay"]);
+    }
+
+    #[test]
+    fn column_detection_does_not_join_independent_layout_regions() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            detect_columns: true,
+            ..Default::default()
+        });
+        let mut fragments = vec![
+            tf("a1", 0.0, 100.0, 10.0, 10.0),
+            tf("b1", 100.0, 100.0, 10.0, 10.0),
+            tf("a2", 0.0, 80.0, 10.0, 10.0),
+            tf("b2", 100.0, 80.0, 10.0, 10.0),
+            // A later overlay repeats the same column corridor and overlaps
+            // the first region's Y span. Column detection must not combine
+            // both into one column-major block.
+            tf("c1", 0.0, 103.0, 10.0, 10.0),
+            tf("d1", 100.0, 103.0, 10.0, 10.0),
+            tf("c2", 0.0, 83.0, 10.0, 10.0),
+            tf("d2", 100.0, 83.0, 10.0, 10.0),
+        ];
+
+        extractor.sort_and_merge_fragments(&mut fragments);
+
+        let order: Vec<&str> = fragments.iter().map(|f| f.text.as_str()).collect();
+        assert_eq!(order, vec!["a1", "a2", "b1", "b2", "c1", "c2", "d1", "d2"]);
     }
 }

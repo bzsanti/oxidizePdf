@@ -8,6 +8,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [4.4.0] - 2026-08-16
+
+### Added
+
+- **`ActualText` marked-content support** (#63, #490). Page generation can now
+  attach replacement text to marked-content sequences, allowing assistive
+  technology and text extractors to consume an accessible textual alternative
+  for visually rendered content.
+
+### Fixed
+
+- **`preserve_layout`'s global Y-sort could interleave unrelated content
+  regions, corrupting hyphen-wrapped words** (#482). `sort_and_merge_fragments`
+  sorts every fragment on a page by Y-coordinate with no notion of separate
+  content regions; when an unrelated fragment (e.g. a digital-signature
+  annotation's appearance text) happened to sit at a Y-coordinate between the
+  two halves of a hyphen-wrapped word elsewhere on the page, the sort spliced
+  it in between them, and the hyphen got joined to the wrong fragment —
+  corrupting both the wrapped word and the unrelated text at once. The initial
+  mitigation fused hyphen-wrapped continuations before sorting. Positional
+  sorting is now also scoped to structural emission regions: geometric flow
+  restarts separate untagged regions, while MCID ownership separates tagged
+  regions. Independent body, overlay, annotation, and appearance flows can no
+  longer be interleaved merely because their Y ranges overlap.
+
+- **`merge_hyphenated` had no effect on the flat (default) extraction path**
+  (#486). It was only wired into `reconstruct_text_from_fragments`
+  (`preserve_layout: true`) and `merge_into_paragraphs`
+  (`reconstruct_paragraphs: true`); every text-showing operator on the flat
+  path (`Tj`, `TJ`, `'`, `"`) independently decided a `'\n'` separator via
+  the shared `append_bounded` helper without ever checking for a trailing
+  hyphen, so a hyphenated word or number wrapping across two lines extracted
+  with a raw newline in place of the hyphen — e.g. a phone number split as
+  `"...3016-"` / `"0900"` came out `"...3016-\n0900"` instead of
+  `"...30160900"`. `append_bounded` now pops the trailing `-` and fuses the
+  next run with no separator when the caller requested `'\n'` and
+  `merge_hyphenated` is enabled (the default); the actual separator applied
+  is threaded back to callers so reading-order line grouping (#448) treats a
+  fused run as a continuation rather than opening a new line.
+
+- **Literal carriage returns in decoded text strings leaked into extracted
+  plain text** (#476). `TextExtractor::with_carriage_return_handling` now lets
+  callers remove standalone CR bytes, replace them with a space, or preserve
+  them while normalizing CRLF without adding a field to the public
+  extraction-options struct. The default removes standalone CR so producer
+  noise does not split words or URLs; CRLF is treated as one line ending under
+  every policy. `NormalizeLineEnding` preserves a standalone CR because it is
+  not equivalent to LF (#481).
+
 ## [4.3.0] - 2026-08-11
 
 ### Fixed
