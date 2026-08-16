@@ -17,12 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   annotation's appearance text) happened to sit at a Y-coordinate between the
   two halves of a hyphen-wrapped word elsewhere on the page, the sort spliced
   it in between them, and the hyphen got joined to the wrong fragment —
-  corrupting both the wrapped word and the unrelated text at once. This case is
-  mitigated by
-  fusing a hyphen-ended fragment with its wrap continuation while fragments
-  are still in emission (content-stream) order, before the Y-sort runs, so
-  the wrapped token becomes a single atomic fragment nothing can be spliced
-  into afterward. Structural region-aware ordering remains follow-up work.
+  corrupting both the wrapped word and the unrelated text at once. The initial
+  mitigation fused hyphen-wrapped continuations before sorting. Positional
+  sorting is now also scoped to structural emission regions: geometric flow
+  restarts separate untagged regions, while MCID ownership separates tagged
+  regions. Independent body, overlay, annotation, and appearance flows can no
+  longer be interleaved merely because their Y ranges overlap.
 
 - **`merge_hyphenated` had no effect on the flat (default) extraction path**
   (#486). It was only wired into `reconstruct_text_from_fragments`
