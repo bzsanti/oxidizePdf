@@ -571,6 +571,19 @@ fn same_paragraph_style(a: &TextFragment, b: &TextFragment) -> bool {
     (a.font_size - b.font_size).abs() / scale <= PARAGRAPH_STYLE_SIZE_TOLERANCE
 }
 
+/// Whether `next` is plausibly the wrapped continuation of `prev` on a new
+/// line, using the exact same Y-gap test `reconstruct_text_from_fragments`
+/// already uses to decide "new line vs. same line" (`|Δy| > newline_threshold`).
+///
+/// Deliberately mirrors that threshold rather than inventing a stricter one:
+/// this function's only job is to protect an already-correct merge decision
+/// from being corrupted by an unrelated fragment sorting in between the two
+/// halves (issue #482) — not to second-guess which pairs `merge_hyphenated`
+/// would otherwise join. Used by `merge_hyphenated_line_wraps_in_emission_order`.
+fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_threshold: f64) -> bool {
+    (prev.y - next.y).abs() > newline_threshold
+}
+
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
@@ -1051,6 +1064,30 @@ impl TextExtractor {
         } = run;
         {
             let _span = tracing::info_span!("layout_finalize").entered();
+
+            // Fuse hyphen-wrapped tokens while fragments are still in emission
+            // order (issue #482), *before* any Y-sort below can interleave an
+            // unrelated fragment between a wrapped line's two halves. Fragments
+            // only exist here for the `preserve_layout`/`reorder_columns` paths
+            // (see the `emit_text_fragment` call sites), both of which feed
+            // `reconstruct_text_from_fragments` further down, so this always
+            // runs ahead of the merge it's protecting.
+            //
+            // `merge_close_fragments` must run first: a word's trailing hyphen
+            // is frequently its own separate glyph-run fragment (e.g. a style
+            // or kerning boundary right at "3016" | "-"), so the hyphen check
+            // below would otherwise fire against that lone "-" fragment (whose
+            // own predecessor is the stranded "6") instead of against the real
+            // "...3016-" line. Coalescing same-line adjacent runs first makes
+            // the trailing-hyphen text end up on one fragment, as the check
+            // assumes. `merge_close_fragments` is a local, order-preserving
+            // pass over adjacent pairs (see its own doc comment on being used
+            // this way for `reconstruct_paragraphs`), so it is safe to run here
+            // on unsorted emission order.
+            if !fragments.is_empty() {
+                fragments = self.merge_close_fragments(&fragments);
+                fragments = self.merge_hyphenated_line_wraps_in_emission_order(fragments);
+            }
 
             // Sort and process fragments if requested — but ONLY when we're not
             // going to run merge_into_lines later. merge_into_lines does its
@@ -2184,6 +2221,73 @@ impl TextExtractor {
                 }
             });
         Some((ops, xobj_res, matrix))
+    }
+
+    /// Fuse a hyphen-ended fragment with its line-wrap continuation while
+    /// fragments are still in emission (content-stream) order, before any
+    /// Y-coordinate sort runs.
+    ///
+    /// `sort_and_merge_fragments`'s global Y-sort has no concept of separate
+    /// content regions (issue #482): an unrelated fragment (an annotation's
+    /// appearance stream, a watermark, …) whose Y-coordinate happens to fall
+    /// between two wrapped lines of unrelated body text gets sorted in
+    /// between them, and the hyphen-merge check in `reconstruct_text_from_fragments`
+    /// — which only ever looks at the *immediately preceding* fragment in
+    /// the already-sorted list — then joins the hyphen to the wrong
+    /// fragment, corrupting both regions at once.
+    ///
+    /// Emission order does not have this problem: two fragments that are
+    /// genuinely adjacent lines of the same wrapped text are (barring a
+    /// pathological content stream) emitted consecutively, regardless of
+    /// where an unrelated annotation's text happens to sit on the Y axis.
+    /// Fusing the pair here, before the sort, makes the wrapped token a
+    /// single atomic fragment that nothing can be spliced into afterward.
+    ///
+    /// Uses `is_line_wrap_geometry` (the same Y-gap test
+    /// `reconstruct_text_from_fragments` already applies) to confirm the
+    /// pair actually looks like consecutive lines before merging, so an
+    /// unrelated same-line hyphen (e.g. "well-known" on one line) is not
+    /// fused with whatever fragment happens to follow it in emission order.
+    fn merge_hyphenated_line_wraps_in_emission_order(
+        &self,
+        fragments: Vec<TextFragment>,
+    ) -> Vec<TextFragment> {
+        if !self.options.merge_hyphenated || fragments.len() < 2 {
+            return fragments;
+        }
+
+        let mut result: Vec<TextFragment> = Vec::with_capacity(fragments.len());
+        for fragment in fragments {
+            let should_merge = result
+                .last()
+                .map(|prev: &TextFragment| {
+                    prev.text.ends_with('-')
+                        && is_line_wrap_geometry(prev, &fragment, self.options.newline_threshold)
+                })
+                .unwrap_or(false);
+
+            if should_merge {
+                // Safe: just checked `result.last()` is `Some` above.
+                let prev = result.last_mut().expect("checked non-empty above");
+                prev.text.pop(); // drop the trailing hyphen
+                prev.text.push_str(&fragment.text);
+                // Extend the fused fragment's box to cover both lines so
+                // downstream geometry (space/newline decisions keyed on
+                // `x + width`, `y`) still reasons about real coverage
+                // rather than only the first line's box.
+                let x_min = prev.x.min(fragment.x);
+                let x_max = (prev.x + prev.width).max(fragment.x + fragment.width);
+                let y_min = prev.y.min(fragment.y);
+                let y_max = (prev.y + prev.height).max(fragment.y + fragment.height);
+                prev.x = x_min;
+                prev.width = x_max - x_min;
+                prev.y = y_min;
+                prev.height = y_max - y_min;
+            } else {
+                result.push(fragment);
+            }
+        }
+        result
     }
 
     /// Sort text fragments by position and merge them appropriately
