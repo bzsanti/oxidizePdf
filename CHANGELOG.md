@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`merge_hyphenated` had no effect on the flat (default) extraction path**
+  (#486). It was only wired into `reconstruct_text_from_fragments`
+  (`preserve_layout: true`) and `merge_into_paragraphs`
+  (`reconstruct_paragraphs: true`); every text-showing operator on the flat
+  path (`Tj`, `TJ`, `'`, `"`) independently decided a `'\n'` separator via
+  the shared `append_bounded` helper without ever checking for a trailing
+  hyphen, so a hyphenated word or number wrapping across two lines extracted
+  with a raw newline in place of the hyphen — e.g. a phone number split as
+  `"...3016-"` / `"0900"` came out `"...3016-\n0900"` instead of
+  `"...30160900"`. `append_bounded` now pops the trailing `-` and fuses the
+  next run with no separator when the caller requested `'\n'` and
+  `merge_hyphenated` is enabled (the default); the actual separator applied
+  is threaded back to callers so reading-order line grouping (#448) treats a
+  fused run as a continuation rather than opening a new line.
+
 - **Literal carriage returns in decoded text strings leaked into extracted
   plain text** (#476). `TextExtractor::with_carriage_return_handling` now lets
   callers remove standalone CR bytes, replace them with a space, or preserve
