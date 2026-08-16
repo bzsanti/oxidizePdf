@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [4.4.0] - 2026-08-16
+
+### Added
+
+- **`ActualText` marked-content support** (#63, #490). Page generation can now
+  attach replacement text to marked-content sequences, allowing assistive
+  technology and text extractors to consume an accessible textual alternative
+  for visually rendered content.
+
 ### Fixed
 
 - **`preserve_layout`'s global Y-sort could interleave unrelated content
