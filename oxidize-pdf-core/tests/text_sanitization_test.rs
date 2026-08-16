@@ -67,6 +67,18 @@ fn test_normalize_line_ending_preserves_standalone_carriage_returns() {
 }
 
 #[test]
+fn test_crlf_normalization_is_idempotent_across_removed_controls() {
+    let input = "\r\u{1}\n";
+    let once =
+        sanitize_extracted_text_with_policy(input, CarriageReturnHandling::NormalizeLineEnding);
+    let twice =
+        sanitize_extracted_text_with_policy(&once, CarriageReturnHandling::NormalizeLineEnding);
+
+    assert_eq!(once, "\n");
+    assert_eq!(twice, once);
+}
+
+#[test]
 fn test_remove_carriage_returns() {
     let input = "rating-aa\ra-exp\r\nnext";
     let expected = "rating-aaa-exp\nnext";
