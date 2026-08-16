@@ -1991,7 +1991,8 @@ impl TextExtractor {
 
                 ContentOperation::EndMarkedContent => {
                     let popped_depth = state.mc_stack.len();
-                    if state.mc_stack.pop().is_none() {
+                    let closed_entry = state.mc_stack.pop();
+                    if closed_entry.is_none() {
                         // Unbalanced EMC — log and ignore. Real PDFs occasionally emit
                         // dangling EMC (e.g. from incremental updates). We must not panic.
                         tracing::debug!(
@@ -2005,8 +2006,14 @@ impl TextExtractor {
                             if run.populated
                                 && (self.options.preserve_layout || self.options.reorder_columns)
                             {
-                                let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
-                                let in_artifact = state.mc_stack.iter().any(|e| e.is_artifact);
+                                // The ActualText owner has just been popped, so
+                                // retain its structural identity explicitly
+                                // instead of accidentally inheriting the parent.
+                                let closed_entry = closed_entry.as_ref().unwrap();
+                                let mcid = closed_entry.mcid;
+                                let struct_tag = Some(closed_entry.tag.clone());
+                                let in_artifact = closed_entry.is_artifact
+                                    || state.mc_stack.iter().any(|e| e.is_artifact);
                                 if !in_artifact || self.options.include_artifacts {
                                     // Per-page byte budget (issue #382): the
                                     // `/ActualText` override is this scope's

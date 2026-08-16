@@ -119,3 +119,43 @@ fn writer_to_extractor_keeps_overlaid_mcid_blocks_distinct() {
         "World must carry struct_tag 'P'"
     );
 }
+
+#[test]
+fn writer_actual_text_roundtrips_unicode_and_replaces_visual_glyphs() {
+    let mut page = Page::a4();
+    let mcid = page
+        .begin_marked_content_with_actual_text("Span", "^{40} € 😀")
+        .expect("begin ActualText span");
+    page.text()
+        .set_font(Font::Helvetica, 9.0)
+        .at(100.0, 705.0)
+        .write("40")
+        .expect("write visual superscript glyphs");
+    page.end_marked_content().expect("end ActualText span");
+
+    let mut doc = Document::new();
+    doc.add_page(page);
+    let bytes = doc.to_bytes().expect("serialize PDF");
+    let reader = PdfReader::new(Cursor::new(bytes)).expect("read generated PDF");
+    let document = PdfDocument::new(reader);
+    let mut extractor = TextExtractor::with_options(ExtractionOptions {
+        preserve_layout: true,
+        ..Default::default()
+    });
+    let page = extractor
+        .extract_from_page(&document, 0)
+        .expect("extract generated page");
+
+    assert_eq!(mcid, 0);
+    assert!(
+        page.fragments
+            .iter()
+            .any(|fragment| fragment.text == "^{40} € 😀" && fragment.mcid == Some(mcid)),
+        "ActualText must replace the visual glyphs and retain its MCID: {:?}",
+        page.fragments
+    );
+    assert!(
+        page.fragments.iter().all(|fragment| fragment.text != "40"),
+        "visual glyphs must not leak into logical extraction"
+    );
+}
