@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`preserve_layout`'s global Y-sort could interleave unrelated content
+  regions, corrupting hyphen-wrapped words** (#482). `sort_and_merge_fragments`
+  sorts every fragment on a page by Y-coordinate with no notion of separate
+  content regions; when an unrelated fragment (e.g. a digital-signature
+  annotation's appearance text) happened to sit at a Y-coordinate between the
+  two halves of a hyphen-wrapped word elsewhere on the page, the sort spliced
+  it in between them, and the hyphen got joined to the wrong fragment —
+  corrupting both the wrapped word and the unrelated text at once. Fixed by
+  fusing a hyphen-ended fragment with its wrap continuation while fragments
+  are still in emission (content-stream) order, before the Y-sort runs, so
+  the wrapped token becomes a single atomic fragment nothing can be spliced
+  into afterward.
+
 - **Literal carriage returns in decoded text strings leaked into extracted
   plain text** (#476). `TextExtractor::with_carriage_return_handling` now lets
   callers remove standalone CR bytes, replace them with a space, or normalize
