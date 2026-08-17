@@ -107,6 +107,14 @@ jobs:
           qpdf_accepts_incremental_text_note_revision
           -- --ignored --exact
 
+      - name: Validate AES-256 R5 interoperability with qpdf
+        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_492_aes256_perms_interop_test
+          qpdf_checks_and_linearizes_generated_aes256_r5_pdf
+          -- --ignored --exact
+
       # The analysis SPI is gated behind `unstable-spi` (+ `semantic` for the
       # enricher/extra bag), so the default test step above never compiles its
       # tests. Exercise the SPI feature matrix on Linux/stable (spec §10.6).
