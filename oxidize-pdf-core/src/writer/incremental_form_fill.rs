@@ -41,6 +41,8 @@ use crate::text::TextEncoding;
 use std::collections::HashMap;
 use std::io::Cursor;
 
+use super::incremental_update::{format_real, write_dictionary, write_object};
+
 /// Fills AcroForm fields on an existing parsed PDF by appending an
 /// ISO 32000-1 §7.5.6 incremental update. See the module docs.
 pub struct IncrementalFormFiller<'a> {
@@ -506,7 +508,7 @@ fn build_text_ap(
     let mut resources = PdfDictionary::new();
     resources.insert("Font".to_string(), PdfObject::Dictionary(font_dict));
     let mut resources_bytes = Vec::new();
-    write_dict(&mut resources_bytes, &resources)?;
+    write_dictionary(&mut resources_bytes, &resources)?;
 
     Ok((content, [0.0, 0.0, width, height], resources_bytes))
 }
@@ -714,7 +716,7 @@ fn parse_da_string(da: &str) -> Option<(String, f64)> {
 /// The content is emitted UNCOMPRESSED, so `/Length` is exactly the raw byte
 /// count — no filter, no two-pass buffering. `resources_snippet` is a
 /// pre-serialized `<< ... >>` dictionary (built by the caller via the
-/// module's `write_dict`) inlined as the `/Resources` value.
+/// shared incremental serializer) inlined as the `/Resources` value.
 fn write_indirect_stream_object(
     out: &mut Vec<u8>,
     num: u32,
@@ -752,77 +754,9 @@ fn write_indirect_object(
     dict: &PdfDictionary,
 ) -> Result<()> {
     out.extend_from_slice(format!("{num} {gen} obj\n").as_bytes());
-    write_object_value(out, &PdfObject::Dictionary(dict.clone()))?;
+    write_object(out, &PdfObject::Dictionary(dict.clone()))?;
     out.extend_from_slice(b"\nendobj\n");
     Ok(())
-}
-
-/// Serialize a parser [`PdfObject`] to PDF wire bytes. Streams are rejected:
-/// AcroForm field and form dictionaries never carry an embedded stream, and
-/// emitting one without a fresh `/Length` would corrupt the file.
-fn write_object_value(out: &mut Vec<u8>, obj: &PdfObject) -> Result<()> {
-    match obj {
-        PdfObject::Null => out.extend_from_slice(b"null"),
-        PdfObject::Boolean(b) => out.extend_from_slice(if *b { b"true" } else { b"false" }),
-        PdfObject::Integer(i) => out.extend_from_slice(i.to_string().as_bytes()),
-        PdfObject::Real(f) => out.extend_from_slice(format_real(*f).as_bytes()),
-        PdfObject::String(s) => write_literal_string(out, s.as_bytes()),
-        PdfObject::Name(n) => write_name(out, n),
-        PdfObject::Reference(num, gen) => {
-            out.extend_from_slice(format!("{num} {gen} R").as_bytes())
-        }
-        PdfObject::Array(arr) => {
-            out.extend_from_slice(b"[");
-            for (i, item) in arr.0.iter().enumerate() {
-                if i > 0 {
-                    out.extend_from_slice(b" ");
-                }
-                write_object_value(out, item)?;
-            }
-            out.extend_from_slice(b"]");
-        }
-        PdfObject::Dictionary(d) => write_dict(out, d)?,
-        PdfObject::Stream(_) => {
-            return Err(PdfError::InvalidStructure(
-                "unexpected stream object in AcroForm field dictionary".to_string(),
-            ))
-        }
-    }
-    Ok(())
-}
-
-fn write_dict(out: &mut Vec<u8>, dict: &PdfDictionary) -> Result<()> {
-    out.extend_from_slice(b"<< ");
-    // Deterministic key order: keeps output stable and tests reproducible.
-    let mut keys: Vec<&PdfName> = dict.0.keys().collect();
-    keys.sort_by(|a, b| a.0.cmp(&b.0));
-    for key in keys {
-        write_name(out, key);
-        out.extend_from_slice(b" ");
-        // Safe: key came from the dict.
-        write_object_value(out, &dict.0[key])?;
-        out.extend_from_slice(b" ");
-    }
-    out.extend_from_slice(b">>");
-    Ok(())
-}
-
-fn write_name(out: &mut Vec<u8>, name: &PdfName) {
-    out.extend_from_slice(b"/");
-    for &b in name.0.as_bytes() {
-        // Regular characters pass through; everything else is #XX-escaped
-        // (ISO 32000-1 §7.3.5).
-        if b.is_ascii_alphanumeric()
-            || matches!(
-                b,
-                b'+' | b'-' | b'.' | b'_' | b'@' | b'$' | b':' | b';' | b'*' | b'?'
-            )
-        {
-            out.push(b);
-        } else {
-            out.extend_from_slice(format!("#{b:02X}").as_bytes());
-        }
-    }
 }
 
 /// Serialize a PDF literal string `(...)`, escaping the reserved bytes and
@@ -842,27 +776,6 @@ fn write_literal_string(out: &mut Vec<u8>, bytes: &[u8]) {
         }
     }
     out.push(b')');
-}
-
-/// Format a PDF real without scientific notation, trimming trailing zeros.
-fn format_real(f: f64) -> String {
-    // PDF has no token for NaN/Infinity; emit a benign 0 rather than a
-    // malformed numeric. Field dicts essentially never carry such values,
-    // but the serializer must stay total.
-    if !f.is_finite() {
-        return "0".to_string();
-    }
-    if f == f.trunc() {
-        return format!("{}", f as i64);
-    }
-    let mut s = format!("{f:.6}");
-    while s.ends_with('0') {
-        s.pop();
-    }
-    if s.ends_with('.') {
-        s.pop();
-    }
-    s
 }
 
 // ---------------------------------------------------------------------------
