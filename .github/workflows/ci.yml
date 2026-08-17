@@ -210,3 +210,8 @@ jobs:
         uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           package: oxidize-pdf
+          # Development accumulates backward-compatible API changes before a
+          # release version is chosen. Allow minor-level changes on develop,
+          # while release/main checks continue deriving the required bump from
+          # Cargo.toml and the published baseline.
+          release-type: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'develop') || github.ref == 'refs/heads/develop') && 'minor' || '' }}
