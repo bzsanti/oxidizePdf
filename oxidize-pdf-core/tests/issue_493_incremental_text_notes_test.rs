@@ -117,11 +117,26 @@ fn mixed_batch_is_one_atomic_incremental_revision() {
     );
     let link = reader.get_object(5, 0).unwrap().as_dict().unwrap();
     assert_eq!(link.get("CustomLinkKey"), Some(&PdfObject::Integer(99)));
+}
 
-    Command::new("qpdf")
-        .arg("--version")
-        .output()
-        .expect("qpdf is required for issue #493 interoperability tests");
+#[test]
+#[ignore = "requires qpdf; exercised by the Ubuntu CI interoperability step"]
+fn qpdf_accepts_incremental_text_note_revision() {
+    let base = base_pdf();
+    let update = IncrementalTextNoteEditor::new(&base)
+        .apply(&[
+            TextNoteMutation::Update {
+                id: TextNoteId::new(4, 0),
+                position: Point::new(100.0, 110.0),
+                contents: "movida ✓".to_string(),
+            },
+            TextNoteMutation::Add {
+                page_index: 0,
+                position: Point::new(200.0, 200.0),
+                contents: "nueva".to_string(),
+            },
+        ])
+        .unwrap();
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("notes.pdf");
     std::fs::write(&path, &update.pdf_bytes).unwrap();

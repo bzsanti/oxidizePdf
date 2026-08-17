@@ -29,9 +29,9 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: rustfmt, clippy
 
-      - name: Install Tesseract OCR (Ubuntu)
+      - name: Install Tesseract OCR and qpdf (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev qpdf
 
       - name: Install Tesseract OCR (macOS)
         if: matrix.os == 'macos-latest'
@@ -98,6 +98,14 @@ jobs:
       - name: Run tests (all others)
         if: matrix.os != 'macos-latest' || matrix.rust != 'beta'
         run: cargo test --all --features internal-testing --verbose
+
+      - name: Validate incremental text notes with qpdf
+        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_493_incremental_text_notes_test
+          qpdf_accepts_incremental_text_note_revision
+          -- --ignored --exact
 
       # The analysis SPI is gated behind `unstable-spi` (+ `semantic` for the
       # enricher/extra bag), so the default test step above never compiles its
