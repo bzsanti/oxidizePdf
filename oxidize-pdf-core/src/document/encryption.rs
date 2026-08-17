@@ -138,14 +138,16 @@ impl DocumentEncryption {
             &u_entry,
             &encryption_key,
         )?;
+        let perms_entry = handler.compute_perms_entry(self.permissions, &enc_key_obj, true)?;
 
-        Ok(EncryptionDictionary::aes_256(
+        EncryptionDictionary::aes_256(
             o_entry,
             u_entry,
             self.permissions,
             file_id.map(|id| id.to_vec()),
         )
-        .with_r5_entries(ue_entry, oe_entry))
+        .with_r5_entries(ue_entry, oe_entry)
+        .with_perms(perms_entry)
     }
 
     /// Get the object encryption key used to encrypt streams and strings.
