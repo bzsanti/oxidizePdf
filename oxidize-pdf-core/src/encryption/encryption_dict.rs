@@ -1,6 +1,7 @@
 //! PDF encryption dictionary structures
 
 use crate::encryption::Permissions;
+use crate::error::{PdfError, Result};
 use crate::objects::{Dictionary, Object};
 
 /// Encryption algorithm
@@ -134,7 +135,7 @@ pub struct EncryptionDictionary {
     pub ue: Option<Vec<u8>>,
     /// OE entry: encrypted file encryption key (owner password, R5/R6 only)
     pub oe: Option<Vec<u8>>,
-    /// Perms entry: encrypted permissions verification (R6 only)
+    /// Perms entry: encrypted permissions verification (R5/R6)
     pub perms: Option<Vec<u8>>,
 }
 
@@ -264,6 +265,18 @@ impl EncryptionDictionary {
         self
     }
 
+    /// Set the encrypted permissions entry required by V=5 dictionaries.
+    pub fn with_perms(mut self, perms: Vec<u8>) -> Result<Self> {
+        if perms.len() != 16 {
+            return Err(PdfError::EncryptionError(format!(
+                "V=5 Perms entry must be 16 bytes, got {}",
+                perms.len()
+            )));
+        }
+        self.perms = Some(perms);
+        Ok(self)
+    }
+
     /// Convert to PDF dictionary
     pub fn to_dict(&self) -> Dictionary {
         let mut dict = Dictionary::new();
@@ -324,10 +337,7 @@ impl EncryptionDictionary {
             dict.set("OE", Object::ByteString(oe.clone()));
         }
         if let Some(ref perms) = self.perms {
-            dict.set(
-                "Perms",
-                Object::String(String::from_utf8_lossy(perms).to_string()),
-            );
+            dict.set("Perms", Object::ByteString(perms.clone()));
         }
 
         dict

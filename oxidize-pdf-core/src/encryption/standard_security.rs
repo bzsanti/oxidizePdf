@@ -1030,10 +1030,10 @@ impl StandardSecurityHandler {
     }
 
     // ========================================================================
-    // R6 Perms Entry (ISO 32000-2 Table 25)
+    // R5/R6 Perms Entry (ISO 32000-2 Table 25)
     // ========================================================================
 
-    /// Compute R6 Perms entry (encrypted permissions)
+    /// Compute R5/R6 Perms entry (encrypted permissions)
     ///
     /// The Perms entry is a 16-byte value that encrypts permissions using AES-256-ECB.
     /// This allows verification that permissions haven't been tampered with.
@@ -1041,28 +1041,31 @@ impl StandardSecurityHandler {
     /// # Plaintext Structure (16 bytes)
     /// - Bytes 0-3: Permissions (P value, little-endian)
     /// - Bytes 4-7: 0xFFFFFFFF (fixed marker)
-    /// - Bytes 8-10: "adb" (literal verification string)
-    /// - Byte 11: 'T' or 'F' (EncryptMetadata flag)
-    /// - Bytes 12-15: 0x00 (padding)
-    pub fn compute_r6_perms_entry(
+    /// - Byte 8: 'T' or 'F' (EncryptMetadata flag)
+    /// - Bytes 9-11: "adb" (literal verification string)
+    /// - Bytes 12-15: random padding
+    pub fn compute_perms_entry(
         &self,
         permissions: Permissions,
         encryption_key: &EncryptionKey,
         encrypt_metadata: bool,
     ) -> Result<Vec<u8>> {
-        if self.revision != SecurityHandlerRevision::R6 {
+        if !matches!(
+            self.revision,
+            SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6
+        ) {
             return Err(crate::error::PdfError::EncryptionError(
-                "Perms entry only for Revision 6".to_string(),
+                "Perms entry only for Revision 5 or 6".to_string(),
             ));
         }
         if encryption_key.len() != UE_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
-                "Encryption key must be {} bytes for R6 Perms",
+                "Encryption key must be {} bytes for R5/R6 Perms",
                 UE_ENTRY_LENGTH
             )));
         }
 
-        // Construct plaintext: P + 0xFFFFFFFF + "adb" + T/F + padding
+        // Construct plaintext: P + 0xFFFFFFFF + T/F + "adb" + random padding
         let mut plaintext = vec![0u8; PERMS_ENTRY_LENGTH];
 
         // Permissions (4 bytes, little-endian)
@@ -1072,13 +1075,15 @@ impl StandardSecurityHandler {
         // Fixed marker bytes (0xFFFFFFFF)
         plaintext[PERMS_MARKER_START..PERMS_MARKER_END].copy_from_slice(&PERMS_MARKER);
 
-        // Literal "adb" verification string
-        plaintext[PERMS_LITERAL_START..PERMS_LITERAL_END].copy_from_slice(PERMS_LITERAL);
-
         // EncryptMetadata flag
         plaintext[PERMS_ENCRYPT_META_BYTE] = if encrypt_metadata { b'T' } else { b'F' };
 
-        // Bytes 12-15 remain 0x00 (padding)
+        // Literal "adb" verification string
+        plaintext[PERMS_LITERAL_START..PERMS_LITERAL_END].copy_from_slice(PERMS_LITERAL);
+
+        // The final four bytes are intentionally unpredictable.
+        use rand::Rng;
+        rand::rng().fill_bytes(&mut plaintext[PERMS_RANDOM_START..]);
 
         // Encrypt with AES-256-ECB
         let aes_key = AesKey::new_256(encryption_key.key.clone())?;
@@ -1089,6 +1094,20 @@ impl StandardSecurityHandler {
         })?;
 
         Ok(encrypted)
+    }
+
+    /// Compatibility alias for [`Self::compute_perms_entry`].
+    #[deprecated(
+        since = "4.4.1",
+        note = "use compute_perms_entry; the algorithm applies to both R5 and R6"
+    )]
+    pub fn compute_r6_perms_entry(
+        &self,
+        permissions: Permissions,
+        encryption_key: &EncryptionKey,
+        encrypt_metadata: bool,
+    ) -> Result<Vec<u8>> {
+        self.compute_perms_entry(permissions, encryption_key, encrypt_metadata)
     }
 
     /// Validate R6 Perms entry by decrypting and checking structure
@@ -1963,14 +1982,17 @@ const PERMS_MARKER_START: usize = 4;
 /// End offset of fixed marker in decrypted Perms
 const PERMS_MARKER_END: usize = 8;
 
+/// Offset of EncryptMetadata flag byte ('T' or 'F') in decrypted Perms
+const PERMS_ENCRYPT_META_BYTE: usize = 8;
+
 /// Start offset of "adb" literal in decrypted Perms
-const PERMS_LITERAL_START: usize = 8;
+const PERMS_LITERAL_START: usize = 9;
 
 /// End offset of "adb" literal in decrypted Perms
-const PERMS_LITERAL_END: usize = 11;
+const PERMS_LITERAL_END: usize = 12;
 
-/// Offset of EncryptMetadata flag byte ('T' or 'F') in decrypted Perms
-const PERMS_ENCRYPT_META_BYTE: usize = 11;
+/// Start offset of the four random bytes in decrypted Perms
+const PERMS_RANDOM_START: usize = 12;
 
 /// Fixed marker value in Perms entry
 const PERMS_MARKER: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
@@ -2992,7 +3014,7 @@ mod tests {
         let key = EncryptionKey::new(vec![0x42; 32]);
 
         let perms = handler
-            .compute_r6_perms_entry(permissions, &key, true)
+            .compute_perms_entry(permissions, &key, true)
             .unwrap();
 
         assert_eq!(perms.len(), 16, "Perms entry must be 16 bytes");
@@ -3005,7 +3027,7 @@ mod tests {
         let key = EncryptionKey::new(vec![0x55; 32]);
 
         let perms = handler
-            .compute_r6_perms_entry(permissions, &key, false)
+            .compute_perms_entry(permissions, &key, false)
             .unwrap();
 
         let is_valid = handler
@@ -3022,7 +3044,7 @@ mod tests {
         let wrong_key = EncryptionKey::new(vec![0xBB; 32]);
 
         let perms = handler
-            .compute_r6_perms_entry(permissions, &correct_key, true)
+            .compute_perms_entry(permissions, &correct_key, true)
             .unwrap();
 
         // Validation with wrong key should fail (structure won't match)
@@ -3038,10 +3060,10 @@ mod tests {
         let key = EncryptionKey::new(vec![0x33; 32]);
 
         let perms_true = handler
-            .compute_r6_perms_entry(permissions, &key, true)
+            .compute_perms_entry(permissions, &key, true)
             .unwrap();
         let perms_false = handler
-            .compute_r6_perms_entry(permissions, &key, false)
+            .compute_perms_entry(permissions, &key, false)
             .unwrap();
 
         // Different encrypt_metadata flag should produce different Perms
@@ -3098,7 +3120,7 @@ mod tests {
 
         // Step 4: Compute Perms entry (encrypted permissions)
         let perms = handler
-            .compute_r6_perms_entry(permissions, &encryption_key, true)
+            .compute_perms_entry(permissions, &encryption_key, true)
             .unwrap();
         assert_eq!(perms.len(), 16);
 
