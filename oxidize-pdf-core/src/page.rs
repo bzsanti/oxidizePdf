@@ -2037,9 +2037,15 @@ impl Page {
     /// as UTF-16BE with a byte-order mark so every Unicode scalar is preserved.
     ///
     /// The returned MCID can be attached to a structure element in the same way
-    /// as the value returned by [`Page::begin_marked_content`]. This makes the
-    /// method useful both for lightweight semantic spans and for fully tagged
-    /// documents.
+    /// as the value returned by [`Page::begin_marked_content`]. To connect the
+    /// replacement text to the Tagged PDF structure, attach it with
+    /// [`StructureElement::add_mcid`](crate::structure::StructureElement::add_mcid)
+    /// and install the completed tree on the document with
+    /// [`Document::set_struct_tree`](crate::Document::set_struct_tree). The writer
+    /// will then emit the page `/StructParents` and structure `/ParentTree`
+    /// connections required by Tagged PDF readers. Copy/paste still depends on
+    /// the viewer honoring `/ActualText`; some viewers copy the painted glyphs
+    /// even when these relationships are present.
     pub fn begin_marked_content_with_actual_text(
         &mut self,
         tag: &str,

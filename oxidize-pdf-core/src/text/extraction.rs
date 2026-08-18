@@ -443,6 +443,10 @@ impl SavedGraphicsState {
 struct OpRunState {
     state: TextState,
     in_text_object: bool,
+    /// True until the first show-text operator after `BT`. A backward jump at
+    /// this boundary is an independent positioned run, not intra-object
+    /// kerning, and can therefore delimit a grid cell (issue #495).
+    at_text_object_start: bool,
     last_x: f64,
     last_y: f64,
     extracted_text: String,
@@ -598,6 +602,10 @@ pub struct TextExtractor {
     carriage_return_handling: CarriageReturnHandling,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
+    /// Narrowest usable CID width for Type0 fonts in the current page. Derived
+    /// once when the font is cached so flat extraction does not rescan a
+    /// potentially large attacker-controlled `/W` table for every glyph.
+    type0_implicit_space_widths: HashMap<String, f64>,
     /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
     /// object across pages. Most multi-page PDFs reuse the same font objects.
     font_object_cache: HashMap<(u32, u16), FontInfo>,
@@ -611,6 +619,7 @@ impl TextExtractor {
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
+            type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
     }
@@ -622,6 +631,7 @@ impl TextExtractor {
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
+            type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
     }
@@ -793,6 +803,16 @@ impl TextExtractor {
     /// ZapfDingbats), which ship no `/Widths` array (#302 symptom 2).
     fn font_space_advance(&self, font_name: Option<&str>, font_size: f64) -> Option<f64> {
         let info = self.font_cache.get(font_name?)?;
+        if let (Some(to_unicode), Some(descendant)) =
+            (info.to_unicode.as_ref(), info.descendant_font.as_deref())
+        {
+            let space_code = to_unicode.source_code_for_unicode(' ')?;
+            let cid = cids_for_codes(&space_code, info)?.first()?.1;
+            let width = descendant.metrics.cid_widths.as_ref()?.width_for(cid);
+            if width > 0.0 {
+                return Some(width / 1000.0 * font_size);
+            }
+        }
         if let Some(ref widths) = info.metrics.widths {
             let first = info.metrics.first_char.unwrap_or(0);
             if first <= 32 {
@@ -804,6 +824,34 @@ impl TextExtractor {
             }
         }
         standard_14_space_width(&info.name).map(|em| em / 1000.0 * font_size)
+    }
+
+    /// Font-derived proxy used only when a Type0 font has CID widths but no
+    /// discoverable U+0020 mapping. The narrowest declared positive advance is
+    /// a lower bound, not a guessed space CID: narrow punctuation and spacing
+    /// glyphs define how small a meaningful inter-word gap can be (#500).
+    fn type0_implicit_space_advance(&self, font_name: Option<&str>, font_size: f64) -> Option<f64> {
+        let width = self.type0_implicit_space_widths.get(font_name?)?;
+        Some(width / 1000.0 * font_size.abs())
+    }
+
+    fn flat_space_gap_threshold(&self, state: &TextState) -> f64 {
+        match self.font_space_advance(state.font_name.as_deref(), state.font_size) {
+            Some(advance) if advance > 0.0 => 0.5 * advance,
+            _ => {
+                let legacy = self.options.space_threshold * state.font_size.abs();
+                match self.type0_implicit_space_advance(state.font_name.as_deref(), state.font_size)
+                {
+                    Some(advance) if advance > 0.0 && legacy > 0.0 => {
+                        // Do not let a malformed near-zero `/W` entry make every
+                        // positioning residue a word gap. Conversely, never make
+                        // the fallback stricter than the established threshold.
+                        (0.5 * advance).max(0.1 * state.font_size.abs()).min(legacy)
+                    }
+                    _ => legacy,
+                }
+            }
+        }
     }
 
     /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
@@ -997,6 +1045,7 @@ impl TextExtractor {
         let mut run = OpRunState {
             state,
             in_text_object,
+            at_text_object_start: false,
             last_x,
             last_y,
             extracted_text,
@@ -1203,6 +1252,7 @@ impl TextExtractor {
         let OpRunState {
             mut state,
             mut in_text_object,
+            mut at_text_object_start,
             mut last_x,
             mut last_y,
             mut extracted_text,
@@ -1229,6 +1279,7 @@ impl TextExtractor {
             match op {
                 ContentOperation::BeginText => {
                     in_text_object = true;
+                    at_text_object_start = true;
                     // Reset text matrix to identity
                     state.text_matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
                     state.text_line_matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
@@ -1321,14 +1372,24 @@ impl TextExtractor {
                                 // returns across the whole column, so a jump beyond
                                 // `SAME_Y_WRAP_EM` font sizes is a wrap even at dy == 0
                                 // (issue #447). dx/dy are baseline-relative (issue
-                                // #443), so this holds under rotation; the epsilon
-                                // absorbs projection rounding noise.
+                                // #443), so this holds under rotation. A new text
+                                // object's first run is independently positioned:
+                                // a large backward jump warrants a separator, but
+                                // does not by itself prove a line wrap (#495). The
+                                // epsilon absorbs projection rounding noise.
                                 let same_y_wrap = dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
-                                let line_wrap = dx < -(self.options.newline_threshold * 2.0)
-                                    && (dy > SAME_LINE_EPS || same_y_wrap);
+                                let large_backward_jump =
+                                    dx < -(self.options.newline_threshold * 2.0);
+                                let line_wrap =
+                                    large_backward_jump && (dy > SAME_LINE_EPS || same_y_wrap);
+                                let positioned_run_boundary = large_backward_jump
+                                    && dy <= SAME_LINE_EPS
+                                    && at_text_object_start;
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
-                                } else if dx > self.options.space_threshold * state.font_size {
+                                } else if positioned_run_boundary
+                                    || dx > self.flat_space_gap_threshold(&state)
+                                {
                                     Some(' ')
                                 } else {
                                     None
@@ -1412,6 +1473,7 @@ impl TextExtractor {
                         // pen point (folds in Tz and CTM scale, issue #386; a
                         // full point so rotated baselines advance y too, #443).
                         (last_x, last_y) = advance_pen(&mut state, text_width);
+                        at_text_object_start = false;
                     }
                 }
 
@@ -1459,15 +1521,24 @@ impl TextExtractor {
                                     // treating a jump beyond `SAME_Y_WRAP_EM` font sizes
                                     // as a same-Y wrap (issue #447). Deltas are
                                     // baseline-relative (issue #443), so both gates hold
-                                    // under rotation; the epsilon absorbs projection
-                                    // rounding noise.
+                                    // under rotation. At the start of a new text
+                                    // object, a large backward jump warrants a
+                                    // separator but does not by itself prove a line
+                                    // wrap (issue #495). The epsilon absorbs
+                                    // projection rounding noise.
                                     let (dx, dy_signed) =
                                         pen_delta(&state, (last_x, last_y), (x, y));
                                     let dy = dy_signed.abs();
                                     let same_y_wrap =
                                         dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
-                                    let line_wrap = dx < -(self.options.newline_threshold * 2.0)
-                                        && (dy > SAME_LINE_EPS || same_y_wrap);
+                                    let large_backward_jump =
+                                        dx < -(self.options.newline_threshold * 2.0);
+                                    let line_wrap =
+                                        large_backward_jump && (dy > SAME_LINE_EPS || same_y_wrap);
+                                    let positioned_run_boundary = large_backward_jump
+                                        && dy <= SAME_LINE_EPS
+                                        && at_text_object_start
+                                        && at_array_start;
                                     // Separator of the run actually appended, for the
                                     // reading-order line grouping (issue #448).
                                     let mut emitted_sep: Option<Option<char>> = None;
@@ -1503,7 +1574,7 @@ impl TextExtractor {
                                             None
                                         } else if dy > self.options.newline_threshold || line_wrap {
                                             Some('\n')
-                                        } else if boundary_space {
+                                        } else if positioned_run_boundary || boundary_space {
                                             Some(' ')
                                         } else {
                                             None
@@ -1581,6 +1652,7 @@ impl TextExtractor {
                                     // issue #386: the pen must fold in Tz/CTM scale).
                                     (last_x, last_y) = advance_pen(&mut state, text_width);
                                     at_array_start = false;
+                                    at_text_object_start = false;
                                 }
                                 TextElement::Spacing(adjustment) => {
                                     // `at_array_start` is deliberately NOT cleared
@@ -1770,6 +1842,7 @@ impl TextExtractor {
                         }
 
                         (last_x, last_y) = advance_pen(&mut state, text_width);
+                        at_text_object_start = false;
                     }
                 }
 
@@ -1865,6 +1938,7 @@ impl TextExtractor {
                         }
 
                         (last_x, last_y) = advance_pen(&mut state, text_width);
+                        at_text_object_start = false;
                     }
                 }
 
@@ -2115,6 +2189,10 @@ impl TextExtractor {
                             let sub = OpRunState {
                                 state,
                                 in_text_object: false,
+                                // Preserve the outer boundary if the form emits
+                                // no text. A `BT` inside the form will replace it
+                                // with the form's own boundary.
+                                at_text_object_start,
                                 last_x,
                                 last_y,
                                 extracted_text,
@@ -2137,6 +2215,7 @@ impl TextExtractor {
                             self.font_cache = saved_fonts;
 
                             state = out.state;
+                            at_text_object_start = out.at_text_object_start;
                             last_x = out.last_x;
                             last_y = out.last_y;
                             extracted_text = out.extracted_text;
@@ -2156,6 +2235,7 @@ impl TextExtractor {
         Ok(OpRunState {
             state,
             in_text_object,
+            at_text_object_start,
             last_x,
             last_y,
             extracted_text,
@@ -2766,6 +2846,7 @@ impl TextExtractor {
     ) -> ParseResult<()> {
         // Clear per-page name mapping (font names like /F1 are page-local)
         self.font_cache.clear();
+        self.type0_implicit_space_widths.clear();
 
         // Try to get resources manually from page dictionary first
         // This is necessary because ParsedPage.get_resources() may not always work
@@ -2827,7 +2908,7 @@ impl TextExtractor {
                 font_name,
                 font_info.to_unicode.is_some()
             );
-            self.font_cache.insert(font_name.to_string(), font_info);
+            self.cache_page_font(font_name, font_info);
         }
     }
 
@@ -2840,8 +2921,7 @@ impl TextExtractor {
     ) {
         // Check persistent object cache first — avoids re-parsing across pages
         if let Some(cached) = self.font_object_cache.get(&font_ref) {
-            self.font_cache
-                .insert(font_name.to_string(), cached.clone());
+            let cached = cached.clone();
             tracing::debug!(
                 "Reused cached font object ({}, {}): {} (ToUnicode: {})",
                 font_ref.0,
@@ -2849,6 +2929,7 @@ impl TextExtractor {
                 font_name,
                 cached.to_unicode.is_some()
             );
+            self.cache_page_font(font_name, cached);
             return;
         }
 
@@ -2860,7 +2941,7 @@ impl TextExtractor {
                 // Store in persistent cache
                 self.font_object_cache.insert(font_ref, font_info.clone());
                 // Store in per-page name cache
-                self.font_cache.insert(font_name.to_string(), font_info);
+                self.cache_page_font(font_name, font_info);
                 tracing::debug!(
                     "Parsed and cached font ({}, {}): {} (ToUnicode: {})",
                     font_ref.0,
@@ -2870,6 +2951,24 @@ impl TextExtractor {
                 );
             }
         }
+    }
+
+    /// Add a parsed font to the page-local caches, deriving the Type0 fallback
+    /// width once rather than on every text-showing boundary.
+    fn cache_page_font(&mut self, font_name: &str, font_info: FontInfo) {
+        if font_info.font_type == "Type0" || font_info.descendant_font.is_some() {
+            let cid_font = font_info.descendant_font.as_deref().unwrap_or(&font_info);
+            if let Some(width) = cid_font
+                .metrics
+                .cid_widths
+                .as_ref()
+                .and_then(|widths| widths.narrowest_positive_width())
+            {
+                self.type0_implicit_space_widths
+                    .insert(font_name.to_string(), width);
+            }
+        }
+        self.font_cache.insert(font_name.to_string(), font_info);
     }
 
     /// Decode text using the current font encoding and ToUnicode mapping
@@ -3348,12 +3447,13 @@ const TJ_BOUNDARY_SPACE_EM: f64 = 0.7;
 /// threshold's sense — otherwise a negative size makes every backward jump a
 /// "wrap" and resurrects the #441 defect.
 ///
-/// Accepted, documented limitation (the #417/#422 trade-off): a same-line
-/// reposition that jumps back more than this many em is misread as a wrap, and
-/// a same-Y wrap of a line shorter than this is glued. Both are rare and
-/// neither loses a glyph — only the separator is wrong. A wrap with any
-/// nonzero leading (the common case, issue #390) is unaffected: it breaks on
-/// the `dy`-aware gate regardless of magnitude.
+/// Accepted, documented limitation (the #417/#422 trade-off) within one text
+/// object: a same-line reposition that jumps back more than this many em is
+/// misread as a wrap, and a same-Y wrap shorter than this is not recognized as
+/// a wrap. A new `BT`/`ET` object supplies enough evidence to separate #495's
+/// runs with whitespace, but not enough to promote the separator to a newline.
+/// A wrap with any nonzero leading (the common case, issue #390) is unaffected:
+/// it breaks on the `dy`-aware gate.
 const SAME_Y_WRAP_EM: f64 = 10.0;
 
 /// Pen movement from the previous post-advance pen point `last` to the
@@ -3571,6 +3671,58 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 /// `word_space` (`Tw`) once per *single-byte* space (code 32, §9.3.3). Both are
 /// unscaled text-space units, added directly (not multiplied by the font size);
 /// the caller's `advance_pen` applies `Th`.
+/// Decode a Type0 text-showing string's raw bytes into CIDs, for CID-indexed
+/// `/W` width lookup (issue #496). Mirrors the code-length/lookup rules
+/// `decode_text_with_font` already uses for Unicode decoding, but stops at
+/// the CID rather than continuing on to a Unicode codepoint.
+///
+/// Returns `None` when the code→CID relation is unavailable or vertical: in
+/// those cases guessing would select unrelated `/W` entries, so the caller
+/// retains the legacy fallback.
+fn cids_for_codes<'a>(codes: &'a [u8], font: &FontInfo) -> Option<Vec<(&'a [u8], u32)>> {
+    use crate::text::encoding_cmap::CidEncoding;
+
+    if matches!(font.cid_encoding, Some(CidEncoding::Utf16Be))
+        || font
+            .encoding
+            .as_deref()
+            .is_some_and(|name| name.ends_with("-V"))
+        || matches!(&font.cid_encoding, Some(CidEncoding::Cmap(cmap)) if cmap.wmode == 1)
+    {
+        return None;
+    }
+    let identity = font.encoding.as_deref() == Some("Identity-H");
+    if font.cid_encoding.is_none() && !identity {
+        return None;
+    }
+
+    let mut result = Vec::new();
+    let mut offset = 0;
+    while offset < codes.len() {
+        let code_len = match &font.cid_encoding {
+            Some(CidEncoding::Cmap(cmap)) => cmap.code_len_at(codes, offset),
+            Some(CidEncoding::Utf16Be) => unreachable!(),
+            None => 2,
+        }
+        .max(1)
+        .min(codes.len() - offset);
+        let code = &codes[offset..offset + code_len];
+        let cid = match &font.cid_encoding {
+            Some(CidEncoding::Cmap(cmap)) => cmap
+                .map_code_to_cid(code)
+                .or_else(|| cmap.map_notdef(code))
+                .map(u32::from)?,
+            Some(CidEncoding::Utf16Be) => unreachable!(),
+            None => code
+                .iter()
+                .fold(0u32, |value, byte| (value << 8) | u32::from(*byte)),
+        };
+        result.push((code, cid));
+        offset += code_len;
+    }
+    Some(result)
+}
+
 fn calculate_text_width_from_codes(
     codes: &[u8],
     decoded: &str,
@@ -3580,13 +3732,36 @@ fn calculate_text_width_from_codes(
     word_space: f64,
 ) -> f64 {
     // Composite (Type0) fonts use multi-byte codes; a single byte is not a code,
-    // so byte-indexed width lookup is invalid. Preserve the existing decoded-based
-    // behavior for them, adding `Tc` per glyph. `Tw` applies only to the
-    // single-byte code 32 (§9.3.3), which a multi-byte code can never be, so it
-    // does not apply here.
+    // so byte-indexed width lookup is invalid. `Tc` is added per glyph below.
+    // `Tw` applies only to the single-byte code 32 (§9.3.3), which a
+    // multi-byte code can never be, so it does not apply here.
     let is_composite =
         font_info.is_some_and(|f| f.font_type == "Type0" || f.descendant_font.is_some());
     if is_composite {
+        // Prefer the descendant CIDFont's `/W`/`/DW` (CID-indexed, per
+        // §9.7.4.3) over the decoded-Unicode-indexed fallback below: a CID
+        // is an arbitrary font-internal identifier with no relationship to
+        // the character it decodes to, so indexing by decoded codepoint
+        // reads the wrong table slot whenever CID != codepoint (any
+        // subset/reordered CID font). Without `/W`/`/DW` at all, fall back
+        // to the previous decoded-text heuristic (issue #496).
+        if let Some(cid_widths) = font_info
+            .and_then(|f| f.descendant_font.as_deref().or(Some(f)))
+            .and_then(|f| f.metrics.cid_widths.as_ref())
+        {
+            if let Some(font) = font_info {
+                if let Some(cid_codes) = cids_for_codes(codes, font) {
+                    let mut total = 0.0;
+                    for (code, cid) in cid_codes {
+                        total += cid_widths.width_for(cid) / 1000.0 * font_size + char_space;
+                        if code.len() == 1 && code[0] == b' ' {
+                            total += word_space;
+                        }
+                    }
+                    return total;
+                }
+            }
+        }
         let glyphs = decoded.chars().count() as f64;
         return calculate_text_width(decoded, font_size, font_info) + char_space * glyphs;
     }
@@ -4422,6 +4597,7 @@ mod tests {
                 widths: None,
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4463,6 +4639,7 @@ mod tests {
                 widths: Some(widths),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4519,6 +4696,7 @@ mod tests {
                 widths: Some(vec![1000.0, 100.0]),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4564,6 +4742,7 @@ mod tests {
                 widths: Some(widths),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4604,6 +4783,7 @@ mod tests {
                 widths: Some(widths),
                 missing_width: Some(600.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4639,6 +4819,7 @@ mod tests {
                 widths: Some(vec![500.0; 95]),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4673,6 +4854,7 @@ mod tests {
                 widths: Some(vec![500.0; 95]),
                 missing_width: Some(600.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4706,6 +4888,7 @@ mod tests {
                 widths: Some(vec![722.0]),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4744,6 +4927,7 @@ mod tests {
                 widths: Some(proportional_widths),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4764,6 +4948,7 @@ mod tests {
                 widths: Some(monospace_widths),
                 missing_width: Some(600.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4814,6 +4999,7 @@ mod tests {
                 widths: Some(widths),
                 missing_width: Some(500.0),
                 kerning: Some(kerning),
+                cid_widths: None,
             },
             cid_encoding: None,
         };

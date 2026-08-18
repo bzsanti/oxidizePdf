@@ -29,9 +29,9 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: rustfmt, clippy
 
-      - name: Install Tesseract OCR (Ubuntu)
+      - name: Install Tesseract OCR and qpdf (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev qpdf
 
       - name: Install Tesseract OCR (macOS)
         if: matrix.os == 'macos-latest'
@@ -98,6 +98,22 @@ jobs:
       - name: Run tests (all others)
         if: matrix.os != 'macos-latest' || matrix.rust != 'beta'
         run: cargo test --all --features internal-testing --verbose
+
+      - name: Validate incremental text notes with qpdf
+        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_493_incremental_text_notes_test
+          qpdf_accepts_incremental_text_note_revision
+          -- --ignored --exact
+
+      - name: Validate AES-256 R5 interoperability with qpdf
+        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_492_aes256_perms_interop_test
+          qpdf_checks_and_linearizes_generated_aes256_r5_pdf
+          -- --ignored --exact
 
       # The analysis SPI is gated behind `unstable-spi` (+ `semantic` for the
       # enricher/extra bag), so the default test step above never compiles its
@@ -202,3 +218,8 @@ jobs:
         uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           package: oxidize-pdf
+          # Development accumulates backward-compatible API changes before a
+          # release version is chosen. Allow minor-level changes on develop,
+          # while release/main checks continue deriving the required bump from
+          # Cargo.toml and the published baseline.
+          release-type: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'develop') || github.ref == 'refs/heads/develop') && 'minor' || '' }}

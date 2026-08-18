@@ -8,6 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [4.5.0] - 2026-08-18
+
+### Added
+
+- **Incremental editing for standard text-note annotations** (#493). The new
+  typed `IncrementalTextNoteEditor` API can enumerate, add, move, edit, and
+  remove `/Text` annotations while preserving the original PDF bytes and
+  applying each validated batch as one incremental revision.
+
+### Fixed
+
+- **AES-256 revision 5 encryption dictionaries now emit `/Perms`** (#492),
+  restoring interoperability with external readers while retaining strict
+  validation of the encrypted permissions block.
+- **Flat extraction could fuse adjacent cells in label/value grids** (#495).
+  Separate text objects that return backward on the same baseline now receive
+  neutral whitespace when the geometry is ambiguous, while genuine long wraps
+  still become newlines and legitimate repositioned overlays remain intact.
+- **Composite (Type0/CID) font text extraction never consulted the CIDFont's
+  `/W`/`/DW` glyph widths** (#496). Every glyph was assumed to advance by a
+  flat `0.5 * font_size`, regardless of its real width. When a glyph's true
+  advance diverged enough from that flat estimate relative to its neighbors
+  (e.g. a genuinely wide glyph in the font), the extractor's pen-tracking
+  drifted out of sync with where the next glyph was actually drawn, crossing
+  the space-insertion threshold and corrupting the extracted text with a
+  spurious space in the middle of a single token. `/W`/`/DW` (ISO 32000-1
+  §9.7.4.3) are now parsed into a CID-indexed width table and consulted for
+  the composite-font width calculation on both the flat and
+  `preserve_layout` extraction paths, falling back to the previous heuristic
+  when neither is present.
+- **Tagged `ActualText` extraction lost the marked-content association**
+  (#498). Generated `ActualText` sequences now carry an MCID connected to the
+  structure tree, so tagged extraction returns the replacement text instead
+  of dropping it.
+- **Real Type0 widths could hide narrow implicit word spaces** (#500). When a
+  composite font has no discoverable U+0020 mapping, flat extraction now uses
+  a bounded, font-derived CID-width signal that preserves narrow word gaps
+  without splitting URLs, identifiers, kerned runs, or positioned overlays.
+
 ## [4.4.0] - 2026-08-16
 
 ### Added
