@@ -83,9 +83,9 @@ const GLYPHS: &[(i32, u32)] = &[
     (256, 0x0035), // P
 ];
 
-fn content_stream() -> Vec<u8> {
+fn content_stream(glyphs: &[(i32, u32)]) -> Vec<u8> {
     let mut content = String::new();
-    for (x, cid) in GLYPHS {
+    for (x, cid) in glyphs {
         content.push_str(&format!(
             "BT\n/F1 20 Tf\n1 0 0 -1 0 0 Tm\n{x} -966 Td <{cid:04X}> Tj\nET\n"
         ));
@@ -94,7 +94,11 @@ fn content_stream() -> Vec<u8> {
 }
 
 fn build_pdf(w_clause: &str) -> Vec<u8> {
-    let content = content_stream();
+    build_pdf_with(w_clause, TOUNICODE, GLYPHS)
+}
+
+fn build_pdf_with(w_clause: &str, to_unicode: &[u8], glyphs: &[(i32, u32)]) -> Vec<u8> {
+    let content = content_stream(glyphs);
     let objects: Vec<Vec<u8>> = vec![
         b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_vec(),
@@ -105,7 +109,7 @@ fn build_pdf(w_clause: &str) -> Vec<u8> {
         b"<< /Type /Font /Subtype /Type0 /BaseFont /Synthetic \
           /Encoding /Identity-H /DescendantFonts [7 0 R] /ToUnicode 6 0 R >>"
             .to_vec(),
-        stream_obj("", TOUNICODE),
+        stream_obj("", to_unicode),
         format!(
             "<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Synthetic \
              /CIDToGIDMap /Identity \
@@ -132,6 +136,30 @@ fn extract(w_clause: &str) -> String {
 }
 
 #[test]
+fn flat_path_uses_the_mapped_type0_space_cid_width_for_narrow_word_gaps() {
+    let to_unicode = b"begincmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+3 beginbfchar <0001> <0041> <0002> <0020> <0003> <0042> endbfchar\n\
+endcmap";
+    let pdf = build_pdf_with(
+        "/W [1 [500 400 500]] /DW 1000",
+        to_unicode,
+        &[(0, 1), (15, 3)],
+    );
+    let doc = PdfReader::new(Cursor::new(pdf))
+        .expect("PDF should parse")
+        .into_document();
+    let text = TextExtractor::new()
+        .extract_from_page(&doc, 0)
+        .expect("extraction should succeed")
+        .text;
+    assert_eq!(
+        text, "A B",
+        "the 5pt gap clears half the real 8pt space advance but not the legacy 6pt threshold"
+    );
+}
+
+#[test]
 fn wide_cid_glyph_does_not_get_a_spurious_space_when_w_is_present() {
     let text = extract(&format!("/W [{W_ARRAY}] /DW 0"));
     assert!(
@@ -146,7 +174,7 @@ fn wide_cid_glyph_does_not_get_a_spurious_space_when_w_is_present() {
 }
 
 #[test]
-fn genuine_word_space_is_still_produced_regardless_of_w() {
+fn real_widths_fix_the_wide_cid_without_claiming_the_narrow_space_case() {
     // The "PAN"/"No" boundary is a real (if narrow) positional gap; whether
     // or not it clears the space threshold is a separate, pre-existing
     // calibration question (also applies to simple fonts) that this fix does
@@ -155,26 +183,22 @@ fn genuine_word_space_is_still_produced_regardless_of_w() {
     // fix itself.
     let with_w = extract(&format!("/W [{W_ARRAY}] /DW 0"));
     let without_w = extract("");
-    // Both variants must agree on this boundary: /W only changes advance
-    // widths, not whether a *given* gap crosses the threshold once the
-    // widths feeding that gap are correct on both sides of it.
     assert_eq!(
-        with_w.contains("PAN No") || with_w.contains("PANNo"),
-        without_w.contains("PAN No") || without_w.contains("PANNo"),
-        "with_w={with_w:?} without_w={without_w:?}"
+        with_w, "PANNo:BLUPM6342P",
+        "real CID widths must remove the wide-M space; the unmapped narrow word gap is #500"
+    );
+    assert_eq!(
+        without_w, "PANNo:BLUPM6342P",
+        "the normative missing /DW default is 1000, not the old 0.5em heuristic"
     );
 }
 
 #[test]
-fn no_w_or_dw_falls_back_to_the_pre_fix_heuristic() {
-    // Without any /W/DW info at all, behavior must be unchanged from before
-    // this fix (the decoded-text-length heuristic) -- this is a real
-    // fallback path (fonts with a missing/malformed /W), not just a defensive
-    // branch, so it must keep working.
-    let text = extract("");
-    assert!(
-        !text.is_empty(),
-        "extraction must still succeed with no CID width info at all"
+fn missing_dw_uses_the_normative_1000_unit_default() {
+    assert_eq!(
+        extract(""),
+        extract("/DW 1000"),
+        "omitted /DW must behave exactly like the ISO-defined 1000-unit default"
     );
 }
 
@@ -185,10 +209,7 @@ fn dw_only_no_w_array_is_honored() {
     // not introduce a spurious space, unlike the flat 0.5em (=1000 units at
     // this scale) pre-fix fallback would for some of these narrower glyphs.
     let text = extract("/DW 600");
-    assert!(
-        !text.is_empty(),
-        "extraction must succeed with /DW present and no /W array"
-    );
+    assert_eq!(text, "PAN No:BLUPM6342P");
 }
 
 #[test]

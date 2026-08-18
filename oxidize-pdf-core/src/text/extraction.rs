@@ -793,6 +793,16 @@ impl TextExtractor {
     /// ZapfDingbats), which ship no `/Widths` array (#302 symptom 2).
     fn font_space_advance(&self, font_name: Option<&str>, font_size: f64) -> Option<f64> {
         let info = self.font_cache.get(font_name?)?;
+        if let (Some(to_unicode), Some(descendant)) =
+            (info.to_unicode.as_ref(), info.descendant_font.as_deref())
+        {
+            let space_code = to_unicode.source_code_for_unicode(' ')?;
+            let cid = cids_for_codes(&space_code, info)?.first()?.1;
+            let width = descendant.metrics.cid_widths.as_ref()?.width_for(cid);
+            if width > 0.0 {
+                return Some(width / 1000.0 * font_size);
+            }
+        }
         if let Some(ref widths) = info.metrics.widths {
             let first = info.metrics.first_char.unwrap_or(0);
             if first <= 32 {
@@ -804,6 +814,13 @@ impl TextExtractor {
             }
         }
         standard_14_space_width(&info.name).map(|em| em / 1000.0 * font_size)
+    }
+
+    fn flat_space_gap_threshold(&self, state: &TextState) -> f64 {
+        match self.font_space_advance(state.font_name.as_deref(), state.font_size) {
+            Some(advance) if advance > 0.0 => 0.5 * advance,
+            _ => self.options.space_threshold * state.font_size,
+        }
     }
 
     /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
@@ -1328,7 +1345,7 @@ impl TextExtractor {
                                     && (dy > SAME_LINE_EPS || same_y_wrap);
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
-                                } else if dx > self.options.space_threshold * state.font_size {
+                                } else if dx > self.flat_space_gap_threshold(&state) {
                                     Some(' ')
                                 } else {
                                     None
@@ -3576,36 +3593,51 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 /// `decode_text_with_font` already uses for Unicode decoding, but stops at
 /// the CID rather than continuing on to a Unicode codepoint.
 ///
-/// - A non-identity encoding CMap (`font_info.cid_encoding`) maps
-///   variable-width codes to CIDs directly; an unmapped code resolves via
-///   `.notdef` when present, and is otherwise skipped (its width cannot be
-///   determined, so it must not desync the remaining codes' pairing).
-/// - `Identity-H`/`Identity-V` (by far the most common case) — and the
-///   `Utf16Be` `cid_encoding`, whose codes are also 2-byte units — read the
-///   CID directly as a big-endian `u16` per §9.7.4.2, no code-space lookup
-///   required.
-fn cids_for_codes(codes: &[u8], font_info: Option<&FontInfo>) -> Vec<u32> {
-    if let Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc)) =
-        font_info.and_then(|f| f.cid_encoding.as_ref())
+/// Returns `None` when the code→CID relation is unavailable or vertical: in
+/// those cases guessing would select unrelated `/W` entries, so the caller
+/// retains the legacy fallback.
+fn cids_for_codes<'a>(codes: &'a [u8], font: &FontInfo) -> Option<Vec<(&'a [u8], u32)>> {
+    use crate::text::encoding_cmap::CidEncoding;
+
+    if matches!(font.cid_encoding, Some(CidEncoding::Utf16Be))
+        || font
+            .encoding
+            .as_deref()
+            .is_some_and(|name| name.ends_with("-V"))
+        || matches!(&font.cid_encoding, Some(CidEncoding::Cmap(cmap)) if cmap.wmode == 1)
     {
-        let mut cids = Vec::new();
-        let mut i = 0;
-        while i < codes.len() {
-            let len = enc.code_len_at(codes, i).max(1).min(codes.len() - i);
-            let code = &codes[i..i + len];
-            if let Some(cid) = enc.map_code_to_cid(code).or_else(|| enc.map_notdef(code)) {
-                cids.push(cid as u32);
-            }
-            i += len;
-        }
-        return cids;
+        return None;
+    }
+    let identity = font.encoding.as_deref() == Some("Identity-H");
+    if font.cid_encoding.is_none() && !identity {
+        return None;
     }
 
-    codes
-        .chunks(2)
-        .filter(|chunk| chunk.len() == 2)
-        .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]) as u32)
-        .collect()
+    let mut result = Vec::new();
+    let mut offset = 0;
+    while offset < codes.len() {
+        let code_len = match &font.cid_encoding {
+            Some(CidEncoding::Cmap(cmap)) => cmap.code_len_at(codes, offset),
+            Some(CidEncoding::Utf16Be) => unreachable!(),
+            None => 2,
+        }
+        .max(1)
+        .min(codes.len() - offset);
+        let code = &codes[offset..offset + code_len];
+        let cid = match &font.cid_encoding {
+            Some(CidEncoding::Cmap(cmap)) => cmap
+                .map_code_to_cid(code)
+                .or_else(|| cmap.map_notdef(code))
+                .map(u32::from)?,
+            Some(CidEncoding::Utf16Be) => unreachable!(),
+            None => code
+                .iter()
+                .fold(0u32, |value, byte| (value << 8) | u32::from(*byte)),
+        };
+        result.push((code, cid));
+        offset += code_len;
+    }
+    Some(result)
 }
 
 fn calculate_text_width_from_codes(
@@ -3623,7 +3655,6 @@ fn calculate_text_width_from_codes(
     let is_composite =
         font_info.is_some_and(|f| f.font_type == "Type0" || f.descendant_font.is_some());
     if is_composite {
-        let glyphs = decoded.chars().count() as f64;
         // Prefer the descendant CIDFont's `/W`/`/DW` (CID-indexed, per
         // §9.7.4.3) over the decoded-Unicode-indexed fallback below: a CID
         // is an arbitrary font-internal identifier with no relationship to
@@ -3635,13 +3666,20 @@ fn calculate_text_width_from_codes(
             .and_then(|f| f.descendant_font.as_deref().or(Some(f)))
             .and_then(|f| f.metrics.cid_widths.as_ref())
         {
-            let cids = cids_for_codes(codes, font_info);
-            let total: f64 = cids
-                .iter()
-                .map(|&cid| cid_widths.width_for(cid) / 1000.0 * font_size)
-                .sum();
-            return total + char_space * glyphs;
+            if let Some(font) = font_info {
+                if let Some(cid_codes) = cids_for_codes(codes, font) {
+                    let mut total = 0.0;
+                    for (code, cid) in cid_codes {
+                        total += cid_widths.width_for(cid) / 1000.0 * font_size + char_space;
+                        if code.len() == 1 && code[0] == b' ' {
+                            total += word_space;
+                        }
+                    }
+                    return total;
+                }
+            }
         }
+        let glyphs = decoded.chars().count() as f64;
         return calculate_text_width(decoded, font_size, font_info) + char_space * glyphs;
     }
 

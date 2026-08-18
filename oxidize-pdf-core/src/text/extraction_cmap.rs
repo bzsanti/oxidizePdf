@@ -22,6 +22,9 @@ pub struct CidWidths {
     /// Per-CID widths (1/1000 em), parsed from `/W`'s mixed
     /// `c [w1 w2 ...]` and `cFirst cLast w` forms.
     pub widths: HashMap<u32, f64>,
+    /// Uniform `/W` ranges stored without materializing every CID. Keeping
+    /// ranges compact bounds parser work by input size for untrusted PDFs.
+    pub ranges: Vec<(u32, u32, f64)>,
     /// `/DW`, the width (1/1000 em) for any CID absent from `widths`.
     /// Defaults to 1000 per spec when `/DW` is not present.
     pub default_width: f64,
@@ -30,7 +33,17 @@ pub struct CidWidths {
 impl CidWidths {
     /// Width (1/1000 em) for `cid`: its `/W` entry, or `/DW` otherwise.
     pub fn width_for(&self, cid: u32) -> f64 {
-        self.widths.get(&cid).copied().unwrap_or(self.default_width)
+        self.widths
+            .get(&cid)
+            .copied()
+            .or_else(|| {
+                self.ranges
+                    .iter()
+                    .rev()
+                    .find(|(first, last, _)| cid >= *first && cid <= *last)
+                    .map(|(_, _, width)| *width)
+            })
+            .unwrap_or(self.default_width)
     }
 }
 
@@ -355,6 +368,10 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         // Extract CIDFont `/W` + `/DW` (ISO 32000-1 §9.7.4.3). Only present
         // on a CIDFontType0/CIDFontType2 descendant font dictionary; a
         // simple font's dict has no `/W` key, so this is a no-op there.
+        let is_cid_font = font_dict
+            .get("Subtype")
+            .and_then(PdfObject::as_name)
+            .is_some_and(|subtype| matches!(subtype.0.as_str(), "CIDFontType0" | "CIDFontType2"));
         let dw = font_dict.get("DW").and_then(|o| o.as_real());
         let w_array: Option<Cow<[PdfObject]>> = match font_dict.get("W") {
             Some(PdfObject::Array(array)) => Some(Cow::Borrowed(&array.0)),
@@ -366,6 +383,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         };
         if let Some(entries) = w_array {
             let mut widths = HashMap::new();
+            let mut ranges = Vec::new();
             let mut i = 0;
             while i < entries.len() {
                 let Some(first_cid) = entries[i].as_integer() else {
@@ -374,9 +392,18 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                 match entries.get(i + 1) {
                     // `c [w1 w2 ...]`: consecutive widths starting at c.
                     Some(PdfObject::Array(w_list)) => {
-                        for (offset, w_obj) in w_list.0.iter().enumerate() {
-                            if let Some(w) = w_obj.as_real() {
-                                widths.insert(first_cid as u32 + offset as u32, w);
+                        if let Ok(first_cid) = u32::try_from(first_cid) {
+                            for (offset, w_obj) in w_list.0.iter().enumerate() {
+                                if let (Ok(offset), Some(w)) =
+                                    (u32::try_from(offset), w_obj.as_real())
+                                {
+                                    if let Some(cid) = first_cid
+                                        .checked_add(offset)
+                                        .filter(|cid| *cid <= u16::MAX as u32)
+                                    {
+                                        widths.insert(cid, w);
+                                    }
+                                }
                             }
                         }
                         i += 2;
@@ -393,11 +420,10 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                         // (§9.7.4.2), so any range past 0xFFFF is malformed;
                         // clamp rather than materializing a huge/looping
                         // range from a corrupt or adversarial `/W` array.
-                        let last_cid = last_cid.min(u16::MAX as i64);
+                        let first_cid = first_cid.max(0).min(u16::MAX as i64) as u32;
+                        let last_cid = last_cid.max(0).min(u16::MAX as i64) as u32;
                         if last_cid >= first_cid {
-                            for cid in first_cid..=last_cid {
-                                widths.insert(cid as u32, w);
-                            }
+                            ranges.push((first_cid, last_cid, w));
                         }
                         i += 3;
                     }
@@ -406,13 +432,15 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             }
             metrics.cid_widths = Some(CidWidths {
                 widths,
+                ranges,
                 default_width: dw.unwrap_or(1000.0),
             });
-        } else if let Some(dw) = dw {
-            // `/DW` with no `/W`: every CID uses the default width.
+        } else if is_cid_font {
+            // `/DW` defaults to 1000 even when both `/W` and `/DW` are absent.
             metrics.cid_widths = Some(CidWidths {
                 widths: HashMap::new(),
-                default_width: dw,
+                ranges: Vec::new(),
+                default_width: dw.unwrap_or(1000.0),
             });
         }
 

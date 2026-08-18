@@ -386,6 +386,47 @@ impl CMap {
         None
     }
 
+    /// Return an explicitly mapped source code for a single Unicode character.
+    /// This lets extraction connect semantic glyphs such as U+0020 back to
+    /// code/CID-indexed font metrics without guessing a CID.
+    pub(crate) fn source_code_for_unicode(&self, target: char) -> Option<Vec<u8>> {
+        let mut utf16 = [0u16; 2];
+        let encoded = target.encode_utf16(&mut utf16);
+        let target_bytes: Vec<u8> = encoded.iter().flat_map(|unit| unit.to_be_bytes()).collect();
+
+        for mapping in &self.mappings {
+            match mapping {
+                CMapEntry::Single { src, dst } if *dst == target_bytes => {
+                    return Some(src.clone());
+                }
+                CMapEntry::Range {
+                    src_start,
+                    src_end,
+                    dst_start,
+                } if dst_start.len() == target_bytes.len()
+                    && target_bytes.as_slice() >= dst_start.as_slice() =>
+                {
+                    let offset = calculate_offset(&target_bytes, dst_start);
+                    if offset <= calculate_offset(src_end, src_start) {
+                        let mut source = src_start.clone();
+                        let mut carry = offset;
+                        for byte in source.iter_mut().rev() {
+                            let sum = usize::from(*byte) + carry;
+                            *byte = (sum & 0xff) as u8;
+                            carry = sum >> 8;
+                            if carry == 0 {
+                                break;
+                            }
+                        }
+                        return Some(source);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
     /// Check if a code is in valid codespace
     pub fn is_valid_code(&self, code: &[u8]) -> bool {
         for range in &self.codespace_ranges {
@@ -1433,5 +1474,20 @@ endcmap\n";
 endcmap";
         let cmap = CMap::parse(data).expect("parse");
         assert_eq!(cmap.inherited_ordering(), Some("Korea1"));
+    }
+
+    #[test]
+    fn source_code_for_unicode_resolves_single_and_range_mappings() {
+        let cmap = CMap::parse(
+            b"begincmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+1 beginbfchar <0002> <0020> endbfchar\n\
+1 beginbfrange <0010> <0012> <0041> endbfrange\n\
+endcmap",
+        )
+        .expect("parse");
+        assert_eq!(cmap.source_code_for_unicode(' '), Some(vec![0x00, 0x02]));
+        assert_eq!(cmap.source_code_for_unicode('B'), Some(vec![0x00, 0x11]));
+        assert_eq!(cmap.source_code_for_unicode('Z'), None);
     }
 }

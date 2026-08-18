@@ -12,6 +12,8 @@ use crate::text::cmap::{tokenize_cmap, CodeRange, Token};
 /// destinations are Unicode hex strings.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct EncodingCMap {
+    /// Writing mode declared by `/WMode` (0 horizontal, 1 vertical).
+    pub wmode: u8,
     pub codespace_ranges: Vec<CodeRange>,
     pub single_cid: HashMap<Vec<u8>, u16>,
     pub cid_ranges: Vec<CidRange>,
@@ -37,6 +39,12 @@ impl EncodingCMap {
         let mut i = 0;
         while i < tokens.len() {
             match &tokens[i] {
+                Token::Name(name) if name == "WMode" => {
+                    if let Some(Token::Integer(value)) = tokens.get(i + 1) {
+                        cmap.wmode = (*value).clamp(0, 1) as u8;
+                    }
+                    i += 1;
+                }
                 Token::Keyword(k) if k == "begincodespacerange" => {
                     i += 1;
                     while i < tokens.len() {
@@ -354,6 +362,15 @@ endcmap";
         assert_eq!(cmap.codespace_ranges.len(), 2);
         assert_eq!(cmap.code_len_at(&[0x81, 0x40], 0), 2);
         assert_eq!(cmap.usecmap_parent.as_deref(), Some("Foo-Base"));
+    }
+
+    #[test]
+    fn parse_retains_vertical_writing_mode() {
+        let cmap = EncodingCMap::parse(
+            b"begincmap\n/WMode 1 def\n1 begincodespacerange <0000> <FFFF> endcodespacerange\nendcmap",
+        )
+        .expect("parse");
+        assert_eq!(cmap.wmode, 1);
     }
 
     #[test]
