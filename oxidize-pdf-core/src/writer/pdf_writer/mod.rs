@@ -198,6 +198,10 @@ impl<W: Write> PdfWriter<W> {
     }
 
     pub fn write_document(&mut self, document: &mut Document) -> Result<()> {
+        if let Some(struct_tree) = &document.struct_tree {
+            Self::validate_struct_tree(struct_tree, &document.pages)?;
+        }
+
         // Store used characters for font subsetting
         if !document.used_characters_by_font.is_empty() {
             self.document_used_chars_by_font = document.used_characters_by_font.clone();
@@ -1300,6 +1304,22 @@ impl<W: Write> PdfWriter<W> {
             element_ids.push(self.allocate_object_id());
         }
 
+        // Build the ParentTree ownership map. Each tagged page gets a
+        // /StructParents key and each MCID slot points at its owning
+        // structure element (ISO 32000-1 §14.7.4.4).
+        let mut page_owners: std::collections::BTreeMap<
+            usize,
+            std::collections::BTreeMap<u32, usize>,
+        > = std::collections::BTreeMap::new();
+        for (element_index, element) in struct_tree.iter().enumerate() {
+            for mcid_ref in &element.mcids {
+                page_owners
+                    .entry(mcid_ref.page_index)
+                    .or_default()
+                    .insert(mcid_ref.mcid, element_index);
+            }
+        }
+
         // Build parent map: element_index -> parent_id
         let mut parent_map: std::collections::HashMap<usize, ObjectId> =
             std::collections::HashMap::new();
@@ -1365,7 +1385,12 @@ impl<W: Write> PdfWriter<W> {
                 element_dict.set("Alt", Object::String(alt.clone()));
             }
             if let Some(ref actual_text) = element.attributes.actual_text {
-                element_dict.set("ActualText", Object::String(actual_text.clone()));
+                let mut encoded = Vec::with_capacity(2 + actual_text.len() * 2);
+                encoded.extend_from_slice(&[0xFE, 0xFF]);
+                for unit in actual_text.encode_utf16() {
+                    encoded.extend_from_slice(&unit.to_be_bytes());
+                }
+                element_dict.set("ActualText", Object::ByteString(encoded));
             }
             if let Some(ref title) = element.attributes.title {
                 element_dict.set("T", Object::String(title.clone()));
@@ -1394,7 +1419,7 @@ impl<W: Write> PdfWriter<W> {
             for mcid_ref in &element.mcids {
                 let mut mcr = Dictionary::new();
                 mcr.set("Type", Object::Name("MCR".to_string()));
-                mcr.set("Pg", Object::Integer(mcid_ref.page_index as i64));
+                mcr.set("Pg", Object::Reference(self.page_ids[mcid_ref.page_index]));
                 mcr.set("MCID", Object::Integer(mcid_ref.mcid as i64));
                 kids.push(Object::Dictionary(mcr));
             }
@@ -1409,6 +1434,29 @@ impl<W: Write> PdfWriter<W> {
         // Create StructTreeRoot dictionary
         let mut struct_tree_root = Dictionary::new();
         struct_tree_root.set("Type", Object::Name("StructTreeRoot".to_string()));
+
+        if !page_owners.is_empty() {
+            let parent_tree_id = self.allocate_object_id();
+            let mut nums = Vec::new();
+            for (struct_parent_key, (_page_index, owners)) in page_owners.iter().enumerate() {
+                let max_mcid = *owners.keys().next_back().expect("non-empty owner map");
+                let mut owner_array = vec![Object::Null; max_mcid as usize + 1];
+                for (&mcid, &element_index) in owners {
+                    owner_array[mcid as usize] = Object::Reference(element_ids[element_index]);
+                }
+                nums.push(Object::Integer(struct_parent_key as i64));
+                nums.push(Object::Array(owner_array));
+            }
+
+            let mut parent_tree = Dictionary::new();
+            parent_tree.set("Nums", Object::Array(nums));
+            self.write_object(parent_tree_id, Object::Dictionary(parent_tree))?;
+            struct_tree_root.set("ParentTree", Object::Reference(parent_tree_id));
+            struct_tree_root.set(
+                "ParentTreeNextKey",
+                Object::Integer(page_owners.len() as i64),
+            );
+        }
 
         // Add root element(s) as K entry
         if let Some(root_index) = struct_tree.root_index() {
@@ -1429,6 +1477,52 @@ impl<W: Write> PdfWriter<W> {
 
         self.write_object(struct_tree_root_id, Object::Dictionary(struct_tree_root))?;
         Ok(struct_tree_root_id)
+    }
+
+    fn validate_struct_tree(
+        struct_tree: &crate::structure::StructTree,
+        pages: &[crate::page::Page],
+    ) -> Result<()> {
+        let mut owners = std::collections::HashSet::new();
+        for element in struct_tree.iter() {
+            for mcid_ref in &element.mcids {
+                if mcid_ref.page_index >= pages.len() {
+                    return Err(PdfError::InvalidStructure(format!(
+                        "structure element references page {} but document has {} pages",
+                        mcid_ref.page_index,
+                        pages.len()
+                    )));
+                }
+                if mcid_ref.mcid >= pages[mcid_ref.page_index].next_mcid() {
+                    return Err(PdfError::InvalidStructure(format!(
+                        "structure element references MCID {} on page {}, but that page has only {} marked-content sequences",
+                        mcid_ref.mcid,
+                        mcid_ref.page_index,
+                        pages[mcid_ref.page_index].next_mcid()
+                    )));
+                }
+                if !owners.insert((mcid_ref.page_index, mcid_ref.mcid)) {
+                    return Err(PdfError::InvalidStructure(format!(
+                        "MCID {} on page {} is owned by more than one structure element",
+                        mcid_ref.mcid, mcid_ref.page_index
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn struct_parent_keys(
+        struct_tree: &crate::structure::StructTree,
+    ) -> std::collections::BTreeMap<usize, i64> {
+        struct_tree
+            .iter()
+            .flat_map(|element| element.mcids.iter().map(|mcid| mcid.page_index))
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .enumerate()
+            .map(|(key, page_index)| (page_index, key as i64))
+            .collect()
     }
 
     /// Reserve an `ObjectId` for every field owned by `document.form_manager`
@@ -2544,6 +2638,14 @@ impl<W: Write> PdfWriter<W> {
         // Store page IDs for form field references
         self.page_ids = page_ids.clone();
 
+        // Compute the page-index -> /StructParents mapping once. Rebuilding it
+        // while serializing every page makes large tagged documents quadratic.
+        let struct_parent_keys = document
+            .struct_tree
+            .as_ref()
+            .map(Self::struct_parent_keys)
+            .unwrap_or_default();
+
         // Write individual pages with font references
         for (i, page) in document.pages.iter().enumerate() {
             let page_id = page_ids[i];
@@ -2559,7 +2661,7 @@ impl<W: Write> PdfWriter<W> {
                 pages_id,
                 content_id,
                 page,
-                document,
+                struct_parent_keys.get(&i).copied(),
                 font_refs,
                 &preserved_font_map,
             )?;
@@ -2585,7 +2687,7 @@ impl<W: Write> PdfWriter<W> {
         parent_id: ObjectId,
         content_id: ObjectId,
         page: &crate::page::Page,
-        _document: &Document,
+        struct_parent_key: Option<i64>,
         font_refs: &HashMap<String, ObjectId>,
         preserved_font_map: &HashMap<String, String>,
     ) -> Result<()> {
@@ -2595,6 +2697,10 @@ impl<W: Write> PdfWriter<W> {
         page_dict.set("Type", Object::Name("Page".to_string()));
         page_dict.set("Parent", Object::Reference(parent_id));
         page_dict.set("Contents", Object::Reference(content_id));
+
+        if let Some(key) = struct_parent_key {
+            page_dict.set("StructParents", Object::Integer(key));
+        }
 
         // Get resources dictionary or create new one
         let mut resources = if let Some(Object::Dictionary(res)) = page_dict.get("Resources") {
