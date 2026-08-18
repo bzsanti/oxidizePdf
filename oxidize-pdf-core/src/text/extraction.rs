@@ -793,6 +793,16 @@ impl TextExtractor {
     /// ZapfDingbats), which ship no `/Widths` array (#302 symptom 2).
     fn font_space_advance(&self, font_name: Option<&str>, font_size: f64) -> Option<f64> {
         let info = self.font_cache.get(font_name?)?;
+        if let (Some(to_unicode), Some(descendant)) =
+            (info.to_unicode.as_ref(), info.descendant_font.as_deref())
+        {
+            let space_code = to_unicode.source_code_for_unicode(' ')?;
+            let cid = cids_for_codes(&space_code, info)?.first()?.1;
+            let width = descendant.metrics.cid_widths.as_ref()?.width_for(cid);
+            if width > 0.0 {
+                return Some(width / 1000.0 * font_size);
+            }
+        }
         if let Some(ref widths) = info.metrics.widths {
             let first = info.metrics.first_char.unwrap_or(0);
             if first <= 32 {
@@ -804,6 +814,13 @@ impl TextExtractor {
             }
         }
         standard_14_space_width(&info.name).map(|em| em / 1000.0 * font_size)
+    }
+
+    fn flat_space_gap_threshold(&self, state: &TextState) -> f64 {
+        match self.font_space_advance(state.font_name.as_deref(), state.font_size) {
+            Some(advance) if advance > 0.0 => 0.5 * advance,
+            _ => self.options.space_threshold * state.font_size,
+        }
     }
 
     /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
@@ -1328,7 +1345,7 @@ impl TextExtractor {
                                     && (dy > SAME_LINE_EPS || same_y_wrap);
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
-                                } else if dx > self.options.space_threshold * state.font_size {
+                                } else if dx > self.flat_space_gap_threshold(&state) {
                                     Some(' ')
                                 } else {
                                     None
@@ -3571,6 +3588,58 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 /// `word_space` (`Tw`) once per *single-byte* space (code 32, §9.3.3). Both are
 /// unscaled text-space units, added directly (not multiplied by the font size);
 /// the caller's `advance_pen` applies `Th`.
+/// Decode a Type0 text-showing string's raw bytes into CIDs, for CID-indexed
+/// `/W` width lookup (issue #496). Mirrors the code-length/lookup rules
+/// `decode_text_with_font` already uses for Unicode decoding, but stops at
+/// the CID rather than continuing on to a Unicode codepoint.
+///
+/// Returns `None` when the code→CID relation is unavailable or vertical: in
+/// those cases guessing would select unrelated `/W` entries, so the caller
+/// retains the legacy fallback.
+fn cids_for_codes<'a>(codes: &'a [u8], font: &FontInfo) -> Option<Vec<(&'a [u8], u32)>> {
+    use crate::text::encoding_cmap::CidEncoding;
+
+    if matches!(font.cid_encoding, Some(CidEncoding::Utf16Be))
+        || font
+            .encoding
+            .as_deref()
+            .is_some_and(|name| name.ends_with("-V"))
+        || matches!(&font.cid_encoding, Some(CidEncoding::Cmap(cmap)) if cmap.wmode == 1)
+    {
+        return None;
+    }
+    let identity = font.encoding.as_deref() == Some("Identity-H");
+    if font.cid_encoding.is_none() && !identity {
+        return None;
+    }
+
+    let mut result = Vec::new();
+    let mut offset = 0;
+    while offset < codes.len() {
+        let code_len = match &font.cid_encoding {
+            Some(CidEncoding::Cmap(cmap)) => cmap.code_len_at(codes, offset),
+            Some(CidEncoding::Utf16Be) => unreachable!(),
+            None => 2,
+        }
+        .max(1)
+        .min(codes.len() - offset);
+        let code = &codes[offset..offset + code_len];
+        let cid = match &font.cid_encoding {
+            Some(CidEncoding::Cmap(cmap)) => cmap
+                .map_code_to_cid(code)
+                .or_else(|| cmap.map_notdef(code))
+                .map(u32::from)?,
+            Some(CidEncoding::Utf16Be) => unreachable!(),
+            None => code
+                .iter()
+                .fold(0u32, |value, byte| (value << 8) | u32::from(*byte)),
+        };
+        result.push((code, cid));
+        offset += code_len;
+    }
+    Some(result)
+}
+
 fn calculate_text_width_from_codes(
     codes: &[u8],
     decoded: &str,
@@ -3580,13 +3649,36 @@ fn calculate_text_width_from_codes(
     word_space: f64,
 ) -> f64 {
     // Composite (Type0) fonts use multi-byte codes; a single byte is not a code,
-    // so byte-indexed width lookup is invalid. Preserve the existing decoded-based
-    // behavior for them, adding `Tc` per glyph. `Tw` applies only to the
-    // single-byte code 32 (§9.3.3), which a multi-byte code can never be, so it
-    // does not apply here.
+    // so byte-indexed width lookup is invalid. `Tc` is added per glyph below.
+    // `Tw` applies only to the single-byte code 32 (§9.3.3), which a
+    // multi-byte code can never be, so it does not apply here.
     let is_composite =
         font_info.is_some_and(|f| f.font_type == "Type0" || f.descendant_font.is_some());
     if is_composite {
+        // Prefer the descendant CIDFont's `/W`/`/DW` (CID-indexed, per
+        // §9.7.4.3) over the decoded-Unicode-indexed fallback below: a CID
+        // is an arbitrary font-internal identifier with no relationship to
+        // the character it decodes to, so indexing by decoded codepoint
+        // reads the wrong table slot whenever CID != codepoint (any
+        // subset/reordered CID font). Without `/W`/`/DW` at all, fall back
+        // to the previous decoded-text heuristic (issue #496).
+        if let Some(cid_widths) = font_info
+            .and_then(|f| f.descendant_font.as_deref().or(Some(f)))
+            .and_then(|f| f.metrics.cid_widths.as_ref())
+        {
+            if let Some(font) = font_info {
+                if let Some(cid_codes) = cids_for_codes(codes, font) {
+                    let mut total = 0.0;
+                    for (code, cid) in cid_codes {
+                        total += cid_widths.width_for(cid) / 1000.0 * font_size + char_space;
+                        if code.len() == 1 && code[0] == b' ' {
+                            total += word_space;
+                        }
+                    }
+                    return total;
+                }
+            }
+        }
         let glyphs = decoded.chars().count() as f64;
         return calculate_text_width(decoded, font_size, font_info) + char_space * glyphs;
     }
@@ -4422,6 +4514,7 @@ mod tests {
                 widths: None,
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4463,6 +4556,7 @@ mod tests {
                 widths: Some(widths),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4519,6 +4613,7 @@ mod tests {
                 widths: Some(vec![1000.0, 100.0]),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4564,6 +4659,7 @@ mod tests {
                 widths: Some(widths),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4604,6 +4700,7 @@ mod tests {
                 widths: Some(widths),
                 missing_width: Some(600.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4639,6 +4736,7 @@ mod tests {
                 widths: Some(vec![500.0; 95]),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4673,6 +4771,7 @@ mod tests {
                 widths: Some(vec![500.0; 95]),
                 missing_width: Some(600.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4706,6 +4805,7 @@ mod tests {
                 widths: Some(vec![722.0]),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4744,6 +4844,7 @@ mod tests {
                 widths: Some(proportional_widths),
                 missing_width: Some(500.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4764,6 +4865,7 @@ mod tests {
                 widths: Some(monospace_widths),
                 missing_width: Some(600.0),
                 kerning: None,
+                cid_widths: None,
             },
             cid_encoding: None,
         };
@@ -4814,6 +4916,7 @@ mod tests {
                 widths: Some(widths),
                 missing_width: Some(500.0),
                 kerning: Some(kerning),
+                cid_widths: None,
             },
             cid_encoding: None,
         };
