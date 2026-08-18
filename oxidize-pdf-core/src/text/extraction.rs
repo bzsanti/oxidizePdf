@@ -443,6 +443,10 @@ impl SavedGraphicsState {
 struct OpRunState {
     state: TextState,
     in_text_object: bool,
+    /// True until the first show-text operator after `BT`. A backward jump at
+    /// this boundary is an independent positioned run, not intra-object
+    /// kerning, and can therefore delimit a grid cell (issue #495).
+    at_text_object_start: bool,
     last_x: f64,
     last_y: f64,
     extracted_text: String,
@@ -1014,6 +1018,7 @@ impl TextExtractor {
         let mut run = OpRunState {
             state,
             in_text_object,
+            at_text_object_start: false,
             last_x,
             last_y,
             extracted_text,
@@ -1220,6 +1225,7 @@ impl TextExtractor {
         let OpRunState {
             mut state,
             mut in_text_object,
+            mut at_text_object_start,
             mut last_x,
             mut last_y,
             mut extracted_text,
@@ -1246,6 +1252,7 @@ impl TextExtractor {
             match op {
                 ContentOperation::BeginText => {
                     in_text_object = true;
+                    at_text_object_start = true;
                     // Reset text matrix to identity
                     state.text_matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
                     state.text_line_matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
@@ -1338,11 +1345,16 @@ impl TextExtractor {
                                 // returns across the whole column, so a jump beyond
                                 // `SAME_Y_WRAP_EM` font sizes is a wrap even at dy == 0
                                 // (issue #447). dx/dy are baseline-relative (issue
-                                // #443), so this holds under rotation; the epsilon
-                                // absorbs projection rounding noise.
+                                // #443), so this holds under rotation. A new text
+                                // object is a stronger boundary: its first run is
+                                // independently positioned, so a large backward
+                                // jump cannot be intra-object kerning (#495). The
+                                // epsilon absorbs projection rounding noise.
                                 let same_y_wrap = dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
-                                let line_wrap = dx < -(self.options.newline_threshold * 2.0)
-                                    && (dy > SAME_LINE_EPS || same_y_wrap);
+                                let large_backward_jump =
+                                    dx < -(self.options.newline_threshold * 2.0);
+                                let line_wrap = large_backward_jump
+                                    && (dy > SAME_LINE_EPS || same_y_wrap || at_text_object_start);
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
                                 } else if dx > self.flat_space_gap_threshold(&state) {
@@ -1429,6 +1441,7 @@ impl TextExtractor {
                         // pen point (folds in Tz and CTM scale, issue #386; a
                         // full point so rotated baselines advance y too, #443).
                         (last_x, last_y) = advance_pen(&mut state, text_width);
+                        at_text_object_start = false;
                     }
                 }
 
@@ -1476,15 +1489,22 @@ impl TextExtractor {
                                     // treating a jump beyond `SAME_Y_WRAP_EM` font sizes
                                     // as a same-Y wrap (issue #447). Deltas are
                                     // baseline-relative (issue #443), so both gates hold
-                                    // under rotation; the epsilon absorbs projection
+                                    // under rotation. At the start of a new text
+                                    // object, a large backward jump is independently
+                                    // positioned rather than intra-array kerning
+                                    // (issue #495). The epsilon absorbs projection
                                     // rounding noise.
                                     let (dx, dy_signed) =
                                         pen_delta(&state, (last_x, last_y), (x, y));
                                     let dy = dy_signed.abs();
                                     let same_y_wrap =
                                         dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
-                                    let line_wrap = dx < -(self.options.newline_threshold * 2.0)
-                                        && (dy > SAME_LINE_EPS || same_y_wrap);
+                                    let large_backward_jump =
+                                        dx < -(self.options.newline_threshold * 2.0);
+                                    let line_wrap = large_backward_jump
+                                        && (dy > SAME_LINE_EPS
+                                            || same_y_wrap
+                                            || (at_text_object_start && at_array_start));
                                     // Separator of the run actually appended, for the
                                     // reading-order line grouping (issue #448).
                                     let mut emitted_sep: Option<Option<char>> = None;
@@ -1598,6 +1618,7 @@ impl TextExtractor {
                                     // issue #386: the pen must fold in Tz/CTM scale).
                                     (last_x, last_y) = advance_pen(&mut state, text_width);
                                     at_array_start = false;
+                                    at_text_object_start = false;
                                 }
                                 TextElement::Spacing(adjustment) => {
                                     // `at_array_start` is deliberately NOT cleared
@@ -1787,6 +1808,7 @@ impl TextExtractor {
                         }
 
                         (last_x, last_y) = advance_pen(&mut state, text_width);
+                        at_text_object_start = false;
                     }
                 }
 
@@ -1882,6 +1904,7 @@ impl TextExtractor {
                         }
 
                         (last_x, last_y) = advance_pen(&mut state, text_width);
+                        at_text_object_start = false;
                     }
                 }
 
@@ -2132,6 +2155,10 @@ impl TextExtractor {
                             let sub = OpRunState {
                                 state,
                                 in_text_object: false,
+                                // Preserve the outer boundary if the form emits
+                                // no text. A `BT` inside the form will replace it
+                                // with the form's own boundary.
+                                at_text_object_start,
                                 last_x,
                                 last_y,
                                 extracted_text,
@@ -2154,6 +2181,7 @@ impl TextExtractor {
                             self.font_cache = saved_fonts;
 
                             state = out.state;
+                            at_text_object_start = out.at_text_object_start;
                             last_x = out.last_x;
                             last_y = out.last_y;
                             extracted_text = out.extracted_text;
@@ -2173,6 +2201,7 @@ impl TextExtractor {
         Ok(OpRunState {
             state,
             in_text_object,
+            at_text_object_start,
             last_x,
             last_y,
             extracted_text,
@@ -3365,12 +3394,12 @@ const TJ_BOUNDARY_SPACE_EM: f64 = 0.7;
 /// threshold's sense — otherwise a negative size makes every backward jump a
 /// "wrap" and resurrects the #441 defect.
 ///
-/// Accepted, documented limitation (the #417/#422 trade-off): a same-line
-/// reposition that jumps back more than this many em is misread as a wrap, and
-/// a same-Y wrap of a line shorter than this is glued. Both are rare and
-/// neither loses a glyph — only the separator is wrong. A wrap with any
-/// nonzero leading (the common case, issue #390) is unaffected: it breaks on
-/// the `dy`-aware gate regardless of magnitude.
+/// Accepted, documented limitation (the #417/#422 trade-off) within one text
+/// object: a same-line reposition that jumps back more than this many em is
+/// misread as a wrap, and a same-Y wrap shorter than this is glued. A new
+/// `BT`/`ET` object supplies an independent-positioning boundary, so #495 does
+/// not depend on this magnitude. A wrap with any nonzero leading (the common
+/// case, issue #390) is also unaffected: it breaks on the `dy`-aware gate.
 const SAME_Y_WRAP_EM: f64 = 10.0;
 
 /// Pen movement from the previous post-advance pen point `last` to the
