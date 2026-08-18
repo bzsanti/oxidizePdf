@@ -602,6 +602,10 @@ pub struct TextExtractor {
     carriage_return_handling: CarriageReturnHandling,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
+    /// Narrowest usable CID width for Type0 fonts in the current page. Derived
+    /// once when the font is cached so flat extraction does not rescan a
+    /// potentially large attacker-controlled `/W` table for every glyph.
+    type0_implicit_space_widths: HashMap<String, f64>,
     /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
     /// object across pages. Most multi-page PDFs reuse the same font objects.
     font_object_cache: HashMap<(u32, u16), FontInfo>,
@@ -615,6 +619,7 @@ impl TextExtractor {
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
+            type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
     }
@@ -626,6 +631,7 @@ impl TextExtractor {
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
+            type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
     }
@@ -820,10 +826,31 @@ impl TextExtractor {
         standard_14_space_width(&info.name).map(|em| em / 1000.0 * font_size)
     }
 
+    /// Font-derived proxy used only when a Type0 font has CID widths but no
+    /// discoverable U+0020 mapping. The narrowest declared positive advance is
+    /// a lower bound, not a guessed space CID: narrow punctuation and spacing
+    /// glyphs define how small a meaningful inter-word gap can be (#500).
+    fn type0_implicit_space_advance(&self, font_name: Option<&str>, font_size: f64) -> Option<f64> {
+        let width = self.type0_implicit_space_widths.get(font_name?)?;
+        Some(width / 1000.0 * font_size.abs())
+    }
+
     fn flat_space_gap_threshold(&self, state: &TextState) -> f64 {
         match self.font_space_advance(state.font_name.as_deref(), state.font_size) {
             Some(advance) if advance > 0.0 => 0.5 * advance,
-            _ => self.options.space_threshold * state.font_size,
+            _ => {
+                let legacy = self.options.space_threshold * state.font_size.abs();
+                match self.type0_implicit_space_advance(state.font_name.as_deref(), state.font_size)
+                {
+                    Some(advance) if advance > 0.0 && legacy > 0.0 => {
+                        // Do not let a malformed near-zero `/W` entry make every
+                        // positioning residue a word gap. Conversely, never make
+                        // the fallback stricter than the established threshold.
+                        (0.5 * advance).max(0.1 * state.font_size.abs()).min(legacy)
+                    }
+                    _ => legacy,
+                }
+            }
         }
     }
 
@@ -2819,6 +2846,7 @@ impl TextExtractor {
     ) -> ParseResult<()> {
         // Clear per-page name mapping (font names like /F1 are page-local)
         self.font_cache.clear();
+        self.type0_implicit_space_widths.clear();
 
         // Try to get resources manually from page dictionary first
         // This is necessary because ParsedPage.get_resources() may not always work
@@ -2880,7 +2908,7 @@ impl TextExtractor {
                 font_name,
                 font_info.to_unicode.is_some()
             );
-            self.font_cache.insert(font_name.to_string(), font_info);
+            self.cache_page_font(font_name, font_info);
         }
     }
 
@@ -2893,8 +2921,7 @@ impl TextExtractor {
     ) {
         // Check persistent object cache first — avoids re-parsing across pages
         if let Some(cached) = self.font_object_cache.get(&font_ref) {
-            self.font_cache
-                .insert(font_name.to_string(), cached.clone());
+            let cached = cached.clone();
             tracing::debug!(
                 "Reused cached font object ({}, {}): {} (ToUnicode: {})",
                 font_ref.0,
@@ -2902,6 +2929,7 @@ impl TextExtractor {
                 font_name,
                 cached.to_unicode.is_some()
             );
+            self.cache_page_font(font_name, cached);
             return;
         }
 
@@ -2913,7 +2941,7 @@ impl TextExtractor {
                 // Store in persistent cache
                 self.font_object_cache.insert(font_ref, font_info.clone());
                 // Store in per-page name cache
-                self.font_cache.insert(font_name.to_string(), font_info);
+                self.cache_page_font(font_name, font_info);
                 tracing::debug!(
                     "Parsed and cached font ({}, {}): {} (ToUnicode: {})",
                     font_ref.0,
@@ -2923,6 +2951,24 @@ impl TextExtractor {
                 );
             }
         }
+    }
+
+    /// Add a parsed font to the page-local caches, deriving the Type0 fallback
+    /// width once rather than on every text-showing boundary.
+    fn cache_page_font(&mut self, font_name: &str, font_info: FontInfo) {
+        if font_info.font_type == "Type0" || font_info.descendant_font.is_some() {
+            let cid_font = font_info.descendant_font.as_deref().unwrap_or(&font_info);
+            if let Some(width) = cid_font
+                .metrics
+                .cid_widths
+                .as_ref()
+                .and_then(|widths| widths.narrowest_positive_width())
+            {
+                self.type0_implicit_space_widths
+                    .insert(font_name.to_string(), width);
+            }
+        }
+        self.font_cache.insert(font_name.to_string(), font_info);
     }
 
     /// Decode text using the current font encoding and ToUnicode mapping

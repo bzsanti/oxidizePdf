@@ -45,6 +45,22 @@ impl CidWidths {
             })
             .unwrap_or(self.default_width)
     }
+
+    /// Narrowest positive width declared by `/W`, or `/DW` when `/W` has no
+    /// usable entries. This is not assumed to be the space CID; it is only a
+    /// conservative lower bound for a font-derived implicit-space heuristic.
+    pub(crate) fn narrowest_positive_width(&self) -> Option<f64> {
+        self.widths
+            .values()
+            .copied()
+            .chain(self.ranges.iter().map(|(_, _, width)| *width))
+            .filter(|width| width.is_finite() && *width > 0.0)
+            .min_by(f64::total_cmp)
+            .or_else(|| {
+                (self.default_width.is_finite() && self.default_width > 0.0)
+                    .then_some(self.default_width)
+            })
+    }
 }
 
 /// Font metrics for accurate text width calculation
