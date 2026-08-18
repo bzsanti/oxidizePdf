@@ -174,18 +174,12 @@ fn wide_cid_glyph_does_not_get_a_spurious_space_when_w_is_present() {
 }
 
 #[test]
-fn real_widths_fix_the_wide_cid_without_claiming_the_narrow_space_case() {
-    // The "PAN"/"No" boundary is a real (if narrow) positional gap; whether
-    // or not it clears the space threshold is a separate, pre-existing
-    // calibration question (also applies to simple fonts) that this fix does
-    // not change -- this test only pins today's behavior so a future
-    // regression there is caught, without conflating it with the CID-width
-    // fix itself.
+fn real_widths_fix_the_wide_cid_and_expose_the_narrow_word_gap() {
     let with_w = extract(&format!("/W [{W_ARRAY}] /DW 0"));
     let without_w = extract("");
     assert_eq!(
-        with_w, "PANNo:BLUPM6342P",
-        "real CID widths must remove the wide-M space; the unmapped narrow word gap is #500"
+        with_w, "PAN No:BLUPM6342P",
+        "real CID widths must remove the wide-M space while #500's font-derived fallback preserves the narrow word gap"
     );
     assert_eq!(
         without_w, "PANNo:BLUPM6342P",
