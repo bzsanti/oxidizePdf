@@ -300,6 +300,47 @@ struct PendingActualText {
     populated: bool,
 }
 
+#[derive(Default)]
+struct StructureActualText {
+    owners: Vec<crate::parser::objects::PdfObject>,
+    cache: HashMap<u32, Option<String>>,
+}
+
+impl StructureActualText {
+    fn get<R: Read + Seek>(
+        &mut self,
+        mcid: u32,
+        document: &PdfDocument<R>,
+        max_bytes: Option<usize>,
+    ) -> Result<Option<String>, ()> {
+        if let Some(cached) = self.cache.get(&mcid) {
+            return Ok(cached.clone());
+        }
+        let Some(owner) = self.owners.get(mcid as usize) else {
+            self.cache.insert(mcid, None);
+            return Ok(None);
+        };
+        let Ok(owner) = document.resolve(owner) else {
+            self.cache.insert(mcid, None);
+            return Ok(None);
+        };
+        let Some(crate::parser::objects::PdfObject::String(value)) =
+            owner.as_dict().and_then(|dict| dict.get("ActualText"))
+        else {
+            self.cache.insert(mcid, None);
+            return Ok(None);
+        };
+        if max_bytes
+            .is_some_and(|limit| value.as_bytes().len() > limit.saturating_mul(4).saturating_add(2))
+        {
+            return Err(());
+        }
+        let decoded = decode_pdf_string(value.as_bytes());
+        self.cache.insert(mcid, Some(decoded.clone()));
+        Ok(Some(decoded))
+    }
+}
+
 /// Text extraction state
 struct TextState {
     /// Current text matrix
@@ -1010,6 +1051,9 @@ impl TextExtractor {
     ) -> ParseResult<ExtractedText> {
         // Get the page
         let page = document.get_page(page_index)?;
+        // Tagged-PDF metadata is advisory: malformed mappings fall back to
+        // visual text instead of failing otherwise valid page extraction.
+        let mut structure_actual_text = resolve_structure_actual_text(&page.dict, document);
 
         // Extract font resources first
         {
@@ -1091,6 +1135,7 @@ impl TextExtractor {
                 operations,
                 document,
                 page_resources.as_ref(),
+                &mut structure_actual_text,
                 run,
                 page_index,
                 0,
@@ -1245,6 +1290,7 @@ impl TextExtractor {
         operations: Vec<ContentOperation>,
         document: &PdfDocument<R>,
         resources: Option<&crate::parser::objects::PdfDictionary>,
+        structure_actual_text: &mut StructureActualText,
         run: OpRunState,
         page_index: u32,
         depth: u8,
@@ -1409,7 +1455,11 @@ impl TextExtractor {
                             let outcome = append_bounded(
                                 &mut extracted_text,
                                 separator,
-                                &decoded,
+                                if state.pending_actualtext.is_some() {
+                                    ""
+                                } else {
+                                    &decoded
+                                },
                                 self.options.max_extracted_bytes,
                                 &mut truncated,
                                 self.options.merge_hyphenated,
@@ -1439,7 +1489,10 @@ impl TextExtractor {
                             )
                         };
 
-                        if self.options.preserve_layout || self.options.reorder_columns {
+                        if self.options.preserve_layout
+                            || self.options.reorder_columns
+                            || state.pending_actualtext.is_some()
+                        {
                             emit_text_fragment(
                                 &mut fragments,
                                 &decoded,
@@ -1459,7 +1512,11 @@ impl TextExtractor {
                                     &mut line_groups,
                                     &mut cur_group,
                                     extracted_text.len(),
-                                    decoded.len(),
+                                    if state.pending_actualtext.is_some() {
+                                        0
+                                    } else {
+                                        decoded.len()
+                                    },
                                     sep,
                                     x,
                                     y,
@@ -1589,7 +1646,11 @@ impl TextExtractor {
                                         let outcome = append_bounded(
                                             &mut extracted_text,
                                             separator,
-                                            &decoded,
+                                            if state.pending_actualtext.is_some() {
+                                                ""
+                                            } else {
+                                                &decoded
+                                            },
                                             self.options.max_extracted_bytes,
                                             &mut truncated,
                                             self.options.merge_hyphenated,
@@ -1615,7 +1676,9 @@ impl TextExtractor {
                                         )
                                     };
 
-                                    if self.options.preserve_layout || self.options.reorder_columns
+                                    if self.options.preserve_layout
+                                        || self.options.reorder_columns
+                                        || state.pending_actualtext.is_some()
                                     {
                                         emit_text_fragment(
                                             &mut fragments,
@@ -1636,7 +1699,11 @@ impl TextExtractor {
                                                 &mut line_groups,
                                                 &mut cur_group,
                                                 extracted_text.len(),
-                                                decoded.len(),
+                                                if state.pending_actualtext.is_some() {
+                                                    0
+                                                } else {
+                                                    decoded.len()
+                                                },
                                                 sep,
                                                 x,
                                                 y,
@@ -1786,7 +1853,11 @@ impl TextExtractor {
                             let outcome = append_bounded(
                                 &mut extracted_text,
                                 separator,
-                                &decoded,
+                                if state.pending_actualtext.is_some() {
+                                    ""
+                                } else {
+                                    &decoded
+                                },
                                 self.options.max_extracted_bytes,
                                 &mut truncated,
                                 self.options.merge_hyphenated,
@@ -1812,7 +1883,10 @@ impl TextExtractor {
                             )
                         };
 
-                        if self.options.preserve_layout || self.options.reorder_columns {
+                        if self.options.preserve_layout
+                            || self.options.reorder_columns
+                            || state.pending_actualtext.is_some()
+                        {
                             emit_text_fragment(
                                 &mut fragments,
                                 &decoded,
@@ -1831,7 +1905,11 @@ impl TextExtractor {
                                     &mut line_groups,
                                     &mut cur_group,
                                     extracted_text.len(),
-                                    decoded.len(),
+                                    if state.pending_actualtext.is_some() {
+                                        0
+                                    } else {
+                                        decoded.len()
+                                    },
                                     sep,
                                     x,
                                     y,
@@ -1882,7 +1960,11 @@ impl TextExtractor {
                             let outcome = append_bounded(
                                 &mut extracted_text,
                                 separator,
-                                &decoded,
+                                if state.pending_actualtext.is_some() {
+                                    ""
+                                } else {
+                                    &decoded
+                                },
                                 self.options.max_extracted_bytes,
                                 &mut truncated,
                                 self.options.merge_hyphenated,
@@ -1908,7 +1990,10 @@ impl TextExtractor {
                             )
                         };
 
-                        if self.options.preserve_layout || self.options.reorder_columns {
+                        if self.options.preserve_layout
+                            || self.options.reorder_columns
+                            || state.pending_actualtext.is_some()
+                        {
                             emit_text_fragment(
                                 &mut fragments,
                                 &decoded,
@@ -1927,7 +2012,11 @@ impl TextExtractor {
                                     &mut line_groups,
                                     &mut cur_group,
                                     extracted_text.len(),
-                                    decoded.len(),
+                                    if state.pending_actualtext.is_some() {
+                                        0
+                                    } else {
+                                        decoded.len()
+                                    },
                                     sep,
                                     x,
                                     y,
@@ -2034,7 +2123,24 @@ impl TextExtractor {
 
                 ContentOperation::BeginMarkedContentWithProps(tag, props) => {
                     let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
-                    let (mcid, actual_text) = resolve_props(&props, page_properties);
+                    let (mcid, inline_actual_text) = resolve_props(&props, page_properties);
+                    let actual_text = if inline_actual_text.is_some() {
+                        inline_actual_text
+                    } else if let Some(id) = mcid {
+                        match structure_actual_text.get(
+                            id,
+                            document,
+                            self.options.max_extracted_bytes,
+                        ) {
+                            Ok(value) => value,
+                            Err(()) => {
+                                truncated = true;
+                                break;
+                            }
+                        }
+                    } else {
+                        None
+                    };
 
                     // If this scope declares ActualText, open a pending run that will be
                     // flushed on the matching EMC. Suppresses per-Tj emission inside the
@@ -2077,9 +2183,7 @@ impl TextExtractor {
                         // If we just closed the scope that opened the pending run, flush it.
                         if pending.stack_depth + 1 == popped_depth {
                             let run = state.pending_actualtext.take().unwrap();
-                            if run.populated
-                                && (self.options.preserve_layout || self.options.reorder_columns)
-                            {
+                            if run.populated {
                                 // The ActualText owner has just been popped, so
                                 // retain its structural identity explicitly
                                 // instead of accidentally inheriting the parent.
@@ -2099,11 +2203,10 @@ impl TextExtractor {
                                     // If it would overshoot, drop the fragment and
                                     // stop — a huge override must not escape the
                                     // cap while reporting `truncated = false`.
-                                    // Always `None` separator, never `\n` —
-                                    // hyphen-wrap fusion (issue #486) does not
-                                    // apply here. This site is also only reached
-                                    // under `preserve_layout`/`reorder_columns`
-                                    // (see the gate above), not the flat path.
+                                    // The flat path already emitted only the
+                                    // geometrical separator while this scope was
+                                    // pending, so the replacement itself needs no
+                                    // additional separator here.
                                     if !append_bounded(
                                         &mut extracted_text,
                                         None,
@@ -2116,21 +2219,29 @@ impl TextExtractor {
                                     {
                                         break;
                                     }
-                                    fragments.push(TextFragment {
-                                        text: run.text,
-                                        x: run.first_x,
-                                        y: run.first_y,
-                                        width: run.width,
-                                        height: run.font_size,
-                                        font_size: run.font_size,
-                                        font_name: run.font_name,
-                                        is_bold: run.is_bold,
-                                        is_italic: run.is_italic,
-                                        color: run.color,
-                                        space_decisions: Vec::new(),
-                                        mcid,
-                                        struct_tag,
-                                    });
+                                    if self.reading_order {
+                                        if let Some(group) = cur_group.as_mut() {
+                                            group.end = extracted_text.len();
+                                        }
+                                    }
+                                    if self.options.preserve_layout || self.options.reorder_columns
+                                    {
+                                        fragments.push(TextFragment {
+                                            text: run.text,
+                                            x: run.first_x,
+                                            y: run.first_y,
+                                            width: run.width,
+                                            height: run.font_size,
+                                            font_size: run.font_size,
+                                            font_name: run.font_name,
+                                            is_bold: run.is_bold,
+                                            is_italic: run.is_italic,
+                                            color: run.color,
+                                            space_decisions: Vec::new(),
+                                            mcid,
+                                            struct_tag,
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -2146,9 +2257,11 @@ impl TextExtractor {
                     // is never extracted.
                     const MAX_XOBJECT_DEPTH: u8 = 12;
                     if depth < MAX_XOBJECT_DEPTH {
-                        if let Some((xobj_ops, xobj_res, matrix)) =
+                        if let Some((xobj_ops, xobj_res, matrix, xobj_dict)) =
                             self.load_form_xobject(resources, &name, document)
                         {
+                            let mut form_structure_actual_text =
+                                resolve_structure_actual_text(&xobj_dict, document);
                             // `Do` paints inside an IMPLICIT q/Q (§8.10.1),
                             // so the whole graphics state — text state included
                             // (issue #452) — comes back afterwards. Same
@@ -2205,6 +2318,7 @@ impl TextExtractor {
                                 xobj_ops,
                                 document,
                                 xobj_res.as_ref(),
+                                &mut form_structure_actual_text,
                                 sub,
                                 page_index,
                                 depth + 1,
@@ -2257,6 +2371,7 @@ impl TextExtractor {
         Vec<ContentOperation>,
         Option<crate::parser::objects::PdfDictionary>,
         Option<[f64; 6]>,
+        crate::parser::objects::PdfDictionary,
     )> {
         use crate::parser::objects::PdfObject;
         let res = resources?;
@@ -2307,7 +2422,7 @@ impl TextExtractor {
                     None
                 }
             });
-        Some((ops, xobj_res, matrix))
+        Some((ops, xobj_res, matrix, stream.dict.clone()))
     }
 
     /// Fuse a hyphen-ended fragment with its line-wrap continuation while
@@ -3520,6 +3635,110 @@ fn multiply_matrix(a: &[f64; 6], b: &[f64; 6]) -> [f64; 6] {
 /// typographic punctuation WinAnsi puts in `0x80..=0x9F`.
 fn decode_pdf_string(bytes: &[u8]) -> String {
     crate::parser::objects::decode_text_string(bytes)
+}
+
+/// Build the page-local MCID -> structure-element `/ActualText` map.
+///
+/// The parent tree is a PDF number tree, so it may store `/Nums` directly or
+/// split them across indirect `/Kids`. Every failure is deliberately reduced
+/// to an empty/partial map: structure metadata must not make text extraction
+/// fail. Depth, visited-reference, and node-count limits keep malformed trees
+/// from causing cycles or unbounded traversal.
+fn resolve_structure_actual_text<R: Read + Seek>(
+    container: &crate::parser::objects::PdfDictionary,
+    document: &PdfDocument<R>,
+) -> StructureActualText {
+    use crate::parser::objects::PdfObject;
+
+    const MAX_NUMBER_TREE_DEPTH: usize = 32;
+    const MAX_NUMBER_TREE_NODES: usize = 4096;
+
+    fn number_tree_value<R: Read + Seek>(
+        object: &PdfObject,
+        key: i64,
+        document: &PdfDocument<R>,
+        depth: usize,
+        visited: &mut std::collections::HashSet<(u32, u16)>,
+        nodes: &mut usize,
+    ) -> Option<PdfObject> {
+        if depth > MAX_NUMBER_TREE_DEPTH || *nodes >= MAX_NUMBER_TREE_NODES {
+            return None;
+        }
+        *nodes += 1;
+
+        let resolved = match object {
+            PdfObject::Reference(id, generation) => {
+                if !visited.insert((*id, *generation)) {
+                    return None;
+                }
+                document.get_object(*id, *generation).ok()?
+            }
+            other => other.clone(),
+        };
+        let dict = resolved.as_dict()?;
+
+        if let Some(PdfObject::Array(nums)) = dict.get("Nums") {
+            for pair in nums.0.chunks_exact(2) {
+                if pair[0] == PdfObject::Integer(key) {
+                    return Some(pair[1].clone());
+                }
+            }
+        }
+
+        let PdfObject::Array(kids) = dict.get("Kids")? else {
+            return None;
+        };
+        for kid in &kids.0 {
+            if let Some(value) = number_tree_value(kid, key, document, depth + 1, visited, nodes) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    let Some(PdfObject::Integer(struct_parent_key)) = container.get("StructParents") else {
+        return StructureActualText::default();
+    };
+    if *struct_parent_key < 0 {
+        return StructureActualText::default();
+    }
+
+    let Ok(catalog) = document.catalog_dictionary() else {
+        return StructureActualText::default();
+    };
+    let Some(struct_root_object) = catalog.get("StructTreeRoot") else {
+        return StructureActualText::default();
+    };
+    let Ok(struct_root_object) = document.resolve(struct_root_object) else {
+        return StructureActualText::default();
+    };
+    let Some(struct_root) = struct_root_object.as_dict() else {
+        return StructureActualText::default();
+    };
+    let Some(parent_tree) = struct_root.get("ParentTree") else {
+        return StructureActualText::default();
+    };
+
+    let Some(owner_array_object) = number_tree_value(
+        parent_tree,
+        *struct_parent_key,
+        document,
+        0,
+        &mut std::collections::HashSet::new(),
+        &mut 0,
+    ) else {
+        return StructureActualText::default();
+    };
+    let Ok(owner_array_object) = document.resolve(&owner_array_object) else {
+        return StructureActualText::default();
+    };
+    let PdfObject::Array(owners) = owner_array_object else {
+        return StructureActualText::default();
+    };
+    StructureActualText {
+        owners: owners.0,
+        cache: HashMap::new(),
+    }
 }
 
 /// Resolve a `MarkedContentProps` to `(mcid, actual_text)`.

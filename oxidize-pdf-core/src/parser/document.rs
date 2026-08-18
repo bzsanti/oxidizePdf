@@ -259,6 +259,11 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(self.reader.borrow().version().to_string())
     }
 
+    /// Return an owned catalog for crate-internal document-level consumers.
+    pub(crate) fn catalog_dictionary(&self) -> ParseResult<PdfDictionary> {
+        self.reader.borrow_mut().catalog().cloned()
+    }
+
     /// Get the parse options
     pub fn options(&self) -> ParseOptions {
         self.reader.borrow().options().clone()
