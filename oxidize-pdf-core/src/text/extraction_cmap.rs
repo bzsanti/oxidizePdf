@@ -8,8 +8,31 @@ use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
 use crate::parser::{ParseError, ParseOptions, ParseResult};
 use crate::text::cid_to_unicode::CidCollection;
 use crate::text::cmap::CMap;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
+
+/// A CIDFont's `/W` + `/DW` glyph-space widths (ISO 32000-1 §9.7.4.3),
+/// indexed by **CID** — an arbitrary font-internal identifier unrelated to
+/// any decoded Unicode codepoint. Only meaningful on a `CIDFontType0`/
+/// `CIDFontType2` descendant font's [`FontMetrics`]; simple fonts use the
+/// `first_char`/`last_char`/`widths` triple instead.
+#[derive(Debug, Clone, Default)]
+pub struct CidWidths {
+    /// Per-CID widths (1/1000 em), parsed from `/W`'s mixed
+    /// `c [w1 w2 ...]` and `cFirst cLast w` forms.
+    pub widths: HashMap<u32, f64>,
+    /// `/DW`, the width (1/1000 em) for any CID absent from `widths`.
+    /// Defaults to 1000 per spec when `/DW` is not present.
+    pub default_width: f64,
+}
+
+impl CidWidths {
+    /// Width (1/1000 em) for `cid`: its `/W` entry, or `/DW` otherwise.
+    pub fn width_for(&self, cid: u32) -> f64 {
+        self.widths.get(&cid).copied().unwrap_or(self.default_width)
+    }
+}
 
 /// Font metrics for accurate text width calculation
 #[derive(Debug, Clone)]
@@ -24,6 +47,10 @@ pub struct FontMetrics {
     pub missing_width: Option<f64>,
     /// Kerning pairs: (char1, char2) -> adjustment
     pub kerning: Option<HashMap<(u32, u32), f64>>,
+    /// CID-indexed widths (`/W`/`/DW`), for a `CIDFontType0`/`CIDFontType2`
+    /// descendant font. `None` for simple fonts and for CID fonts with
+    /// neither `/W` nor `/DW` present.
+    pub cid_widths: Option<CidWidths>,
 }
 
 impl Default for FontMetrics {
@@ -34,6 +61,7 @@ impl Default for FontMetrics {
             widths: None,
             missing_width: Some(500.0), // Default to 500 units (typical average)
             kerning: None,
+            cid_widths: None,
         }
     }
 }
@@ -322,6 +350,70 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                     }
                 }
             }
+        }
+
+        // Extract CIDFont `/W` + `/DW` (ISO 32000-1 §9.7.4.3). Only present
+        // on a CIDFontType0/CIDFontType2 descendant font dictionary; a
+        // simple font's dict has no `/W` key, so this is a no-op there.
+        let dw = font_dict.get("DW").and_then(|o| o.as_real());
+        let w_array: Option<Cow<[PdfObject]>> = match font_dict.get("W") {
+            Some(PdfObject::Array(array)) => Some(Cow::Borrowed(&array.0)),
+            Some(PdfObject::Reference(num, gen)) => match document.get_object(*num, *gen) {
+                Ok(PdfObject::Array(array)) => Some(Cow::Owned(array.0)),
+                _ => None,
+            },
+            _ => None,
+        };
+        if let Some(entries) = w_array {
+            let mut widths = HashMap::new();
+            let mut i = 0;
+            while i < entries.len() {
+                let Some(first_cid) = entries[i].as_integer() else {
+                    break;
+                };
+                match entries.get(i + 1) {
+                    // `c [w1 w2 ...]`: consecutive widths starting at c.
+                    Some(PdfObject::Array(w_list)) => {
+                        for (offset, w_obj) in w_list.0.iter().enumerate() {
+                            if let Some(w) = w_obj.as_real() {
+                                widths.insert(first_cid as u32 + offset as u32, w);
+                            }
+                        }
+                        i += 2;
+                    }
+                    // `cFirst cLast w`: uniform width across an inclusive CID range.
+                    Some(last_obj) => {
+                        let (Some(last_cid), Some(w)) = (
+                            last_obj.as_integer(),
+                            entries.get(i + 2).and_then(|o| o.as_real()),
+                        ) else {
+                            break;
+                        };
+                        // CIDs from Identity-H/Identity-V decode as a u16
+                        // (§9.7.4.2), so any range past 0xFFFF is malformed;
+                        // clamp rather than materializing a huge/looping
+                        // range from a corrupt or adversarial `/W` array.
+                        let last_cid = last_cid.min(u16::MAX as i64);
+                        if last_cid >= first_cid {
+                            for cid in first_cid..=last_cid {
+                                widths.insert(cid as u32, w);
+                            }
+                        }
+                        i += 3;
+                    }
+                    None => break,
+                }
+            }
+            metrics.cid_widths = Some(CidWidths {
+                widths,
+                default_width: dw.unwrap_or(1000.0),
+            });
+        } else if let Some(dw) = dw {
+            // `/DW` with no `/W`: every CID uses the default width.
+            metrics.cid_widths = Some(CidWidths {
+                widths: HashMap::new(),
+                default_width: dw,
+            });
         }
 
         // Extract kerning from TrueType fonts (if embedded)

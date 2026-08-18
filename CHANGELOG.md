@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- **Composite (Type0/CID) font text extraction never consulted the CIDFont's
+  `/W`/`/DW` glyph widths** (#496). Every glyph was assumed to advance by a
+  flat `0.5 * font_size`, regardless of its real width. When a glyph's true
+  advance diverged enough from that flat estimate relative to its neighbors
+  (e.g. a genuinely wide glyph in the font), the extractor's pen-tracking
+  drifted out of sync with where the next glyph was actually drawn, crossing
+  the space-insertion threshold and corrupting the extracted text with a
+  spurious space in the middle of a single token. `/W`/`/DW` (ISO 32000-1
+  §9.7.4.3) are now parsed into a CID-indexed width table and consulted for
+  the composite-font width calculation on both the flat and
+  `preserve_layout` extraction paths, falling back to the previous heuristic
+  when neither is present.
+
 ## [4.4.0] - 2026-08-16
 
 ### Added
