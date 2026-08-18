@@ -61,7 +61,7 @@ fn separate_tj_objects_do_not_fuse_backward_positioned_grid_cells() {
     );
 
     let text = extract_flat(content);
-    assert_eq!(text, " ABCDE1234F\nPAN:\n U12345DL2019PTC123456\nCIN:");
+    assert_eq!(text, " ABCDE1234F PAN:\n U12345DL2019PTC123456\nCIN:");
 }
 
 #[test]
@@ -71,5 +71,20 @@ fn separate_tj_array_objects_use_the_same_grid_boundary() {
         "BT\n/F1 9 Tf\n1 0 0 1 11.32 653.33 Tm\n[(PAN:)] TJ\nET"
     );
 
-    assert_eq!(extract_flat(content), " ABCDE1234F\nPAN:");
+    assert_eq!(extract_flat(content), " ABCDE1234F PAN:");
+}
+
+#[test]
+fn separate_text_objects_do_not_turn_same_line_repositioning_into_a_wrap() {
+    let content = concat!(
+        "BT\n/F1 10 Tf\n1 0 0 1 200 500 Tm\n(right) Tj\nET\n",
+        "BT\n/F1 10 Tf\n1 0 0 1 140 500 Tm\n(left) Tj\nET"
+    );
+
+    let text = extract_flat(content);
+    assert_eq!(text, "right left");
+    assert!(
+        !text.contains('\n'),
+        "same-line reposition wrapped: {text:?}"
+    );
 }

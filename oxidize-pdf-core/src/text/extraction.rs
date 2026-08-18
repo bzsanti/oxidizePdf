@@ -1346,18 +1346,23 @@ impl TextExtractor {
                                 // `SAME_Y_WRAP_EM` font sizes is a wrap even at dy == 0
                                 // (issue #447). dx/dy are baseline-relative (issue
                                 // #443), so this holds under rotation. A new text
-                                // object is a stronger boundary: its first run is
-                                // independently positioned, so a large backward
-                                // jump cannot be intra-object kerning (#495). The
+                                // object's first run is independently positioned:
+                                // a large backward jump warrants a separator, but
+                                // does not by itself prove a line wrap (#495). The
                                 // epsilon absorbs projection rounding noise.
                                 let same_y_wrap = dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
                                 let large_backward_jump =
                                     dx < -(self.options.newline_threshold * 2.0);
-                                let line_wrap = large_backward_jump
-                                    && (dy > SAME_LINE_EPS || same_y_wrap || at_text_object_start);
+                                let line_wrap =
+                                    large_backward_jump && (dy > SAME_LINE_EPS || same_y_wrap);
+                                let positioned_run_boundary = large_backward_jump
+                                    && dy <= SAME_LINE_EPS
+                                    && at_text_object_start;
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
-                                } else if dx > self.flat_space_gap_threshold(&state) {
+                                } else if positioned_run_boundary
+                                    || dx > self.flat_space_gap_threshold(&state)
+                                {
                                     Some(' ')
                                 } else {
                                     None
@@ -1490,10 +1495,10 @@ impl TextExtractor {
                                     // as a same-Y wrap (issue #447). Deltas are
                                     // baseline-relative (issue #443), so both gates hold
                                     // under rotation. At the start of a new text
-                                    // object, a large backward jump is independently
-                                    // positioned rather than intra-array kerning
-                                    // (issue #495). The epsilon absorbs projection
-                                    // rounding noise.
+                                    // object, a large backward jump warrants a
+                                    // separator but does not by itself prove a line
+                                    // wrap (issue #495). The epsilon absorbs
+                                    // projection rounding noise.
                                     let (dx, dy_signed) =
                                         pen_delta(&state, (last_x, last_y), (x, y));
                                     let dy = dy_signed.abs();
@@ -1501,10 +1506,12 @@ impl TextExtractor {
                                         dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
                                     let large_backward_jump =
                                         dx < -(self.options.newline_threshold * 2.0);
-                                    let line_wrap = large_backward_jump
-                                        && (dy > SAME_LINE_EPS
-                                            || same_y_wrap
-                                            || (at_text_object_start && at_array_start));
+                                    let line_wrap =
+                                        large_backward_jump && (dy > SAME_LINE_EPS || same_y_wrap);
+                                    let positioned_run_boundary = large_backward_jump
+                                        && dy <= SAME_LINE_EPS
+                                        && at_text_object_start
+                                        && at_array_start;
                                     // Separator of the run actually appended, for the
                                     // reading-order line grouping (issue #448).
                                     let mut emitted_sep: Option<Option<char>> = None;
@@ -1540,7 +1547,7 @@ impl TextExtractor {
                                             None
                                         } else if dy > self.options.newline_threshold || line_wrap {
                                             Some('\n')
-                                        } else if boundary_space {
+                                        } else if positioned_run_boundary || boundary_space {
                                             Some(' ')
                                         } else {
                                             None
@@ -3396,10 +3403,11 @@ const TJ_BOUNDARY_SPACE_EM: f64 = 0.7;
 ///
 /// Accepted, documented limitation (the #417/#422 trade-off) within one text
 /// object: a same-line reposition that jumps back more than this many em is
-/// misread as a wrap, and a same-Y wrap shorter than this is glued. A new
-/// `BT`/`ET` object supplies an independent-positioning boundary, so #495 does
-/// not depend on this magnitude. A wrap with any nonzero leading (the common
-/// case, issue #390) is also unaffected: it breaks on the `dy`-aware gate.
+/// misread as a wrap, and a same-Y wrap shorter than this is not recognized as
+/// a wrap. A new `BT`/`ET` object supplies enough evidence to separate #495's
+/// runs with whitespace, but not enough to promote the separator to a newline.
+/// A wrap with any nonzero leading (the common case, issue #390) is unaffected:
+/// it breaks on the `dy`-aware gate.
 const SAME_Y_WRAP_EM: f64 = 10.0;
 
 /// Pen movement from the previous post-advance pen point `last` to the
