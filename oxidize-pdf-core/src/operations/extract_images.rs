@@ -181,6 +181,37 @@ impl Default for ImageExtractionLimits {
     }
 }
 
+/// Errors produced by bounded in-memory image extraction.
+#[derive(Debug, thiserror::Error)]
+pub enum ImageExtractionError {
+    /// An existing PDF operation or image-processing step failed.
+    #[error(transparent)]
+    Operation(#[from] OperationError),
+    /// A configured extraction bound would be exceeded.
+    #[error(
+        "Image extraction limit exceeded for {limit}: maximum {maximum}, attempted {attempted}"
+    )]
+    LimitExceeded {
+        limit: &'static str,
+        maximum: u64,
+        attempted: u64,
+    },
+}
+
+/// Result type for bounded in-memory image extraction.
+pub type ImageExtractionResult<T> = Result<T, ImageExtractionError>;
+
+impl ImageExtractionError {
+    fn into_operation_error(self) -> OperationError {
+        match self {
+            Self::Operation(error) => error,
+            error @ Self::LimitExceeded { .. } => {
+                OperationError::ProcessingError(error.to_string())
+            }
+        }
+    }
+}
+
 struct ImageExtractionBudget {
     limits: ImageExtractionLimits,
     images: usize,
@@ -196,10 +227,10 @@ impl ImageExtractionBudget {
         }
     }
 
-    fn check_pixels(&self, width: u32, height: u32) -> OperationResult<()> {
+    fn check_pixels(&self, width: u32, height: u32) -> ImageExtractionResult<()> {
         let pixels = u64::from(width) * u64::from(height);
         if pixels > self.limits.max_decoded_pixels_per_image {
-            return Err(OperationError::ImageExtractionLimitExceeded {
+            return Err(ImageExtractionError::LimitExceeded {
                 limit: "decoded pixels per image",
                 maximum: self.limits.max_decoded_pixels_per_image,
                 attempted: pixels,
@@ -208,10 +239,10 @@ impl ImageExtractionBudget {
         Ok(())
     }
 
-    fn check_image_slot(&self) -> OperationResult<()> {
+    fn check_image_slot(&self) -> ImageExtractionResult<()> {
         let attempted = self.images.checked_add(1).unwrap_or(usize::MAX);
         if attempted > self.limits.max_images {
-            return Err(OperationError::ImageExtractionLimitExceeded {
+            return Err(ImageExtractionError::LimitExceeded {
                 limit: "image count",
                 maximum: self.limits.max_images as u64,
                 attempted: attempted as u64,
@@ -220,9 +251,9 @@ impl ImageExtractionBudget {
         Ok(())
     }
 
-    fn consume(&mut self, bytes: usize) -> OperationResult<()> {
+    fn consume(&mut self, bytes: usize) -> ImageExtractionResult<()> {
         if bytes > self.limits.max_encoded_bytes_per_image {
-            return Err(OperationError::ImageExtractionLimitExceeded {
+            return Err(ImageExtractionError::LimitExceeded {
                 limit: "encoded bytes per image",
                 maximum: self.limits.max_encoded_bytes_per_image as u64,
                 attempted: bytes as u64,
@@ -230,15 +261,16 @@ impl ImageExtractionBudget {
         }
         self.check_image_slot()?;
         let next_images = self.images + 1;
-        let next_bytes = self.encoded_bytes.checked_add(bytes).ok_or(
-            OperationError::ImageExtractionLimitExceeded {
-                limit: "total encoded bytes",
-                maximum: self.limits.max_total_encoded_bytes as u64,
-                attempted: u64::MAX,
-            },
-        )?;
+        let next_bytes =
+            self.encoded_bytes
+                .checked_add(bytes)
+                .ok_or(ImageExtractionError::LimitExceeded {
+                    limit: "total encoded bytes",
+                    maximum: self.limits.max_total_encoded_bytes as u64,
+                    attempted: u64::MAX,
+                })?;
         if next_bytes > self.limits.max_total_encoded_bytes {
-            return Err(OperationError::ImageExtractionLimitExceeded {
+            return Err(ImageExtractionError::LimitExceeded {
                 limit: "total encoded bytes",
                 maximum: self.limits.max_total_encoded_bytes as u64,
                 attempted: next_bytes as u64,
@@ -278,9 +310,9 @@ impl<R: Read + Seek> ImageExtractor<R> {
         &mut self,
         limits: ImageExtractionLimits,
         mut visitor: F,
-    ) -> OperationResult<()>
+    ) -> ImageExtractionResult<()>
     where
-        F: FnMut(ExtractedImageData) -> OperationResult<()>,
+        F: FnMut(ExtractedImageData) -> ImageExtractionResult<()>,
     {
         let page_count = self
             .document
@@ -302,7 +334,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
     pub fn extract_all_in_memory(
         &mut self,
         limits: ImageExtractionLimits,
-    ) -> OperationResult<Vec<ExtractedImageData>> {
+    ) -> ImageExtractionResult<Vec<ExtractedImageData>> {
         let mut images = Vec::new();
         self.visit_images(limits, |image| {
             images.push(image);
@@ -321,7 +353,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
         &mut self,
         page_number: usize,
         limits: ImageExtractionLimits,
-    ) -> OperationResult<Vec<ExtractedImageData>> {
+    ) -> ImageExtractionResult<Vec<ExtractedImageData>> {
         let mut images = Vec::new();
         let mut budget = ImageExtractionBudget::new(limits);
         self.visit_page_images(page_number, &mut budget, &mut |image| {
@@ -336,9 +368,9 @@ impl<R: Read + Seek> ImageExtractor<R> {
         page_number: usize,
         budget: &mut ImageExtractionBudget,
         visitor: &mut F,
-    ) -> OperationResult<()>
+    ) -> ImageExtractionResult<()>
     where
-        F: FnMut(ExtractedImageData) -> OperationResult<()>,
+        F: FnMut(ExtractedImageData) -> ImageExtractionResult<()>,
     {
         let page = self
             .document
@@ -400,7 +432,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
         page_number: usize,
         image_index: usize,
         budget: &ImageExtractionBudget,
-    ) -> OperationResult<Option<ExtractedImageData>> {
+    ) -> ImageExtractionResult<Option<ExtractedImageData>> {
         let Some(PdfObject::Integer(width @ 1..)) = stream.dict.get("Width") else {
             return Ok(None);
         };
@@ -480,9 +512,9 @@ impl<R: Read + Seek> ImageExtractor<R> {
         image_index: &mut usize,
         budget: &mut ImageExtractionBudget,
         visitor: &mut F,
-    ) -> OperationResult<()>
+    ) -> ImageExtractionResult<()>
     where
-        F: FnMut(ExtractedImageData) -> OperationResult<()>,
+        F: FnMut(ExtractedImageData) -> ImageExtractionResult<()>,
     {
         let mut position = 0;
         while let Some(begin) = Self::find_bytes(stream_data, b"BI", position) {
@@ -536,7 +568,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
             Ok(())
         });
         self.processed_images = cache;
-        result?;
+        result.map_err(ImageExtractionError::into_operation_error)?;
         Ok(images)
     }
 
@@ -557,7 +589,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
             Ok(())
         });
         self.processed_images = cache;
-        result?;
+        result.map_err(ImageExtractionError::into_operation_error)?;
         Ok(images)
     }
 

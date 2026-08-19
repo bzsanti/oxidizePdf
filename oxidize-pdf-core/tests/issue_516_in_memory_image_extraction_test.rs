@@ -4,8 +4,8 @@ mod common;
 
 use common::pdf_assembler::{assemble_pdf, stream_obj};
 use oxidize_pdf::operations::{
-    ExtractImagesOptions, ImageExtractionLimits, ImageExtractor, ImagePreprocessingOptions,
-    OperationError,
+    ExtractImagesOptions, ImageExtractionError, ImageExtractionLimits, ImageExtractor,
+    ImagePreprocessingOptions, OperationError,
 };
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use std::io::Cursor;
@@ -102,7 +102,7 @@ fn visitor_error_stops_extraction_immediately() {
     let error = extractor
         .visit_images(ImageExtractionLimits::default(), |_| {
             calls += 1;
-            Err(OperationError::ParseError("visitor stopped".into()))
+            Err(OperationError::ParseError("visitor stopped".into()).into())
         })
         .unwrap_err();
 
@@ -127,7 +127,7 @@ fn rejects_pixel_limit_before_decoding_image_data() {
 
     assert!(matches!(
         extractor.extract_all_in_memory(limits),
-        Err(OperationError::ImageExtractionLimitExceeded {
+        Err(ImageExtractionError::LimitExceeded {
             limit: "decoded pixels per image",
             ..
         })
@@ -144,7 +144,7 @@ fn enforces_per_image_and_total_encoded_byte_limits() {
     };
     assert!(matches!(
         per_image.extract_all_in_memory(per_image_limits),
-        Err(OperationError::ImageExtractionLimitExceeded {
+        Err(ImageExtractionError::LimitExceeded {
             limit: "encoded bytes per image",
             ..
         })
@@ -157,7 +157,7 @@ fn enforces_per_image_and_total_encoded_byte_limits() {
     };
     assert!(matches!(
         total.extract_all_in_memory(total_limits),
-        Err(OperationError::ImageExtractionLimitExceeded {
+        Err(ImageExtractionError::LimitExceeded {
             limit: "total encoded bytes",
             ..
         })
@@ -181,7 +181,7 @@ fn enforces_the_image_count_limit_before_visiting() {
 
     assert!(matches!(
         result,
-        Err(OperationError::ImageExtractionLimitExceeded {
+        Err(ImageExtractionError::LimitExceeded {
             limit: "image count",
             ..
         })
