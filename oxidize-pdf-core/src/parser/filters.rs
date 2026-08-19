@@ -224,6 +224,80 @@ pub fn decode_stream(
     Ok(result)
 }
 
+/// Decode stream data while enforcing a caller-provided output bound.
+///
+/// The bound is applied before copying unfiltered data, incrementally while
+/// inflating Flate data, and after every filter in a filter chain.
+pub fn decode_stream_with_limit(
+    data: &[u8],
+    dict: &PdfDictionary,
+    _options: &ParseOptions,
+    max_bytes: usize,
+) -> ParseResult<Vec<u8>> {
+    let filters = match dict.get("Filter") {
+        Some(PdfObject::Name(name)) => vec![name.as_str()],
+        Some(PdfObject::Array(array)) => array
+            .0
+            .iter()
+            .map(|object| {
+                object
+                    .as_name()
+                    .map(|name| name.as_str())
+                    .ok_or_else(|| bounded_decode_syntax("Invalid filter in array"))
+            })
+            .collect::<ParseResult<Vec<_>>>()?,
+        None => return copy_with_limit(data, max_bytes),
+        _ => return Err(bounded_decode_syntax("Invalid Filter type")),
+    };
+    let decode_params = dict.get("DecodeParms");
+    let mut result = copy_with_limit(data, max_bytes)?;
+    for (index, filter_name) in filters.iter().enumerate() {
+        let filter = Filter::from_name(filter_name)
+            .ok_or_else(|| bounded_decode_syntax(&format!("Unknown filter: {filter_name}")))?;
+        let params = get_filter_params(decode_params, index);
+        result = match filter {
+            Filter::FlateDecode => {
+                let decoded = decode_flate_with_limit(&result, max_bytes)?;
+                if let Some(params) = params {
+                    if let Some(predictor) = params.get("Predictor").and_then(PdfObject::as_integer)
+                    {
+                        apply_predictor(&decoded, predictor as u32, params).unwrap_or(decoded)
+                    } else {
+                        decoded
+                    }
+                } else {
+                    decoded
+                }
+            }
+            Filter::LZWDecode => decode_lzw_with_limit(&result, params, max_bytes)?,
+            Filter::RunLengthDecode => decode_run_length_with_limit(&result, max_bytes)?,
+            other => apply_filter_with_params(&result, other, params)?,
+        };
+        if result.len() > max_bytes {
+            return Err(ParseError::StreamDecodeError(format!(
+                "decoded stream exceeds limit of {max_bytes} bytes"
+            )));
+        }
+    }
+    Ok(result)
+}
+
+fn copy_with_limit(data: &[u8], max_bytes: usize) -> ParseResult<Vec<u8>> {
+    if data.len() > max_bytes {
+        return Err(ParseError::StreamDecodeError(format!(
+            "stream exceeds limit of {max_bytes} bytes"
+        )));
+    }
+    Ok(data.to_vec())
+}
+
+fn bounded_decode_syntax(message: &str) -> ParseError {
+    ParseError::SyntaxError {
+        position: 0,
+        message: message.to_string(),
+    }
+}
+
 /// Apply a single filter to data (legacy function, use apply_filter_with_params)
 #[allow(dead_code)]
 pub(crate) fn apply_filter(data: &[u8], filter: Filter) -> ParseResult<Vec<u8>> {
@@ -311,6 +385,21 @@ fn decode_flate(data: &[u8]) -> ParseResult<Vec<u8>> {
     // Strategy 8: Last resort - return empty data instead of garbage
     tracing::debug!("Warning: All FlateDecode strategies failed, returning empty data");
     Ok(Vec::new())
+}
+
+#[cfg(feature = "compression")]
+fn decode_flate_with_limit(data: &[u8], max_bytes: usize) -> ParseResult<Vec<u8>> {
+    let mut decoder = ZlibDecoder::new(data);
+    read_to_end_limited(&mut decoder, max_bytes).map_err(|error| {
+        ParseError::StreamDecodeError(format!("bounded FlateDecode failed: {error}"))
+    })
+}
+
+#[cfg(not(feature = "compression"))]
+fn decode_flate_with_limit(_data: &[u8], _max_bytes: usize) -> ParseResult<Vec<u8>> {
+    Err(ParseError::StreamDecodeError(
+        "FlateDecode requires the compression feature".to_string(),
+    ))
 }
 
 #[cfg(feature = "compression")]
@@ -1887,6 +1976,14 @@ fn paeth_predictor(left: u8, up: u8, up_left: u8) -> u8 {
 /// Section 3.3.3. The PDF variant of LZW uses variable-length codes starting at
 /// 9 bits and growing up to 12 bits.
 fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8>> {
+    decode_lzw_with_limit(data, params, MAX_DECOMPRESSED_SIZE)
+}
+
+fn decode_lzw_with_limit(
+    data: &[u8],
+    params: Option<&PdfDictionary>,
+    max_bytes: usize,
+) -> ParseResult<Vec<u8>> {
     // Get parameters
     let early_change = params
         .and_then(|p| p.get("EarlyChange"))
@@ -1951,10 +2048,9 @@ fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8
             result.extend_from_slice(&string);
 
             // Decompression bomb check
-            if result.len() > MAX_DECOMPRESSED_SIZE {
+            if result.len() > max_bytes {
                 return Err(ParseError::StreamDecodeError(format!(
-                    "LZW decompressed size exceeds {} MB limit",
-                    MAX_DECOMPRESSED_SIZE / (1024 * 1024)
+                    "LZW decompressed size exceeds {max_bytes} byte limit"
                 )));
             }
 
@@ -2055,6 +2151,10 @@ impl<'a> LzwBitReader<'a> {
 /// Implements the Run Length Encoding decompression as specified in PDF Reference 1.7
 /// Section 3.3.4. Run-length encoding compresses sequences of identical bytes.
 fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
+    decode_run_length_with_limit(data, MAX_DECOMPRESSED_SIZE)
+}
+
+fn decode_run_length_with_limit(data: &[u8], max_bytes: usize) -> ParseResult<Vec<u8>> {
     let mut result = Vec::new();
     let mut i = 0;
 
@@ -2091,10 +2191,9 @@ fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
         }
 
         // Decompression bomb check
-        if result.len() > MAX_DECOMPRESSED_SIZE {
+        if result.len() > max_bytes {
             return Err(ParseError::StreamDecodeError(format!(
-                "RunLength decompressed size exceeds {} MB limit",
-                MAX_DECOMPRESSED_SIZE / (1024 * 1024)
+                "RunLength decompressed size exceeds {max_bytes} byte limit"
             )));
         }
     }

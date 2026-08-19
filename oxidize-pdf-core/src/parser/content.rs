@@ -888,6 +888,12 @@ pub struct ContentParser {
     position: usize,
 }
 
+pub(crate) struct ParsedType3CharProc {
+    pub(crate) width: (f64, f64),
+    pub(crate) bbox: Option<[f64; 4]>,
+    pub(crate) operations: Vec<ContentOperation>,
+}
+
 impl ContentParser {
     /// Create a new content parser
     pub fn new(_content: &[u8]) -> Self {
@@ -932,6 +938,111 @@ impl ContentParser {
     /// ```
     pub fn parse(content: &[u8]) -> ParseResult<Vec<ContentOperation>> {
         Self::parse_content(content)
+    }
+
+    /// Parse a content stream without best-effort recovery.
+    ///
+    /// Unlike [`Self::parse`], malformed or unknown operators are returned to
+    /// the caller. This is intended for self-contained programs such as Type 3
+    /// character procedures, where silently dropping an operation could alter
+    /// the rendered glyph.
+    pub fn parse_strict(content: &[u8]) -> ParseResult<Vec<ContentOperation>> {
+        let mut tokenizer = ContentTokenizer::new(content);
+        let mut tokens = Vec::new();
+        while let Some(token) = tokenizer.next_token()? {
+            tokens.push(token);
+        }
+        Self {
+            tokens,
+            position: 0,
+        }
+        .parse_operators_strict()
+    }
+
+    pub(crate) fn parse_type3_charproc(content: &[u8]) -> ParseResult<ParsedType3CharProc> {
+        let mut tokenizer = ContentTokenizer::new(content);
+        let mut tokens = Vec::new();
+        while let Some(token) = tokenizer.next_token()? {
+            tokens.push(token);
+        }
+        let mut parser = Self {
+            tokens,
+            position: 0,
+        };
+        let mut operations = Vec::new();
+        let mut operands = Vec::new();
+        let mut metrics = None;
+        while parser.position < parser.tokens.len() {
+            let token = parser.tokens[parser.position].clone();
+            parser.position += 1;
+            match token {
+                Token::Operator(op) if op == "d0" => {
+                    if metrics.is_some() || !operations.is_empty() {
+                        return Err(ParseError::SyntaxError {
+                            position: parser.position,
+                            message: "d0/d1 must be the first Type 3 CharProc operator".into(),
+                        });
+                    }
+                    let wy = parser.pop_number(&mut operands)?;
+                    let wx = parser.pop_number(&mut operands)?;
+                    if !operands.is_empty() {
+                        return Err(ParseError::SyntaxError {
+                            position: parser.position,
+                            message: "d0 has extra operands".into(),
+                        });
+                    }
+                    metrics = Some(((f64::from(wx), f64::from(wy)), None));
+                }
+                Token::Operator(op) if op == "d1" => {
+                    if metrics.is_some() || !operations.is_empty() {
+                        return Err(ParseError::SyntaxError {
+                            position: parser.position,
+                            message: "d0/d1 must be the first Type 3 CharProc operator".into(),
+                        });
+                    }
+                    let ury = parser.pop_number(&mut operands)?;
+                    let urx = parser.pop_number(&mut operands)?;
+                    let lly = parser.pop_number(&mut operands)?;
+                    let llx = parser.pop_number(&mut operands)?;
+                    let wy = parser.pop_number(&mut operands)?;
+                    let wx = parser.pop_number(&mut operands)?;
+                    if !operands.is_empty() {
+                        return Err(ParseError::SyntaxError {
+                            position: parser.position,
+                            message: "d1 has extra operands".into(),
+                        });
+                    }
+                    metrics = Some((
+                        (f64::from(wx), f64::from(wy)),
+                        Some([
+                            f64::from(llx),
+                            f64::from(lly),
+                            f64::from(urx),
+                            f64::from(ury),
+                        ]),
+                    ));
+                }
+                Token::Operator(op) => {
+                    operations.push(parser.parse_operator(&op, &mut operands)?);
+                }
+                operand => operands.push(operand),
+            }
+        }
+        if !operands.is_empty() {
+            return Err(ParseError::SyntaxError {
+                position: parser.position,
+                message: "trailing operands without an operator".into(),
+            });
+        }
+        let (width, bbox) = metrics.ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Type 3 CharProc must begin with d0 or d1".into(),
+        })?;
+        Ok(ParsedType3CharProc {
+            width,
+            bbox,
+            operations,
+        })
     }
 
     /// Parse a content stream into a vector of operators.
@@ -1002,6 +1113,29 @@ impl ContentParser {
         }
 
         Ok(operators)
+    }
+
+    fn parse_operators_strict(&mut self) -> ParseResult<Vec<ContentOperation>> {
+        let mut operators = Vec::new();
+        let mut operand_stack = Vec::new();
+        while self.position < self.tokens.len() {
+            let token = self.tokens[self.position].clone();
+            self.position += 1;
+            match token {
+                Token::Operator(op) => {
+                    operators.push(self.parse_operator(&op, &mut operand_stack)?);
+                }
+                operand => operand_stack.push(operand),
+            }
+        }
+        if operand_stack.is_empty() {
+            Ok(operators)
+        } else {
+            Err(ParseError::SyntaxError {
+                position: self.position,
+                message: "trailing operands without an operator".to_string(),
+            })
+        }
     }
 
     fn parse_operator(

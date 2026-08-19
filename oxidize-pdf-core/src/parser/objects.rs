@@ -232,6 +232,15 @@ impl PdfStream {
         super::filters::decode_stream(&self.data, &self.dict, options)
     }
 
+    /// Decode the stream with a caller-defined maximum output size.
+    pub fn decode_with_limit(
+        &self,
+        options: &ParseOptions,
+        max_bytes: usize,
+    ) -> ParseResult<Vec<u8>> {
+        super::filters::decode_stream_with_limit(&self.data, &self.dict, options, max_bytes)
+    }
+
     /// Get the raw (possibly compressed) stream data.
     ///
     /// Returns the stream data exactly as stored in the PDF file,
