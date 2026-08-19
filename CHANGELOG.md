@@ -23,6 +23,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Tm`/CTM x-factor already applied to page-space widths elsewhere in
   extraction, together with the horizontal text scaling selected by `Tz`.
 
+## [4.5.1] - 2026-08-19
+
+### Fixed
+
+- **Text extraction ignored structure-element `/ActualText` replacements**
+  (#506). The extractor now resolves each marked-content MCID through the
+  page's `/StructParents` entry and the document `/ParentTree`, preserving
+  inline-over-structure precedence in both flat and layout-preserving modes.
+  Resolution is lazy and bounded, malformed structure trees fall back safely
+  to visual text, and tagged Form XObjects use their own structural context.
+
+## [4.5.0] - 2026-08-18
+
+### Added
+
+- **Incremental editing for standard text-note annotations** (#493). The new
+  typed `IncrementalTextNoteEditor` API can enumerate, add, move, edit, and
+  remove `/Text` annotations while preserving the original PDF bytes and
+  applying each validated batch as one incremental revision.
+
+### Fixed
+
+- **AES-256 revision 5 encryption dictionaries now emit `/Perms`** (#492),
+  restoring interoperability with external readers while retaining strict
+  validation of the encrypted permissions block.
+- **Flat extraction could fuse adjacent cells in label/value grids** (#495).
+  Separate text objects that return backward on the same baseline now receive
+  neutral whitespace when the geometry is ambiguous, while genuine long wraps
+  still become newlines and legitimate repositioned overlays remain intact.
 - **Composite (Type0/CID) font text extraction never consulted the CIDFont's
   `/W`/`/DW` glyph widths** (#496). Every glyph was assumed to advance by a
   flat `0.5 * font_size`, regardless of its real width. When a glyph's true
@@ -35,6 +64,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the composite-font width calculation on both the flat and
   `preserve_layout` extraction paths, falling back to the previous heuristic
   when neither is present.
+- **Tagged `ActualText` extraction lost the marked-content association**
+  (#498). Generated `ActualText` sequences now carry an MCID connected to the
+  structure tree, so tagged extraction returns the replacement text instead
+  of dropping it.
+- **Real Type0 widths could hide narrow implicit word spaces** (#500). When a
+  composite font has no discoverable U+0020 mapping, flat extraction now uses
+  a bounded, font-derived CID-width signal that preserves narrow word gaps
+  without splitting URLs, identifiers, kerned runs, or positioned overlays.
 
 ## [4.4.0] - 2026-08-16
 
