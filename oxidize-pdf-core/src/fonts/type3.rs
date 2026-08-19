@@ -37,7 +37,9 @@ pub struct Type3Glyph {
     pub procedure_width: (f64, f64),
     /// Glyph bounding box declared by `d1`, when present.
     pub bbox: Option<[f64; 4]>,
-    /// Parsed, renderer-neutral glyph operations, including `d0`/`d1`.
+    /// Parsed, renderer-neutral glyph drawing operations. The leading `d0` or
+    /// `d1` operator is represented by [`Self::procedure_width`] and
+    /// [`Self::bbox`] rather than duplicated here.
     pub operations: Vec<ContentOperation>,
 }
 

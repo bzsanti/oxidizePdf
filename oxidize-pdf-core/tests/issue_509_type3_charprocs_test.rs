@@ -130,3 +130,59 @@ fn bounded_decode_stops_flate_expansion_at_the_local_limit() {
         .expect_err("the decoder must stop before allocating the full output");
     assert!(error.to_string().contains("1024"));
 }
+
+#[test]
+fn bounded_decode_limits_output_not_ascii_encoded_input() {
+    let mut dict = PdfDictionary::new();
+    dict.insert(
+        "Filter".into(),
+        PdfObject::Name(PdfName("ASCIIHexDecode".into())),
+    );
+    let stream = PdfStream {
+        dict,
+        data: b"00>".to_vec(),
+    };
+
+    assert_eq!(
+        stream
+            .decode_with_limit(&ParseOptions::default(), 1)
+            .expect("one decoded byte is within the output limit"),
+        vec![0]
+    );
+}
+
+#[test]
+fn bounded_decode_stops_ascii85_expansion_during_output() {
+    let mut dict = PdfDictionary::new();
+    dict.insert(
+        "Filter".into(),
+        PdfObject::Name(PdfName("ASCII85Decode".into())),
+    );
+    let stream = PdfStream {
+        dict,
+        data: b"z".to_vec(),
+    };
+
+    let error = stream
+        .decode_with_limit(&ParseOptions::default(), 3)
+        .expect_err("z expands to four bytes and must stop at the limit");
+    assert!(error.to_string().contains("3"));
+}
+
+#[test]
+fn bounded_decode_rejects_filters_without_a_bounded_decoder() {
+    let mut dict = PdfDictionary::new();
+    dict.insert(
+        "Filter".into(),
+        PdfObject::Name(PdfName("CCITTFaxDecode".into())),
+    );
+    let stream = PdfStream {
+        dict,
+        data: Vec::new(),
+    };
+
+    let error = stream
+        .decode_with_limit(&ParseOptions::default(), 1024)
+        .expect_err("an unbounded codec must not run behind the bounded API");
+    assert!(error.to_string().contains("no bounded decoder"));
+}
