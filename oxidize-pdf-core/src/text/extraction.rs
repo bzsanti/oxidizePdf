@@ -886,12 +886,18 @@ impl TextExtractor {
     /// sub-point positioning residue between glyph runs cross the threshold
     /// and insert a spurious mid-token space (issue #510). Scaling by the
     /// same `combined_text_scale` x-factor `emit_text_fragment` already
-    /// applies to page-space widths brings both sides of the `dx >
-    /// threshold` comparison into the same unit space.
+    /// applies to page-space widths, plus the horizontal text scaling (`Tz`)
+    /// used by [`advance_pen`], brings both sides of the `dx > threshold`
+    /// comparison into the same unit space.
     fn flat_space_gap_threshold(&self, state: &TextState) -> f64 {
         let (x_scale, _) = combined_text_scale(state);
-        let x_scale = if x_scale.is_finite() && x_scale > 0.0 {
+        let x_scale = if x_scale.is_finite() && x_scale > f64::EPSILON {
             x_scale
+        } else {
+            1.0
+        };
+        let horizontal_scale = if state.horizontal_scale.is_finite() {
+            state.horizontal_scale.abs() / 100.0
         } else {
             1.0
         };
@@ -911,7 +917,7 @@ impl TextExtractor {
                 }
             }
         };
-        threshold * x_scale
+        threshold * x_scale * horizontal_scale
     }
 
     /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
@@ -4374,6 +4380,19 @@ mod tests {
         // Non-finite baseline: same fallback.
         let nan_state = state_with_ctm([f64::NAN, 0.0, 0.0, 1.0, 0.0, 0.0]);
         assert_eq!(pen_delta(&nan_state, (1.0, 2.0), (4.0, 6.0)), (3.0, 4.0));
+    }
+
+    #[test]
+    fn flat_space_threshold_uses_unscaled_fallback_for_tiny_baseline() {
+        let mut state = TextState::default();
+        state.font_size = 10.0;
+        state.text_matrix = [f64::EPSILON, 0.0, 0.0, 1.0, 0.0, 0.0];
+        let extractor = TextExtractor::new();
+
+        assert_eq!(
+            extractor.flat_space_gap_threshold(&state),
+            extractor.options.space_threshold * state.font_size
+        );
     }
 
     // ── issue #382: per-page byte-budget helper ──────────────────────────────

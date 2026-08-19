@@ -65,9 +65,14 @@ fn build_pdf() -> Vec<u8> {
     // Tm-scaled user-space units, so 0.15 clears the new threshold but not
     // the old one -- the mismatch between an unscaled threshold and a
     // Tm-scaled `dx` is exactly the bug.
-    let content = b"BT\n/F1 1 Tf\n9 0 0 9 100 700 Tm\n(3030)Tj\n\
+    build_pdf_with_content(
+        b"BT\n/F1 1 Tf\n9 0 0 9 100 700 Tm\n(3030)Tj\n\
 9 0 0 9 119.966 700 Tm\n(-)Tj\n\
-9 0 0 9 123.113 700 Tm\n(7160)Tj\nET\n";
+9 0 0 9 123.113 700 Tm\n(7160)Tj\nET\n",
+    )
+}
+
+fn build_pdf_with_content(content: &[u8]) -> Vec<u8> {
     let widths = widths_array();
     let objects: Vec<Vec<u8>> = vec![
         b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
@@ -102,8 +107,42 @@ fn small_forward_residue_between_simple_font_runs_at_font_size_1_is_not_a_space(
         .text;
     assert_eq!(
         text, "3030-7160",
-        "small positive Td residue between simple-font runs at font_size=1 \
+        "small positive Tm residue between simple-font runs at font_size=1 \
          (well below the old flat 0.3*font_size threshold) must not be \
          promoted to a word space by the font-derived threshold, got: {text:?}"
     );
+}
+
+#[test]
+fn horizontal_text_scaling_is_included_in_the_space_threshold() {
+    let pdf = build_pdf_with_content(
+        b"BT\n/F1 1 Tf\n200 Tz\n9 0 0 9 100 700 Tm\n(3030)Tj\n\
+9 0 0 9 140 700 Tm\n(-)Tj\n\
+9 0 0 9 147.994 700 Tm\n(7160)Tj\nET\n",
+    );
+    let doc = PdfReader::new(Cursor::new(pdf))
+        .expect("PDF should parse")
+        .into_document();
+    let text = TextExtractor::new()
+        .extract_from_page(&doc, 0)
+        .expect("extraction should succeed")
+        .text;
+    assert_eq!(text, "3030-7160");
+}
+
+#[test]
+fn ctm_only_scaling_is_included_in_the_space_threshold() {
+    let pdf = build_pdf_with_content(
+        b"q\n9 0 0 9 0 0 cm\nBT\n/F1 1 Tf\n1 0 0 1 11.111111 77.777778 Tm\n(3030)Tj\n\
+1 0 0 1 13.329556 77.777778 Tm\n(-)Tj\n\
+1 0 0 1 13.679222 77.777778 Tm\n(7160)Tj\nET\nQ\n",
+    );
+    let doc = PdfReader::new(Cursor::new(pdf))
+        .expect("PDF should parse")
+        .into_document();
+    let text = TextExtractor::new()
+        .extract_from_page(&doc, 0)
+        .expect("extraction should succeed")
+        .text;
+    assert_eq!(text, "3030-7160");
 }

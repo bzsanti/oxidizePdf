@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hyphenated phone number split across separate runs) could cross it and
   insert a spurious mid-token space. The threshold is now scaled by the same
   `Tm`/CTM x-factor already applied to page-space widths elsewhere in
-  extraction.
+  extraction, together with the horizontal text scaling selected by `Tz`.
 
 - **Composite (Type0/CID) font text extraction never consulted the CIDFont's
   `/W`/`/DW` glyph widths** (#496). Every glyph was assumed to advance by a
