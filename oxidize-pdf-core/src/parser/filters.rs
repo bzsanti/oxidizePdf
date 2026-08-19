@@ -1847,8 +1847,17 @@ fn apply_png_predictor_advanced(
     // Calculate bytes per pixel
     let bytes_per_pixel = (bpc * colors).div_ceil(8);
 
-    // Calculate row size (columns + 1 for predictor byte)
-    let row_size = columns + 1;
+    // Each PNG row contains the full sample payload plus one filter byte.
+    // `/Columns` counts pixels, not bytes, for multi-component images.
+    let row_bytes = columns
+        .checked_mul(colors)
+        .and_then(|samples| samples.checked_mul(bpc))
+        .and_then(|bits| bits.checked_add(7))
+        .map(|bits| bits / 8)
+        .ok_or_else(|| ParseError::StreamDecodeError("PNG predictor row size overflow".into()))?;
+    let row_size = row_bytes
+        .checked_add(1)
+        .ok_or_else(|| ParseError::StreamDecodeError("PNG predictor row size overflow".into()))?;
 
     if data.len() % row_size != 0 {
         return Err(ParseError::StreamDecodeError(
@@ -1857,7 +1866,7 @@ fn apply_png_predictor_advanced(
     }
 
     let num_rows = data.len() / row_size;
-    let mut result = Vec::with_capacity(columns * num_rows);
+    let mut result = Vec::with_capacity(row_bytes * num_rows);
 
     for row in 0..num_rows {
         let row_start = row * row_size;
@@ -1877,7 +1886,7 @@ fn apply_png_predictor_advanced(
             2 => {
                 // Up filter - each byte is prediction from byte above
                 let prev_row = if row > 0 {
-                    Some(&result[(row - 1) * columns..row * columns])
+                    Some(&result[(row - 1) * row_bytes..row * row_bytes])
                 } else {
                     None
                 };
@@ -1886,7 +1895,7 @@ fn apply_png_predictor_advanced(
             3 => {
                 // Average filter
                 let prev_row = if row > 0 {
-                    Some(&result[(row - 1) * columns..row * columns])
+                    Some(&result[(row - 1) * row_bytes..row * row_bytes])
                 } else {
                     None
                 };
@@ -1895,7 +1904,7 @@ fn apply_png_predictor_advanced(
             4 => {
                 // Paeth filter
                 let prev_row = if row > 0 {
-                    Some(&result[(row - 1) * columns..row * columns])
+                    Some(&result[(row - 1) * row_bytes..row * row_bytes])
                 } else {
                     None
                 };

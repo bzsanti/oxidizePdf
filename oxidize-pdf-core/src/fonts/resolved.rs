@@ -453,7 +453,7 @@ fn resolve_encoding<R: Read + Seek>(
             ))
         }
         PdfObject::Stream(stream) if composite => {
-            let data = stream.decode_with_limit(&document.options(), MAX_CMAP_STREAM_SIZE)?;
+            let data = document.decode_stream_with_limit(&stream, MAX_CMAP_STREAM_SIZE)?;
             let cmap = EncodingCMap::parse(&data)?;
             let mode = if cmap.wmode == 1 {
                 WritingMode::Vertical
@@ -482,7 +482,7 @@ fn resolve_cmap<R: Read + Seek>(
     let stream = resolved
         .as_stream()
         .ok_or_else(|| syntax("ToUnicode must be a stream"))?;
-    let data = stream.decode_with_limit(&document.options(), MAX_CMAP_STREAM_SIZE)?;
+    let data = document.decode_stream_with_limit(stream, MAX_CMAP_STREAM_SIZE)?;
     CMap::parse(&data).map(Some)
 }
 
@@ -497,7 +497,7 @@ fn resolve_cid_to_gid<R: Read + Seek>(
     match resolved {
         PdfObject::Name(name) if name.0 == "Identity" => Ok(Some(CidToGid::Identity)),
         PdfObject::Stream(stream) => {
-            let data = stream.decode_with_limit(&document.options(), MAX_CID_TO_GID_MAP_SIZE)?;
+            let data = document.decode_stream_with_limit(&stream, MAX_CID_TO_GID_MAP_SIZE)?;
             if data.len() % 2 != 0 {
                 return Err(syntax("CIDToGIDMap stream has odd length"));
             }
@@ -605,7 +605,7 @@ fn resolve_embedded_font<R: Read + Seek>(
         } else {
             default_format
         };
-        let data = stream.decode_with_limit(&document.options(), MAX_FONT_STREAM_SIZE)?;
+        let data = document.decode_stream_with_limit(stream, MAX_FONT_STREAM_SIZE)?;
         return Ok(Some(EmbeddedFont { format, data }));
     }
     Ok(None)
