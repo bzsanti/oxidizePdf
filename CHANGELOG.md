@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [4.5.1] - 2026-08-19
+
+### Fixed
+
+- **Text extraction ignored structure-element `/ActualText` replacements**
+  (#506). The extractor now resolves each marked-content MCID through the
+  page's `/StructParents` entry and the document `/ParentTree`, preserving
+  inline-over-structure precedence in both flat and layout-preserving modes.
+  Resolution is lazy and bounded, malformed structure trees fall back safely
+  to visual text, and tagged Form XObjects use their own structural context.
+
 ## [4.5.0] - 2026-08-18
 
 ### Added
