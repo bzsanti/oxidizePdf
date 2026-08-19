@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- **Flat-path word-gap threshold compared a `Tm`-scaled pen delta against an
+  unscaled font-size threshold** (#510). `flat_space_gap_threshold` derives
+  its threshold from the font's real space-glyph advance at the nominal `Tf`
+  font size, but the gap it's compared against is measured in user space,
+  already scaled by `Tm`/CTM. PDF generators that draw at `Tf 1` with the
+  real point size baked into `Tm` instead (a common technique) hit a
+  threshold far smaller, relative to the gap, than intended: an ordinary
+  sub-point positioning residue between `Tj` runs of the same token (e.g. a
+  hyphenated phone number split across separate runs) could cross it and
+  insert a spurious mid-token space. The threshold is now scaled by the same
+  `Tm`/CTM x-factor already applied to page-space widths elsewhere in
+  extraction, together with the horizontal text scaling selected by `Tz`.
+
 ## [4.5.1] - 2026-08-19
 
 ### Fixed
