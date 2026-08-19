@@ -876,8 +876,26 @@ impl TextExtractor {
         Some(width / 1000.0 * font_size.abs())
     }
 
+    /// `dx` (from [`pen_delta`]) is measured in *user space* — the pen's
+    /// `text_matrix × CTM` origin already folds in any scale the PDF puts in
+    /// `Tm`/CTM rather than `Tf`. `font_space_advance`/`type0_implicit_space_advance`
+    /// compute a *text-space* advance from the nominal `Tf` font size alone,
+    /// so a document that draws at `Tf 1` with its real point size baked into
+    /// `Tm` (a common generator technique) would otherwise compare a
+    /// Tm-scaled `dx` against an unscaled threshold, letting an ordinary
+    /// sub-point positioning residue between glyph runs cross the threshold
+    /// and insert a spurious mid-token space (issue #510). Scaling by the
+    /// same `combined_text_scale` x-factor `emit_text_fragment` already
+    /// applies to page-space widths brings both sides of the `dx >
+    /// threshold` comparison into the same unit space.
     fn flat_space_gap_threshold(&self, state: &TextState) -> f64 {
-        match self.font_space_advance(state.font_name.as_deref(), state.font_size) {
+        let (x_scale, _) = combined_text_scale(state);
+        let x_scale = if x_scale.is_finite() && x_scale > 0.0 {
+            x_scale
+        } else {
+            1.0
+        };
+        let threshold = match self.font_space_advance(state.font_name.as_deref(), state.font_size) {
             Some(advance) if advance > 0.0 => 0.5 * advance,
             _ => {
                 let legacy = self.options.space_threshold * state.font_size.abs();
@@ -892,7 +910,8 @@ impl TextExtractor {
                     _ => legacy,
                 }
             }
-        }
+        };
+        threshold * x_scale
     }
 
     /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
