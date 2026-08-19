@@ -19,7 +19,7 @@ pub mod split;
 pub use chunk_page_mapper::ChunkPageMapper;
 pub use extract_images::{
     extract_images_from_pages, extract_images_from_pdf, ExtractImagesOptions, ExtractedImage,
-    ImageExtractor, ImagePreprocessingOptions,
+    ExtractedImageData, ImageExtractionLimits, ImageExtractor, ImagePreprocessingOptions,
 };
 pub use merge::{merge_pdf_files, merge_pdfs, MergeInput, MergeOptions, PdfMerger};
 pub use overlay::{overlay_pdf, OverlayOptions, OverlayPosition, PdfOverlay};
@@ -83,6 +83,16 @@ pub enum OperationError {
     /// IO error
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+
+    /// A configured image extraction bound would be exceeded.
+    #[error(
+        "Image extraction limit exceeded for {limit}: maximum {maximum}, attempted {attempted}"
+    )]
+    ImageExtractionLimitExceeded {
+        limit: &'static str,
+        maximum: u64,
+        attempted: u64,
+    },
 
     /// Core PDF error
     #[error("PDF error: {0}")]
