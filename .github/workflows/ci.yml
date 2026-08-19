@@ -29,19 +29,9 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: rustfmt, clippy
 
-      - name: Install Tesseract OCR and qpdf (Ubuntu)
+      - name: Install qpdf (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev qpdf
-
-      - name: Install Tesseract OCR (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install tesseract
-
-      - name: Install Tesseract OCR (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install tesseract
-          echo "C:\Program Files\Tesseract-OCR" >> $env:GITHUB_PATH
+        run: sudo apt-get update && sudo apt-get install -y qpdf
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -146,9 +136,6 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install Tesseract OCR
-        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev
-
       - name: Cache cargo registry
         uses: actions/cache@v5
         with:
@@ -179,8 +166,8 @@ jobs:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-msrv-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
-      # Build only — rusty-tesseract (ocr-tesseract) shells out to the tesseract
-      # binary at runtime via subprocess, so the C library is not needed to compile.
+      # Build only — the optional OCR adapter shells out to Tesseract at runtime,
+      # so neither the executable nor a C development package is needed here.
       - name: Build library on MSRV (all features, locked)
         run: cargo build --lib --all-features --locked
 
@@ -201,8 +188,8 @@ jobs:
       # was no such gate. With ~17K crates.io downloads and an anonymous
       # third-party consumer base, breaking changes must be batched into a planned
       # MAJOR bundle, never leak into a minor. rustdoc-JSON generation only
-      # compiles the crate; the tesseract C library is not needed (OCR shells out
-      # at runtime), same as the MSRV job.
+      # compiles the crate; the optional OCR executable is not needed, same as
+      # the MSRV and examples compile gates.
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
