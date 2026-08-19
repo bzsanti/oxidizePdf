@@ -103,8 +103,8 @@ impl Type3Font {
             let stream = proc_object
                 .as_stream()
                 .ok_or_else(|| syntax("Type 3 CharProc must be a stream"))?;
-            let data = stream
-                .decode_with_limit(&document.options(), MAX_TYPE3_GLYPH_STREAM_SIZE)
+            let data = document
+                .decode_stream_with_limit(stream, MAX_TYPE3_GLYPH_STREAM_SIZE)
                 .map_err(|error| {
                     syntax(&format!(
                         "failed to decode Type 3 CharProc /{name} (code {code}): {error}"
