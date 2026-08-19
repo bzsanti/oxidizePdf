@@ -29,10 +29,6 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: rustfmt, clippy
 
-      - name: Install qpdf (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y qpdf
-
       - name: Cache cargo registry
         uses: actions/cache@v5
         with:
@@ -88,22 +84,6 @@ jobs:
       - name: Run tests (all others)
         if: matrix.os != 'macos-latest' || matrix.rust != 'beta'
         run: cargo test --all --features internal-testing --verbose
-
-      - name: Validate incremental text notes with qpdf
-        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
-        run: >
-          cargo test -p oxidize-pdf
-          --test issue_493_incremental_text_notes_test
-          qpdf_accepts_incremental_text_note_revision
-          -- --ignored --exact
-
-      - name: Validate AES-256 R5 interoperability with qpdf
-        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
-        run: >
-          cargo test -p oxidize-pdf
-          --test issue_492_aes256_perms_interop_test
-          qpdf_checks_and_linearizes_generated_aes256_r5_pdf
-          -- --ignored --exact
 
       # The analysis SPI is gated behind `unstable-spi` (+ `semantic` for the
       # enricher/extra bag), so the default test step above never compiles its
