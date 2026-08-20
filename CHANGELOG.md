@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- **Standard-14 simple fonts without a `/Widths` array used a flat per-glyph
+  pen advance, causing spurious mid-token spaces** (#521). A bare standard-14
+  font dictionary (e.g. `<< /BaseFont /Helvetica /Subtype /Type1 /Type /Font >>`,
+  valid per ISO 32000-1 §9.6.2.2 without `/Widths`) made
+  `calculate_text_width`/`calculate_text_width_from_codes` fall back to a flat
+  `len * font_size * 0.5` guess instead of the font's real, highly variable
+  per-glyph AFM widths (e.g. Helvetica "i" = 222 vs "m" = 833 per 1000 em).
+  When a token was split across multiple `Tj` runs (common generator output:
+  per-character coloring, kerning-pair runs, redaction overlays), the
+  resulting wrong pen position produced an arbitrary residual gap to the next
+  run that could cross `flat_space_gap_threshold` and get promoted to a
+  spurious space. Both functions now use the Core-14 AFM per-glyph widths
+  (already available internally for the standard-14 font family, weight and
+  slant implied by `/BaseFont`) as their fallback when `/Widths` is absent,
+  matching the space-width fallback `flat_space_gap_threshold` already had.
+
 ## [4.6.0] - 2026-08-20
 
 ### Added

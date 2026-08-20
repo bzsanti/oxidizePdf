@@ -11,7 +11,9 @@ use crate::parser::page_tree::ParsedPage;
 use crate::parser::ParseResult;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
 use crate::text::flat_reading_order;
+use crate::text::fonts::{get_standard_font_metrics, StandardFontMetrics};
 use crate::text::graphics_state_stack::GraphicsStateStack;
+use crate::text::Font;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -647,6 +649,11 @@ pub struct TextExtractor {
     /// once when the font is cached so flat extraction does not rescan a
     /// potentially large attacker-controlled `/W` table for every glyph.
     type0_implicit_space_widths: HashMap<String, f64>,
+    /// Standard-14 AFM metrics for simple fonts with no `/Widths` array,
+    /// resolved once from `/BaseFont` when the font is cached (issue #521)
+    /// rather than re-parsing the name's family/bold/italic on every
+    /// `Tj`-run pen-advance calculation.
+    standard_14_metrics: HashMap<String, &'static StandardFontMetrics>,
     /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
     /// object across pages. Most multi-page PDFs reuse the same font objects.
     font_object_cache: HashMap<(u32, u16), FontInfo>,
@@ -661,6 +668,7 @@ impl TextExtractor {
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
+            standard_14_metrics: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
     }
@@ -673,6 +681,7 @@ impl TextExtractor {
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
+            standard_14_metrics: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
     }
@@ -1504,6 +1513,11 @@ impl TextExtractor {
                                 .font_name
                                 .as_ref()
                                 .and_then(|name| self.font_cache.get(name));
+                            let standard_14 = state
+                                .font_name
+                                .as_ref()
+                                .and_then(|name| self.standard_14_metrics.get(name))
+                                .copied();
                             calculate_text_width_from_codes(
                                 text_bytes,
                                 &decoded,
@@ -1511,6 +1525,7 @@ impl TextExtractor {
                                 font_info,
                                 state.char_space,
                                 state.word_space,
+                                standard_14,
                             )
                         };
 
@@ -1691,6 +1706,11 @@ impl TextExtractor {
                                             .font_name
                                             .as_ref()
                                             .and_then(|name| self.font_cache.get(name));
+                                        let standard_14 = state
+                                            .font_name
+                                            .as_ref()
+                                            .and_then(|name| self.standard_14_metrics.get(name))
+                                            .copied();
                                         calculate_text_width_from_codes(
                                             &text_bytes,
                                             &decoded,
@@ -1698,6 +1718,7 @@ impl TextExtractor {
                                             font_info,
                                             state.char_space,
                                             state.word_space,
+                                            standard_14,
                                         )
                                     };
 
@@ -1898,6 +1919,11 @@ impl TextExtractor {
                                 .font_name
                                 .as_ref()
                                 .and_then(|name| self.font_cache.get(name));
+                            let standard_14 = state
+                                .font_name
+                                .as_ref()
+                                .and_then(|name| self.standard_14_metrics.get(name))
+                                .copied();
                             calculate_text_width_from_codes(
                                 &text,
                                 &decoded,
@@ -1905,6 +1931,7 @@ impl TextExtractor {
                                 font_info,
                                 state.char_space,
                                 state.word_space,
+                                standard_14,
                             )
                         };
 
@@ -2005,6 +2032,11 @@ impl TextExtractor {
                                 .font_name
                                 .as_ref()
                                 .and_then(|name| self.font_cache.get(name));
+                            let standard_14 = state
+                                .font_name
+                                .as_ref()
+                                .and_then(|name| self.standard_14_metrics.get(name))
+                                .copied();
                             calculate_text_width_from_codes(
                                 &text,
                                 &decoded,
@@ -2012,6 +2044,7 @@ impl TextExtractor {
                                 font_info,
                                 state.char_space,
                                 state.word_space,
+                                standard_14,
                             )
                         };
 
@@ -2987,6 +3020,7 @@ impl TextExtractor {
         // Clear per-page name mapping (font names like /F1 are page-local)
         self.font_cache.clear();
         self.type0_implicit_space_widths.clear();
+        self.standard_14_metrics.clear();
 
         // Try to get resources manually from page dictionary first
         // This is necessary because ParsedPage.get_resources() may not always work
@@ -3094,8 +3128,15 @@ impl TextExtractor {
     }
 
     /// Add a parsed font to the page-local caches, deriving the Type0 fallback
-    /// width once rather than on every text-showing boundary.
+    /// width and the standard-14 AFM metrics (issue #521) once rather than
+    /// re-deriving either on every text-showing boundary.
     fn cache_page_font(&mut self, font_name: &str, font_info: FontInfo) {
+        if font_info.metrics.widths.is_none() {
+            if let Some(metrics) = standard_14_font_metrics(&font_info.name) {
+                self.standard_14_metrics
+                    .insert(font_name.to_string(), metrics);
+            }
+        }
         if font_info.font_type == "Type0" || font_info.descendant_font.is_some() {
             let cid_font = font_info.descendant_font.as_deref().unwrap_or(&font_info);
             if let Some(width) = cid_font
@@ -3848,7 +3889,12 @@ fn transform_point(x: f64, y: f64, matrix: &[f64; 6]) -> (f64, f64) {
 }
 
 /// Calculate text width using actual font metrics (including kerning)
-fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>) -> f64 {
+fn calculate_text_width(
+    text: &str,
+    font_size: f64,
+    font_info: Option<&FontInfo>,
+    standard_14: Option<&'static StandardFontMetrics>,
+) -> f64 {
     // If we have font metrics, use them for accurate width calculation
     if let Some(font) = font_info {
         if let Some(ref widths) = font.metrics.widths {
@@ -3887,6 +3933,18 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 
             return total_width;
         }
+    }
+
+    // No explicit `/Widths` array: standard-14 fonts legitimately ship
+    // without one. Use their real per-glyph AFM widths (resolved once per
+    // font by the caller, not re-derived from `/BaseFont` on every call —
+    // see `TextExtractor::standard_14_metrics`) rather than a flat
+    // per-character guess, whose highly variable per-glyph widths (e.g.
+    // Helvetica "i"=222 vs "m"=833) would otherwise produce an arbitrary
+    // residual gap between runs that can be misread as a word space
+    // (issue #521).
+    if let Some(metrics) = standard_14 {
+        return metrics.to_user_space(metrics.get_string_width(text), font_size);
     }
 
     // Fallback to simplified calculation if no metrics available
@@ -3974,6 +4032,7 @@ fn calculate_text_width_from_codes(
     font_info: Option<&FontInfo>,
     char_space: f64,
     word_space: f64,
+    standard_14: Option<&'static StandardFontMetrics>,
 ) -> f64 {
     // Composite (Type0) fonts use multi-byte codes; a single byte is not a code,
     // so byte-indexed width lookup is invalid. `Tc` is added per glyph below.
@@ -4007,7 +4066,8 @@ fn calculate_text_width_from_codes(
             }
         }
         let glyphs = decoded.chars().count() as f64;
-        return calculate_text_width(decoded, font_size, font_info) + char_space * glyphs;
+        return calculate_text_width(decoded, font_size, font_info, standard_14)
+            + char_space * glyphs;
     }
 
     // `Tc` on every byte-code, `Tw` on every space byte. Shared by the metric
@@ -4049,6 +4109,22 @@ fn calculate_text_width_from_codes(
 
             return total_width + spacing(codes);
         }
+    }
+
+    // No explicit `/Widths` array: standard-14 fonts legitimately ship
+    // without one. Use their real per-glyph AFM widths (resolved once per
+    // font by the caller, not re-derived from `/BaseFont` on every call —
+    // see `TextExtractor::standard_14_metrics`), indexed by the raw WinAnsi
+    // byte code exactly as `get_char_width` expects, instead of a flat
+    // per-code guess whose highly variable per-glyph widths (e.g. Helvetica
+    // "i"=222 vs "m"=833) would otherwise produce an arbitrary residual gap
+    // between runs that can be misread as a word space (issue #521).
+    if let Some(metrics) = standard_14 {
+        let total_width: f64 = codes
+            .iter()
+            .map(|&byte| metrics.to_user_space(metrics.get_char_width(byte), font_size))
+            .sum();
+        return total_width + spacing(codes);
     }
 
     // No metrics: one fallback width per code (byte), the simple-font glyph count.
@@ -4324,6 +4400,69 @@ fn standard_14_space_width(base_font: &str) -> Option<f64> {
     } else {
         None
     }
+}
+
+/// Full Adobe Core-14 per-glyph metrics table for a `/BaseFont` name, keyed
+/// the same way as [`standard_14_space_width`] (subset prefixes stripped,
+/// metric-compatible substitutes folded in), additionally distinguishing
+/// bold/italic/oblique variants from the name so callers get the correct
+/// per-glyph widths rather than just the family's space width (issue #521):
+/// a standard-14 font legitimately ships no `/Widths` array, and the pen
+/// advance computed from its glyphs must use real, highly variable per-glyph
+/// widths (e.g. Helvetica "i"=222 vs "m"=833) — a flat fallback produces an
+/// arbitrary residual gap between runs that can be misread as a word space.
+fn standard_14_font_metrics(base_font: &str) -> Option<&'static StandardFontMetrics> {
+    let name = base_font.rsplit('+').next().unwrap_or(base_font);
+    let lower = name.to_ascii_lowercase();
+
+    // Resolve the weight/slant variant for a family that has bold/italic
+    // standard-14 members (Courier, Helvetica, Times). Computed lazily —
+    // only for a name that already matched one of those three families —
+    // rather than unconditionally for every `/BaseFont`, since Symbol and
+    // ZapfDingbats have no such variants to distinguish.
+    let variant = |regular, bold_only, italic_only, bold_italic| {
+        let bold = lower.contains("bold");
+        // "oblique" (common on Helvetica/Courier substitutes) and "italic"
+        // are metric-equivalent for the standard-14 set; treat either as
+        // the slanted variant.
+        let italic = lower.contains("italic") || lower.contains("oblique");
+        match (bold, italic) {
+            (true, true) => bold_italic,
+            (true, false) => bold_only,
+            (false, true) => italic_only,
+            (false, false) => regular,
+        }
+    };
+
+    let font = if lower.contains("courier") {
+        variant(
+            Font::Courier,
+            Font::CourierBold,
+            Font::CourierOblique,
+            Font::CourierBoldOblique,
+        )
+    } else if lower.contains("helvetica") || lower.contains("arial") {
+        variant(
+            Font::Helvetica,
+            Font::HelveticaBold,
+            Font::HelveticaOblique,
+            Font::HelveticaBoldOblique,
+        )
+    } else if lower.contains("times") {
+        variant(
+            Font::TimesRoman,
+            Font::TimesBold,
+            Font::TimesItalic,
+            Font::TimesBoldItalic,
+        )
+    } else if lower == "symbol" {
+        Font::Symbol
+    } else if lower.contains("zapfdingbats") || lower.contains("dingbats") {
+        Font::ZapfDingbats
+    } else {
+        return None;
+    };
+    get_standard_font_metrics(&font)
 }
 
 #[cfg(test)]
@@ -4826,7 +4965,7 @@ mod tests {
     #[test]
     fn test_calculate_text_width_with_no_font_info() {
         // Test fallback: should use simplified calculation
-        let width = calculate_text_width("Hello", 12.0, None);
+        let width = calculate_text_width("Hello", 12.0, None, None);
 
         // Expected: 5 chars * 12.0 * 0.5 = 30.0
         assert_eq!(
@@ -4859,7 +4998,7 @@ mod tests {
             cid_encoding: None,
         };
 
-        let width = calculate_text_width("Hello", 12.0, Some(&font_info));
+        let width = calculate_text_width("Hello", 12.0, Some(&font_info), None);
 
         // Should fall back to simplified calculation
         assert_eq!(
@@ -4901,7 +5040,7 @@ mod tests {
             cid_encoding: None,
         };
 
-        let width = calculate_text_width("Hello", 12.0, Some(&font_info));
+        let width = calculate_text_width("Hello", 12.0, Some(&font_info), None);
 
         // Expected calculation (widths in glyph space / 1000 * font_size):
         // H: 722/1000 * 12 = 8.664
@@ -4960,8 +5099,15 @@ mod tests {
 
         let codes = [1u8, 2u8];
         let decoded = "mi"; // what decode_text produced for these codes
-        let width =
-            calculate_text_width_from_codes(&codes, decoded, 10.0, Some(&font_info), 0.0, 0.0);
+        let width = calculate_text_width_from_codes(
+            &codes,
+            decoded,
+            10.0,
+            Some(&font_info),
+            0.0,
+            0.0,
+            None,
+        );
         let expected = (1000.0 + 100.0) / 1000.0 * 10.0; // 11.0
         assert!(
             (width - expected).abs() < 1e-6,
@@ -4970,7 +5116,7 @@ mod tests {
 
         // The decoded-Unicode-indexed path is the bug: 109 and 105 are outside
         // [1,2] so both fall back to missing_width -> (500+500)/1000*10 = 10.0.
-        let buggy = calculate_text_width(decoded, 10.0, Some(&font_info));
+        let buggy = calculate_text_width(decoded, 10.0, Some(&font_info), None);
         assert_eq!(buggy, 10.0);
         assert_ne!(
             width, buggy,
@@ -5005,7 +5151,7 @@ mod tests {
         };
 
         // Test with character outside range
-        let width = calculate_text_width("A1", 10.0, Some(&font_info));
+        let width = calculate_text_width("A1", 10.0, Some(&font_info), None);
 
         // Expected:
         // 'A' (65) is in range: 722/1000 * 10 = 7.22
@@ -5048,7 +5194,7 @@ mod tests {
         // Character 42 (index 10 from first_char 32)
         let char_code = 42u8 as char; // '*'
         let text = char_code.to_string();
-        let width = calculate_text_width(&text, 10.0, Some(&font_info));
+        let width = calculate_text_width(&text, 10.0, Some(&font_info), None);
 
         // Character is in range but width is 0.0, should NOT fall back to missing_width
         // (0.0 is a valid width for zero-width characters)
@@ -5081,11 +5227,11 @@ mod tests {
             cid_encoding: None,
         };
 
-        let width = calculate_text_width("", 12.0, Some(&font_info));
+        let width = calculate_text_width("", 12.0, Some(&font_info), None);
         assert_eq!(width, 0.0, "Empty string should have zero width");
 
         // Also test without font info
-        let width_no_font = calculate_text_width("", 12.0, None);
+        let width_no_font = calculate_text_width("", 12.0, None, None);
         assert_eq!(
             width_no_font, 0.0,
             "Empty string should have zero width (no font)"
@@ -5117,7 +5263,7 @@ mod tests {
         };
 
         // Test with Unicode characters outside ASCII range
-        let width = calculate_text_width("Ñ", 10.0, Some(&font_info));
+        let width = calculate_text_width("Ñ", 10.0, Some(&font_info), None);
 
         // 'Ñ' (U+00D1, code 209) is outside range, should use missing_width
         // Expected: 600/1000 * 10 = 6.0
@@ -5151,8 +5297,8 @@ mod tests {
         };
 
         // Test same character with different font sizes
-        let width_10 = calculate_text_width("A", 10.0, Some(&font_info));
-        let width_20 = calculate_text_width("A", 20.0, Some(&font_info));
+        let width_10 = calculate_text_width("A", 10.0, Some(&font_info), None);
+        let width_20 = calculate_text_width("A", 20.0, Some(&font_info), None);
 
         // Widths should scale linearly with font size
         assert_eq!(width_10, 722.0 / 1000.0 * 10.0);
@@ -5210,8 +5356,8 @@ mod tests {
             cid_encoding: None,
         };
 
-        let prop_width = calculate_text_width("i", 12.0, Some(&proportional_font));
-        let mono_width = calculate_text_width("i", 12.0, Some(&monospace_font));
+        let prop_width = calculate_text_width("i", 12.0, Some(&proportional_font), None);
+        let mono_width = calculate_text_width("i", 12.0, Some(&monospace_font), None);
 
         // Proportional 'i' should be narrower than monospace 'i'
         assert!(
@@ -5262,7 +5408,7 @@ mod tests {
         };
 
         // Test "AV" with kerning
-        let width_av = calculate_text_width("AV", 12.0, Some(&font_info));
+        let width_av = calculate_text_width("AV", 12.0, Some(&font_info), None);
         // Expected: (722 + 722)/1000 * 12 + (-50/1000 * 12)
         //         = 17.328 - 0.6 = 16.728
         let expected_av = (722.0 + 722.0) / 1000.0 * 12.0 + (-50.0 / 1000.0 * 12.0);
@@ -5276,7 +5422,7 @@ mod tests {
         );
 
         // Test "AW" with different kerning value
-        let width_aw = calculate_text_width("AW", 12.0, Some(&font_info));
+        let width_aw = calculate_text_width("AW", 12.0, Some(&font_info), None);
         // Expected: (722 + 944)/1000 * 12 + (-40/1000 * 12)
         //         = 19.992 - 0.48 = 19.512
         let expected_aw = (722.0 + 944.0) / 1000.0 * 12.0 + (-40.0 / 1000.0 * 12.0);
@@ -5289,7 +5435,7 @@ mod tests {
         );
 
         // Test "VA" with NO kerning (pair not in HashMap)
-        let width_va = calculate_text_width("VA", 12.0, Some(&font_info));
+        let width_va = calculate_text_width("VA", 12.0, Some(&font_info), None);
         // Expected: (722 + 722)/1000 * 12 = 17.328 (no kerning adjustment)
         let expected_va = (722.0 + 722.0) / 1000.0 * 12.0;
         assert!(
