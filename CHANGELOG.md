@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [4.6.0] - 2026-08-20
+
+### Added
+
+- **Type 3 font glyph resolution for downstream renderers** (#509). Parser
+  consumers can resolve bounded CharProc content streams together with the
+  glyph resources and metrics needed to render Type 3 fonts safely.
+- **Resolved parser font resources** (#513). The parser now exposes resolved
+  Type0, CID, simple, and Symbol font data through public, renderer-oriented
+  font resource types while retaining safe fallbacks for malformed PDFs.
+- **Bounded in-memory image extraction** (#516). New visitor and collection
+  APIs expose encoded image data without temporary files, with configurable
+  limits for image count, per-image and total encoded bytes, and decoded
+  pixels. Existing file-based extraction APIs remain compatible.
+
 ### Fixed
 
 - **Flat-path word-gap threshold compared a `Tm`-scaled pen delta against an
@@ -22,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   insert a spurious mid-token space. The threshold is now scaled by the same
   `Tm`/CTM x-factor already applied to page-space widths elsewhere in
   extraction, together with the horizontal text scaling selected by `Tz`.
+- **Indirect `/DecodeParms` references bypassed stream predictors** (#514).
+  Filter decoding now resolves indirect parameter dictionaries before
+  applying PNG and TIFF predictors, including parameters nested in filter
+  arrays, while rejecting cycles and invalid references safely.
 
 ## [4.5.1] - 2026-08-19
 
