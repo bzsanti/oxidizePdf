@@ -224,6 +224,85 @@ pub fn decode_stream(
     Ok(result)
 }
 
+/// Decode stream data while enforcing a caller-provided output bound.
+///
+/// Unfiltered data is copied only when it fits. Expanding filters enforce the
+/// bound while producing output; filters without a bounded implementation are
+/// rejected rather than allocating an unchecked intermediate buffer.
+pub fn decode_stream_with_limit(
+    data: &[u8],
+    dict: &PdfDictionary,
+    _options: &ParseOptions,
+    max_bytes: usize,
+) -> ParseResult<Vec<u8>> {
+    let filters = match dict.get("Filter") {
+        Some(PdfObject::Name(name)) => vec![name.as_str()],
+        Some(PdfObject::Array(array)) => array
+            .0
+            .iter()
+            .map(|object| {
+                object
+                    .as_name()
+                    .map(|name| name.as_str())
+                    .ok_or_else(|| bounded_decode_syntax("Invalid filter in array"))
+            })
+            .collect::<ParseResult<Vec<_>>>()?,
+        None => return copy_with_limit(data, max_bytes),
+        _ => return Err(bounded_decode_syntax("Invalid Filter type")),
+    };
+    let decode_params = dict.get("DecodeParms");
+    let mut result: Option<Vec<u8>> = None;
+    for (index, filter_name) in filters.iter().enumerate() {
+        let filter = Filter::from_name(filter_name)
+            .ok_or_else(|| bounded_decode_syntax(&format!("Unknown filter: {filter_name}")))?;
+        let params = get_filter_params(decode_params, index);
+        let input = result.as_deref().unwrap_or(data);
+        let applies_predictor = matches!(filter, Filter::FlateDecode | Filter::LZWDecode);
+        let mut decoded = match filter {
+            Filter::FlateDecode => decode_flate_with_limit(input, max_bytes)?,
+            Filter::ASCIIHexDecode => decode_ascii_hex_with_limit(input, max_bytes)?,
+            Filter::ASCII85Decode => decode_ascii85_with_limit(input, max_bytes)?,
+            Filter::LZWDecode => decode_lzw_with_limit(input, params, max_bytes)?,
+            Filter::RunLengthDecode => decode_run_length_with_limit(input, max_bytes)?,
+            other => {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "filter {other:?} has no bounded decoder"
+                )))
+            }
+        };
+        if applies_predictor {
+            if let Some(params) = params {
+                if let Some(predictor) = params.get("Predictor").and_then(PdfObject::as_integer) {
+                    decoded = apply_predictor(&decoded, predictor as u32, params)?;
+                }
+            }
+        }
+        if decoded.len() > max_bytes {
+            return Err(ParseError::StreamDecodeError(format!(
+                "decoded stream exceeds limit of {max_bytes} bytes"
+            )));
+        }
+        result = Some(decoded);
+    }
+    Ok(result.unwrap_or_default())
+}
+
+fn copy_with_limit(data: &[u8], max_bytes: usize) -> ParseResult<Vec<u8>> {
+    if data.len() > max_bytes {
+        return Err(ParseError::StreamDecodeError(format!(
+            "stream exceeds limit of {max_bytes} bytes"
+        )));
+    }
+    Ok(data.to_vec())
+}
+
+fn bounded_decode_syntax(message: &str) -> ParseError {
+    ParseError::SyntaxError {
+        position: 0,
+        message: message.to_string(),
+    }
+}
+
 /// Apply a single filter to data (legacy function, use apply_filter_with_params)
 #[allow(dead_code)]
 pub(crate) fn apply_filter(data: &[u8], filter: Filter) -> ParseResult<Vec<u8>> {
@@ -311,6 +390,21 @@ fn decode_flate(data: &[u8]) -> ParseResult<Vec<u8>> {
     // Strategy 8: Last resort - return empty data instead of garbage
     tracing::debug!("Warning: All FlateDecode strategies failed, returning empty data");
     Ok(Vec::new())
+}
+
+#[cfg(feature = "compression")]
+fn decode_flate_with_limit(data: &[u8], max_bytes: usize) -> ParseResult<Vec<u8>> {
+    let mut decoder = ZlibDecoder::new(data);
+    read_to_end_limited(&mut decoder, max_bytes).map_err(|error| {
+        ParseError::StreamDecodeError(format!("bounded FlateDecode failed: {error}"))
+    })
+}
+
+#[cfg(not(feature = "compression"))]
+fn decode_flate_with_limit(_data: &[u8], _max_bytes: usize) -> ParseResult<Vec<u8>> {
+    Err(ParseError::StreamDecodeError(
+        "FlateDecode requires the compression feature".to_string(),
+    ))
 }
 
 #[cfg(feature = "compression")]
@@ -497,6 +591,10 @@ fn decode_flate(_data: &[u8]) -> ParseResult<Vec<u8>> {
 
 /// Decode ASCIIHexDecode data
 fn decode_ascii_hex(data: &[u8]) -> ParseResult<Vec<u8>> {
+    decode_ascii_hex_with_limit(data, MAX_DECOMPRESSED_SIZE)
+}
+
+fn decode_ascii_hex_with_limit(data: &[u8], max_bytes: usize) -> ParseResult<Vec<u8>> {
     let mut result = Vec::new();
     let mut chars = data.iter().filter(|&&b| !b.is_ascii_whitespace());
 
@@ -523,7 +621,7 @@ fn decode_ascii_hex(data: &[u8]) -> ParseResult<Vec<u8>> {
             ParseError::StreamDecodeError(format!("Invalid hex digit: {}", low as char))
         })?;
 
-        result.push((high_val << 4) | low_val);
+        push_bounded(&mut result, (high_val << 4) | low_val, max_bytes)?;
 
         if low == b'>' {
             break;
@@ -545,6 +643,10 @@ fn hex_digit_value(ch: u8) -> Option<u8> {
 
 /// Decode ASCII85Decode data
 fn decode_ascii85(data: &[u8]) -> ParseResult<Vec<u8>> {
+    decode_ascii85_with_limit(data, MAX_DECOMPRESSED_SIZE)
+}
+
+fn decode_ascii85_with_limit(data: &[u8], max_bytes: usize) -> ParseResult<Vec<u8>> {
     let mut result = Vec::new();
     let mut chars = data.iter().filter(|&&b| !b.is_ascii_whitespace());
     let mut group = Vec::with_capacity(5);
@@ -577,7 +679,7 @@ fn decode_ascii85(data: &[u8]) -> ParseResult<Vec<u8>> {
             }
             b'z' if group.is_empty() => {
                 // Special case: 'z' represents four zero bytes
-                result.extend_from_slice(&[0, 0, 0, 0]);
+                extend_bounded(&mut result, &[0, 0, 0, 0], max_bytes)?;
             }
             b'!'..=b'u' => {
                 group.push(c);
@@ -589,10 +691,16 @@ fn decode_ascii85(data: &[u8]) -> ParseResult<Vec<u8>> {
                         .map(|(i, &ch)| (ch - b'!') as u32 * 85u32.pow(4 - i as u32))
                         .sum::<u32>();
 
-                    result.push((value >> 24) as u8);
-                    result.push((value >> 16) as u8);
-                    result.push((value >> 8) as u8);
-                    result.push(value as u8);
+                    extend_bounded(
+                        &mut result,
+                        &[
+                            (value >> 24) as u8,
+                            (value >> 16) as u8,
+                            (value >> 8) as u8,
+                            value as u8,
+                        ],
+                        max_bytes,
+                    )?;
 
                     group.clear();
                 }
@@ -626,11 +734,31 @@ fn decode_ascii85(data: &[u8]) -> ParseResult<Vec<u8>> {
         // Only output the number of bytes that were actually encoded
         let output_bytes = original_len - 1;
         for i in 0..output_bytes {
-            result.push((value >> (24 - 8 * i)) as u8);
+            push_bounded(&mut result, (value >> (24 - 8 * i)) as u8, max_bytes)?;
         }
     }
 
     Ok(result)
+}
+
+fn push_bounded(result: &mut Vec<u8>, byte: u8, max_bytes: usize) -> ParseResult<()> {
+    if result.len() >= max_bytes {
+        return Err(ParseError::StreamDecodeError(format!(
+            "decoded stream exceeds limit of {max_bytes} bytes"
+        )));
+    }
+    result.push(byte);
+    Ok(())
+}
+
+fn extend_bounded(result: &mut Vec<u8>, bytes: &[u8], max_bytes: usize) -> ParseResult<()> {
+    if bytes.len() > max_bytes.saturating_sub(result.len()) {
+        return Err(ParseError::StreamDecodeError(format!(
+            "decoded stream exceeds limit of {max_bytes} bytes"
+        )));
+    }
+    result.extend_from_slice(bytes);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1664,14 +1792,10 @@ pub(crate) fn apply_filter_with_params(
 }
 
 /// Get filter parameters for a specific filter index
-fn get_filter_params(decode_params: Option<&PdfObject>, _index: usize) -> Option<&PdfDictionary> {
+fn get_filter_params(decode_params: Option<&PdfObject>, index: usize) -> Option<&PdfDictionary> {
     match decode_params {
         Some(PdfObject::Dictionary(dict)) => Some(dict),
-        Some(PdfObject::Array(array)) => {
-            // For multiple filters, each can have its own decode params
-            // For now, use the first one
-            array.0.first().and_then(|obj| obj.as_dict())
-        }
+        Some(PdfObject::Array(array)) => array.0.get(index).and_then(PdfObject::as_dict),
         _ => None,
     }
 }
@@ -1723,8 +1847,17 @@ fn apply_png_predictor_advanced(
     // Calculate bytes per pixel
     let bytes_per_pixel = (bpc * colors).div_ceil(8);
 
-    // Calculate row size (columns + 1 for predictor byte)
-    let row_size = columns + 1;
+    // Each PNG row contains the full sample payload plus one filter byte.
+    // `/Columns` counts pixels, not bytes, for multi-component images.
+    let row_bytes = columns
+        .checked_mul(colors)
+        .and_then(|samples| samples.checked_mul(bpc))
+        .and_then(|bits| bits.checked_add(7))
+        .map(|bits| bits / 8)
+        .ok_or_else(|| ParseError::StreamDecodeError("PNG predictor row size overflow".into()))?;
+    let row_size = row_bytes
+        .checked_add(1)
+        .ok_or_else(|| ParseError::StreamDecodeError("PNG predictor row size overflow".into()))?;
 
     if data.len() % row_size != 0 {
         return Err(ParseError::StreamDecodeError(
@@ -1733,7 +1866,7 @@ fn apply_png_predictor_advanced(
     }
 
     let num_rows = data.len() / row_size;
-    let mut result = Vec::with_capacity(columns * num_rows);
+    let mut result = Vec::with_capacity(row_bytes * num_rows);
 
     for row in 0..num_rows {
         let row_start = row * row_size;
@@ -1753,7 +1886,7 @@ fn apply_png_predictor_advanced(
             2 => {
                 // Up filter - each byte is prediction from byte above
                 let prev_row = if row > 0 {
-                    Some(&result[(row - 1) * columns..row * columns])
+                    Some(&result[(row - 1) * row_bytes..row * row_bytes])
                 } else {
                     None
                 };
@@ -1762,7 +1895,7 @@ fn apply_png_predictor_advanced(
             3 => {
                 // Average filter
                 let prev_row = if row > 0 {
-                    Some(&result[(row - 1) * columns..row * columns])
+                    Some(&result[(row - 1) * row_bytes..row * row_bytes])
                 } else {
                     None
                 };
@@ -1771,7 +1904,7 @@ fn apply_png_predictor_advanced(
             4 => {
                 // Paeth filter
                 let prev_row = if row > 0 {
-                    Some(&result[(row - 1) * columns..row * columns])
+                    Some(&result[(row - 1) * row_bytes..row * row_bytes])
                 } else {
                     None
                 };
@@ -1887,6 +2020,14 @@ fn paeth_predictor(left: u8, up: u8, up_left: u8) -> u8 {
 /// Section 3.3.3. The PDF variant of LZW uses variable-length codes starting at
 /// 9 bits and growing up to 12 bits.
 fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8>> {
+    decode_lzw_with_limit(data, params, MAX_DECOMPRESSED_SIZE)
+}
+
+fn decode_lzw_with_limit(
+    data: &[u8],
+    params: Option<&PdfDictionary>,
+    max_bytes: usize,
+) -> ParseResult<Vec<u8>> {
     // Get parameters
     let early_change = params
         .and_then(|p| p.get("EarlyChange"))
@@ -1951,10 +2092,9 @@ fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8
             result.extend_from_slice(&string);
 
             // Decompression bomb check
-            if result.len() > MAX_DECOMPRESSED_SIZE {
+            if result.len() > max_bytes {
                 return Err(ParseError::StreamDecodeError(format!(
-                    "LZW decompressed size exceeds {} MB limit",
-                    MAX_DECOMPRESSED_SIZE / (1024 * 1024)
+                    "LZW decompressed size exceeds {max_bytes} byte limit"
                 )));
             }
 
@@ -2055,6 +2195,10 @@ impl<'a> LzwBitReader<'a> {
 /// Implements the Run Length Encoding decompression as specified in PDF Reference 1.7
 /// Section 3.3.4. Run-length encoding compresses sequences of identical bytes.
 fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
+    decode_run_length_with_limit(data, MAX_DECOMPRESSED_SIZE)
+}
+
+fn decode_run_length_with_limit(data: &[u8], max_bytes: usize) -> ParseResult<Vec<u8>> {
     let mut result = Vec::new();
     let mut i = 0;
 
@@ -2091,10 +2235,9 @@ fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
         }
 
         // Decompression bomb check
-        if result.len() > MAX_DECOMPRESSED_SIZE {
+        if result.len() > max_bytes {
             return Err(ParseError::StreamDecodeError(format!(
-                "RunLength decompressed size exceeds {} MB limit",
-                MAX_DECOMPRESSED_SIZE / (1024 * 1024)
+                "RunLength decompressed size exceeds {max_bytes} byte limit"
             )));
         }
     }

@@ -1,0 +1,48 @@
+name: Interoperability
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  qpdf:
+    name: qpdf external validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-qpdf-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install qpdf
+        timeout-minutes: 5
+        run: |
+          sudo apt-get update -o Acquire::Retries=3
+          sudo apt-get install -y --no-install-recommends qpdf
+
+      - name: Validate incremental text notes
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_493_incremental_text_notes_test
+          qpdf_accepts_incremental_text_note_revision
+          -- --ignored --exact
+
+      - name: Validate AES-256 R5 interoperability
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_492_aes256_perms_interop_test
+          qpdf_checks_and_linearizes_generated_aes256_r5_pdf
+          -- --ignored --exact

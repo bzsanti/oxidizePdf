@@ -29,6 +29,7 @@ pub struct TransformMatrix {
 }
 
 impl TransformMatrix {
+    #[allow(dead_code)]
     fn new(a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) -> Self {
         Self { a, b, c, d, e, f }
     }
@@ -139,6 +140,148 @@ pub struct ExtractedImage {
     pub format: ImageFormat,
 }
 
+/// An extracted image whose encoded bytes remain in memory.
+#[derive(Debug, Clone)]
+pub struct ExtractedImageData {
+    /// Zero-based page containing the image.
+    pub page_number: usize,
+    /// Zero-based image index within the page.
+    pub image_index: usize,
+    /// Image width in pixels.
+    pub width: u32,
+    /// Image height in pixels.
+    pub height: u32,
+    /// Encoding of `data`.
+    pub format: ImageFormat,
+    /// Encoded image bytes after optional preprocessing.
+    pub data: Vec<u8>,
+}
+
+/// Resource bounds applied while extracting images in memory.
+#[derive(Debug, Clone, Copy)]
+pub struct ImageExtractionLimits {
+    /// Maximum number of images delivered to the consumer.
+    pub max_images: usize,
+    /// Maximum encoded size of one delivered image.
+    pub max_encoded_bytes_per_image: usize,
+    /// Maximum total encoded size delivered during the operation.
+    pub max_total_encoded_bytes: usize,
+    /// Maximum width multiplied by height for one image.
+    pub max_decoded_pixels_per_image: u64,
+}
+
+impl Default for ImageExtractionLimits {
+    fn default() -> Self {
+        Self {
+            max_images: usize::MAX,
+            max_encoded_bytes_per_image: usize::MAX,
+            max_total_encoded_bytes: usize::MAX,
+            max_decoded_pixels_per_image: u64::MAX,
+        }
+    }
+}
+
+/// Errors produced by bounded in-memory image extraction.
+#[derive(Debug, thiserror::Error)]
+pub enum ImageExtractionError {
+    /// An existing PDF operation or image-processing step failed.
+    #[error(transparent)]
+    Operation(#[from] OperationError),
+    /// A configured extraction bound would be exceeded.
+    #[error(
+        "Image extraction limit exceeded for {limit}: maximum {maximum}, attempted {attempted}"
+    )]
+    LimitExceeded {
+        limit: &'static str,
+        maximum: u64,
+        attempted: u64,
+    },
+}
+
+/// Result type for bounded in-memory image extraction.
+pub type ImageExtractionResult<T> = Result<T, ImageExtractionError>;
+
+impl ImageExtractionError {
+    fn into_operation_error(self) -> OperationError {
+        match self {
+            Self::Operation(error) => error,
+            error @ Self::LimitExceeded { .. } => {
+                OperationError::ProcessingError(error.to_string())
+            }
+        }
+    }
+}
+
+struct ImageExtractionBudget {
+    limits: ImageExtractionLimits,
+    images: usize,
+    encoded_bytes: usize,
+}
+
+impl ImageExtractionBudget {
+    fn new(limits: ImageExtractionLimits) -> Self {
+        Self {
+            limits,
+            images: 0,
+            encoded_bytes: 0,
+        }
+    }
+
+    fn check_pixels(&self, width: u32, height: u32) -> ImageExtractionResult<()> {
+        let pixels = u64::from(width) * u64::from(height);
+        if pixels > self.limits.max_decoded_pixels_per_image {
+            return Err(ImageExtractionError::LimitExceeded {
+                limit: "decoded pixels per image",
+                maximum: self.limits.max_decoded_pixels_per_image,
+                attempted: pixels,
+            });
+        }
+        Ok(())
+    }
+
+    fn check_image_slot(&self) -> ImageExtractionResult<()> {
+        let attempted = self.images.checked_add(1).unwrap_or(usize::MAX);
+        if attempted > self.limits.max_images {
+            return Err(ImageExtractionError::LimitExceeded {
+                limit: "image count",
+                maximum: self.limits.max_images as u64,
+                attempted: attempted as u64,
+            });
+        }
+        Ok(())
+    }
+
+    fn consume(&mut self, bytes: usize) -> ImageExtractionResult<()> {
+        if bytes > self.limits.max_encoded_bytes_per_image {
+            return Err(ImageExtractionError::LimitExceeded {
+                limit: "encoded bytes per image",
+                maximum: self.limits.max_encoded_bytes_per_image as u64,
+                attempted: bytes as u64,
+            });
+        }
+        self.check_image_slot()?;
+        let next_images = self.images + 1;
+        let next_bytes =
+            self.encoded_bytes
+                .checked_add(bytes)
+                .ok_or(ImageExtractionError::LimitExceeded {
+                    limit: "total encoded bytes",
+                    maximum: self.limits.max_total_encoded_bytes as u64,
+                    attempted: u64::MAX,
+                })?;
+        if next_bytes > self.limits.max_total_encoded_bytes {
+            return Err(ImageExtractionError::LimitExceeded {
+                limit: "total encoded bytes",
+                maximum: self.limits.max_total_encoded_bytes as u64,
+                attempted: next_bytes as u64,
+            });
+        }
+        self.images = next_images;
+        self.encoded_bytes = next_bytes;
+        Ok(())
+    }
+}
+
 /// Image extractor
 pub struct ImageExtractor<R: Read + Seek> {
     document: PdfDocument<R>,
@@ -157,25 +300,276 @@ impl<R: Read + Seek> ImageExtractor<R> {
         }
     }
 
-    /// Extract all images from the document
-    pub fn extract_all(&mut self) -> OperationResult<Vec<ExtractedImage>> {
-        // Create output directory if needed
-        if self.options.create_dir && !self.options.output_dir.exists() {
-            fs::create_dir_all(&self.options.output_dir)?;
-        }
-
-        let mut extracted_images = Vec::new();
+    /// Visit every extracted image without writing to the filesystem.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the document cannot be parsed, a configured limit
+    /// would be exceeded, image processing fails, or the visitor returns an error.
+    pub fn visit_images<F>(
+        &mut self,
+        limits: ImageExtractionLimits,
+        mut visitor: F,
+    ) -> ImageExtractionResult<()>
+    where
+        F: FnMut(ExtractedImageData) -> ImageExtractionResult<()>,
+    {
         let page_count = self
             .document
             .page_count()
-            .map_err(|e| OperationError::ParseError(e.to_string()))?;
+            .map_err(|error| OperationError::ParseError(error.to_string()))?;
+        let mut budget = ImageExtractionBudget::new(limits);
+        for page_number in 0..page_count as usize {
+            self.visit_page_images(page_number, &mut budget, &mut visitor)?;
+        }
+        Ok(())
+    }
 
-        for page_idx in 0..page_count {
-            let page_images = self.extract_from_page(page_idx as usize)?;
-            extracted_images.extend(page_images);
+    /// Extract every image as encoded bytes without filesystem writes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when parsing or image processing fails, or when a
+    /// configured extraction limit would be exceeded.
+    pub fn extract_all_in_memory(
+        &mut self,
+        limits: ImageExtractionLimits,
+    ) -> ImageExtractionResult<Vec<ExtractedImageData>> {
+        let mut images = Vec::new();
+        self.visit_images(limits, |image| {
+            images.push(image);
+            Ok(())
+        })?;
+        Ok(images)
+    }
+
+    /// Extract one page's images as encoded bytes without filesystem writes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the page cannot be read, image processing fails,
+    /// or a configured extraction limit would be exceeded.
+    pub fn extract_from_page_in_memory(
+        &mut self,
+        page_number: usize,
+        limits: ImageExtractionLimits,
+    ) -> ImageExtractionResult<Vec<ExtractedImageData>> {
+        let mut images = Vec::new();
+        let mut budget = ImageExtractionBudget::new(limits);
+        self.visit_page_images(page_number, &mut budget, &mut |image| {
+            images.push(image);
+            Ok(())
+        })?;
+        Ok(images)
+    }
+
+    fn visit_page_images<F>(
+        &mut self,
+        page_number: usize,
+        budget: &mut ImageExtractionBudget,
+        visitor: &mut F,
+    ) -> ImageExtractionResult<()>
+    where
+        F: FnMut(ExtractedImageData) -> ImageExtractionResult<()>,
+    {
+        let page = self
+            .document
+            .get_page(page_number as u32)
+            .map_err(|error| OperationError::ParseError(error.to_string()))?;
+        let resources = self
+            .document
+            .get_page_resources(&page)
+            .map_err(|error| OperationError::ParseError(error.to_string()))?;
+        let mut references = Vec::new();
+        if let Some(resources) = resources {
+            if let Some(PdfObject::Dictionary(xobjects)) = resources.get("XObject") {
+                for object in xobjects.0.values() {
+                    if let PdfObject::Reference(number, generation) = object {
+                        references.push((*number, *generation));
+                    }
+                }
+            }
         }
 
-        Ok(extracted_images)
+        let mut image_index = 0;
+        for (number, generation) in references {
+            let object = self
+                .document
+                .get_object(number, generation)
+                .map_err(|error| OperationError::ParseError(error.to_string()))?;
+            let PdfObject::Stream(stream) = object else {
+                continue;
+            };
+            if !matches!(stream.dict.get("Subtype"), Some(PdfObject::Name(name)) if name.0 == "Image")
+            {
+                continue;
+            }
+            budget.check_image_slot()?;
+            if let Some(image) =
+                self.prepare_image_data(&stream, page_number, image_index, budget)?
+            {
+                budget.consume(image.data.len())?;
+                visitor(image)?;
+                image_index += 1;
+            }
+        }
+
+        if self.options.extract_inline {
+            for content in self
+                .document
+                .get_page_content_streams(&page)
+                .map_err(|error| OperationError::ParseError(error.to_string()))?
+            {
+                self.visit_inline_images(&content, page_number, &mut image_index, budget, visitor)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn prepare_image_data(
+        &self,
+        stream: &PdfStream,
+        page_number: usize,
+        image_index: usize,
+        budget: &ImageExtractionBudget,
+    ) -> ImageExtractionResult<Option<ExtractedImageData>> {
+        let Some(PdfObject::Integer(width @ 1..)) = stream.dict.get("Width") else {
+            return Ok(None);
+        };
+        let Some(PdfObject::Integer(height @ 1..)) = stream.dict.get("Height") else {
+            return Ok(None);
+        };
+        let (Ok(width), Ok(height)) = (u32::try_from(*width), u32::try_from(*height)) else {
+            return Ok(None);
+        };
+        if self
+            .options
+            .min_size
+            .is_some_and(|minimum| width < minimum || height < minimum)
+        {
+            return Ok(None);
+        }
+        budget.check_pixels(width, height)?;
+        let color_space = stream.dict.get("ColorSpace");
+        let bits = match stream.dict.get("BitsPerComponent") {
+            Some(PdfObject::Integer(bits)) => *bits as u8,
+            _ => 8,
+        };
+        let smask = self.extract_smask_alpha(&stream.dict, width, height);
+        let first_filter = match stream.dict.get("Filter") {
+            Some(PdfObject::Name(name)) => Some(name.0.as_str()),
+            Some(PdfObject::Array(filters)) => filters.0.first().and_then(|filter| match filter {
+                PdfObject::Name(name) => Some(name.0.as_str()),
+                _ => None,
+            }),
+            _ => None,
+        };
+        let (data, format) = match first_filter {
+            Some("DCTDecode") => (stream.data.clone(), ImageFormat::Jpeg),
+            Some("FlateDecode" | "LZWDecode") | None => {
+                let decoded = self.decode_image_stream(stream)?;
+                (
+                    self.convert_raw_image_data_to_png(
+                        &decoded,
+                        width,
+                        height,
+                        color_space,
+                        bits,
+                        smask.as_deref(),
+                    )?,
+                    ImageFormat::Png,
+                )
+            }
+            Some("CCITTFaxDecode") => {
+                let decoded = self.decode_image_stream(stream)?;
+                (
+                    self.convert_ccitt_to_png(&decoded, width, height)?,
+                    ImageFormat::Png,
+                )
+            }
+            Some(_) => return Ok(None),
+        };
+        #[cfg(feature = "external-images")]
+        let data = if self.should_preprocess() {
+            self.preprocess_image_data(&data, width, height, format)?
+        } else {
+            data
+        };
+        Ok(Some(ExtractedImageData {
+            page_number,
+            image_index,
+            width,
+            height,
+            format,
+            data,
+        }))
+    }
+
+    fn visit_inline_images<F>(
+        &self,
+        stream_data: &[u8],
+        page_number: usize,
+        image_index: &mut usize,
+        budget: &mut ImageExtractionBudget,
+        visitor: &mut F,
+    ) -> ImageExtractionResult<()>
+    where
+        F: FnMut(ExtractedImageData) -> ImageExtractionResult<()>,
+    {
+        let mut position = 0;
+        while let Some(begin) = Self::find_bytes(stream_data, b"BI", position) {
+            let Some(id) = Self::find_bytes(stream_data, b"ID", begin + 2) else {
+                break;
+            };
+            let Some(end) = Self::find_bytes(stream_data, b"EI", id + 2) else {
+                break;
+            };
+            budget.check_image_slot()?;
+            let dictionary = String::from_utf8_lossy(&stream_data[begin + 2..id]);
+            let (width, height) = self.parse_inline_image_dict(dictionary.trim());
+            budget.check_pixels(width, height)?;
+            let data = stream_data[id + 2..end].to_vec();
+            budget.consume(data.len())?;
+            let format = self
+                .detect_image_format_from_data(&data)
+                .unwrap_or(ImageFormat::Raw);
+            visitor(ExtractedImageData {
+                page_number,
+                image_index: *image_index,
+                width,
+                height,
+                format,
+                data,
+            })?;
+            *image_index += 1;
+            position = end + 2;
+        }
+        Ok(())
+    }
+
+    fn find_bytes(haystack: &[u8], needle: &[u8], start: usize) -> Option<usize> {
+        haystack
+            .get(start..)?
+            .windows(needle.len())
+            .position(|window| window == needle)
+            .map(|position| start + position)
+    }
+
+    /// Extract all images from the document
+    pub fn extract_all(&mut self) -> OperationResult<Vec<ExtractedImage>> {
+        if self.options.create_dir && !self.options.output_dir.exists() {
+            fs::create_dir_all(&self.options.output_dir)?;
+        }
+        let options = self.options.clone();
+        let mut cache = std::mem::take(&mut self.processed_images);
+        let mut images = Vec::new();
+        let result = self.visit_images(ImageExtractionLimits::default(), |image| {
+            images.push(Self::persist_image_data(&options, &mut cache, image)?);
+            Ok(())
+        });
+        self.processed_images = cache;
+        result.map_err(ImageExtractionError::into_operation_error)?;
+        Ok(images)
     }
 
     /// Extract images from a specific page
@@ -183,326 +577,57 @@ impl<R: Read + Seek> ImageExtractor<R> {
         &mut self,
         page_number: usize,
     ) -> OperationResult<Vec<ExtractedImage>> {
-        let mut extracted = Vec::new();
-
-        // Get the page
-        let page = self
-            .document
-            .get_page(page_number as u32)
-            .map_err(|e| OperationError::ParseError(e.to_string()))?;
-
-        // Get page resources and collect XObject references
-        let xobject_refs: Vec<(String, u32, u16)> = {
-            let resources = self
-                .document
-                .get_page_resources(&page)
-                .map_err(|e| OperationError::ParseError(e.to_string()))?;
-
-            let mut refs = Vec::new();
-
-            if let Some(resources) = resources {
-                if let Some(PdfObject::Dictionary(xobjects)) =
-                    resources.0.get(&PdfName("XObject".to_string()))
-                {
-                    for (name, obj_ref) in &xobjects.0 {
-                        if let PdfObject::Reference(obj_num, gen_num) = obj_ref {
-                            refs.push((name.0.clone(), *obj_num, *gen_num));
-                        }
-                    }
-                }
-            }
-
-            refs
-        };
-
-        // Process each XObject reference
-        let mut image_index = 0;
-        for (name, obj_num, gen_num) in xobject_refs {
-            if let Ok(xobject) = self.document.get_object(obj_num, gen_num) {
-                if let Some(extracted_image) =
-                    self.process_xobject(&xobject, page_number, image_index, &name)?
-                {
-                    extracted.push(extracted_image);
-                    image_index += 1;
-                }
-            }
+        if self.options.create_dir && !self.options.output_dir.exists() {
+            fs::create_dir_all(&self.options.output_dir)?;
         }
-
-        // If no XObjects found via resources, try alternative method
-        if extracted.is_empty() {
-            // Analyze content streams for image references
-            if let Ok(content_streams) = self.document.get_page_content_streams(&page) {
-                for stream_data in &content_streams {
-                    let referenced_images = self.extract_referenced_images_from_content(
-                        stream_data,
-                        page_number,
-                        &mut image_index,
-                    )?;
-                    extracted.extend(referenced_images);
-                }
-            }
-        }
-
-        // Extract inline images from content stream if requested
-        if self.options.extract_inline {
-            if let Ok(parsed_page) = self.document.get_page(page_number as u32) {
-                if let Ok(content_streams) = self.document.get_page_content_streams(&parsed_page) {
-                    for stream_data in &content_streams {
-                        let inline_images = self.extract_inline_images_from_stream(
-                            stream_data,
-                            page_number,
-                            &mut image_index,
-                        )?;
-                        extracted.extend(inline_images);
-                    }
-                }
-            }
-        }
-
-        Ok(extracted)
+        let options = self.options.clone();
+        let mut cache = std::mem::take(&mut self.processed_images);
+        let mut images = Vec::new();
+        let mut budget = ImageExtractionBudget::new(ImageExtractionLimits::default());
+        let result = self.visit_page_images(page_number, &mut budget, &mut |image| {
+            images.push(Self::persist_image_data(&options, &mut cache, image)?);
+            Ok(())
+        });
+        self.processed_images = cache;
+        result.map_err(ImageExtractionError::into_operation_error)?;
+        Ok(images)
     }
 
-    /// Process an XObject to see if it's an image
-    fn process_xobject(
-        &mut self,
-        xobject: &PdfObject,
-        page_number: usize,
-        image_index: usize,
-        _name: &str,
-    ) -> OperationResult<Option<ExtractedImage>> {
-        if let PdfObject::Stream(stream) = xobject {
-            // Check if it's an image XObject
-            if let Some(PdfObject::Name(subtype)) =
-                stream.dict.0.get(&PdfName("Subtype".to_string()))
-            {
-                if subtype.0 == "Image" {
-                    return self.extract_image_xobject(stream, page_number, image_index);
-                }
-            }
-        }
-        Ok(None)
-    }
-
-    /// Extract an image XObject
-    fn extract_image_xobject(
-        &mut self,
-        stream: &PdfStream,
-        page_number: usize,
-        image_index: usize,
-    ) -> OperationResult<Option<ExtractedImage>> {
-        // Get image properties
-        let width = match stream.dict.0.get(&PdfName("Width".to_string())) {
-            Some(PdfObject::Integer(w)) => *w as u32,
-            _ => return Ok(None),
-        };
-
-        let height = match stream.dict.0.get(&PdfName("Height".to_string())) {
-            Some(PdfObject::Integer(h)) => *h as u32,
-            _ => return Ok(None),
-        };
-
-        // Check minimum size
-        if let Some(min_size) = self.options.min_size {
-            if width < min_size || height < min_size {
-                return Ok(None);
-            }
-        }
-
-        // Get color space information
-        let color_space = stream.dict.0.get(&PdfName("ColorSpace".to_string()));
-        let bits_per_component = match stream.dict.0.get(&PdfName("BitsPerComponent".to_string())) {
-            Some(PdfObject::Integer(bits)) => *bits as u8,
-            _ => 8, // Default to 8 bits per component
-        };
-
-        // Get the decoded image data (resolving an indirect /DecodeParms so
-        // predictors are applied — issue #286).
-        let mut data = self.decode_image_stream(stream)?;
-
-        // Soft mask (/SMask): a grayscale image whose samples are the per-pixel
-        // alpha of this image. Decoded once here (resized to this image's
-        // dimensions) and composited into an RGBA PNG by the raw→PNG paths below
-        // (issue #286: images whose visible shape lives entirely in the SMask
-        // otherwise extract as opaque, often near-black, rectangles).
-        let smask_alpha = self.extract_smask_alpha(&stream.dict, width, height);
-
-        // Determine format from filter and process data accordingly
-        let format = match stream.dict.0.get(&PdfName("Filter".to_string())) {
-            Some(PdfObject::Name(filter)) => match filter.0.as_str() {
-                "DCTDecode" => {
-                    // JPEG data is already in correct format - use raw stream data
-                    // DCTDecode streams contain complete JPEG data, don't decode
-                    if smask_alpha.is_some() {
-                        tracing::debug!(
-                            "image has an /SMask but is DCT-encoded; alpha not composited into JPEG output"
-                        );
-                    }
-                    data = stream.data.clone();
-                    ImageFormat::Jpeg
-                }
-                "FlateDecode" => {
-                    // FlateDecode contains raw pixel data - need to convert to image format
-                    data = self.convert_raw_image_data_to_png(
-                        &data,
-                        width,
-                        height,
-                        color_space,
-                        bits_per_component,
-                        smask_alpha.as_deref(),
-                    )?;
-                    ImageFormat::Png
-                }
-                "CCITTFaxDecode" => {
-                    // CCITT data for scanned documents - convert to PNG
-                    data = self.convert_ccitt_to_png(&data, width, height)?;
-                    ImageFormat::Png
-                }
-                "LZWDecode" => {
-                    // LZW compressed raw data - convert to PNG
-                    data = self.convert_raw_image_data_to_png(
-                        &data,
-                        width,
-                        height,
-                        color_space,
-                        bits_per_component,
-                        smask_alpha.as_deref(),
-                    )?;
-                    ImageFormat::Png
-                }
-                _ => {
-                    tracing::debug!("Unsupported image filter: {}", filter.0);
-                    return Ok(None);
-                }
-            },
-            Some(PdfObject::Array(filters)) => {
-                // Handle filter arrays - use the first filter
-                if let Some(PdfObject::Name(filter)) = filters.0.first() {
-                    match filter.0.as_str() {
-                        "DCTDecode" => {
-                            // JPEG data is already in correct format - use raw stream data
-                            if smask_alpha.is_some() {
-                                tracing::debug!(
-                                    "image has an /SMask but is DCT-encoded; alpha not composited into JPEG output"
-                                );
-                            }
-                            data = stream.data.clone();
-                            ImageFormat::Jpeg
-                        }
-                        "FlateDecode" => {
-                            data = self.convert_raw_image_data_to_png(
-                                &data,
-                                width,
-                                height,
-                                color_space,
-                                bits_per_component,
-                                smask_alpha.as_deref(),
-                            )?;
-                            ImageFormat::Png
-                        }
-                        "CCITTFaxDecode" => {
-                            data = self.convert_ccitt_to_png(&data, width, height)?;
-                            ImageFormat::Png
-                        }
-                        "LZWDecode" => {
-                            data = self.convert_raw_image_data_to_png(
-                                &data,
-                                width,
-                                height,
-                                color_space,
-                                bits_per_component,
-                                smask_alpha.as_deref(),
-                            )?;
-                            ImageFormat::Png
-                        }
-                        _ => {
-                            tracing::debug!("Unsupported image filter: {}", filter.0);
-                            return Ok(None);
-                        }
-                    }
-                } else {
-                    return Ok(None);
-                }
-            }
-            _ => {
-                // No filter - raw image data
-                data = self.convert_raw_image_data_to_png(
-                    &data,
-                    width,
-                    height,
-                    color_space,
-                    bits_per_component,
-                    smask_alpha.as_deref(),
-                )?;
-                ImageFormat::Png
-            }
-        };
-
-        // Generate unique key for this image data
-        let image_key = format!("{:x}", md5::compute(&data));
-
-        // For scanned PDFs where all pages reference the same image object,
-        // we need to create separate files per page for OCR processing
-        // Don't deduplicate if we're extracting for OCR purposes
-        let allow_deduplication = !self.options.name_pattern.contains("{page}");
-
-        // Check if we've already extracted this image (only if deduplication is allowed)
-        if allow_deduplication {
-            if let Some(existing_path) = self.processed_images.get(&image_key) {
-                // Return reference to already extracted image
-                return Ok(Some(ExtractedImage {
-                    page_number,
-                    image_index,
-                    file_path: existing_path.clone(),
-                    width,
-                    height,
-                    format,
-                }));
-            }
-        }
-
-        // Generate output filename
-        let extension = match format {
+    fn persist_image_data(
+        options: &ExtractImagesOptions,
+        cache: &mut HashMap<String, PathBuf>,
+        image: ExtractedImageData,
+    ) -> OperationResult<ExtractedImage> {
+        let key = format!("{:x}", md5::compute(&image.data));
+        let allow_deduplication = !options.name_pattern.contains("{page}");
+        let extension = match image.format {
             ImageFormat::Jpeg => "jpg",
             ImageFormat::Png => "png",
             ImageFormat::Tiff => "tiff",
             ImageFormat::Raw => "rgb",
         };
-
-        let filename = self
-            .options
+        let filename = options
             .name_pattern
-            .replace("{page}", &(page_number + 1).to_string())
-            .replace("{index}", &(image_index + 1).to_string())
+            .replace("{page}", &(image.page_number + 1).to_string())
+            .replace("{index}", &(image.image_index + 1).to_string())
             .replace("{format}", extension);
-
-        let output_path = self.options.output_dir.join(filename);
-
-        // Apply preprocessing if enabled
-        #[cfg(feature = "external-images")]
-        let processed_data = if self.should_preprocess() {
-            self.preprocess_image_data(&data, width, height, format)?
-        } else {
-            data
-        };
-
-        #[cfg(not(feature = "external-images"))]
-        let processed_data = data;
-
-        // Write image data
-        let mut file = File::create(&output_path)?;
-        file.write_all(&processed_data)?;
-
-        // Cache the path
-        self.processed_images.insert(image_key, output_path.clone());
-
-        Ok(Some(ExtractedImage {
-            page_number,
-            image_index,
-            file_path: output_path,
-            width,
-            height,
-            format,
-        }))
+        let existing = allow_deduplication
+            .then(|| cache.get(&key).cloned())
+            .flatten();
+        let path = existing.unwrap_or_else(|| options.output_dir.join(filename));
+        if !allow_deduplication || !cache.contains_key(&key) {
+            let mut file = File::create(&path)?;
+            file.write_all(&image.data)?;
+            cache.insert(key, path.clone());
+        }
+        Ok(ExtractedImage {
+            page_number: image.page_number,
+            image_index: image.image_index,
+            file_path: path,
+            width: image.width,
+            height: image.height,
+            format: image.format,
+        })
     }
 
     /// Detect image format from raw data by examining magic bytes
@@ -543,292 +668,6 @@ impl<R: Read + Seek> ImageExtractor<R> {
         // Default to PNG for FlateDecode if no other format detected
         // This is a fallback since FlateDecode is commonly used for PNG in PDFs
         Ok(ImageFormat::Png)
-    }
-
-    /// Extract inline images from a content stream
-    fn extract_inline_images_from_stream(
-        &mut self,
-        stream_data: &[u8],
-        page_number: usize,
-        image_index: &mut usize,
-    ) -> OperationResult<Vec<ExtractedImage>> {
-        let mut inline_images = Vec::new();
-
-        // Convert bytes to string for parsing
-        let stream_str = String::from_utf8_lossy(stream_data);
-
-        // Find inline image operators: BI (Begin Image), ID (Image Data), EI (End Image)
-        let mut pos = 0;
-        while let Some(bi_pos) = stream_str[pos..].find("BI") {
-            let absolute_bi_pos = pos + bi_pos;
-
-            // Find the ID operator after BI
-            if let Some(relative_id_pos) = stream_str[absolute_bi_pos..].find("ID") {
-                let absolute_id_pos = absolute_bi_pos + relative_id_pos;
-
-                // Find the EI operator after ID
-                if let Some(relative_ei_pos) = stream_str[absolute_id_pos..].find("EI") {
-                    let absolute_ei_pos = absolute_id_pos + relative_ei_pos;
-
-                    // Extract image dictionary (between BI and ID)
-                    let dict_section = &stream_str[absolute_bi_pos + 2..absolute_id_pos].trim();
-
-                    // Extract image data (between ID and EI)
-                    let data_start = absolute_id_pos + 2;
-                    let data_end = absolute_ei_pos;
-
-                    if data_start < data_end && data_end <= stream_data.len() {
-                        let image_data = &stream_data[data_start..data_end];
-
-                        // Parse basic image properties from dictionary
-                        let (width, height) = self.parse_inline_image_dict(dict_section);
-
-                        // Create extracted image
-                        if let Ok(extracted_image) = self.save_inline_image(
-                            image_data,
-                            page_number,
-                            *image_index,
-                            width,
-                            height,
-                        ) {
-                            inline_images.push(extracted_image);
-                            *image_index += 1;
-                        }
-                    }
-
-                    // Continue searching after this EI
-                    pos = absolute_ei_pos + 2;
-                } else {
-                    break; // No matching EI found
-                }
-            } else {
-                break; // No matching ID found
-            }
-        }
-
-        Ok(inline_images)
-    }
-
-    /// Extract images referenced in content streams when resources are not available
-    fn extract_referenced_images_from_content(
-        &mut self,
-        stream_data: &[u8],
-        page_number: usize,
-        image_index: &mut usize,
-    ) -> OperationResult<Vec<ExtractedImage>> {
-        let mut extracted = Vec::new();
-
-        // Convert to string for parsing
-        let content = String::from_utf8_lossy(stream_data);
-
-        tracing::debug!("       Content: {}", content);
-
-        // Parse transformation matrices and image references together
-        // Pattern: look for cm matrices followed by Do operators
-        let image_with_transform = self.parse_images_with_transformations(&content)?;
-
-        for (image_name, transform_matrix) in image_with_transform {
-            // Try to find this object by scanning all objects in the document
-            if let Some(mut extracted_image) =
-                self.find_and_extract_xobject_by_name(&image_name, page_number, *image_index)?
-            {
-                // Apply transformation if one was found
-                if let Some(matrix) = transform_matrix {
-                    extracted_image =
-                        self.apply_transformation_to_image(extracted_image, &matrix)?;
-                }
-
-                extracted.push(extracted_image);
-                *image_index += 1;
-            }
-        }
-
-        Ok(extracted)
-    }
-
-    /// Find an XObject by name by scanning through the document
-    fn find_and_extract_xobject_by_name(
-        &mut self,
-        name: &str,
-        page_number: usize,
-        image_index: usize,
-    ) -> OperationResult<Option<ExtractedImage>> {
-        // This is a brute force approach - scan through objects looking for image streams
-        // In a real implementation, we would have better object mapping, but for now
-        // this should work for common landscape-in-portrait cases
-
-        // Try some common object numbers that might contain images
-        // We'll scan a range and look for stream objects that look like images
-        for obj_num in 1..1000 {
-            if let Ok(obj) = self.document.get_object(obj_num, 0) {
-                if let Some(extracted) =
-                    self.try_extract_image_from_object(&obj, page_number, image_index, name)?
-                {
-                    return Ok(Some(extracted));
-                }
-            }
-        }
-
-        Ok(None)
-    }
-
-    /// Try to extract an image from any PDF object
-    fn try_extract_image_from_object(
-        &mut self,
-        obj: &PdfObject,
-        page_number: usize,
-        image_index: usize,
-        _expected_name: &str,
-    ) -> OperationResult<Option<ExtractedImage>> {
-        if let PdfObject::Stream(stream) = obj {
-            // Check if this stream looks like an image
-            if let Some(PdfObject::Name(subtype)) =
-                stream.dict.0.get(&PdfName("Subtype".to_string()))
-            {
-                if subtype.0 == "Image" {
-                    return self.extract_image_xobject(stream, page_number, image_index);
-                }
-            }
-
-            // Also check for streams that might be images but don't have proper Subtype
-            if let Some(PdfObject::Integer(_width)) =
-                stream.dict.0.get(&PdfName("Width".to_string()))
-            {
-                if let Some(PdfObject::Integer(_height)) =
-                    stream.dict.0.get(&PdfName("Height".to_string()))
-                {
-                    return self.extract_image_xobject(stream, page_number, image_index);
-                }
-            }
-        }
-
-        Ok(None)
-    }
-
-    /// Parse content stream to find images with their transformation matrices
-    fn parse_images_with_transformations(
-        &self,
-        content: &str,
-    ) -> OperationResult<Vec<(String, Option<TransformMatrix>)>> {
-        let mut results = Vec::new();
-        let lines: Vec<&str> = content.lines().collect();
-
-        let mut current_matrix: Option<TransformMatrix> = None;
-
-        for line in lines {
-            let line = line.trim();
-
-            // Look for transformation matrices: "a b c d e f cm"
-            if line.ends_with(" cm") {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() == 7 && parts[6] == "cm" {
-                    // Parse the 6 matrix values
-                    if let (Ok(a), Ok(b), Ok(c), Ok(d), Ok(e), Ok(f)) = (
-                        parts[0].parse::<f64>(),
-                        parts[1].parse::<f64>(),
-                        parts[2].parse::<f64>(),
-                        parts[3].parse::<f64>(),
-                        parts[4].parse::<f64>(),
-                        parts[5].parse::<f64>(),
-                    ) {
-                        current_matrix = Some(TransformMatrix::new(a, b, c, d, e, f));
-                    }
-                }
-            }
-
-            // Look for image draw commands: "/ImageName Do"
-            if line.contains(" Do") {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                for part in parts {
-                    if part.starts_with('/') && !part.contains("Do") {
-                        let image_name = part[1..].to_string(); // Remove the '/'
-                        results.push((image_name, current_matrix.clone()));
-                    }
-                }
-            }
-
-            // Reset matrix on graphics state restore
-            if line.trim() == "Q" {
-                current_matrix = None;
-            }
-        }
-
-        Ok(results)
-    }
-
-    /// Apply transformation matrix to an extracted image
-    #[allow(unused_mut)]
-    fn apply_transformation_to_image(
-        &self,
-        mut extracted_image: ExtractedImage,
-        _matrix: &TransformMatrix,
-    ) -> OperationResult<ExtractedImage> {
-        #[cfg(feature = "external-images")]
-        {
-            // Read the extracted image file
-            let image_data = std::fs::read(&extracted_image.file_path)?;
-
-            // Load with image crate
-            let img = image::load_from_memory(&image_data).map_err(|e| {
-                OperationError::ParseError(format!("Failed to load image for transformation: {e}"))
-            })?;
-
-            // IGNORE TRANSFORMATION FOR NOW - FOCUS ON STRIDE PROBLEM
-            let transformed_img =
-                self.fix_stride_problem(img, extracted_image.width, extracted_image.height)?;
-
-            // Save the transformed image
-            let output_filename = extracted_image
-                .file_path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .ok_or_else(|| OperationError::InvalidPath {
-                    reason: format!(
-                        "Image path has no valid filename: {:?}",
-                        extracted_image.file_path
-                    ),
-                })?;
-            let output_extension = extracted_image
-                .file_path
-                .extension()
-                .and_then(|s| s.to_str())
-                .ok_or_else(|| OperationError::InvalidPath {
-                    reason: format!(
-                        "Image path has no valid extension: {:?}",
-                        extracted_image.file_path
-                    ),
-                })?;
-
-            let parent_dir =
-                extracted_image
-                    .file_path
-                    .parent()
-                    .ok_or_else(|| OperationError::InvalidPath {
-                        reason: format!(
-                            "Image path has no parent directory: {:?}",
-                            extracted_image.file_path
-                        ),
-                    })?;
-            let transformed_path = parent_dir.join(format!(
-                "{}_transformed.{}",
-                output_filename, output_extension
-            ));
-
-            transformed_img.save(&transformed_path).map_err(|e| {
-                OperationError::ParseError(format!("Failed to save transformed image: {e}"))
-            })?;
-
-            // Update the extracted image info
-            let (new_width, new_height) = transformed_img.dimensions();
-            extracted_image.file_path = transformed_path;
-            extracted_image.width = new_width;
-            extracted_image.height = new_height;
-        }
-
-        #[cfg(not(feature = "external-images"))]
-        {}
-
-        Ok(extracted_image)
     }
 
     /// Apply rotation transformation
@@ -875,69 +714,6 @@ impl<R: Read + Seek> ImageExtractor<R> {
         }
     }
 
-    /// Fix stride/row alignment problems in image data
-    #[cfg(feature = "external-images")]
-    fn fix_stride_problem(
-        &self,
-        img: DynamicImage,
-        original_width: u32,
-        original_height: u32,
-    ) -> OperationResult<DynamicImage> {
-        // Convert to raw grayscale data
-        let gray_img = img.to_luma8();
-        let pixel_data = gray_img.as_raw();
-
-        // Try different row strides to fix misalignment
-        let bytes_per_row = original_width as usize;
-        let min_bytes_per_row = bytes_per_row;
-
-        // Possible stride alignments
-        let possible_strides = [
-            min_bytes_per_row,              // No padding
-            (min_bytes_per_row + 1) & !1,   // 2-byte aligned
-            (min_bytes_per_row + 3) & !3,   // 4-byte aligned
-            (min_bytes_per_row + 7) & !7,   // 8-byte aligned
-            (min_bytes_per_row + 15) & !15, // 16-byte aligned
-            min_bytes_per_row + 1,          // +1 padding
-            min_bytes_per_row + 2,          // +2 padding
-            min_bytes_per_row + 4,          // +4 padding
-        ];
-
-        for (_i, &stride) in possible_strides.iter().enumerate() {
-            let expected_total = stride * original_height as usize;
-
-            if expected_total <= pixel_data.len() {
-                // Extract using this stride
-                let mut corrected_data = Vec::new();
-                for row in 0..original_height {
-                    let row_start = row as usize * stride;
-                    let row_end = row_start + bytes_per_row;
-
-                    if row_end <= pixel_data.len() {
-                        corrected_data.extend_from_slice(&pixel_data[row_start..row_end]);
-                    } else {
-                        // Fill with white if we run out of data
-                        corrected_data.resize(corrected_data.len() + bytes_per_row, 255);
-                    }
-                }
-
-                // Create corrected image
-                if corrected_data.len() == (original_width * original_height) as usize {
-                    if let Some(corrected_img) = ImageBuffer::<Luma<u8>, Vec<u8>>::from_raw(
-                        original_width,
-                        original_height,
-                        corrected_data,
-                    ) {
-                        return Ok(DynamicImage::ImageLuma8(corrected_img));
-                    }
-                }
-            } else {
-            }
-        }
-
-        Ok(img)
-    }
-
     /// Parse inline image dictionary to extract width and height
     fn parse_inline_image_dict(&self, dict_str: &str) -> (u32, u32) {
         let mut width = 100; // Default width
@@ -967,71 +743,6 @@ impl<R: Read + Seek> ImageExtractor<R> {
         }
 
         (width, height)
-    }
-
-    /// Save an inline image to disk
-    fn save_inline_image(
-        &mut self,
-        data: &[u8],
-        page_number: usize,
-        image_index: usize,
-        width: u32,
-        height: u32,
-    ) -> OperationResult<ExtractedImage> {
-        // Generate unique key for deduplication
-        let image_key = format!("{:x}", md5::compute(data));
-
-        // Don't deduplicate if we're extracting for OCR purposes (pattern contains {page})
-        let allow_deduplication = !self.options.name_pattern.contains("{page}");
-
-        // Check if we've already extracted this image (only if deduplication is allowed)
-        if allow_deduplication {
-            if let Some(existing_path) = self.processed_images.get(&image_key) {
-                return Ok(ExtractedImage {
-                    page_number,
-                    image_index,
-                    file_path: existing_path.clone(),
-                    width,
-                    height,
-                    format: ImageFormat::Raw, // Inline images are often raw
-                });
-            }
-        }
-
-        // Determine format and extension
-        let format = self
-            .detect_image_format_from_data(data)
-            .unwrap_or(ImageFormat::Raw);
-        let extension = match format {
-            ImageFormat::Jpeg => "jpg",
-            ImageFormat::Png => "png",
-            ImageFormat::Tiff => "tif",
-            ImageFormat::Raw => "raw",
-        };
-
-        // Generate filename
-        let filename = format!(
-            "inline_page_{}_{:03}.{}",
-            page_number + 1,
-            image_index + 1,
-            extension
-        );
-        let file_path = self.options.output_dir.join(filename);
-
-        // Write image data to file
-        fs::write(&file_path, data)?;
-
-        // Cache the extracted image
-        self.processed_images.insert(image_key, file_path.clone());
-
-        Ok(ExtractedImage {
-            page_number,
-            image_index,
-            file_path,
-            width,
-            height,
-            format,
-        })
     }
 
     /// Decode an image stream, resolving an indirect `/DecodeParms` (or `/DP`)
