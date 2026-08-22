@@ -56,8 +56,10 @@ fn wrap_pdf(content: &[u8]) -> Vec<u8> {
     obj4.extend_from_slice(b"\nendstream\nendobj\n");
     pdf.extend_from_slice(&obj4);
     offsets.push(pdf.len());
+    // Courier's fixed 600-unit width matches the synthetic 6pt glyph advance
+    // at 10pt font size.
     pdf.extend_from_slice(
-        b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+        b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj\n",
     );
     let xref_offset = pdf.len();
     pdf.extend_from_slice(b"xref\n");

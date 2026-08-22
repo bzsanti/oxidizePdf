@@ -54,7 +54,8 @@ use std::collections::BTreeMap;
 use std::io::{Cursor, Write};
 
 const FONT_SIZE: f64 = 9.0;
-const GLYPH_ADVANCE: f64 = FONT_SIZE * 0.5;
+// Courier is monospaced at 600 units, so this matches the font's real advance.
+const GLYPH_ADVANCE: f64 = FONT_SIZE * 0.6;
 const LEADING: f64 = 13.0;
 
 const WORDS: [&str; 10] = [
@@ -100,7 +101,7 @@ fn wrap_pdf(content: &[u8]) -> Vec<u8> {
     pdf.extend_from_slice(&obj4);
     offsets.push(pdf.len());
     pdf.extend_from_slice(
-        b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+        b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj\n",
     );
     let xref_pos = pdf.len();
     writeln!(pdf, "xref\n0 6\n0000000000 65535 f ").unwrap();
