@@ -4,6 +4,7 @@ use crate::parser::content::{ContentOperation, ContentParser};
 use crate::parser::document::PdfDocument;
 use crate::parser::objects::{PdfDictionary, PdfObject};
 use crate::parser::{ParseError, ParseResult};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Seek};
 
@@ -270,7 +271,7 @@ fn apply_encoding_differences(
     Ok(())
 }
 
-fn predefined_encoding(name: &str) -> ParseResult<HashMap<u8, String>> {
+pub(crate) fn predefined_encoding(name: &str) -> ParseResult<HashMap<u8, String>> {
     if !matches!(
         name,
         "StandardEncoding" | "WinAnsiEncoding" | "MacRomanEncoding"
@@ -278,30 +279,60 @@ fn predefined_encoding(name: &str) -> ParseResult<HashMap<u8, String>> {
         return Err(syntax(&format!("unsupported Type 3 encoding /{name}")));
     }
     let mut names = HashMap::new();
-    for code in 32u8..=126 {
-        names.insert(code, ascii_glyph_name(code).to_string());
-    }
-    match name {
-        "StandardEncoding" => {
-            names.insert(39, "quoteright".into());
-            names.insert(96, "quoteleft".into());
-            for &(code, glyph) in STANDARD_ENCODING_EXTENDED {
-                names.insert(code, glyph.into());
-            }
+    for code in 0u16..=255 {
+        let code = code as u8;
+        if let Some(glyph) = predefined_glyph_name(name, code) {
+            names.insert(code, glyph.to_string());
         }
-        "WinAnsiEncoding" => {
-            for &(code, glyph) in WIN_ANSI_EXTENDED {
-                names.insert(code, glyph.into());
-            }
-        }
-        "MacRomanEncoding" => {
-            for (offset, glyph) in MAC_ROMAN_EXTENDED.iter().enumerate() {
-                names.insert(0x80 + offset as u8, (*glyph).into());
-            }
-        }
-        _ => unreachable!(),
     }
     Ok(names)
+}
+
+/// Resolve one simple-font character code to its PostScript glyph name.
+///
+/// This is the shared code-to-glyph layer used by Type 3 parsing and by
+/// Standard-14 AFM width lookup. Keeping the mapping here prevents text
+/// decoding and text measurement from silently selecting different glyphs.
+pub(crate) fn predefined_glyph_name(name: &str, code: u8) -> Option<&'static str> {
+    if !matches!(
+        name,
+        "StandardEncoding" | "WinAnsiEncoding" | "MacRomanEncoding"
+    ) {
+        return None;
+    }
+    if (32..=126).contains(&code) {
+        return match (name, code) {
+            ("StandardEncoding", 39) => Some("quoteright"),
+            ("StandardEncoding", 96) => Some("quoteleft"),
+            _ => Some(ascii_glyph_name(code)),
+        };
+    }
+
+    match name {
+        "StandardEncoding" => STANDARD_ENCODING_EXTENDED
+            .iter()
+            .find_map(|&(encoded, glyph)| (encoded == code).then_some(glyph)),
+        "WinAnsiEncoding" => WIN_ANSI_EXTENDED
+            .iter()
+            .find_map(|&(encoded, glyph)| (encoded == code).then_some(glyph)),
+        "MacRomanEncoding" if code >= 0x80 => {
+            MAC_ROMAN_EXTENDED.get((code - 0x80) as usize).copied()
+        }
+        _ => None,
+    }
+}
+
+/// Apply an encoding dictionary's `/Differences` to a predefined base
+/// encoding and return the effective PostScript glyph name for `code`.
+pub(crate) fn effective_glyph_name<'a>(
+    base_encoding: &str,
+    differences: Option<&'a HashMap<u8, String>>,
+    code: u8,
+) -> Option<Cow<'a, str>> {
+    if let Some(glyph) = differences.and_then(|entries| entries.get(&code)) {
+        return Some(Cow::Borrowed(glyph.as_str()));
+    }
+    predefined_glyph_name(base_encoding, code).map(Cow::Borrowed)
 }
 
 const STANDARD_ENCODING_EXTENDED: &[(u8, &str)] = &[
@@ -733,6 +764,36 @@ mod tests {
             .expect("known encoding");
         assert_eq!(names.get(&65).map(String::as_str), Some("A"));
         assert_eq!(names.get(&48).map(String::as_str), Some("zero"));
+    }
+
+    #[test]
+    fn predefined_glyph_names_preserve_encoding_specific_mappings() {
+        assert_eq!(
+            predefined_glyph_name("StandardEncoding", 39),
+            Some("quoteright")
+        );
+        assert_eq!(
+            predefined_glyph_name("WinAnsiEncoding", 39),
+            Some("quotesingle")
+        );
+        assert_eq!(
+            predefined_glyph_name("MacRomanEncoding", 0xDB),
+            Some("currency")
+        );
+        assert_eq!(predefined_glyph_name("StandardEncoding", 0), None);
+    }
+
+    #[test]
+    fn effective_glyph_name_applies_differences_before_base_encoding() {
+        let differences = HashMap::from([(65, "fi".to_string())]);
+        assert_eq!(
+            effective_glyph_name("WinAnsiEncoding", Some(&differences), 65).as_deref(),
+            Some("fi")
+        );
+        assert_eq!(
+            effective_glyph_name("WinAnsiEncoding", Some(&differences), 66).as_deref(),
+            Some("B")
+        );
     }
 
     #[test]

@@ -4049,6 +4049,31 @@ fn calculate_text_width_from_codes(
 
             return total_width + spacing(codes);
         }
+
+        // Standard-14 simple fonts may legally omit `/Widths`. Resolve each
+        // original character code through the effective base encoding and
+        // `/Differences`, then look up the resulting PostScript glyph name in
+        // the font's AFM metrics (#523). An unresolved code retains the legacy
+        // 0.5em estimate instead of borrowing a width from the wrong encoding.
+        if let Some(metrics) =
+            crate::text::fonts::standard::get_standard_font_metrics_by_name(&font.name)
+        {
+            let total_width = codes
+                .iter()
+                .map(|&code| {
+                    metrics
+                        .encoded_char_width(
+                            font.encoding.as_deref(),
+                            font.differences.as_ref(),
+                            code,
+                        )
+                        .unwrap_or(500) as f64
+                        / 1000.0
+                        * font_size
+                })
+                .sum::<f64>();
+            return total_width + spacing(codes);
+        }
     }
 
     // No metrics: one fallback width per code (byte), the simple-font glyph count.
@@ -4865,6 +4890,64 @@ mod tests {
         assert_eq!(
             width, 30.0,
             "Without widths array, should fall back to simplified calculation"
+        );
+    }
+
+    #[test]
+    fn standard_14_no_widths_uses_effective_encoding_for_pen_advance() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+        use std::collections::HashMap;
+
+        let font = |name: &str, encoding: Option<&str>, differences| FontInfo {
+            name: name.to_string(),
+            font_type: "Type1".to_string(),
+            encoding: encoding.map(str::to_string),
+            to_unicode: None,
+            differences,
+            descendant_font: None,
+            cid_ordering: None,
+            metrics: FontMetrics::default(),
+            cid_encoding: None,
+        };
+        let width = |code: u8, info: &FontInfo| {
+            calculate_text_width_from_codes(&[code], "", 10.0, Some(info), 0.0, 0.0)
+        };
+        let assert_width = |actual: f64, expected: f64| {
+            assert!((actual - expected).abs() < 1e-12, "{actual} != {expected}");
+        };
+
+        assert_width(
+            width(39, &font("Helvetica", Some("StandardEncoding"), None)),
+            2.22,
+        );
+        assert_width(
+            width(39, &font("Helvetica", Some("WinAnsiEncoding"), None)),
+            1.91,
+        );
+        assert_width(
+            width(0xDB, &font("Helvetica", Some("MacRomanEncoding"), None)),
+            5.56,
+        );
+
+        let differences = HashMap::from([(b'A', "fi".to_string())]);
+        assert_width(
+            width(
+                b'A',
+                &font("Helvetica", Some("WinAnsiEncoding"), Some(differences)),
+            ),
+            5.0,
+        );
+        assert_width(width(b'a', &font("Symbol", None, None)), 6.31);
+        assert_width(width(b'!', &font("ZapfDingbats", None, None)), 9.74);
+
+        let unknown = HashMap::from([(b'A', "not-a-glyph".to_string())]);
+        let unresolved = width(
+            b'A',
+            &font("Helvetica", Some("WinAnsiEncoding"), Some(unknown)),
+        );
+        assert!(
+            (unresolved - 5.0).abs() < 1e-12,
+            "unresolved glyphs retain the legacy 0.5em fallback"
         );
     }
 
