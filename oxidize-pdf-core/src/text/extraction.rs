@@ -4334,21 +4334,8 @@ fn line_prefers_emission_order(line: &[(usize, &TextFragment)]) -> bool {
 /// leaves the caller on its fixed-fraction fallback. These fonts legitimately
 /// ship no `/Widths` array, so their space metric is only available here.
 fn standard_14_space_width(base_font: &str) -> Option<f64> {
-    let name = base_font.rsplit('+').next().unwrap_or(base_font);
-    let lower = name.to_ascii_lowercase();
-    if lower.contains("courier") {
-        Some(600.0)
-    } else if lower.contains("helvetica") || lower.contains("arial") {
-        Some(278.0)
-    } else if lower.contains("times") {
-        Some(250.0)
-    } else if lower == "symbol" {
-        Some(250.0)
-    } else if lower.contains("zapfdingbats") || lower.contains("dingbats") {
-        Some(278.0)
-    } else {
-        None
-    }
+    crate::text::fonts::standard::get_standard_font_metrics_by_name(base_font)
+        .map(|metrics| f64::from(metrics.get_char_width(b' ')))
 }
 
 #[cfg(test)]

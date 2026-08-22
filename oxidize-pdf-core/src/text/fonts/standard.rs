@@ -149,36 +149,31 @@ pub(crate) fn get_standard_font_metrics_by_name(
 ) -> Option<&'static StandardFontMetrics> {
     let name = base_font.rsplit('+').next().unwrap_or(base_font);
     let lower = name.to_ascii_lowercase();
-    let bold = lower.contains("bold");
-    let italic = lower.contains("italic") || lower.contains("oblique");
-
-    let font = if lower == "symbol" {
-        Font::Symbol
-    } else if lower.contains("zapfdingbats") || lower.contains("dingbats") {
-        Font::ZapfDingbats
-    } else if lower.contains("courier") {
-        match (bold, italic) {
-            (false, false) => Font::Courier,
-            (true, false) => Font::CourierBold,
-            (false, true) => Font::CourierOblique,
-            (true, true) => Font::CourierBoldOblique,
+    let font = match lower.as_str() {
+        "courier" | "couriernew" | "couriernewpsmt" => Font::Courier,
+        "courier-bold" | "couriernew-bold" | "couriernewps-boldmt" => Font::CourierBold,
+        "courier-oblique" | "couriernew-italic" | "couriernewps-italicmt" => Font::CourierOblique,
+        "courier-boldoblique" | "couriernew-bolditalic" | "couriernewps-bolditalicmt" => {
+            Font::CourierBoldOblique
         }
-    } else if lower.contains("helvetica") || lower.contains("arial") {
-        match (bold, italic) {
-            (false, false) => Font::Helvetica,
-            (true, false) => Font::HelveticaBold,
-            (false, true) => Font::HelveticaOblique,
-            (true, true) => Font::HelveticaBoldOblique,
+        "helvetica" | "arial" | "arialmt" => Font::Helvetica,
+        "helvetica-bold" | "arial-bold" | "arial-boldmt" => Font::HelveticaBold,
+        "helvetica-oblique" | "arial-italic" | "arial-italicmt" | "arial-oblique" => {
+            Font::HelveticaOblique
         }
-    } else if lower.contains("times") {
-        match (bold, italic) {
-            (false, false) => Font::TimesRoman,
-            (true, false) => Font::TimesBold,
-            (false, true) => Font::TimesItalic,
-            (true, true) => Font::TimesBoldItalic,
+        "helvetica-boldoblique"
+        | "arial-bolditalic"
+        | "arial-bolditalicmt"
+        | "arial-boldoblique" => Font::HelveticaBoldOblique,
+        "times-roman" | "timesnewroman" | "timesnewromanpsmt" => Font::TimesRoman,
+        "times-bold" | "timesnewroman-bold" | "timesnewromanps-boldmt" => Font::TimesBold,
+        "times-italic" | "timesnewroman-italic" | "timesnewromanps-italicmt" => Font::TimesItalic,
+        "times-bolditalic" | "timesnewroman-bolditalic" | "timesnewromanps-bolditalicmt" => {
+            Font::TimesBoldItalic
         }
-    } else {
-        return None;
+        "symbol" => Font::Symbol,
+        "zapfdingbats" => Font::ZapfDingbats,
+        _ => return None,
     };
     get_standard_font_metrics(&font)
 }
@@ -559,11 +554,59 @@ mod tests {
 
     #[test]
     fn glyph_name_lookup_covers_non_winansi_and_symbolic_afm_glyphs() {
-        assert_eq!(HELVETICA_METRICS.get_glyph_width("fi"), Some(500));
-        assert_eq!(TIMES_ROMAN_METRICS.get_glyph_width("fi"), Some(556));
+        let expected_fi_widths = [
+            (&HELVETICA_METRICS, 500),
+            (&HELVETICA_BOLD_METRICS, 611),
+            (&HELVETICA_OBLIQUE_METRICS, 500),
+            (&HELVETICA_BOLD_OBLIQUE_METRICS, 611),
+            (&TIMES_ROMAN_METRICS, 556),
+            (&TIMES_BOLD_METRICS, 556),
+            (&TIMES_ITALIC_METRICS, 500),
+            (&TIMES_BOLD_ITALIC_METRICS, 556),
+            (&COURIER_METRICS, 600),
+            (&COURIER_BOLD_METRICS, 600),
+            (&COURIER_OBLIQUE_METRICS, 600),
+            (&COURIER_BOLD_OBLIQUE_METRICS, 600),
+        ];
+        for (metrics, expected) in expected_fi_widths {
+            assert_eq!(
+                metrics.get_glyph_width("fi"),
+                Some(expected),
+                "wrong /fi width for {}",
+                metrics.name
+            );
+        }
         assert_eq!(SYMBOL_METRICS.get_glyph_width("alpha"), Some(631));
         assert_eq!(ZAPF_DINGBATS_METRICS.get_glyph_width("a1"), Some(974));
         assert_eq!(HELVETICA_METRICS.get_glyph_width("not-a-glyph"), None);
+    }
+
+    #[test]
+    fn base_font_resolution_is_exact_and_rejects_lookalikes() {
+        assert_eq!(
+            get_standard_font_metrics_by_name("ABCDEF+Times-BoldItalic").map(|m| m.name),
+            Some("Times-BoldItalic")
+        );
+        assert_eq!(
+            get_standard_font_metrics_by_name("Arial-BoldMT").map(|m| m.name),
+            Some("Helvetica-Bold")
+        );
+        assert_eq!(
+            get_standard_font_metrics_by_name("CourierNewPS-ItalicMT").map(|m| m.name),
+            Some("Courier-Oblique")
+        );
+        for custom in [
+            "Sometimes-Regular",
+            "HelveticaNeue-Light",
+            "Arialish-Regular",
+            "MyCourierFont",
+            "FancyDingbats",
+        ] {
+            assert!(
+                get_standard_font_metrics_by_name(custom).is_none(),
+                "custom font {custom} must not borrow Standard-14 metrics"
+            );
+        }
     }
 
     #[test]
