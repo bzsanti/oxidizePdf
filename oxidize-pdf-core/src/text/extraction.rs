@@ -2950,8 +2950,19 @@ impl TextExtractor {
                 1.0
             };
 
+            // `x_gap >= 0.0` treats a "touching" pair (the next run starting
+            // exactly where the previous one's pen advance ended, e.g. two
+            // runs of the same word/sentence with no positioning operator
+            // between them) as mergeable. But `current.width` and
+            // `fragment.x` are usually derived from independent floating-point
+            // paths (accumulated per-glyph AFM/Widths sums vs. the text
+            // matrix's absolute origin) that are mathematically identical but
+            // not bit-identical, so a genuinely zero gap can land a few ULPs
+            // on either side of 0.0 (issue #521 follow-up). Tolerate that
+            // rounding noise (see `SAME_LINE_EPS`) without loosening the check
+            // enough to treat a real, visible overlap as adjacent.
             let should_merge = y_diff < y_tol
-                && x_gap >= 0.0  // Fragment is to the right
+                && x_gap >= -SAME_LINE_EPS  // Fragment is to the right (within FP rounding noise)
                 && x_gap < fragment.font_size * 0.5 // Gap less than 50% of font size
                 && current.mcid == fragment.mcid;
 
