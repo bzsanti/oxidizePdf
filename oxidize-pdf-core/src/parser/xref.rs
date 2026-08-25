@@ -460,6 +460,26 @@ impl XRefTable {
         &self.entries
     }
 
+    /// Return every latest in-use object reference, including objects whose
+    /// current location is inside an object stream.
+    pub(crate) fn in_use_references(&self) -> Vec<(u32, u16)> {
+        let mut references: Vec<_> = self
+            .entries
+            .iter()
+            .filter(|(_, entry)| entry.in_use)
+            .map(|(number, entry)| (*number, entry.generation))
+            .chain(
+                self.extended_entries
+                    .iter()
+                    .filter(|(_, entry)| entry.basic.in_use)
+                    .map(|(number, entry)| (*number, entry.basic.generation)),
+            )
+            .collect();
+        references.sort_unstable();
+        references.dedup();
+        references
+    }
+
     /// Parse xref table from a reader with fallback recovery
     pub fn parse<R: Read + Seek>(reader: &mut BufReader<R>) -> ParseResult<Self> {
         Self::parse_with_options(reader, &super::ParseOptions::default())
@@ -547,15 +567,29 @@ impl XRefTable {
             // Merge entries (newer entries override older ones)
             let _regular_count = table.entries.len();
             let _extended_count = table.extended_entries.len();
+            let current_compressed: std::collections::HashSet<u32> =
+                table.extended_entries.keys().copied().collect();
 
             for (obj_num, entry) in table.entries {
-                merged_table.entries.entry(obj_num).or_insert(entry);
+                // A newer uncompressed entry supersedes an older compressed
+                // entry for the same object number. Keep the two maps mutually
+                // exclusive so object resolution cannot accidentally prefer
+                // the stale object-stream location (issue #531).
+                if !current_compressed.contains(&obj_num)
+                    && !merged_table.extended_entries.contains_key(&obj_num)
+                {
+                    merged_table.entries.entry(obj_num).or_insert(entry);
+                }
             }
             for (obj_num, ext_entry) in table.extended_entries {
-                merged_table
-                    .extended_entries
-                    .entry(obj_num)
-                    .or_insert(ext_entry);
+                // Conversely, a newer compressed entry supersedes an older
+                // uncompressed one encountered later in the /Prev chain.
+                if !merged_table.entries.contains_key(&obj_num) {
+                    merged_table
+                        .extended_entries
+                        .entry(obj_num)
+                        .or_insert(ext_entry);
+                }
             }
 
             // Use the most recent trailer

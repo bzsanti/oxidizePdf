@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Added
+
+- **Lossless incremental page reordering** (#531). The new
+  `reorder_pdf_pages_lossless` API preserves the source bytes, indirect page
+  identities, inherited page attributes, and unrelated document objects while
+  atomically applying an exact page permutation. Encrypted and signed inputs
+  fail closed pending DocMDP permission support in #532.
+
 ## [4.7.0] - 2026-08-25
 
 ### Added

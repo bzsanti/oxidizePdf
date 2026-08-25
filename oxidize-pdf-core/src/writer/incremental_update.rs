@@ -5,7 +5,7 @@ use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfString};
 use crate::parser::PdfReader;
 use std::io::{Cursor, Read, Seek};
 
-pub(super) struct IncrementalUpdate<'a> {
+pub(crate) struct IncrementalUpdate<'a> {
     base: &'a [u8],
     previous_xref: u64,
     root: (u32, u16),
@@ -54,7 +54,7 @@ impl<'a> IncrementalUpdate<'a> {
         })
     }
 
-    pub(super) fn from_base(base: &'a [u8]) -> Result<Self> {
+    pub(crate) fn from_base(base: &'a [u8]) -> Result<Self> {
         let reader = PdfReader::new(Cursor::new(base))
             .map_err(|e| PdfError::InvalidStructure(format!("parse base PDF: {e}")))?;
         if reader.is_encrypted() {
@@ -73,7 +73,7 @@ impl<'a> IncrementalUpdate<'a> {
         Ok(id)
     }
 
-    pub(super) fn replace(&mut self, id: (u32, u16), object: PdfObject) -> Result<()> {
+    pub(crate) fn replace(&mut self, id: (u32, u16), object: PdfObject) -> Result<()> {
         if self
             .replacements
             .iter()
@@ -88,7 +88,7 @@ impl<'a> IncrementalUpdate<'a> {
         Ok(())
     }
 
-    pub(super) fn finish(mut self) -> Result<Vec<u8>> {
+    pub(crate) fn finish(mut self) -> Result<Vec<u8>> {
         self.replacements
             .sort_by_key(|(number, generation, _)| (*number, *generation));
         let mut out = Vec::with_capacity(self.base.len() + self.replacements.len() * 256 + 512);

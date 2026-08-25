@@ -163,6 +163,11 @@ impl<R: Read + Seek> PdfReader<R> {
         &self.trailer
     }
 
+    /// Return the latest in-use indirect-object references known to the xref.
+    pub(crate) fn object_references(&self) -> Vec<(u32, u16)> {
+        self.xref.in_use_references()
+    }
+
     /// Check if the PDF is unlocked (can read encrypted content)
     pub fn is_unlocked(&self) -> bool {
         match &self.encryption_handler {
