@@ -15,14 +15,6 @@ use crate::text::graphics_state_stack::GraphicsStateStack;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
-/// Tolerance for treating a "touching" pair of same-line fragments (the next
-/// run starting exactly where the previous one's pen advance ended) as
-/// adjacent in [`TextExtractor::merge_close_fragments`], absorbing
-/// floating-point rounding noise between independently computed positions
-/// without loosening the check enough to treat a real, visible overlap as
-/// adjacent (issue #521 follow-up).
-const TOUCHING_EPS: f64 = 1e-6;
-
 /// Controls how carriage returns decoded from PDF text-showing strings are
 /// represented in extracted plain text.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2967,10 +2959,10 @@ impl TextExtractor {
             // matrix's absolute origin) that are mathematically identical but
             // not bit-identical, so a genuinely zero gap can land a few ULPs
             // on either side of 0.0 (issue #521 follow-up). Tolerate that
-            // rounding noise (see `TOUCHING_EPS`) without loosening the check
+            // rounding noise (see `SAME_LINE_EPS`) without loosening the check
             // enough to treat a real, visible overlap as adjacent.
             let should_merge = y_diff < y_tol
-                && x_gap >= -TOUCHING_EPS  // Fragment is to the right (within FP rounding noise)
+                && x_gap >= -SAME_LINE_EPS  // Fragment is to the right (within FP rounding noise)
                 && x_gap < fragment.font_size * 0.5 // Gap less than 50% of font size
                 && current.mcid == fragment.mcid;
 
