@@ -45,6 +45,42 @@ impl StandardFontMetrics {
         self.widths[ch as usize]
     }
 
+    /// Get the Adobe AFM advance width for a PostScript glyph name.
+    ///
+    /// Unlike [`Self::get_char_width`], this lookup is independent of the
+    /// font dictionary's character encoding. Callers must first resolve the
+    /// character code through its effective encoding and `/Differences`.
+    pub fn get_glyph_width(&self, glyph_name: &str) -> Option<i32> {
+        super::standard_glyph_widths::glyph_width(self.name, glyph_name)
+    }
+
+    /// Resolve a simple-font character code through its effective PDF
+    /// encoding and return the corresponding AFM advance width.
+    ///
+    /// `/Differences` takes precedence over the base encoding. A missing
+    /// encoding selects the font's built-in encoding: StandardEncoding for
+    /// Latin Standard-14 fonts, and the font-specific code table for Symbol
+    /// and ZapfDingbats. Unknown encodings and glyph names return `None` so
+    /// extraction can retain its documented legacy fallback.
+    pub(crate) fn encoded_char_width(
+        &self,
+        encoding: Option<&str>,
+        differences: Option<&HashMap<u8, String>>,
+        code: u8,
+    ) -> Option<i32> {
+        if let Some(glyph) = differences.and_then(|entries| entries.get(&code)) {
+            return self.get_glyph_width(glyph);
+        }
+
+        if encoding.is_none() && matches!(self.name, "Symbol" | "ZapfDingbats") {
+            return Some(self.get_char_width(code));
+        }
+
+        let base = encoding.unwrap_or("StandardEncoding");
+        let glyph = crate::fonts::type3::effective_glyph_name(base, None, code)?;
+        self.get_glyph_width(&glyph)
+    }
+
     /// Get the width of a Unicode character in font units.
     ///
     /// The standard-14 fonts are written with `/WinAnsiEncoding`, so the
@@ -104,6 +140,42 @@ pub fn get_standard_font_metrics(font: &Font) -> Option<&'static StandardFontMet
         Font::ZapfDingbats => Some(&ZAPF_DINGBATS_METRICS),
         Font::Custom(_) => None,
     }
+}
+
+/// Resolve a PDF `/BaseFont` name (including subset prefixes and common
+/// metric-compatible substitutes) to Standard-14 AFM metrics.
+pub(crate) fn get_standard_font_metrics_by_name(
+    base_font: &str,
+) -> Option<&'static StandardFontMetrics> {
+    let name = base_font.rsplit('+').next().unwrap_or(base_font);
+    let lower = name.to_ascii_lowercase();
+    let font = match lower.as_str() {
+        "courier" | "couriernew" | "couriernewpsmt" => Font::Courier,
+        "courier-bold" | "couriernew-bold" | "couriernewps-boldmt" => Font::CourierBold,
+        "courier-oblique" | "couriernew-italic" | "couriernewps-italicmt" => Font::CourierOblique,
+        "courier-boldoblique" | "couriernew-bolditalic" | "couriernewps-bolditalicmt" => {
+            Font::CourierBoldOblique
+        }
+        "helvetica" | "arial" | "arialmt" => Font::Helvetica,
+        "helvetica-bold" | "arial-bold" | "arial-boldmt" => Font::HelveticaBold,
+        "helvetica-oblique" | "arial-italic" | "arial-italicmt" | "arial-oblique" => {
+            Font::HelveticaOblique
+        }
+        "helvetica-boldoblique"
+        | "arial-bolditalic"
+        | "arial-bolditalicmt"
+        | "arial-boldoblique" => Font::HelveticaBoldOblique,
+        "times-roman" | "timesnewroman" | "timesnewromanpsmt" => Font::TimesRoman,
+        "times-bold" | "timesnewroman-bold" | "timesnewromanps-boldmt" => Font::TimesBold,
+        "times-italic" | "timesnewroman-italic" | "timesnewromanps-italicmt" => Font::TimesItalic,
+        "times-bolditalic" | "timesnewroman-bolditalic" | "timesnewromanps-bolditalicmt" => {
+            Font::TimesBoldItalic
+        }
+        "symbol" => Font::Symbol,
+        "zapfdingbats" => Font::ZapfDingbats,
+        _ => return None,
+    };
+    get_standard_font_metrics(&font)
 }
 
 // Helvetica font metrics (based on Adobe AFM)
@@ -479,6 +551,107 @@ pub static ZAPF_DINGBATS_METRICS: StandardFontMetrics = StandardFontMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn glyph_name_lookup_covers_non_winansi_and_symbolic_afm_glyphs() {
+        let expected_fi_widths = [
+            (&HELVETICA_METRICS, 500),
+            (&HELVETICA_BOLD_METRICS, 611),
+            (&HELVETICA_OBLIQUE_METRICS, 500),
+            (&HELVETICA_BOLD_OBLIQUE_METRICS, 611),
+            (&TIMES_ROMAN_METRICS, 556),
+            (&TIMES_BOLD_METRICS, 556),
+            (&TIMES_ITALIC_METRICS, 500),
+            (&TIMES_BOLD_ITALIC_METRICS, 556),
+            (&COURIER_METRICS, 600),
+            (&COURIER_BOLD_METRICS, 600),
+            (&COURIER_OBLIQUE_METRICS, 600),
+            (&COURIER_BOLD_OBLIQUE_METRICS, 600),
+        ];
+        for (metrics, expected) in expected_fi_widths {
+            assert_eq!(
+                metrics.get_glyph_width("fi"),
+                Some(expected),
+                "wrong /fi width for {}",
+                metrics.name
+            );
+        }
+        assert_eq!(SYMBOL_METRICS.get_glyph_width("alpha"), Some(631));
+        assert_eq!(ZAPF_DINGBATS_METRICS.get_glyph_width("a1"), Some(974));
+        assert_eq!(HELVETICA_METRICS.get_glyph_width("not-a-glyph"), None);
+    }
+
+    #[test]
+    fn base_font_resolution_is_exact_and_rejects_lookalikes() {
+        assert_eq!(
+            get_standard_font_metrics_by_name("ABCDEF+Times-BoldItalic").map(|m| m.name),
+            Some("Times-BoldItalic")
+        );
+        assert_eq!(
+            get_standard_font_metrics_by_name("Arial-BoldMT").map(|m| m.name),
+            Some("Helvetica-Bold")
+        );
+        assert_eq!(
+            get_standard_font_metrics_by_name("CourierNewPS-ItalicMT").map(|m| m.name),
+            Some("Courier-Oblique")
+        );
+        for custom in [
+            "Sometimes-Regular",
+            "HelveticaNeue-Light",
+            "Arialish-Regular",
+            "MyCourierFont",
+            "FancyDingbats",
+        ] {
+            assert!(
+                get_standard_font_metrics_by_name(custom).is_none(),
+                "custom font {custom} must not borrow Standard-14 metrics"
+            );
+        }
+    }
+
+    #[test]
+    fn encoded_width_respects_base_encoding_and_differences() {
+        assert_eq!(
+            HELVETICA_METRICS.encoded_char_width(Some("StandardEncoding"), None, 39),
+            Some(222) // /quoteright
+        );
+        assert_eq!(
+            HELVETICA_METRICS.encoded_char_width(Some("WinAnsiEncoding"), None, 39),
+            Some(191) // /quotesingle
+        );
+        assert_eq!(
+            HELVETICA_METRICS.encoded_char_width(Some("MacRomanEncoding"), None, 0xDB),
+            Some(556) // /currency
+        );
+
+        let differences = HashMap::from([(b'A', "fi".to_string())]);
+        assert_eq!(
+            HELVETICA_METRICS.encoded_char_width(Some("WinAnsiEncoding"), Some(&differences), b'A'),
+            Some(500)
+        );
+        assert_eq!(
+            HELVETICA_METRICS.encoded_char_width(Some("UnknownEncoding"), None, b'A'),
+            None
+        );
+    }
+
+    #[test]
+    fn encoded_width_uses_symbolic_builtin_encodings() {
+        assert_eq!(
+            SYMBOL_METRICS.encoded_char_width(None, None, b'a'),
+            Some(631)
+        );
+        assert_eq!(
+            ZAPF_DINGBATS_METRICS.encoded_char_width(None, None, b'!'),
+            Some(974)
+        );
+
+        let differences = HashMap::from([(b'A', "alpha".to_string())]);
+        assert_eq!(
+            SYMBOL_METRICS.encoded_char_width(None, Some(&differences), b'A'),
+            Some(631)
+        );
+    }
 
     #[test]
     fn test_winansi_non_ascii_byte_widths_match_afm() {

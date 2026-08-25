@@ -15,14 +15,15 @@ use oxidize_pdf::parser::{ParseOptions, PdfReader};
 use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 
 /// Build a minimal, valid PDF whose single page has `content` as its content
-/// stream. `/F1` maps to Helvetica (Type1) so decoding is trivial.
+/// stream. `/F1` maps to Courier (Type1) so decoding is trivial and every
+/// glyph has the fixed 600-unit advance used by the synthetic positioning.
 fn build_pdf(content: &str) -> Vec<u8> {
     let clen = content.len();
     let o1 = "<< /Type /Catalog /Pages 3 0 R >>";
     let o2 = "<< /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] \
               /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>";
     let o3 = "<< /Type /Pages /Kids [2 0 R] /Count 1 >>";
-    let o4 = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+    let o4 = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>";
 
     let mut buf = Vec::<u8>::new();
     buf.extend_from_slice(b"%PDF-1.4\n");

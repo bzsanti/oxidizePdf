@@ -2950,8 +2950,19 @@ impl TextExtractor {
                 1.0
             };
 
+            // `x_gap >= 0.0` treats a "touching" pair (the next run starting
+            // exactly where the previous one's pen advance ended, e.g. two
+            // runs of the same word/sentence with no positioning operator
+            // between them) as mergeable. But `current.width` and
+            // `fragment.x` are usually derived from independent floating-point
+            // paths (accumulated per-glyph AFM/Widths sums vs. the text
+            // matrix's absolute origin) that are mathematically identical but
+            // not bit-identical, so a genuinely zero gap can land a few ULPs
+            // on either side of 0.0 (issue #521 follow-up). Tolerate that
+            // rounding noise (see `SAME_LINE_EPS`) without loosening the check
+            // enough to treat a real, visible overlap as adjacent.
             let should_merge = y_diff < y_tol
-                && x_gap >= 0.0  // Fragment is to the right
+                && x_gap >= -SAME_LINE_EPS  // Fragment is to the right (within FP rounding noise)
                 && x_gap < fragment.font_size * 0.5 // Gap less than 50% of font size
                 && current.mcid == fragment.mcid;
 
@@ -4049,6 +4060,31 @@ fn calculate_text_width_from_codes(
 
             return total_width + spacing(codes);
         }
+
+        // Standard-14 simple fonts may legally omit `/Widths`. Resolve each
+        // original character code through the effective base encoding and
+        // `/Differences`, then look up the resulting PostScript glyph name in
+        // the font's AFM metrics (#523). An unresolved code retains the legacy
+        // 0.5em estimate instead of borrowing a width from the wrong encoding.
+        if let Some(metrics) =
+            crate::text::fonts::standard::get_standard_font_metrics_by_name(&font.name)
+        {
+            let total_width = codes
+                .iter()
+                .map(|&code| {
+                    metrics
+                        .encoded_char_width(
+                            font.encoding.as_deref(),
+                            font.differences.as_ref(),
+                            code,
+                        )
+                        .unwrap_or(500) as f64
+                        / 1000.0
+                        * font_size
+                })
+                .sum::<f64>();
+            return total_width + spacing(codes);
+        }
     }
 
     // No metrics: one fallback width per code (byte), the simple-font glyph count.
@@ -4309,21 +4345,8 @@ fn line_prefers_emission_order(line: &[(usize, &TextFragment)]) -> bool {
 /// leaves the caller on its fixed-fraction fallback. These fonts legitimately
 /// ship no `/Widths` array, so their space metric is only available here.
 fn standard_14_space_width(base_font: &str) -> Option<f64> {
-    let name = base_font.rsplit('+').next().unwrap_or(base_font);
-    let lower = name.to_ascii_lowercase();
-    if lower.contains("courier") {
-        Some(600.0)
-    } else if lower.contains("helvetica") || lower.contains("arial") {
-        Some(278.0)
-    } else if lower.contains("times") {
-        Some(250.0)
-    } else if lower == "symbol" {
-        Some(250.0)
-    } else if lower.contains("zapfdingbats") || lower.contains("dingbats") {
-        Some(278.0)
-    } else {
-        None
-    }
+    crate::text::fonts::standard::get_standard_font_metrics_by_name(base_font)
+        .map(|metrics| f64::from(metrics.get_char_width(b' ')))
 }
 
 #[cfg(test)]
@@ -4865,6 +4888,64 @@ mod tests {
         assert_eq!(
             width, 30.0,
             "Without widths array, should fall back to simplified calculation"
+        );
+    }
+
+    #[test]
+    fn standard_14_no_widths_uses_effective_encoding_for_pen_advance() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+        use std::collections::HashMap;
+
+        let font = |name: &str, encoding: Option<&str>, differences| FontInfo {
+            name: name.to_string(),
+            font_type: "Type1".to_string(),
+            encoding: encoding.map(str::to_string),
+            to_unicode: None,
+            differences,
+            descendant_font: None,
+            cid_ordering: None,
+            metrics: FontMetrics::default(),
+            cid_encoding: None,
+        };
+        let width = |code: u8, info: &FontInfo| {
+            calculate_text_width_from_codes(&[code], "", 10.0, Some(info), 0.0, 0.0)
+        };
+        let assert_width = |actual: f64, expected: f64| {
+            assert!((actual - expected).abs() < 1e-12, "{actual} != {expected}");
+        };
+
+        assert_width(
+            width(39, &font("Helvetica", Some("StandardEncoding"), None)),
+            2.22,
+        );
+        assert_width(
+            width(39, &font("Helvetica", Some("WinAnsiEncoding"), None)),
+            1.91,
+        );
+        assert_width(
+            width(0xDB, &font("Helvetica", Some("MacRomanEncoding"), None)),
+            5.56,
+        );
+
+        let differences = HashMap::from([(b'A', "fi".to_string())]);
+        assert_width(
+            width(
+                b'A',
+                &font("Helvetica", Some("WinAnsiEncoding"), Some(differences)),
+            ),
+            5.0,
+        );
+        assert_width(width(b'a', &font("Symbol", None, None)), 6.31);
+        assert_width(width(b'!', &font("ZapfDingbats", None, None)), 9.74);
+
+        let unknown = HashMap::from([(b'A', "not-a-glyph".to_string())]);
+        let unresolved = width(
+            b'A',
+            &font("Helvetica", Some("WinAnsiEncoding"), Some(unknown)),
+        );
+        assert!(
+            (unresolved - 5.0).abs() < 1e-12,
+            "unresolved glyphs retain the legacy 0.5em fallback"
         );
     }
 
