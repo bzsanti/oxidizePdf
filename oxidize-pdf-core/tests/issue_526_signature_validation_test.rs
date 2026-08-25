@@ -2,8 +2,8 @@
 
 use oxidize_pdf::parser::PdfReader;
 use oxidize_pdf::signatures::{
-    parse_pkcs7_signature, validate_certificate, verify_signature, ByteRange, RevocationStatus,
-    TrustStore,
+    parse_pkcs7_signature_detailed, validate_certificate, verify_signature_detailed, ByteRange,
+    RevocationStatus, TrustStore,
 };
 use std::io::Cursor;
 
@@ -25,10 +25,10 @@ fn complete_range(bytes: &[u8]) -> ByteRange {
 #[test]
 fn openssl_rsa_and_ecdsa_signed_attributes_verify() {
     for cms in [RSA_CMS, ECDSA_CMS] {
-        let parsed = parse_pkcs7_signature(cms).unwrap();
+        let parsed = parse_pkcs7_signature_detailed(cms).unwrap();
         assert!(parsed.signed_attributes_der.is_some());
         assert!(parsed.message_digest.is_some());
-        let result = verify_signature(CONTENT, &parsed, &complete_range(CONTENT)).unwrap();
+        let result = verify_signature_detailed(CONTENT, &parsed, &complete_range(CONTENT)).unwrap();
         assert!(result.hash_valid);
         assert!(result.signature_valid);
     }
@@ -36,19 +36,19 @@ fn openssl_rsa_and_ecdsa_signed_attributes_verify() {
 
 #[test]
 fn altered_signed_content_invalidates_only_document_integrity() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let mut altered = CONTENT.to_vec();
     altered[0] ^= 1;
-    let result = verify_signature(&altered, &parsed, &complete_range(&altered)).unwrap();
+    let result = verify_signature_detailed(&altered, &parsed, &complete_range(&altered)).unwrap();
     assert!(!result.hash_valid);
     assert!(result.signature_valid);
 }
 
 #[test]
 fn altered_message_digest_fails_closed() {
-    let mut parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let mut parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     parsed.message_digest.as_mut().unwrap()[0] ^= 1;
-    let result = verify_signature(CONTENT, &parsed, &complete_range(CONTENT)).unwrap();
+    let result = verify_signature_detailed(CONTENT, &parsed, &complete_range(CONTENT)).unwrap();
     assert!(!result.hash_valid);
     assert!(result.signature_valid);
     assert!(!result.is_valid());
@@ -56,16 +56,16 @@ fn altered_message_digest_fails_closed() {
 
 #[test]
 fn altered_signed_attributes_break_the_cryptographic_signature() {
-    let mut parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let mut parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     parsed.signed_attributes_der.as_mut().unwrap()[5] ^= 1;
-    let result = verify_signature(CONTENT, &parsed, &complete_range(CONTENT)).unwrap();
+    let result = verify_signature_detailed(CONTENT, &parsed, &complete_range(CONTENT)).unwrap();
     assert!(result.hash_valid);
     assert!(!result.signature_valid);
 }
 
 #[test]
 fn untrusted_self_signed_signer_is_not_trusted() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let result =
         validate_certificate(&parsed.signer_certificate_der, &TrustStore::default()).unwrap();
     assert!(!result.is_trusted);
@@ -74,7 +74,7 @@ fn untrusted_self_signed_signer_is_not_trusted() {
 
 #[test]
 fn complete_chain_builds_to_explicit_trust_anchor() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let trust_store = TrustStore::from_der_certificates(vec![ROOT.to_vec()]).unwrap();
     let result = oxidize_pdf::signatures::validate_certificate_chain(
         &parsed.signer_certificate_der,
@@ -92,7 +92,7 @@ fn complete_chain_builds_to_explicit_trust_anchor() {
 
 #[test]
 fn valid_crl_makes_the_chain_fully_valid() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let trust_store = TrustStore::from_der_certificates(vec![ROOT.to_vec()])
         .unwrap()
         .with_crls(vec![VALID_CRL.to_vec()])
@@ -115,7 +115,7 @@ fn valid_crl_makes_the_chain_fully_valid() {
 
 #[test]
 fn revoked_signer_fails_closed_with_an_explicit_status() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let trust_store = TrustStore::from_der_certificates(vec![ROOT.to_vec()])
         .unwrap()
         .with_crls(vec![REVOKED_CRL.to_vec()])
@@ -147,7 +147,7 @@ fn malformed_crl_is_rejected_at_the_trust_boundary() {
 
 #[test]
 fn incomplete_chain_fails_closed() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let trust_store = TrustStore::from_der_certificates(vec![ROOT.to_vec()]).unwrap();
     let result = oxidize_pdf::signatures::validate_certificate_chain(
         &parsed.signer_certificate_der,
@@ -162,7 +162,7 @@ fn incomplete_chain_fails_closed() {
 
 #[test]
 fn chain_order_is_irrelevant_but_missing_intermediate_is_not() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let trust_store = TrustStore::from_der_certificates(vec![ROOT.to_vec()]).unwrap();
     let mut reversed = parsed.certificates_der.clone();
     reversed.reverse();
@@ -178,7 +178,7 @@ fn chain_order_is_irrelevant_but_missing_intermediate_is_not() {
 
 #[test]
 fn validity_is_checked_at_the_requested_time() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let trust_store = TrustStore::from_der_certificates(vec![ROOT.to_vec()]).unwrap();
     for timestamp in [0, 4_102_444_800] {
         let time = time::OffsetDateTime::from_unix_timestamp(timestamp).unwrap();
@@ -196,7 +196,7 @@ fn validity_is_checked_at_the_requested_time() {
 
 #[test]
 fn certificate_without_digital_signature_usage_is_rejected() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let trust_store = TrustStore::from_der_certificates(vec![ROOT.to_vec()]).unwrap();
     let result = oxidize_pdf::signatures::validate_certificate_chain(
         NO_SIGNATURE_USAGE,
@@ -212,23 +212,23 @@ fn certificate_without_digital_signature_usage_is_rejected() {
 
 #[test]
 fn malformed_byte_ranges_fail_before_cryptographic_validation() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     for range in [
         ByteRange::new(vec![(1, 2), (3, 4)]),
         ByteRange::new(vec![(0, 10), (5, 1)]),
         ByteRange::new(vec![(0, u64::MAX), (u64::MAX, 1)]),
     ] {
-        assert!(verify_signature(CONTENT, &parsed, &range).is_err());
+        assert!(verify_signature_detailed(CONTENT, &parsed, &range).is_err());
     }
 }
 
 #[test]
 fn byte_range_exclusion_must_be_the_actual_cms_contents() {
-    let parsed = parse_pkcs7_signature(RSA_CMS).unwrap();
+    let parsed = parse_pkcs7_signature_detailed(RSA_CMS).unwrap();
     let mut pdf = CONTENT.to_vec();
     pdf.extend_from_slice(b"<00>");
     let byte_range = ByteRange::new(vec![(0, CONTENT.len() as u64), (pdf.len() as u64, 0)]);
-    assert!(verify_signature(&pdf, &parsed, &byte_range).is_err());
+    assert!(verify_signature_detailed(&pdf, &parsed, &byte_range).is_err());
 }
 
 fn verify_pdf(pdf: &[u8]) -> oxidize_pdf::signatures::FullSignatureValidationResult {

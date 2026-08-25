@@ -12,7 +12,6 @@ pub struct CertificateValidationResult {
     pub is_time_valid: bool,
     pub is_trusted: bool,
     pub is_signature_capable: bool,
-    pub revocation_status: RevocationStatus,
     pub warnings: Vec<String>,
 }
 
@@ -27,13 +26,38 @@ pub enum RevocationStatus {
 
 impl CertificateValidationResult {
     pub fn is_valid(&self) -> bool {
-        self.is_time_valid
-            && self.is_trusted
-            && self.is_signature_capable
-            && self.revocation_status == RevocationStatus::CheckedValid
+        self.is_time_valid && self.is_trusted && self.is_signature_capable
     }
     pub fn has_warnings(&self) -> bool {
         !self.warnings.is_empty()
+    }
+}
+
+/// Certificate result with an explicit revocation-check outcome.
+#[derive(Debug, Clone)]
+pub struct DetailedCertificateValidationResult {
+    pub certificate: CertificateValidationResult,
+    pub revocation_status: RevocationStatus,
+}
+
+impl DetailedCertificateValidationResult {
+    pub fn is_valid(&self) -> bool {
+        self.certificate.is_valid() && self.revocation_status == RevocationStatus::CheckedValid
+    }
+
+    pub fn into_certificate_result_fail_closed(mut self) -> CertificateValidationResult {
+        if self.revocation_status != RevocationStatus::CheckedValid {
+            self.certificate.is_trusted = false;
+        }
+        self.certificate
+    }
+}
+
+impl std::ops::Deref for DetailedCertificateValidationResult {
+    type Target = CertificateValidationResult;
+
+    fn deref(&self) -> &Self::Target {
+        &self.certificate
     }
 }
 
@@ -148,6 +172,17 @@ pub fn validate_certificate_at_time(
     trust_store: &TrustStore,
     validation_time: Option<time::OffsetDateTime>,
 ) -> SignatureResult<CertificateValidationResult> {
+    validate_certificate_detailed_at_time(cert_der, trust_store, validation_time)
+        .map(DetailedCertificateValidationResult::into_certificate_result_fail_closed)
+}
+
+/// Validate a certificate and expose its revocation status separately.
+#[cfg(feature = "signatures")]
+pub fn validate_certificate_detailed_at_time(
+    cert_der: &[u8],
+    trust_store: &TrustStore,
+    validation_time: Option<time::OffsetDateTime>,
+) -> SignatureResult<DetailedCertificateValidationResult> {
     use der::Decode;
     use x509_cert::Certificate;
     let cert = Certificate::from_der(cert_der).map_err(|e| {
@@ -170,16 +205,18 @@ pub fn validate_certificate_at_time(
     let mut warnings = Vec::new();
     warnings.extend(trust_warnings);
     warnings.extend(usage_warnings);
-    Ok(CertificateValidationResult {
-        subject,
-        issuer,
-        valid_from,
-        valid_to,
-        is_time_valid,
-        is_trusted,
-        is_signature_capable,
+    Ok(DetailedCertificateValidationResult {
+        certificate: CertificateValidationResult {
+            subject,
+            issuer,
+            valid_from,
+            valid_to,
+            is_time_valid,
+            is_trusted,
+            is_signature_capable,
+            warnings,
+        },
         revocation_status,
-        warnings,
     })
 }
 
@@ -190,7 +227,7 @@ pub fn validate_certificate_chain(
     certificates_der: &[Vec<u8>],
     trust_store: &TrustStore,
     validation_time: Option<time::OffsetDateTime>,
-) -> SignatureResult<CertificateValidationResult> {
+) -> SignatureResult<DetailedCertificateValidationResult> {
     use der::Decode;
     use x509_cert::Certificate;
 
@@ -211,18 +248,20 @@ pub fn validate_certificate_chain(
     let validity = &cert.tbs_certificate.validity;
     let mut warnings = trust_warnings;
     warnings.extend(usage_warnings);
-    Ok(CertificateValidationResult {
-        subject: extract_common_name(&cert.tbs_certificate.subject)
-            .unwrap_or_else(|| format_dn(&cert.tbs_certificate.subject)),
-        issuer: extract_common_name(&cert.tbs_certificate.issuer)
-            .unwrap_or_else(|| format_dn(&cert.tbs_certificate.issuer)),
-        valid_from: format_x509_time(&validity.not_before),
-        valid_to: format_x509_time(&validity.not_after),
-        is_time_valid: check_validity_period(&validity.not_before, &validity.not_after, now),
-        is_trusted,
-        is_signature_capable,
+    Ok(DetailedCertificateValidationResult {
+        certificate: CertificateValidationResult {
+            subject: extract_common_name(&cert.tbs_certificate.subject)
+                .unwrap_or_else(|| format_dn(&cert.tbs_certificate.subject)),
+            issuer: extract_common_name(&cert.tbs_certificate.issuer)
+                .unwrap_or_else(|| format_dn(&cert.tbs_certificate.issuer)),
+            valid_from: format_x509_time(&validity.not_before),
+            valid_to: format_x509_time(&validity.not_after),
+            is_time_valid: check_validity_period(&validity.not_before, &validity.not_after, now),
+            is_trusted,
+            is_signature_capable,
+            warnings,
+        },
         revocation_status,
-        warnings,
     })
 }
 
@@ -232,7 +271,7 @@ pub fn validate_certificate_chain(
     _: &[Vec<u8>],
     _: &TrustStore,
     _: Option<()>,
-) -> SignatureResult<CertificateValidationResult> {
+) -> SignatureResult<DetailedCertificateValidationResult> {
     Err(SignatureError::CertificateValidationFailed {
         details: "signatures feature not enabled".to_string(),
     })
@@ -518,7 +557,6 @@ mod tests {
             is_time_valid: true,
             is_trusted: true,
             is_signature_capable: true,
-            revocation_status: RevocationStatus::CheckedValid,
             warnings: vec![],
         };
         assert!(result.is_valid());
@@ -534,7 +572,6 @@ mod tests {
             is_time_valid: false,
             is_trusted: true,
             is_signature_capable: true,
-            revocation_status: RevocationStatus::CheckedValid,
             warnings: vec![],
         };
         assert!(!result.is_valid());
@@ -550,7 +587,6 @@ mod tests {
             is_time_valid: true,
             is_trusted: false,
             is_signature_capable: true,
-            revocation_status: RevocationStatus::CheckedValid,
             warnings: vec![],
         };
         assert!(!result.is_valid());
@@ -566,7 +602,6 @@ mod tests {
             is_time_valid: true,
             is_trusted: true,
             is_signature_capable: true,
-            revocation_status: RevocationStatus::CheckedValid,
             warnings: vec!["Self-signed certificate".to_string()],
         };
         assert!(result.has_warnings());
@@ -582,7 +617,6 @@ mod tests {
             is_time_valid: true,
             is_trusted: true,
             is_signature_capable: true,
-            revocation_status: RevocationStatus::CheckedValid,
             warnings: vec![],
         };
         assert!(!result.has_warnings());

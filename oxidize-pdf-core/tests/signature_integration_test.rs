@@ -3,7 +3,7 @@
 #![cfg(feature = "signatures")]
 
 use oxidize_pdf::parser::PdfReader;
-use oxidize_pdf::signatures::{RevocationStatus, TrustStore};
+use oxidize_pdf::signatures::TrustStore;
 use std::io::Cursor;
 
 const SIGNED: &[u8] = include_bytes!("fixtures/signatures/signed_rsa.pdf");
@@ -55,10 +55,6 @@ fn verifies_integrity_signature_chain_usage_and_revocation() {
     let certificate = result.certificate_result.as_ref().unwrap();
     assert!(certificate.is_trusted);
     assert!(certificate.is_signature_capable);
-    assert_eq!(
-        certificate.revocation_status,
-        RevocationStatus::CheckedValid
-    );
     assert!(result.is_valid(), "{:?}", result.all_warnings());
 }
 

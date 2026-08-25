@@ -34,20 +34,23 @@ mod types;
 mod verification;
 
 // Public exports
-#[cfg(feature = "signatures")]
-pub use certificate::validate_certificate_at_time;
 pub use certificate::{
     validate_certificate, validate_certificate_chain, CertificateValidationResult,
-    RevocationStatus, TrustStore,
+    DetailedCertificateValidationResult, RevocationStatus, TrustStore,
 };
-pub use cms::{parse_pkcs7_signature, DigestAlgorithm, ParsedSignature, SignatureAlgorithm};
+#[cfg(feature = "signatures")]
+pub use certificate::{validate_certificate_at_time, validate_certificate_detailed_at_time};
+pub use cms::{
+    parse_pkcs7_signature, parse_pkcs7_signature_detailed, DetailedParsedSignature,
+    DigestAlgorithm, ParsedSignature, SignatureAlgorithm,
+};
 pub use detection::detect_signature_fields;
 pub use error::{SignatureError, SignatureResult};
 pub use types::{ByteRange, SignatureField};
 // FullSignatureValidationResult is defined below in this file
 pub use verification::{
     compute_pdf_hash, has_incremental_update, hashes_match, verify_signature,
-    HashVerificationResult, SignatureVerificationResult,
+    verify_signature_detailed, HashVerificationResult, SignatureVerificationResult,
 };
 
 /// Complete signature validation result combining all verification steps
@@ -171,7 +174,6 @@ mod integration_tests {
                 is_time_valid: true,
                 is_trusted: true,
                 is_signature_capable: true,
-                revocation_status: RevocationStatus::CheckedValid,
                 warnings: vec![],
             }),
             has_modifications_after_signing: false,
@@ -321,7 +323,6 @@ mod integration_tests {
                 is_time_valid: true,
                 is_trusted: true,
                 is_signature_capable: true,
-                revocation_status: RevocationStatus::CheckedValid,
                 warnings: vec!["Self-signed certificate".to_string()],
             }),
             has_modifications_after_signing: true,
@@ -356,7 +357,6 @@ mod integration_tests {
                 is_time_valid: false, // Expired
                 is_trusted: true,
                 is_signature_capable: true,
-                revocation_status: RevocationStatus::CheckedValid,
                 warnings: vec![],
             }),
             has_modifications_after_signing: false,

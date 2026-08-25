@@ -7,7 +7,7 @@
 //!
 //! Requires the `signatures` feature for cryptographic verification.
 
-use super::cms::{DigestAlgorithm, ParsedSignature, SignatureAlgorithm};
+use super::cms::{DetailedParsedSignature, DigestAlgorithm, ParsedSignature, SignatureAlgorithm};
 use super::error::{SignatureError, SignatureResult};
 use super::types::ByteRange;
 use sha2::{Digest, Sha256, Sha384, Sha512};
@@ -169,13 +169,43 @@ pub fn verify_signature(
     signature: &ParsedSignature,
     byte_range: &ByteRange,
 ) -> SignatureResult<SignatureVerificationResult> {
+    verify_signature_inputs(pdf_bytes, signature, byte_range, None, None)
+}
+
+/// Verify a signature using retained CMS signed attributes and `/Contents` bytes.
+#[cfg(feature = "signatures")]
+pub fn verify_signature_detailed(
+    pdf_bytes: &[u8],
+    signature: &DetailedParsedSignature,
+    byte_range: &ByteRange,
+) -> SignatureResult<SignatureVerificationResult> {
+    byte_range
+        .validate()
+        .map_err(|details| SignatureError::InvalidByteRange { details })?;
+    validate_contents_exclusion(pdf_bytes, byte_range, &signature.cms_contents)?;
+    verify_signature_inputs(
+        pdf_bytes,
+        &signature.signature,
+        byte_range,
+        signature.signed_attributes_der.as_deref(),
+        signature.message_digest.as_deref(),
+    )
+}
+
+#[cfg(feature = "signatures")]
+fn verify_signature_inputs(
+    pdf_bytes: &[u8],
+    signature: &ParsedSignature,
+    byte_range: &ByteRange,
+    signed_attributes_der: Option<&[u8]>,
+    message_digest: Option<&[u8]>,
+) -> SignatureResult<SignatureVerificationResult> {
     use der::{Decode, Encode};
     use x509_cert::Certificate;
 
     byte_range
         .validate()
         .map_err(|details| SignatureError::InvalidByteRange { details })?;
-    validate_contents_exclusion(pdf_bytes, byte_range, &signature.cms_contents)?;
 
     // Compute the document hash
     let hash_result = compute_pdf_hash(pdf_bytes, byte_range, signature.digest_algorithm)?;
@@ -196,27 +226,25 @@ pub fn verify_signature(
             details: format!("Failed to encode SPKI: {}", e),
         })?;
 
-    let (hash_valid, signed_bytes, input_is_prehashed) = match (
-        signature.signed_attributes_der.as_deref(),
-        signature.message_digest.as_deref(),
-    ) {
-        (Some(attributes), Some(expected_digest)) => (
-            hashes_match(&hash_result.computed_hash, expected_digest),
-            attributes,
-            false,
-        ),
-        (Some(_), None) => {
-            return Err(SignatureError::HashVerificationFailed {
-                details: "CMS signed attributes are missing messageDigest".to_string(),
-            })
-        }
-        (None, Some(_)) => {
-            return Err(SignatureError::CmsParsingFailed {
-                details: "messageDigest is present without signed attributes".to_string(),
-            })
-        }
-        (None, None) => (true, hash_result.computed_hash.as_slice(), true),
-    };
+    let (hash_valid, signed_bytes, input_is_prehashed) =
+        match (signed_attributes_der, message_digest) {
+            (Some(attributes), Some(expected_digest)) => (
+                hashes_match(&hash_result.computed_hash, expected_digest),
+                attributes,
+                false,
+            ),
+            (Some(_), None) => {
+                return Err(SignatureError::HashVerificationFailed {
+                    details: "CMS signed attributes are missing messageDigest".to_string(),
+                })
+            }
+            (None, Some(_)) => {
+                return Err(SignatureError::CmsParsingFailed {
+                    details: "messageDigest is present without signed attributes".to_string(),
+                })
+            }
+            (None, None) => (true, hash_result.computed_hash.as_slice(), true),
+        };
 
     // Verify the signature over canonical signed attributes when CMS carries them.
     let signature_valid = match signature.signature_algorithm {
@@ -310,6 +338,17 @@ fn validate_contents_exclusion(
 pub fn verify_signature(
     _pdf_bytes: &[u8],
     _signature: &ParsedSignature,
+    _byte_range: &ByteRange,
+) -> SignatureResult<SignatureVerificationResult> {
+    Err(SignatureError::SignatureVerificationFailed {
+        details: "signatures feature not enabled".to_string(),
+    })
+}
+
+#[cfg(not(feature = "signatures"))]
+pub fn verify_signature_detailed(
+    _pdf_bytes: &[u8],
+    _signature: &DetailedParsedSignature,
     _byte_range: &ByteRange,
 ) -> SignatureResult<SignatureVerificationResult> {
     Err(SignatureError::SignatureVerificationFailed {

@@ -475,6 +475,14 @@ pub struct ParsedSignature {
     pub signature_value: Vec<u8>,
     /// The signer's certificate in DER format
     pub signer_certificate_der: Vec<u8>,
+    /// Optional signer-claimed time from signed attributes (not a trusted timestamp).
+    pub signing_time: Option<String>,
+}
+
+/// Parsed CMS signature plus the data required for strict validation.
+#[derive(Debug, Clone)]
+pub struct DetailedParsedSignature {
+    pub signature: ParsedSignature,
     /// Original CMS bytes extracted from the PDF `/Contents` string.
     pub cms_contents: Vec<u8>,
     /// Every X.509 certificate embedded in the CMS container, in DER format.
@@ -483,8 +491,14 @@ pub struct ParsedSignature {
     pub signed_attributes_der: Option<Vec<u8>>,
     /// CMS `messageDigest` signed attribute.
     pub message_digest: Option<Vec<u8>>,
-    /// Optional signer-claimed time from signed attributes (not a trusted timestamp).
-    pub signing_time: Option<String>,
+}
+
+impl std::ops::Deref for DetailedParsedSignature {
+    type Target = ParsedSignature;
+
+    fn deref(&self) -> &Self::Target {
+        &self.signature
+    }
 }
 
 impl ParsedSignature {
@@ -545,6 +559,12 @@ impl ParsedSignature {
 /// Returns an error if the DER structure is invalid or unsupported.
 #[cfg(feature = "signatures")]
 pub fn parse_pkcs7_signature(contents: &[u8]) -> SignatureResult<ParsedSignature> {
+    parse_pkcs7_signature_detailed(contents).map(|detailed| detailed.signature)
+}
+
+/// Parse a CMS signature while retaining all strict-validation inputs.
+#[cfg(feature = "signatures")]
+pub fn parse_pkcs7_signature_detailed(contents: &[u8]) -> SignatureResult<DetailedParsedSignature> {
     use const_oid::ObjectIdentifier;
 
     // Convert BER to DER if necessary (PDF signatures may use BER encoding)
@@ -674,16 +694,18 @@ pub fn parse_pkcs7_signature(contents: &[u8]) -> SignatureResult<ParsedSignature
     // Extract signing time from signed attributes if present
     let signing_time = extract_signing_time(signer_info)?;
 
-    Ok(ParsedSignature {
-        digest_algorithm,
-        signature_algorithm,
-        signature_value,
-        signer_certificate_der,
+    Ok(DetailedParsedSignature {
+        signature: ParsedSignature {
+            digest_algorithm,
+            signature_algorithm,
+            signature_value,
+            signer_certificate_der,
+            signing_time,
+        },
         cms_contents: contents.to_vec(),
         certificates_der,
         signed_attributes_der,
         message_digest,
-        signing_time,
     })
 }
 
@@ -791,6 +813,15 @@ fn validate_content_type(
 
 #[cfg(not(feature = "signatures"))]
 pub fn parse_pkcs7_signature(_contents: &[u8]) -> SignatureResult<ParsedSignature> {
+    Err(SignatureError::CmsParsingFailed {
+        details: "signatures feature not enabled".to_string(),
+    })
+}
+
+#[cfg(not(feature = "signatures"))]
+pub fn parse_pkcs7_signature_detailed(
+    _contents: &[u8],
+) -> SignatureResult<DetailedParsedSignature> {
     Err(SignatureError::CmsParsingFailed {
         details: "signatures feature not enabled".to_string(),
     })
@@ -1055,10 +1086,6 @@ mod tests {
             signature_algorithm: SignatureAlgorithm::RsaSha256,
             signature_value: vec![1, 2, 3],
             signer_certificate_der: vec![4, 5, 6],
-            cms_contents: vec![],
-            certificates_der: vec![vec![4, 5, 6]],
-            signed_attributes_der: None,
-            message_digest: None,
             signing_time: Some("2024-01-01".to_string()),
         };
         let debug = format!("{:?}", sig);
@@ -1073,10 +1100,6 @@ mod tests {
             signature_algorithm: SignatureAlgorithm::RsaSha256,
             signature_value: vec![1, 2, 3],
             signer_certificate_der: vec![4, 5, 6],
-            cms_contents: vec![],
-            certificates_der: vec![vec![4, 5, 6]],
-            signed_attributes_der: None,
-            message_digest: None,
             signing_time: None,
         };
         let cloned = sig.clone();
