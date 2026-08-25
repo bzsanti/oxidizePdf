@@ -7,6 +7,7 @@ use crate::error::PdfError;
 use crate::parser::objects::{PdfArray, PdfDictionary, PdfObject};
 use crate::parser::page_tree::ParsedPage;
 use crate::parser::{PdfDocument, PdfReader};
+use crate::signatures::{ensure_modification_allowed, IncrementalModification};
 use crate::writer::IncrementalUpdate;
 use crate::{Document, Page};
 use std::collections::{HashMap, HashSet};
@@ -227,7 +228,11 @@ fn reorder_pdf_bytes_lossless(
         .catalog()
         .map_err(|error| invalid_lossless(format!("read document catalog: {error}")))?
         .clone();
-    reject_signed_document(&mut reader, &catalog)?;
+    ensure_modification_allowed(
+        &mut reader,
+        &catalog,
+        IncrementalModification::PageTreeReorder,
+    )?;
 
     let root_reference = catalog
         .get("Pages")
@@ -495,76 +500,6 @@ fn validate_exact_permutation(page_order: &[usize], page_count: usize) -> Result
         }
     }
     Ok(())
-}
-
-fn reject_signed_document<R: Read + std::io::Seek>(
-    reader: &mut PdfReader<R>,
-    catalog: &PdfDictionary,
-) -> Result<(), PdfError> {
-    if catalog.contains_key("Perms") {
-        return Err(PdfError::PermissionDenied(
-            "lossless page reordering does not support certified PDFs; see issue #532".to_string(),
-        ));
-    }
-    for reference in reader.object_references() {
-        let object = reader
-            .get_object(reference.0, reference.1)
-            .map_err(|error| {
-                invalid_lossless(format!(
-                    "inspect object {} {} R for signatures: {error}",
-                    reference.0, reference.1
-                ))
-            })?;
-        if object_contains_signature(object, 0)? {
-            return Err(PdfError::PermissionDenied(
-                "lossless page reordering does not support signed PDFs; see issue #532".to_string(),
-            ));
-        }
-    }
-    Ok(())
-}
-
-fn object_contains_signature(object: &PdfObject, depth: usize) -> Result<bool, PdfError> {
-    if depth > 128 {
-        return Err(invalid_lossless(
-            "object nesting is too deep to inspect safely for signatures",
-        ));
-    }
-    match object {
-        PdfObject::Array(array) => {
-            for value in &array.0 {
-                if object_contains_signature(value, depth + 1)? {
-                    return Ok(true);
-                }
-            }
-        }
-        PdfObject::Dictionary(dictionary) => {
-            if dictionary.get_type() == Some("Sig")
-                || (dictionary.contains_key("ByteRange") && dictionary.contains_key("Contents"))
-            {
-                return Ok(true);
-            }
-            for value in dictionary.0.values() {
-                if object_contains_signature(value, depth + 1)? {
-                    return Ok(true);
-                }
-            }
-        }
-        PdfObject::Stream(stream) => {
-            if stream.dict.get_type() == Some("Sig")
-                || (stream.dict.contains_key("ByteRange") && stream.dict.contains_key("Contents"))
-            {
-                return Ok(true);
-            }
-            for value in stream.dict.0.values() {
-                if object_contains_signature(value, depth + 1)? {
-                    return Ok(true);
-                }
-            }
-        }
-        _ => {}
-    }
-    Ok(false)
 }
 
 fn validate_lossless_output(

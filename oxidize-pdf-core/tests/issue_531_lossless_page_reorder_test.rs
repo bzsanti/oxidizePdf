@@ -232,18 +232,17 @@ fn rejects_non_permutations_without_replacing_existing_destination() {
 }
 
 #[test]
-fn rejects_signed_documents_fail_closed() {
+fn permits_ordinary_approval_signatures() {
     let directory = TempDir::new().unwrap();
     let input = directory.path().join("signed.pdf");
     let output = directory.path().join("output.pdf");
     let signature = b"<< /Type /Sig /ByteRange [0 1 2 3] /Contents <00> >>".to_vec();
-    fs::write(&input, nested_page_tree_pdf(Some(signature))).unwrap();
+    let source = nested_page_tree_pdf(Some(signature));
+    fs::write(&input, &source).unwrap();
 
-    let error = reorder_pdf_pages_lossless(&input, &output, &[1, 0])
-        .expect_err("signed input must be rejected")
-        .to_string();
-    assert!(error.contains("signed PDFs"));
-    assert!(!output.exists());
+    reorder_pdf_pages_lossless(&input, &output, &[1, 0])
+        .expect("approval signature must not establish a DocMDP policy");
+    assert!(fs::read(output).unwrap().starts_with(&source));
 }
 
 #[test]
