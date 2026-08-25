@@ -1,12 +1,11 @@
 //! Incremental editing of standard `/Text` annotations in existing PDFs.
 
+use super::incremental_annotations::{subtype, AnnotationContainer, AnnotationSnapshot, PageState};
 use super::incremental_update::IncrementalUpdate;
 use crate::error::{PdfError, Result};
 use crate::geometry::Point;
 use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfString};
-use crate::parser::{PdfDocument, PdfReader};
 use std::collections::{HashMap, HashSet};
-use std::io::Cursor;
 
 const NOTE_SIZE: f64 = 20.0;
 
@@ -212,21 +211,6 @@ impl<'a> IncrementalTextNoteEditor<'a> {
     }
 }
 
-#[derive(Clone)]
-struct PageState {
-    reference: (u32, u16),
-    dictionary: PdfDictionary,
-    bounds: [f64; 4],
-    container: AnnotationContainer,
-    annotations: Vec<PdfObject>,
-}
-
-#[derive(Clone, Copy)]
-enum AnnotationContainer {
-    Page,
-    Indirect((u32, u16)),
-}
-
 struct AnnotationState {
     page_index: u32,
     dictionary: PdfDictionary,
@@ -253,118 +237,36 @@ struct Snapshot {
 
 impl Snapshot {
     fn parse(bytes: &[u8]) -> Result<Self> {
-        let reader = PdfReader::new(Cursor::new(bytes))
-            .map_err(|e| PdfError::InvalidStructure(format!("parse base PDF: {e}")))?;
-        if reader.is_encrypted() {
-            return Err(PdfError::PermissionDenied(
-                "incremental text-note editing is not supported on encrypted PDFs".to_string(),
-            ));
-        }
-        let document = PdfDocument::new(reader);
-        let page_count = document
-            .page_count()
-            .map_err(|e| PdfError::InvalidStructure(format!("read page tree: {e}")))?;
-        let mut pages = Vec::with_capacity(page_count as usize);
+        let shared = AnnotationSnapshot::parse(bytes, "Text", "text-note")?;
         let mut annotations = HashMap::new();
-        let mut indirect_annots_pages = HashMap::new();
-
-        for page_index in 0..page_count {
-            let page = document
-                .get_page(page_index)
-                .map_err(|e| PdfError::InvalidStructure(format!("read page {page_index}: {e}")))?;
-            let bounds = page.crop_box.unwrap_or(page.media_box);
-            let (container, values) = match page.dict.get("Annots") {
-                None => (AnnotationContainer::Page, Vec::new()),
-                Some(PdfObject::Array(array)) => (AnnotationContainer::Page, array.0.clone()),
-                Some(PdfObject::Reference(number, generation)) => {
-                    if let Some(first_page) =
-                        indirect_annots_pages.insert((*number, *generation), page_index)
-                    {
-                        return Err(PdfError::InvalidStructure(format!(
-                            "page /Annots array {number} {generation} is shared by multiple pages ({first_page} and {page_index})"
-                        )));
-                    }
-                    let object = document.get_object(*number, *generation).map_err(|e| {
-                        PdfError::InvalidStructure(format!("resolve page /Annots: {e}"))
-                    })?;
-                    let array = object.as_array().ok_or_else(|| {
-                        PdfError::InvalidStructure("indirect /Annots is not an array".to_string())
-                    })?;
-                    (
-                        AnnotationContainer::Indirect((*number, *generation)),
-                        array.0.clone(),
-                    )
-                }
-                Some(_) => {
-                    return Err(PdfError::InvalidStructure(
-                        "page /Annots must be an array or indirect array".to_string(),
-                    ))
-                }
+        for ((number, generation), state) in shared.annotations {
+            let is_text = subtype(&state.dictionary) == Some("Text");
+            let rect = if is_text {
+                parse_rectangle(&state.dictionary)?
+            } else {
+                [0.0; 4]
             };
-
-            for value in &values {
-                match value {
-                    PdfObject::Reference(number, generation) => {
-                        let object = document.get_object(*number, *generation).map_err(|e| {
-                            PdfError::InvalidStructure(format!(
-                                "resolve annotation {number} {generation}: {e}"
-                            ))
-                        })?;
-                        let dictionary = object.as_dict().cloned().ok_or_else(|| {
-                            PdfError::InvalidStructure(format!(
-                                "annotation {number} {generation} is not a dictionary"
-                            ))
-                        })?;
-                        let is_text = subtype(&dictionary) == Some("Text");
-                        let rect = if is_text {
-                            parse_rectangle(&dictionary)?
-                        } else {
-                            [0.0; 4]
-                        };
-                        let contents = dictionary
-                            .get("Contents")
-                            .and_then(PdfObject::as_string)
-                            .map(PdfString::to_text)
-                            .unwrap_or_default();
-                        let id = TextNoteId::new(*number, *generation);
-                        if annotations
-                            .get(&id)
-                            .is_some_and(|existing: &AnnotationState| {
-                                existing.page_index != page_index
-                            })
-                        {
-                            return Err(PdfError::InvalidStructure(format!(
-                                "annotation {number} {generation} is referenced from multiple pages"
-                            )));
-                        }
-                        annotations.insert(
-                            id,
-                            AnnotationState {
-                                page_index,
-                                dictionary,
-                                rect,
-                                contents,
-                                is_text,
-                            },
-                        );
-                    }
-                    PdfObject::Dictionary(dictionary) if subtype(dictionary) == Some("Text") => {
-                        return Err(PdfError::InvalidStructure(
-                            "inline /Text annotations have no stable object identity".to_string(),
-                        ));
-                    }
-                    _ => {}
-                }
-            }
-            pages.push(PageState {
-                reference: page.obj_ref,
-                dictionary: page.dict,
-                bounds,
-                container,
-                annotations: values,
-            });
+            let contents = state
+                .dictionary
+                .get("Contents")
+                .and_then(PdfObject::as_string)
+                .map(PdfString::to_text)
+                .unwrap_or_default();
+            annotations.insert(
+                TextNoteId::new(number, generation),
+                AnnotationState {
+                    page_index: state.page_index,
+                    dictionary: state.dictionary,
+                    rect,
+                    contents,
+                    is_text,
+                },
+            );
         }
-        Ok(Self { pages, annotations })
+        Ok(Self {
+            pages: shared.pages,
+            annotations,
+        })
     }
 }
 
@@ -464,13 +366,6 @@ fn validate_position(position: Point, width: f64, height: f64, bounds: [f64; 4])
         ));
     }
     Ok(())
-}
-
-fn subtype(dictionary: &PdfDictionary) -> Option<&str> {
-    dictionary
-        .get("Subtype")
-        .and_then(PdfObject::as_name)
-        .map(|name| name.0.as_str())
 }
 
 fn parse_rectangle(dictionary: &PdfDictionary) -> Result<[f64; 4]> {
