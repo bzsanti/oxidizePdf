@@ -480,6 +480,22 @@ impl XRefTable {
         references
     }
 
+    /// Return the file offset containing the latest definition of an object.
+    /// Compressed objects use the offset of their containing object stream.
+    pub(crate) fn object_storage_offset(&self, object_number: u32) -> Option<u64> {
+        if let Some((stream_number, _)) = self
+            .extended_entries
+            .get(&object_number)
+            .and_then(|entry| entry.compressed_info)
+        {
+            return self.entries.get(&stream_number).map(|entry| entry.offset);
+        }
+        self.entries
+            .get(&object_number)
+            .filter(|entry| entry.in_use)
+            .map(|entry| entry.offset)
+    }
+
     /// Parse xref table from a reader with fallback recovery
     pub fn parse<R: Read + Seek>(reader: &mut BufReader<R>) -> ParseResult<Self> {
         Self::parse_with_options(reader, &super::ParseOptions::default())

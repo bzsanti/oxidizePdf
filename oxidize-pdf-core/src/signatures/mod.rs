@@ -30,6 +30,7 @@ mod certificate;
 mod cms;
 mod detection;
 mod error;
+mod permissions;
 mod types;
 mod verification;
 
@@ -46,6 +47,7 @@ pub use cms::{
 };
 pub use detection::detect_signature_fields;
 pub use error::{SignatureError, SignatureResult};
+pub(crate) use permissions::{ensure_modification_allowed, IncrementalModification};
 pub use types::{ByteRange, SignatureField};
 // FullSignatureValidationResult is defined below in this file
 pub use verification::{

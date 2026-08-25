@@ -168,6 +168,11 @@ impl<R: Read + Seek> PdfReader<R> {
         self.xref.in_use_references()
     }
 
+    /// Return the storage offset of the latest definition of an object.
+    pub(crate) fn object_storage_offset(&self, object_number: u32) -> Option<u64> {
+        self.xref.object_storage_offset(object_number)
+    }
+
     /// Check if the PDF is unlocked (can read encrypted content)
     pub fn is_unlocked(&self) -> bool {
         match &self.encryption_handler {
