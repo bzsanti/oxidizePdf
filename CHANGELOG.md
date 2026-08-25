@@ -8,20 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [4.7.0] - 2026-08-25
+
+### Added
+
+- **Incremental editing for highlight annotations** (#525, #527). The new
+  `IncrementalHighlightEditor` API can enumerate, add, update, and remove
+  `/Highlight` annotations while preserving the original PDF bytes and
+  applying validated changes as incremental revisions.
+
 ### Fixed
 
-- **`merge_close_fragments` rejected a contiguous pair of same-line
-  fragments due to floating-point rounding noise in the merge-gap check**
-  (issue #521 follow-up). Two runs positioned back-to-back with no
-  repositioning operator between them (e.g. successive `Tj` calls) have a
-  gap that is mathematically zero, but the run's end position and the next
-  run's declared start position are computed via independent
-  floating-point paths that are not always bit-identical — a `-1e-13`-class
-  negative residue on an otherwise touching pair failed the `x_gap >= 0.0`
-  check and left the pair as two separate fragments instead of merging them
-  into one. The check now tolerates a small negative epsilon
-  (`x_gap >= -TOUCHING_EPS`) without loosening it enough to treat a real,
-  visible overlap as adjacent.
+- **Standard-14 fonts without explicit `/Widths` used inaccurate fallback
+  advances during text extraction** (#523, #524). Encoding-aware AFM metrics
+  now provide per-glyph widths for simple Standard-14 fonts, preventing
+  spurious spaces when text is split across consecutive showing operators.
+- **CMS signature verification could accept certificates without establishing
+  trust in the configured anchors** (#526, #528). Trust validation now fails
+  closed while preserving the existing public verification API.
+- **Floating-point residue could keep mathematically contiguous text fragments
+  separate** (#521, #522). Same-line merging now tolerates rounding noise
+  without treating visible overlaps as adjacent or inserting a spurious space.
 
 ## [4.6.0] - 2026-08-20
 
