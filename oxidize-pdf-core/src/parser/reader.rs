@@ -3093,7 +3093,7 @@ impl<R: Read + Seek> PdfReader<R> {
         trust_store: crate::signatures::TrustStore,
     ) -> ParseResult<Vec<crate::signatures::FullSignatureValidationResult>> {
         use crate::signatures::{
-            has_incremental_update, parse_pkcs7_signature, validate_certificate, verify_signature,
+            has_incremental_update, parse_pkcs7_signature, verify_signature,
             FullSignatureValidationResult,
         };
 
@@ -3162,13 +3162,18 @@ impl<R: Read + Seek> PdfReader<R> {
             }
 
             // Validate the certificate
-            match validate_certificate(&parsed_sig.signer_certificate_der, &trust_store) {
+            match crate::signatures::validate_certificate_chain(
+                &parsed_sig.signer_certificate_der,
+                &parsed_sig.certificates_der,
+                &trust_store,
+                None,
+            ) {
                 Ok(cert_result) => {
                     result.certificate_result = Some(cert_result);
                 }
                 Err(e) => {
                     result
-                        .warnings
+                        .errors
                         .push(format!("Certificate validation failed: {}", e));
                 }
             }

@@ -36,7 +36,10 @@ mod verification;
 // Public exports
 #[cfg(feature = "signatures")]
 pub use certificate::validate_certificate_at_time;
-pub use certificate::{validate_certificate, CertificateValidationResult, TrustStore};
+pub use certificate::{
+    validate_certificate, validate_certificate_chain, CertificateValidationResult,
+    RevocationStatus, TrustStore,
+};
 pub use cms::{parse_pkcs7_signature, DigestAlgorithm, ParsedSignature, SignatureAlgorithm};
 pub use detection::detect_signature_fields;
 pub use error::{SignatureError, SignatureResult};
@@ -108,7 +111,7 @@ impl FullSignatureValidationResult {
                 .certificate_result
                 .as_ref()
                 .map(|c| c.is_valid())
-                .unwrap_or(true)
+                .unwrap_or(false)
     }
 
     /// Returns the signer's name, or a placeholder if unknown
@@ -168,6 +171,7 @@ mod integration_tests {
                 is_time_valid: true,
                 is_trusted: true,
                 is_signature_capable: true,
+                revocation_status: RevocationStatus::CheckedValid,
                 warnings: vec![],
             }),
             has_modifications_after_signing: false,
@@ -317,6 +321,7 @@ mod integration_tests {
                 is_time_valid: true,
                 is_trusted: true,
                 is_signature_capable: true,
+                revocation_status: RevocationStatus::CheckedValid,
                 warnings: vec!["Self-signed certificate".to_string()],
             }),
             has_modifications_after_signing: true,
@@ -351,6 +356,7 @@ mod integration_tests {
                 is_time_valid: false, // Expired
                 is_trusted: true,
                 is_signature_capable: true,
+                revocation_status: RevocationStatus::CheckedValid,
                 warnings: vec![],
             }),
             has_modifications_after_signing: false,
