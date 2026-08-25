@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- **Semantic redaction no longer presents visual masking as irreversible
+  removal** (#541). Reports explicitly identify recoverable masking risks, and
+  the security-grade API fails closed until every sensitive-data surface can
+  be sanitized and verified.
+
 ### Added
 
 - **Lossless incremental page reordering** (#531). The new

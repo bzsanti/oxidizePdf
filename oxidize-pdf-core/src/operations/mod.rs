@@ -36,8 +36,8 @@ pub use reorder::{
 };
 pub use rotate::{rotate_all_pages, rotate_pdf_pages, PageRotator, RotateOptions, RotationAngle};
 pub use semantic_redactor::{
-    RedactionConfig, RedactionEntry, RedactionReport, RedactionStyle, SemanticRedactor,
-    SemanticRedactorError, SemanticRedactorResult,
+    RedactionConfig, RedactionEntry, RedactionMode, RedactionReport, RedactionStyle,
+    SemanticRedactor, SemanticRedactorError, SemanticRedactorResult,
 };
 pub use source_highlighter::{
     fragment_to_highlight_rect, HighlightStyle, IndexedFragment, SourceHighlighter,

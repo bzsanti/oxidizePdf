@@ -1,8 +1,8 @@
-//! Semantic redactor for RAG-aligned PDF editing
+//! Semantic visual masking for RAG-aligned PDF editing.
 //!
-//! Draws opaque rectangles over content identified by `SemanticEntity` bounding boxes,
-//! removing sensitive information (PII, confidential data) before LLM ingestion while
-//! preserving document structure for retrieval.
+//! This module's legacy operation draws opaque rectangles over content identified
+//! by `SemanticEntity` bounding boxes. It does **not** remove underlying content
+//! and must not be used as irreversible or security-grade redaction.
 
 use std::collections::HashMap;
 use std::io::Cursor;
@@ -78,6 +78,17 @@ pub struct RedactionEntry {
 #[derive(Debug)]
 pub struct RedactionReport {
     entries: Vec<RedactionEntry>,
+    mode: RedactionMode,
+    residual_risks: Vec<String>,
+}
+
+/// Security semantics of a redaction result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RedactionMode {
+    /// The result only obscures visible content; source data remains recoverable.
+    VisualMask,
+    /// Targeted data was removed and the configured forensic checks passed.
+    Irreversible,
 }
 
 impl RedactionReport {
@@ -106,6 +117,21 @@ impl RedactionReport {
     pub fn entries(&self) -> &[RedactionEntry] {
         &self.entries
     }
+
+    /// Whether the operation only covered content visually or removed it.
+    pub fn mode(&self) -> RedactionMode {
+        self.mode
+    }
+
+    /// Known ways sensitive data may remain recoverable from the result.
+    pub fn residual_risks(&self) -> &[String] {
+        &self.residual_risks
+    }
+
+    /// True only for a completed irreversible-redaction operation.
+    pub fn is_irreversible(&self) -> bool {
+        self.mode == RedactionMode::Irreversible && self.residual_risks.is_empty()
+    }
 }
 
 /// Errors that can occur during semantic redaction.
@@ -122,20 +148,26 @@ pub enum SemanticRedactorError {
     /// Failed to write the output PDF
     #[error("write failed: {0}")]
     WriteFailed(String),
+
+    /// The requested security-grade redaction cannot yet be proven safe.
+    #[error("secure redaction refused: {0}")]
+    SecureRedactionUnsupported(String),
 }
 
 /// Result type for semantic redactor operations.
 pub type SemanticRedactorResult<T> = Result<T, SemanticRedactorError>;
 
-/// Redacts sensitive content from PDFs based on semantic entity bounding boxes.
+/// Visually masks content based on semantic entity bounding boxes.
 ///
 /// Given PDF bytes and a set of `SemanticEntity`s with bounding boxes, this
-/// draws opaque rectangles over the specified entity types, producing a
-/// redacted PDF suitable for LLM ingestion.
+/// draws opaque rectangles over the specified entity types. Underlying text,
+/// images, annotations, metadata, attachments, and prior revisions may remain
+/// recoverable. Use [`SemanticRedactor::redact_irreversible`] when a security
+/// guarantee is required; unsupported documents are rejected without output.
 pub struct SemanticRedactor;
 
 impl SemanticRedactor {
-    /// Redact entities from a PDF, returning the modified bytes and a report.
+    /// Apply visual masks, returning the modified bytes and an explicit risk report.
     ///
     /// # Arguments
     ///
@@ -167,6 +199,8 @@ impl SemanticRedactor {
                 pdf_bytes.to_vec(),
                 RedactionReport {
                     entries: Vec::new(),
+                    mode: RedactionMode::VisualMask,
+                    residual_risks: visual_mask_risks(),
                 },
             ));
         }
@@ -248,7 +282,35 @@ impl SemanticRedactor {
             output_bytes,
             RedactionReport {
                 entries: report_entries,
+                mode: RedactionMode::VisualMask,
+                residual_risks: visual_mask_risks(),
             },
         ))
     }
+
+    /// Remove targeted information irreversibly or fail without producing output.
+    ///
+    /// The secure engine is intentionally fail-closed while complete content,
+    /// XObject, annotation, form, metadata, attachment, and revision-history
+    /// sanitization is being implemented under issue #541. Returning the legacy
+    /// visual mask from this API would be a security vulnerability.
+    pub fn redact_irreversible(
+        _pdf_bytes: &[u8],
+        _entities: &[SemanticEntity],
+        _config: RedactionConfig,
+    ) -> SemanticRedactorResult<(Vec<u8>, RedactionReport)> {
+        Err(SemanticRedactorError::SecureRedactionUnsupported(
+            "complete removal across page content, XObjects, annotations, forms, metadata, \
+             attachments, and prior revisions is not yet implemented"
+                .to_string(),
+        ))
+    }
+}
+
+fn visual_mask_risks() -> Vec<String> {
+    vec![
+        "underlying page content remains extractable".to_string(),
+        "sensitive data may remain in annotations, forms, metadata, attachments, or prior revisions"
+            .to_string(),
+    ]
 }

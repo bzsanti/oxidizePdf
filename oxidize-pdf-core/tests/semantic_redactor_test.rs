@@ -4,7 +4,7 @@
 //! by SemanticEntity bounding boxes. Every test verifies actual output content.
 
 use oxidize_pdf::operations::{
-    RedactionConfig, RedactionStyle, SemanticRedactor, SemanticRedactorError,
+    RedactionConfig, RedactionMode, RedactionStyle, SemanticRedactor, SemanticRedactorError,
 };
 use oxidize_pdf::parser::PdfReader;
 use oxidize_pdf::semantic::{BoundingBox, EntityMetadata, EntityType, SemanticEntity};
@@ -403,4 +403,36 @@ fn test_redact_preserves_page_count() {
         "Page count should be preserved: expected {}, got {}",
         original_pages, output_pages
     );
+}
+
+#[test]
+fn visual_mask_report_never_claims_irreversible_redaction() {
+    let pdf_bytes = create_test_pdf();
+    let entities = vec![make_entity(
+        "e1",
+        EntityType::PersonName,
+        1,
+        72.0,
+        700.0,
+        60.0,
+        15.0,
+    )];
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+
+    let (_, report) = SemanticRedactor::redact(&pdf_bytes, &entities, config).unwrap();
+    assert_eq!(report.mode(), RedactionMode::VisualMask);
+    assert!(!report.is_irreversible());
+    assert!(!report.residual_risks().is_empty());
+}
+
+#[test]
+fn irreversible_api_fails_closed_without_returning_masked_bytes() {
+    let pdf_bytes = create_test_pdf();
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+    let error = SemanticRedactor::redact_irreversible(&pdf_bytes, &[], config).unwrap_err();
+
+    assert!(matches!(
+        error,
+        SemanticRedactorError::SecureRedactionUnsupported(_)
+    ));
 }
