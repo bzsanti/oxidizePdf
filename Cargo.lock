@@ -1581,6 +1581,8 @@ dependencies = [
  "rayon",
  "regex",
  "rsa",
+ "rustls-pki-types",
+ "rustls-webpki",
  "rusty-tesseract",
  "serde",
  "serde_json",
