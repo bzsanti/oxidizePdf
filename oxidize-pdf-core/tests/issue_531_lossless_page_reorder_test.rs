@@ -19,12 +19,12 @@ fn nested_page_tree_pdf(extra_object: Option<Vec<u8>>) -> Vec<u8> {
             .to_vec(),
         b"<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>".to_vec(),
         b"<< /Type /Pages /Parent 2 0 R /Kids [5 0 R] /Count 1 \
-          /Resources 7 0 R /MediaBox [0 0 300 400] >>"
+          /Resources 7 0 R /MediaBox [0 0 300 400] /CropBox [10 20 290 380] >>"
             .to_vec(),
         b"<< /Type /Pages /Parent 2 0 R /Kids [6 0 R] /Count 1 \
           /Resources 8 0 R /MediaBox [0 0 500 600] /Rotate 90 >>"
             .to_vec(),
-        b"<< /Type /Page /Parent 3 0 R /Contents 9 0 R /Annots [16 0 R] \
+        b"<< /Type /Page /Parent 3 0 R /Contents 9 0 R /Annots [16 0 R 17 0 R] \
           /StructParents 0 >>"
             .to_vec(),
         b"<< /Type /Page /Parent 4 0 R /Contents 10 0 R >>".to_vec(),
@@ -34,10 +34,17 @@ fn nested_page_tree_pdf(extra_object: Option<Vec<u8>>) -> Vec<u8> {
         stream_obj("", b""),
         stream_obj("/Type /Metadata /Subtype /XML", b"<keep-me/>"),
         b"<< /Type /Outlines /Count 0 >>".to_vec(),
-        b"<< /Dests << /First [5 0 R /Fit] >> >>".to_vec(),
-        b"<< /Fields [] >>".to_vec(),
+        b"<< /Dests << /First [5 0 R /Fit] >> \
+          /EmbeddedFiles << /Names [(attachment.txt) 19 0 R] >> >>"
+            .to_vec(),
+        b"<< /Fields [17 0 R] >>".to_vec(),
         b"<< /Type /StructTreeRoot /K [] >>".to_vec(),
         b"<< /Type /Annot /Subtype /Text /Rect [0 0 10 10] >>".to_vec(),
+        b"<< /Type /Annot /Subtype /Widget /FT /Tx /T (field) /P 5 0 R \
+          /Rect [10 10 20 20] >>"
+            .to_vec(),
+        stream_obj("/Type /EmbeddedFile", b"attachment payload"),
+        b"<< /Type /Filespec /F (attachment.txt) /EF << /F 18 0 R >> >>".to_vec(),
     ];
     if let Some(object) = extra_object {
         objects.push(object);
@@ -104,6 +111,15 @@ fn nested_tree_reorder_preserves_prefix_ids_and_effective_inheritance() {
         Some((7, 0))
     );
     assert_eq!(
+        page_5.get("CropBox"),
+        Some(&PdfObject::Array(oxidize_pdf::PdfArray(vec![
+            PdfObject::Integer(10),
+            PdfObject::Integer(20),
+            PdfObject::Integer(290),
+            PdfObject::Integer(380),
+        ])))
+    );
+    assert_eq!(
         page_5
             .get("Annots")
             .and_then(PdfObject::as_array)
@@ -127,6 +143,71 @@ fn nested_tree_reorder_preserves_prefix_ids_and_effective_inheritance() {
     assert!(reordered
         .windows(b"<keep-me/>".len())
         .any(|window| window == b"<keep-me/>"));
+    let form = reader.get_object(14, 0).unwrap().as_dict().unwrap();
+    assert_eq!(
+        form.get("Fields")
+            .and_then(PdfObject::as_array)
+            .and_then(|fields| fields.0.first())
+            .and_then(PdfObject::as_reference),
+        Some((17, 0))
+    );
+    let names = reader.get_object(13, 0).unwrap().as_dict().unwrap();
+    assert!(names.contains_key("EmbeddedFiles"));
+    assert!(
+        reader.get_object(17, 0).is_ok(),
+        "widget must remain reachable"
+    );
+    assert!(
+        reader.get_object(18, 0).is_ok(),
+        "attachment stream must remain reachable"
+    );
+    assert!(
+        reader.get_object(19, 0).is_ok(),
+        "file specification must remain reachable"
+    );
+}
+
+#[test]
+fn flat_tree_rewrites_only_the_page_tree_root() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("flat.pdf");
+    let output = directory.path().join("output.pdf");
+    let source = assemble_pdf(&[
+        b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+        b"<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 \
+          /Resources 5 0 R /MediaBox [0 0 100 100] >>"
+            .to_vec(),
+        b"<< /Type /Page /Parent 2 0 R >>".to_vec(),
+        b"<< /Type /Page /Parent 2 0 R >>".to_vec(),
+        b"<< /ProcSet [/PDF] >>".to_vec(),
+    ]);
+    fs::write(&input, &source).unwrap();
+
+    reorder_pdf_pages_lossless(&input, &output, &[1, 0]).expect("flat reorder");
+    let reordered = fs::read(&output).unwrap();
+    let revision = &reordered[source.len()..];
+    assert!(revision.windows(7).any(|window| window == b"2 0 obj"));
+    assert!(!revision.windows(7).any(|window| window == b"3 0 obj"));
+    assert!(!revision.windows(7).any(|window| window == b"4 0 obj"));
+    assert_eq!(page_references(&reordered), vec![(4, 0), (3, 0)]);
+}
+
+#[test]
+fn accepts_a_source_with_an_existing_incremental_revision() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("input.pdf");
+    let first = directory.path().join("first.pdf");
+    let second = directory.path().join("second.pdf");
+    let source = nested_page_tree_pdf(None);
+    fs::write(&input, &source).unwrap();
+
+    reorder_pdf_pages_lossless(&input, &first, &[1, 0]).expect("first revision");
+    let first_revision = fs::read(&first).unwrap();
+    reorder_pdf_pages_lossless(&first, &second, &[1, 0]).expect("second revision");
+    let second_revision = fs::read(&second).unwrap();
+
+    assert!(second_revision.starts_with(&first_revision));
+    assert_eq!(page_references(&second_revision), vec![(5, 0), (6, 0)]);
 }
 
 #[test]
@@ -226,13 +307,21 @@ fn rejects_malformed_parent_links_and_page_counts() {
                 b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>".to_vec(),
             ],
         ),
+        (
+            "cycle",
+            vec![
+                b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+                b"<< /Type /Pages /Kids [3 0 R 3 0 R] /Count 2 >>".to_vec(),
+                b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>".to_vec(),
+            ],
+        ),
     ] {
         let input = directory.path().join(format!("{name}.pdf"));
         fs::write(&input, assemble_pdf(&objects)).unwrap();
         let error = reorder_pdf_pages_lossless(&input, &output, &[0])
             .expect_err("malformed tree must fail")
             .to_string();
-        assert!(error.contains("/Parent") || error.contains("/Count"));
+        assert!(error.contains("/Parent") || error.contains("/Count") || error.contains("cycle"));
         assert!(!output.exists());
     }
 }
