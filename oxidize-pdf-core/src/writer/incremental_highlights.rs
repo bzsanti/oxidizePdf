@@ -354,8 +354,6 @@ fn validate_batch(
             HighlightMutation::Add {
                 page_index,
                 quadrilaterals,
-                color,
-                opacity,
                 ..
             } => {
                 let page = snapshot
@@ -363,7 +361,6 @@ fn validate_batch(
                     .get(*page_index as usize)
                     .ok_or_else(|| invalid(&format!("page {page_index} does not exist")))?;
                 validate_quads(quadrilaterals, page.bounds)?;
-                let _ = (color, opacity);
             }
             HighlightMutation::Remove { id } => {
                 if !targeted.insert(*id) {

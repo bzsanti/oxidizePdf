@@ -12,10 +12,11 @@ fn classic_base() -> Vec<u8> {
     build_classic(&[
         (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
         (2, b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
-        (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots [4 0 R 5 0 R 6 0 R] /CustomPageKey 42 >>"),
+        (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots [4 0 R 5 0 R 6 0 R 7 0 R] /CustomPageKey 42 >>"),
         (4, b"<< /Type /Annot /Subtype /Highlight /Rect [10 10 90 30] /QuadPoints [10 30 90 30 10 10 90 10] /C [1 1 0] /CA 0.5 /Contents (old) /CustomHighlightKey /Keep >>"),
         (5, b"<< /Type /Annot /Subtype /Link /Rect [0 0 5 5] /CustomLinkKey 99 >>"),
         (6, b"<< /Type /Annot /Subtype /Text /Rect [100 100 120 120] /Contents (note) >>"),
+        (7, b"<< /Type /Annot /Subtype /VendorMarkup /Rect [130 130 150 150] /VendorKey (preserve) >>"),
     ])
 }
 
@@ -176,6 +177,10 @@ fn reads_adds_multiline_and_removes_highlights_without_touching_other_annotation
         .0
         .iter()
         .any(|item| item.as_reference() == Some((6, 0))));
+    assert!(annots
+        .0
+        .iter()
+        .any(|item| item.as_reference() == Some((7, 0))));
     assert_eq!(
         document
             .get_object(5, 0)
@@ -184,6 +189,17 @@ fn reads_adds_multiline_and_removes_highlights_without_touching_other_annotation
             .unwrap()
             .get("CustomLinkKey"),
         Some(&PdfObject::Integer(99))
+    );
+    assert_eq!(
+        document
+            .get_object(7, 0)
+            .unwrap()
+            .as_dict()
+            .unwrap()
+            .get("VendorKey")
+            .and_then(PdfObject::as_string)
+            .map(|value| value.to_text()),
+        Some("preserve".to_string())
     );
 }
 
@@ -290,6 +306,38 @@ fn reads_all_pages_indirect_annots_and_nonzero_generations() {
         .unwrap();
     assert_eq!(update.highlights.len(), 1);
     assert_eq!(update.highlights[0].id, HighlightId::new(6, 2));
+
+    let added = IncrementalHighlightEditor::new(&base)
+        .apply(&[HighlightMutation::Add {
+            page_index: 0,
+            quadrilaterals: vec![quad(100.0, 100.0, 180.0, 120.0)],
+            color: color([1.0, 0.5, 0.0]),
+            opacity: None,
+            contents: Some("indirect array".to_string()),
+        }])
+        .unwrap();
+    let reader = PdfReader::new(Cursor::new(&added.pdf_bytes)).unwrap();
+    let document = PdfDocument::new(reader);
+    let page = document.get_page(0).unwrap();
+    assert_eq!(
+        page.dict.get("Annots").and_then(PdfObject::as_reference),
+        Some((7, 0))
+    );
+    let annots_object = document.get_object(7, 0).unwrap();
+    let annots = annots_object.as_array().unwrap();
+    assert!(annots
+        .0
+        .iter()
+        .any(|value| value.as_reference() == Some((5, 1))));
+    let new_id = added
+        .highlights
+        .iter()
+        .find(|highlight| highlight.contents.as_deref() == Some("indirect array"))
+        .unwrap()
+        .id;
+    assert!(annots.0.iter().any(|value| {
+        value.as_reference() == Some((new_id.object_number, new_id.generation_number))
+    }));
 }
 
 #[test]
@@ -380,6 +428,32 @@ fn rejects_malformed_inline_and_encrypted_documents() {
         IncrementalHighlightEditor::new(&malformed_contents).highlights(),
         "/Contents must be a string",
     );
+
+    for (body, expected) in [
+        (
+            b"<< /Type /Annot /Subtype /Highlight /Rect [10 10 20] /QuadPoints [10 20 20 20 10 10 20 10] /C [1 1 0] >>".as_slice(),
+            "/Rect has the wrong number",
+        ),
+        (
+            b"<< /Type /Annot /Subtype /Highlight /Rect [10 10 20 20] /QuadPoints [10 20 20 20 10 10 20 10] /C [1.5 1 0] >>".as_slice(),
+            "between 0 and 1",
+        ),
+        (
+            b"<< /Type /Annot /Subtype /Highlight /Rect [10 10 20 20] /QuadPoints [10 20 20 20 10 10 20 10] /C [1 1 0] /CA -0.1 >>".as_slice(),
+            "between 0 and 1",
+        ),
+    ] {
+        let malformed_property = build_classic(&[
+            (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
+            (2, b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
+            (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots [4 0 R] >>"),
+            (4, body),
+        ]);
+        assert_invalid_contains(
+            IncrementalHighlightEditor::new(&malformed_property).highlights(),
+            expected,
+        );
+    }
 
     let inline = build_classic(&[
         (1, b"<< /Type /Catalog /Pages 2 0 R >>"),

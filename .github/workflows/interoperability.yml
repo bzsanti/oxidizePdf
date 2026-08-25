@@ -40,6 +40,13 @@ jobs:
           qpdf_accepts_incremental_text_note_revision
           -- --ignored --exact
 
+      - name: Validate incremental highlights
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_525_incremental_highlights_test
+          qpdf_accepts_classic_and_xref_stream_highlight_revisions
+          -- --ignored --exact
+
       - name: Validate AES-256 R5 interoperability
         run: >
           cargo test -p oxidize-pdf
