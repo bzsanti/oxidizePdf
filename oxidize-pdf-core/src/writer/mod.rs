@@ -23,6 +23,7 @@ pub use incremental_highlights::{
 pub use incremental_text_notes::{
     IncrementalTextNoteEditor, TextNote, TextNoteId, TextNoteMutation, TextNoteUpdate,
 };
+pub(crate) use incremental_update::IncrementalUpdate;
 pub use object_streams::{ObjectStream, ObjectStreamConfig, ObjectStreamStats, ObjectStreamWriter};
 pub use pdf_writer::{PdfWriter, WriterConfig};
 pub(crate) use signature::{Edition, PdfSignature};
