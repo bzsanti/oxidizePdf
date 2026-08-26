@@ -12,6 +12,7 @@ pub(crate) enum IncrementalModification {
     FormFill,
     AddSignature,
     AddAnnotation,
+    OcrTextLayer,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -322,9 +323,12 @@ fn enforce_permission(
             modification,
             IncrementalModification::FormFill | IncrementalModification::AddSignature
         ),
-        DocMdpPermission::FormFillSignAndAnnotate => {
-            !matches!(modification, IncrementalModification::PageTreeReorder)
-        }
+        DocMdpPermission::FormFillSignAndAnnotate => matches!(
+            modification,
+            IncrementalModification::FormFill
+                | IncrementalModification::AddSignature
+                | IncrementalModification::AddAnnotation
+        ),
     };
     if allowed {
         return Ok(());
@@ -334,6 +338,7 @@ fn enforce_permission(
         IncrementalModification::FormFill => "form filling",
         IncrementalModification::AddSignature => "adding signatures",
         IncrementalModification::AddAnnotation => "adding annotations",
+        IncrementalModification::OcrTextLayer => "adding an OCR text layer",
     };
     Err(PdfError::PermissionDenied(format!(
         "DocMDP {description} does not permit {edit}"
@@ -387,6 +392,17 @@ mod tests {
             assert!(
                 enforce_permission(IncrementalModification::PageTreeReorder, permission).is_err()
             );
+        }
+    }
+
+    #[test]
+    fn ocr_page_content_is_forbidden_at_every_permission_level() {
+        for permission in [
+            DocMdpPermission::NoChanges,
+            DocMdpPermission::FormFillAndSign,
+            DocMdpPermission::FormFillSignAndAnnotate,
+        ] {
+            assert!(enforce_permission(IncrementalModification::OcrTextLayer, permission).is_err());
         }
     }
 }

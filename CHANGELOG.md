@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Lossless incremental OCR text layers** (#542). Positioned, invisible
+  Unicode text can now be appended to existing pages without rebuilding the
+  document graph or changing the source-byte prefix. The editor exposes a
+  policy-aware dry run, isolated streams and font resources, language,
+  confidence, source-region and reading-order metadata, duplicate-layer
+  detection, deterministic output, xref-table and xref-stream support, and
+  validated atomic publication through `PdfOcrConverter`. Encrypted inputs and
+  every DocMDP certification level fail closed because OCR changes page
+  content.
 - **Lossless incremental page reordering** (#531). The new
   `reorder_pdf_pages_lossless` API preserves the source bytes, indirect page
   identities, inherited page attributes, and unrelated document objects while
