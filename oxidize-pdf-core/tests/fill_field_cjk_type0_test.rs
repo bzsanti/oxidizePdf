@@ -99,7 +99,7 @@ fn extract_first_hex_tj_gids(content: &[u8]) -> Option<Vec<u16>> {
 
     let hex = std::str::from_utf8(&content[start + 1..end]).ok()?;
     let hex: String = hex.chars().filter(|c| !c.is_whitespace()).collect();
-    if hex.len() % 4 != 0 {
+    if !hex.len().is_multiple_of(4) {
         return None;
     }
     let mut gids = Vec::with_capacity(hex.len() / 4);

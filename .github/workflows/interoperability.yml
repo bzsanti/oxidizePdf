@@ -27,11 +27,16 @@ jobs:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-qpdf-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install qpdf
+      - name: Install qpdf and poppler
         timeout-minutes: 5
         run: |
           sudo apt-get update -o Acquire::Retries=3
-          sudo apt-get install -y --no-install-recommends qpdf
+          sudo apt-get install -y --no-install-recommends qpdf poppler-utils
+
+      - name: Validate semantic comparison differentially
+        env:
+          OXIDIZE_PDF_REQUIRE_DIFFERENTIAL_TOOLS: "1"
+        run: cargo test -p oxidize-pdf --test semantic_comparison_differential
 
       - name: Validate incremental text notes
         run: >

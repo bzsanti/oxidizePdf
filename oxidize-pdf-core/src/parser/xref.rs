@@ -425,6 +425,21 @@ pub struct XRefEntryExt {
     pub compressed_info: Option<(u32, u32)>, // (stream_obj_num, index_in_stream)
 }
 
+/// One object's state in a physical cross-reference revision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct RevisionXRefEntry {
+    pub(crate) object_number: u32,
+    pub(crate) generation: u16,
+    pub(crate) in_use: bool,
+}
+
+/// Physical xref section discovered through the `/Prev` chain.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct XRefRevision {
+    pub(crate) xref_offset: u64,
+    pub(crate) entries: Vec<RevisionXRefEntry>,
+}
+
 /// Cross-reference table
 #[derive(Debug, Clone)]
 pub struct XRefTable {
@@ -436,6 +451,8 @@ pub struct XRefTable {
     trailer: Option<super::objects::PdfDictionary>,
     /// Offset of the xref table in the file
     xref_offset: u64,
+    /// Physical revisions, newest first while parsing and exposed oldest first.
+    revisions: Vec<XRefRevision>,
 }
 
 impl Default for XRefTable {
@@ -452,6 +469,7 @@ impl XRefTable {
             extended_entries: HashMap::new(),
             trailer: None,
             xref_offset: 0,
+            revisions: Vec::new(),
         }
     }
 
@@ -567,6 +585,28 @@ impl XRefTable {
             // Parse the xref table at this offset
             reader.seek(SeekFrom::Start(offset))?;
             let table = Self::parse_primary_with_options(reader, options)?;
+
+            let mut revision_entries: Vec<_> = table
+                .entries
+                .iter()
+                .map(|(object_number, entry)| RevisionXRefEntry {
+                    object_number: *object_number,
+                    generation: entry.generation,
+                    in_use: entry.in_use,
+                })
+                .chain(table.extended_entries.iter().map(|(object_number, entry)| {
+                    RevisionXRefEntry {
+                        object_number: *object_number,
+                        generation: entry.basic.generation,
+                        in_use: entry.basic.in_use,
+                    }
+                }))
+                .collect();
+            revision_entries.sort_by_key(|entry| (entry.object_number, entry.generation));
+            merged_table.revisions.push(XRefRevision {
+                xref_offset: table.xref_offset,
+                entries: revision_entries,
+            });
 
             // Get the previous offset from trailer
             let prev_offset = table
@@ -1513,6 +1553,10 @@ impl XRefTable {
     /// Get the xref offset
     pub fn xref_offset(&self) -> u64 {
         self.xref_offset
+    }
+
+    pub(crate) fn revisions_oldest_first(&self) -> Vec<XRefRevision> {
+        self.revisions.iter().rev().cloned().collect()
     }
 
     /// Get the number of entries
