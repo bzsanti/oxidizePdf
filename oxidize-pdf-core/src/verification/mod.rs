@@ -15,6 +15,7 @@ pub mod compliance_report;
 pub mod curated_matrix;
 pub mod iso_matrix;
 pub mod parser;
+pub mod semantic_comparison;
 pub mod validators;
 
 // Disabled vanity ISO compliance tests - these test PDF syntax rather than functionality

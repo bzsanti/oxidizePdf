@@ -373,6 +373,11 @@ pub use verification::compliance_report::{
     format_report_markdown, generate_compliance_report, ComplianceReport,
 };
 pub use verification::iso_matrix::{load_default_matrix, load_matrix, ComplianceStats, IsoMatrix};
+pub use verification::semantic_comparison::{
+    compare_pdfs_semantically, PdfRevisionSummary, RevisionObjectChange, RevisionObjectChangeKind,
+    SemanticComparisonLimits, SemanticComparisonOptions, SemanticComparisonResult,
+    SemanticDifferenceClass, SemanticPdfDifference,
+};
 pub use verification::validators::{
     check_available_validators, validate_external, validate_with_qpdf,
 };

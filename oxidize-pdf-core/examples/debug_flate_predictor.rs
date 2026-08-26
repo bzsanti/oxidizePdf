@@ -159,7 +159,7 @@ fn analyze_xref_stream(data: &[u8]) {
     // Los XRef streams con Predictor 12 tienen estructura de filas
     // Intentar detectar el patrón del predictor analizando posibles tamaños de fila
     for row_size in [5, 6, 7, 8, 9, 10, 11, 12, 15, 20] {
-        if data.len() % row_size == 0 {
+        if data.len().is_multiple_of(row_size) {
             println!(
                 "\n🔍 Probando tamaño de fila: {} (total {} filas)",
                 row_size,

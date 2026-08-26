@@ -173,6 +173,11 @@ impl<R: Read + Seek> PdfReader<R> {
         self.xref.object_storage_offset(object_number)
     }
 
+    /// Return physical xref revisions from the base revision to the latest.
+    pub(crate) fn xref_revisions(&self) -> Vec<super::xref::XRefRevision> {
+        self.xref.revisions_oldest_first()
+    }
+
     /// Check if the PDF is unlocked (can read encrypted content)
     pub fn is_unlocked(&self) -> bool {
         match &self.encryption_handler {

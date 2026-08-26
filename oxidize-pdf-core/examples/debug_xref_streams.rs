@@ -134,7 +134,7 @@ fn analyze_xref_content(data: &[u8]) {
 
     // Intentar interpretar como entradas XRef
     // Formato típico: [tipo 1 byte][campo1 3 bytes][campo2 1 byte] = 5 bytes por entrada
-    if data.len() % 5 == 0 {
+    if data.len().is_multiple_of(5) {
         let entries = data.len() / 5;
         println!(
             "✅ Posible estructura XRef: {} entradas de 5 bytes cada una",
@@ -165,7 +165,7 @@ fn simulate_predictor_12(data: &[u8]) {
     let columns = 5;
     let row_size = columns + 1; // +1 para el byte predictor
 
-    if data.len() % row_size != 0 {
+    if !data.len().is_multiple_of(row_size) {
         println!("❌ Los datos NO son compatibles con Predictor 12");
         println!(
             "   Tamaño: {} bytes, esperado múltiplo de {} (columnas + 1)",

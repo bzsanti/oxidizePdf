@@ -255,7 +255,7 @@ fn build_minimal_cff_otf(num_glyphs: u16) -> Vec<u8> {
     let mut current_offset = header_size;
     let mut table_entries: Vec<(u32, u32)> = Vec::new();
     for (_, data) in &table_defs {
-        while current_offset % 4 != 0 {
+        while !current_offset.is_multiple_of(4) {
             current_offset += 1;
         }
         table_entries.push((current_offset as u32, data.len() as u32));
@@ -418,7 +418,7 @@ fn build_large_cff_otf() -> Vec<u8> {
     let mut current_offset = header_size;
     let mut table_entries: Vec<(u32, u32)> = Vec::new();
     for (_, data) in &table_defs {
-        while current_offset % 4 != 0 {
+        while !current_offset.is_multiple_of(4) {
             current_offset += 1;
         }
         table_entries.push((current_offset as u32, data.len() as u32));

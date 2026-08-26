@@ -225,11 +225,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "   • Total characters extracted: {}",
         stats.total_chars_extracted
     );
-    if stats.successful_extractions > 0 {
-        println!(
-            "   • Average chars per extraction: {}",
-            stats.total_chars_extracted / stats.successful_extractions
-        );
+    if let Some(average_chars) = stats
+        .total_chars_extracted
+        .checked_div(stats.successful_extractions)
+    {
+        println!("   • Average chars per extraction: {}", average_chars);
     }
 
     println!("\n⏱️  Performance Metrics:");
