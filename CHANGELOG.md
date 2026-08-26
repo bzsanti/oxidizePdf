@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- **Semantic redaction no longer presents visual masking as irreversible
+  removal** (#541). Reports explicitly identify recoverable masking risks, and
+  the security-grade API now removes exact direct-page ASCII `Tj` operands and
+  complete literal `TJ` arrays backed by verified non-symbolic Standard-14
+  fonts. Both `Tj` and `TJ` replacements preserve the original text advance,
+  including AFM glyph widths, numeric adjustments, character spacing, and word
+  spacing. The API rebuilds the file without prior revisions or document-level
+  auxiliary data and verifies output page streams before reporting
+  irreversible success.
+  It correlates each match with its declared bounding box, audits retained page
+  resources and metadata during forensic reparse, and enforces input, page,
+  entity, decoded-content, and operation budgets. It fails closed for
+  annotations, XObjects, shadings, inline images, marked content, custom or
+  ambiguous font encodings, partial or ambiguous matches, and malformed
+  streams.
+
 ### Added
 
 - **Lossless incremental page reordering** (#531). The new
