@@ -47,6 +47,13 @@ jobs:
           qpdf_accepts_classic_and_xref_stream_highlight_revisions
           -- --ignored --exact
 
+      - name: Validate incremental OCR layers
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_542_incremental_ocr_test
+          qpdf_accepts_classic_and_xref_stream_ocr_revisions
+          -- --ignored --exact
+
       - name: Validate AES-256 R5 interoperability
         run: >
           cargo test -p oxidize-pdf
