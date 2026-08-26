@@ -3,14 +3,21 @@
 //! These tests verify that SemanticRedactor correctly redacts content identified
 //! by SemanticEntity bounding boxes. Every test verifies actual output content.
 
+use oxidize_pdf::annotations::TextAnnotation;
+use oxidize_pdf::geometry::Point;
 use oxidize_pdf::operations::{
     RedactionConfig, RedactionMode, RedactionStyle, SemanticRedactor, SemanticRedactorError,
 };
+use oxidize_pdf::parser::content::{ContentOperation, ContentParser, TextElement};
 use oxidize_pdf::parser::PdfReader;
 use oxidize_pdf::semantic::{BoundingBox, EntityMetadata, EntityType, SemanticEntity};
 use oxidize_pdf::text::Font;
+use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 use oxidize_pdf::{Document, Page};
 use std::io::Cursor;
+
+#[path = "common/synthetic_pdf.rs"]
+mod synthetic_pdf;
 
 /// Helper: create a simple 1-page PDF with text
 fn create_test_pdf() -> Vec<u8> {
@@ -42,6 +49,24 @@ fn create_two_page_pdf() -> Vec<u8> {
     doc.to_bytes().expect("Failed to create test PDF")
 }
 
+fn create_secure_redaction_pdf() -> Vec<u8> {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    {
+        let text = page.text();
+        text.set_font(Font::Helvetica, 12.0);
+        text.at(72.0, 700.0);
+        let _ = text.write("Public prefix");
+        text.at(72.0, 680.0);
+        let _ = text.write("John Doe");
+        text.at(72.0, 660.0);
+        let _ = text.write("Public suffix");
+    }
+    doc.add_page(page);
+    doc.to_bytes()
+        .expect("Failed to create secure-redaction PDF")
+}
+
 /// Helper: create a SemanticEntity with given type and bounding box
 fn make_entity(
     id: &str,
@@ -60,6 +85,17 @@ fn make_entity(
         metadata: EntityMetadata::new(),
         relationships: Vec::new(),
     }
+}
+
+fn make_entity_with_content(
+    id: &str,
+    entity_type: EntityType,
+    page: u32,
+    content: &str,
+) -> SemanticEntity {
+    let mut entity = make_entity(id, entity_type, page, 72.0, 675.0, 80.0, 15.0);
+    entity.content = content.to_string();
+    entity
 }
 
 /// Helper: get page count from PDF bytes
@@ -435,4 +471,311 @@ fn irreversible_api_fails_closed_without_returning_masked_bytes() {
         error,
         SemanticRedactorError::SecureRedactionUnsupported(_)
     ));
+}
+
+#[test]
+fn irreversible_redaction_removes_exact_direct_text_and_reports_success() {
+    let pdf_bytes = create_secure_redaction_pdf();
+    let entities = vec![make_entity_with_content(
+        "person-1",
+        EntityType::PersonName,
+        1,
+        "John Doe",
+    )];
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+
+    let (output, report) =
+        SemanticRedactor::redact_irreversible(&pdf_bytes, &entities, config).unwrap();
+
+    assert_eq!(report.mode(), RedactionMode::Irreversible);
+    assert!(report.is_irreversible());
+    assert!(report.residual_risks().is_empty());
+    assert_eq!(report.redacted_count(), 1);
+    assert_eq!(get_page_count(&output), 1);
+    let document = PdfReader::new(Cursor::new(&output))
+        .unwrap()
+        .into_document();
+    let extracted = TextExtractor::with_options(ExtractionOptions::default())
+        .extract_from_page(&document, 0)
+        .unwrap();
+    assert!(!extracted.text.contains("John Doe"));
+    assert!(!output
+        .windows(b"John Doe".len())
+        .any(|window| window == b"John Doe"));
+}
+
+#[test]
+fn irreversible_redaction_rejects_partial_text_operand_match() {
+    let pdf_bytes = create_test_pdf();
+    let entities = vec![make_entity_with_content(
+        "person-1",
+        EntityType::PersonName,
+        1,
+        "John Doe",
+    )];
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+
+    let error = SemanticRedactor::redact_irreversible(&pdf_bytes, &entities, config).unwrap_err();
+
+    assert!(matches!(
+        error,
+        SemanticRedactorError::SecureRedactionUnsupported(_)
+    ));
+    assert!(error.to_string().contains("larger Tj operand"));
+}
+
+#[test]
+fn irreversible_redaction_rejects_empty_entity_content() {
+    let pdf_bytes = create_secure_redaction_pdf();
+    let entities = vec![make_entity(
+        "person-1",
+        EntityType::PersonName,
+        1,
+        72.0,
+        675.0,
+        80.0,
+        15.0,
+    )];
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+
+    let error = SemanticRedactor::redact_irreversible(&pdf_bytes, &entities, config).unwrap_err();
+    assert!(error.to_string().contains("empty content"));
+}
+
+#[test]
+fn irreversible_redaction_rejects_symbol_font_even_when_operand_bytes_match() {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    {
+        let text = page.text();
+        text.set_font(Font::Symbol, 12.0);
+        text.at(72.0, 680.0);
+        text.write("John Doe").unwrap();
+    }
+    doc.add_page(page);
+    let pdf_bytes = doc.to_bytes().unwrap();
+    let entities = vec![make_entity_with_content(
+        "person-1",
+        EntityType::PersonName,
+        1,
+        "John Doe",
+    )];
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+
+    let error = SemanticRedactor::redact_irreversible(&pdf_bytes, &entities, config).unwrap_err();
+
+    assert!(error.to_string().contains("verified Standard-14 text font"));
+}
+
+#[test]
+fn irreversible_redaction_drops_document_metadata_copy_of_target() {
+    let mut doc = Document::new();
+    doc.set_title("John Doe");
+    let mut page = Page::a4();
+    {
+        let text = page.text();
+        text.set_font(Font::Helvetica, 12.0);
+        text.at(72.0, 680.0);
+        text.write("John Doe").unwrap();
+    }
+    doc.add_page(page);
+    let pdf_bytes = doc.to_bytes().unwrap();
+    let entities = vec![make_entity_with_content(
+        "person-1",
+        EntityType::PersonName,
+        1,
+        "John Doe",
+    )];
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+
+    let (output, report) =
+        SemanticRedactor::redact_irreversible(&pdf_bytes, &entities, config).unwrap();
+    let reader = PdfReader::new(Cursor::new(output)).unwrap();
+    let output_doc = reader.into_document();
+    let metadata = output_doc.metadata().unwrap();
+
+    assert!(report.is_irreversible());
+    assert_eq!(metadata.title, None);
+}
+
+fn redact_synthetic_tj(content: &[u8], target: &str) -> Result<Vec<u8>, SemanticRedactorError> {
+    let pdf = synthetic_pdf::build_pdf_with_content_stream(content);
+    let entity = make_entity_with_content("target-1", EntityType::PersonName, 1, target);
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+    SemanticRedactor::redact_irreversible(&pdf, &[entity], config).map(|(output, _)| output)
+}
+
+fn first_tj_array(pdf: &[u8]) -> Vec<TextElement> {
+    let document = PdfReader::new(Cursor::new(pdf)).unwrap().into_document();
+    let page = document.get_page(0).unwrap();
+    let streams = page.content_streams_with_document(&document).unwrap();
+    streams
+        .iter()
+        .flat_map(|stream| ContentParser::parse_strict(stream).unwrap())
+        .find_map(|operation| match operation {
+            ContentOperation::ShowTextArray(elements) => Some(elements),
+            _ => None,
+        })
+        .expect("missing TJ array")
+}
+
+#[test]
+fn irreversible_redaction_removes_complete_tj_array() {
+    let content = b"BT /F1 12 Tf 72 680 Td [(John) -40 ( Doe)] TJ ET";
+
+    let output = redact_synthetic_tj(content, "John Doe").unwrap();
+    let document = PdfReader::new(Cursor::new(&output))
+        .unwrap()
+        .into_document();
+    let extracted = TextExtractor::with_options(ExtractionOptions::default())
+        .extract_from_page(&document, 0)
+        .unwrap();
+
+    assert!(!extracted.text.contains("John Doe"));
+    assert!(!output
+        .windows(b"John Doe".len())
+        .any(|window| window == b"John Doe"));
+}
+
+#[test]
+fn irreversible_tj_redaction_preserves_following_text_position() {
+    let content = b"BT /F1 12 Tf 72 680 Td [(John) -40 ( Doe)] TJ (AFTER) Tj ET";
+    let input = synthetic_pdf::build_pdf_with_content_stream(content);
+    let metrics = Font::Helvetica.get_metrics().unwrap();
+    let original = first_tj_array(&input);
+    let original_advance_units: f32 = original
+        .iter()
+        .map(|element| match element {
+            TextElement::Text(text) => text
+                .iter()
+                .map(|byte| metrics.get_char_width(*byte) as f32)
+                .sum(),
+            TextElement::Spacing(adjustment) => -*adjustment,
+        })
+        .sum();
+
+    let output = redact_synthetic_tj(content, "John Doe").unwrap();
+    let replacement = first_tj_array(&output);
+
+    assert_eq!(replacement.len(), 1);
+    let TextElement::Spacing(adjustment) = replacement[0] else {
+        panic!("redacted TJ must contain only an advance adjustment");
+    };
+    assert!(((-adjustment) - original_advance_units).abs() < 0.01);
+}
+
+#[test]
+fn irreversible_tj_redaction_preserves_character_and_word_spacing_advance() {
+    let content = b"BT /F1 12 Tf 2 Tc 4 Tw 72 680 Td [(John) -40 ( Doe)] TJ (AFTER) Tj ET";
+    let output = redact_synthetic_tj(content, "John Doe").unwrap();
+    let replacement = first_tj_array(&output);
+    let TextElement::Spacing(adjustment) = replacement[0] else {
+        panic!("redacted TJ must contain only an advance adjustment");
+    };
+
+    let metrics = Font::Helvetica.get_metrics().unwrap();
+    let glyph_units: f32 = b"John Doe"
+        .iter()
+        .map(|byte| metrics.get_char_width(*byte) as f32)
+        .sum();
+    let tj_adjustment_units = 40.0;
+    let character_spacing_units = 2.0 * 8.0 * 1000.0 / 12.0;
+    let word_spacing_units = 4.0 * 1000.0 / 12.0;
+    let expected_advance_units =
+        glyph_units + tj_adjustment_units + character_spacing_units + word_spacing_units;
+
+    assert!(((-adjustment) - expected_advance_units).abs() < 0.01);
+}
+
+#[test]
+fn irreversible_redaction_rejects_target_spanning_part_of_tj_array() {
+    let content = b"BT /F1 12 Tf 72 680 Td [(prefix John) -40 ( Doe suffix)] TJ ET";
+
+    let error = redact_synthetic_tj(content, "John Doe").unwrap_err();
+
+    assert!(error.to_string().contains("complete TJ array"));
+}
+
+#[test]
+fn irreversible_redaction_rejects_text_outside_entity_bounds() {
+    let pdf = create_secure_redaction_pdf();
+    let mut entity = make_entity_with_content("target-1", EntityType::PersonName, 1, "John Doe");
+    entity.bounds = BoundingBox::new(300.0, 300.0, 80.0, 20.0, 1);
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+
+    let error = SemanticRedactor::redact_irreversible(&pdf, &[entity], config).unwrap_err();
+
+    assert!(error.to_string().contains("bounding box"));
+}
+
+#[test]
+fn irreversible_tj_redaction_preserves_tj_advance() {
+    let content = b"BT /F1 12 Tf 2 Tc 4 Tw 72 680 Td (John Doe) Tj (AFTER) Tj ET";
+    let output = redact_synthetic_tj(content, "John Doe").unwrap();
+    let replacement = first_tj_array(&output);
+    let TextElement::Spacing(adjustment) = replacement[0] else {
+        panic!("redacted Tj must become an advance-only TJ array");
+    };
+    let metrics = Font::Helvetica.get_metrics().unwrap();
+    let glyph_units: f32 = b"John Doe"
+        .iter()
+        .map(|byte| metrics.get_char_width(*byte) as f32)
+        .sum();
+    let expected = glyph_units + 2.0 * 8.0 * 1000.0 / 12.0 + 4.0 * 1000.0 / 12.0;
+    assert!(((-adjustment) - expected).abs() < 0.01);
+}
+
+#[test]
+fn irreversible_redaction_rejects_unaudited_shading_resource_path() {
+    let content = b"/S1 sh BT /F1 12 Tf 72 680 Td (John Doe) Tj ET";
+
+    let error = redact_synthetic_tj(content, "John Doe").unwrap_err();
+
+    assert!(error.to_string().contains("unsupported"));
+}
+
+#[test]
+fn irreversible_redaction_enforces_entity_budget() {
+    let pdf = create_secure_redaction_pdf();
+    let entity = make_entity_with_content("target-1", EntityType::PersonName, 1, "John Doe");
+    let entities = vec![entity; 10_001];
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+
+    let error = SemanticRedactor::redact_irreversible(&pdf, &entities, config).unwrap_err();
+
+    assert!(error.to_string().contains("entity limit"));
+}
+
+#[test]
+fn irreversible_redaction_rejects_annotations() {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    {
+        let text = page.text();
+        text.set_font(Font::Helvetica, 12.0);
+        text.at(72.0, 680.0);
+        text.write("John Doe").unwrap();
+    }
+    page.add_annotation(
+        TextAnnotation::new(Point::new(100.0, 700.0))
+            .with_contents("John Doe")
+            .to_annotation(),
+    );
+    doc.add_page(page);
+    let pdf = doc.to_bytes().unwrap();
+    let entity = make_entity_with_content("target-1", EntityType::PersonName, 1, "John Doe");
+    let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
+
+    let error = SemanticRedactor::redact_irreversible(&pdf, &[entity], config).unwrap_err();
+
+    assert!(error.to_string().contains("annotations"));
+}
+
+#[test]
+fn irreversible_redaction_rejects_marked_content() {
+    let content = b"BT /F1 12 Tf 72 680 Td /P BMC (John Doe) Tj EMC ET";
+
+    let error = redact_synthetic_tj(content, "John Doe").unwrap_err();
+
+    assert!(error.to_string().contains("unsupported"));
 }
