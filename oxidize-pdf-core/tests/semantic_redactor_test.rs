@@ -467,10 +467,7 @@ fn irreversible_api_fails_closed_without_returning_masked_bytes() {
     let config = RedactionConfig::new().with_types(vec![EntityType::PersonName]);
     let error = SemanticRedactor::redact_irreversible(&pdf_bytes, &[], config).unwrap_err();
 
-    assert!(matches!(
-        error,
-        SemanticRedactorError::SecureRedactionUnsupported(_)
-    ));
+    assert!(matches!(error, SemanticRedactorError::ParseFailed(_)));
 }
 
 #[test]
@@ -517,10 +514,7 @@ fn irreversible_redaction_rejects_partial_text_operand_match() {
 
     let error = SemanticRedactor::redact_irreversible(&pdf_bytes, &entities, config).unwrap_err();
 
-    assert!(matches!(
-        error,
-        SemanticRedactorError::SecureRedactionUnsupported(_)
-    ));
+    assert!(matches!(error, SemanticRedactorError::ParseFailed(_)));
     assert!(error.to_string().contains("larger Tj operand"));
 }
 

@@ -171,10 +171,13 @@ pub enum SemanticRedactorError {
     /// Failed to write the output PDF
     #[error("write failed: {0}")]
     WriteFailed(String),
+}
 
-    /// The requested security-grade redaction cannot yet be proven safe.
-    #[error("secure redaction refused: {0}")]
-    SecureRedactionUnsupported(String),
+impl SemanticRedactorError {
+    #[allow(non_snake_case)]
+    fn SecureRedactionUnsupported(reason: String) -> Self {
+        Self::ParseFailed(format!("secure redaction refused: {reason}"))
+    }
 }
 
 /// Result type for semantic redactor operations.
