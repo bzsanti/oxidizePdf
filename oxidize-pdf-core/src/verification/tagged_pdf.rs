@@ -74,6 +74,9 @@ pub enum TaggedPdfFindingCode {
     ParentTreeOwnerMismatch,
     UnmappedCustomRole,
     InvalidRoleMap,
+    MissingDocumentLanguage,
+    MissingAlternateText,
+    InvalidHeadingOrder,
 }
 
 /// An indirect object reference exposed without leaking parser internals.
@@ -110,6 +113,12 @@ pub struct TaggedPdfStructureElement {
     pub parent: Option<TaggedPdfObjectRef>,
     pub child_count: usize,
     pub marked_content_count: usize,
+    pub language: Option<String>,
+    pub alternate_text: Option<String>,
+    pub actual_text: Option<String>,
+    pub title: Option<String>,
+    /// Every key present in the original dictionary, including unknown keys.
+    pub dictionary_keys: Vec<String>,
 }
 
 /// Machine-readable result of tagged-PDF inspection.
@@ -158,6 +167,8 @@ struct Validator<'a, R: Read + Seek> {
     direct_mcid_counts: HashMap<TaggedPdfObjectRef, usize>,
     page_mcids: HashMap<TaggedPdfObjectRef, HashSet<i64>>,
     decoded_content_bytes: usize,
+    saw_language: bool,
+    last_heading_level: Option<u8>,
 }
 
 impl<'a, R: Read + Seek> Validator<'a, R> {
@@ -176,11 +187,14 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             direct_mcid_counts: HashMap::new(),
             page_mcids: HashMap::new(),
             decoded_content_bytes: 0,
+            saw_language: false,
+            last_heading_level: None,
         }
     }
 
     fn run(mut self) -> Result<TaggedPdfValidationReport> {
         let catalog = self.reader.catalog()?.clone();
+        self.saw_language = text_value(catalog.get("Lang")).is_some();
         let Some(root_value) = catalog.get("StructTreeRoot").cloned() else {
             self.finding(
                 TaggedPdfFindingSeverity::Warning,
@@ -229,6 +243,15 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
 
         if let Some(kids) = root.get("K").cloned() {
             self.walk_structure_value(&kids, root_ref, None, 0, "/StructTreeRoot/K")?;
+        }
+        if !self.saw_language {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::MissingDocumentLanguage,
+                "/Catalog/Lang",
+                "tagged document has no language on the catalog or any structure element",
+                root_ref,
+            );
         }
         self.elements.sort_by_key(|element| element.object);
         self.class_names.sort();
@@ -446,6 +469,38 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                 );
             }
         }
+        let language = text_value(dict.get("Lang"));
+        self.saw_language |= language.is_some();
+        let alternate_text = text_value(dict.get("Alt"));
+        let actual_text = text_value(dict.get("ActualText"));
+        let title = text_value(dict.get("T"));
+        if matches!(structure_type.as_deref(), Some("Figure" | "Formula"))
+            && alternate_text.is_none()
+            && actual_text.is_none()
+        {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::MissingAlternateText,
+                format!("{path}/Alt"),
+                "figure or formula has neither Alt nor ActualText",
+                object_ref,
+            );
+        }
+        if let Some(level) = structure_type.as_deref().and_then(heading_level) {
+            if self
+                .last_heading_level
+                .is_some_and(|previous| level > previous + 1)
+            {
+                self.finding(
+                    TaggedPdfFindingSeverity::Error,
+                    TaggedPdfFindingCode::InvalidHeadingOrder,
+                    format!("{path}/S"),
+                    "heading level skips an intermediate level in structure order",
+                    object_ref,
+                );
+            }
+            self.last_heading_level = Some(level);
+        }
         let parent = dict
             .get("P")
             .and_then(PdfObject::as_reference)
@@ -476,12 +531,19 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         }
         if let Some(reference) = object_ref {
             let marked_content_count = self.direct_mcid_counts.remove(&reference).unwrap_or(0);
+            let mut dictionary_keys: Vec<_> = dict.0.keys().map(|key| key.0.clone()).collect();
+            dictionary_keys.sort();
             self.elements.push(TaggedPdfStructureElement {
                 object: reference,
                 structure_type,
                 parent,
                 child_count,
                 marked_content_count,
+                language,
+                alternate_text,
+                actual_text,
+                title,
+                dictionary_keys,
             });
             self.active.remove(&reference);
         }
@@ -1048,6 +1110,25 @@ fn is_standard_structure_type(name: &str) -> bool {
     )
 }
 
+fn text_value(value: Option<&PdfObject>) -> Option<String> {
+    value
+        .and_then(PdfObject::as_string)
+        .map(|value| value.to_text())
+        .filter(|value| !value.trim().is_empty())
+}
+
+fn heading_level(name: &str) -> Option<u8> {
+    match name {
+        "H1" => Some(1),
+        "H2" => Some(2),
+        "H3" => Some(3),
+        "H4" => Some(4),
+        "H5" => Some(5),
+        "H6" => Some(6),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1084,7 +1165,7 @@ mod tests {
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R >>",
             "<< /Length 22 >>\nstream\n/P <</MCID 0>> BDC EMC\nendstream",
             "<< /Type /StructTreeRoot /K [6 0 R] /ParentTree 7 0 R /RoleMap << /CustomP /P >> /ClassMap << /C1 << /O /Layout >> >> >>",
-            "<< /Type /StructElem /S /CustomP /P 5 0 R /Pg 3 0 R /K [<< /Type /MCR /Pg 3 0 R /MCID 0 >>] >>",
+            "<< /Type /StructElem /S /CustomP /P 5 0 R /Pg 3 0 R /Lang (en-US) /K [<< /Type /MCR /Pg 3 0 R /MCID 0 >>] >>",
             "<< /Nums [0 [6 0 R]] >>",
         ])
     }
@@ -1112,7 +1193,7 @@ mod tests {
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R >>",
             "<< /Length 22 >>\nstream\n/P <</MCID 0>> BDC EMC\nendstream",
             "<< /Type /StructTreeRoot /K [6 0 R] /ParentTree 7 0 R >>",
-            "<< /Type /StructElem /S /P /P 5 0 R /Pg 3 0 R /K 0 >>",
+            "<< /Type /StructElem /S /P /P 5 0 R /Pg 3 0 R /Lang (en-US) /K 0 >>",
             "<< /Nums [0 [5 0 R]] >>",
         ]);
         let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
@@ -1211,7 +1292,7 @@ mod tests {
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R >>",
             "<< /Length 22 >>\nstream\n/P <</MCID 1>> BDC EMC\nendstream",
             "<< /Type /StructTreeRoot /K 6 0 R /ParentTree 7 0 R >>",
-            "<< /Type /StructElem /S /P /P 5 0 R /Pg 3 0 R /K 0 >>",
+            "<< /Type /StructElem /S /P /P 5 0 R /Pg 3 0 R /Lang (en-US) /K 0 >>",
             "<< /Nums [0 [6 0 R]] >>",
         ]);
         let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
@@ -1230,7 +1311,7 @@ mod tests {
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R /Resources << /Properties << /MC0 << /MCID 0 >> >> >> >>",
             "<< /Length 15 >>\nstream\n/P /MC0 BDC EMC\nendstream",
             "<< /Type /StructTreeRoot /K 6 0 R /ParentTree 7 0 R >>",
-            "<< /Type /StructElem /S /P /P 5 0 R /Pg 3 0 R /K 0 >>",
+            "<< /Type /StructElem /S /P /P 5 0 R /Pg 3 0 R /Lang (en-US) /K 0 >>",
             "<< /Nums [0 [6 0 R]] >>",
         ]);
         let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
@@ -1244,7 +1325,7 @@ mod tests {
             "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
             "<< /Type /StructTreeRoot /K 5 0 R /ParentTree 6 0 R >>",
-            "<< /Type /StructElem /S /Annot /P 4 0 R /Pg 3 0 R /K << /Type /OBJR /Obj 7 0 R >> >>",
+            "<< /Type /StructElem /S /Annot /P 4 0 R /Pg 3 0 R /Lang (en-US) /K << /Type /OBJR /Obj 7 0 R >> >>",
             "<< /Nums [1 5 0 R] >>",
             "<< /Type /Annot /Subtype /Link /StructParent 1 >>",
         ]);
@@ -1283,5 +1364,57 @@ mod tests {
         };
         let error = validate_tagged_pdf(&valid_tagged_pdf(), &options).unwrap_err();
         assert!(error.to_string().contains("decoded content bytes"));
+    }
+
+    #[test]
+    fn reports_missing_language_for_tagged_documents() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K 5 0 R /ParentTree 6 0 R >>",
+            "<< /Type /StructElem /S /Document /P 4 0 R >>",
+            "<< /Nums [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| { finding.code == TaggedPdfFindingCode::MissingDocumentLanguage }));
+    }
+
+    #[test]
+    fn reports_figure_without_text_alternative() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K 5 0 R /ParentTree 6 0 R >>",
+            "<< /Type /StructElem /S /Figure /P 4 0 R >>",
+            "<< /Nums [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| finding.code == TaggedPdfFindingCode::MissingAlternateText));
+    }
+
+    #[test]
+    fn reports_skipped_heading_levels_in_structure_order() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K [5 0 R 6 0 R] /ParentTree 7 0 R >>",
+            "<< /Type /StructElem /S /H1 /P 4 0 R >>",
+            "<< /Type /StructElem /S /H3 /P 4 0 R >>",
+            "<< /Nums [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| finding.code == TaggedPdfFindingCode::InvalidHeadingOrder));
     }
 }

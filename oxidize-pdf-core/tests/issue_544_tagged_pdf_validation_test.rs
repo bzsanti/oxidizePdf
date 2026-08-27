@@ -11,7 +11,8 @@ fn validates_a_tagged_pdf_created_by_the_public_writer() {
     page.end_marked_content().unwrap();
 
     let mut tree = StructTree::new();
-    let document = tree.set_root(StructureElement::new(StandardStructureType::Document));
+    let document = tree
+        .set_root(StructureElement::new(StandardStructureType::Document).with_language("en-US"));
     let mut paragraph = StructureElement::new(StandardStructureType::P);
     paragraph.add_mcid(0, mcid);
     tree.add_child(document, paragraph).unwrap();
