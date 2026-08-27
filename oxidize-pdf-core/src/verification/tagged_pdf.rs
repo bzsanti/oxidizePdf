@@ -74,6 +74,7 @@ pub enum TaggedPdfFindingCode {
     ParentTreeOwnerMismatch,
     UnmappedCustomRole,
     InvalidRoleMap,
+    InvalidClassMap,
     MissingDocumentLanguage,
     MissingAlternateText,
     InvalidHeadingOrder,
@@ -122,13 +123,15 @@ pub struct TaggedPdfStructureElement {
 }
 
 /// Machine-readable result of tagged-PDF inspection.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TaggedPdfValidationReport {
     pub tagged: bool,
     pub valid: bool,
     pub structure_tree_root: Option<TaggedPdfObjectRef>,
     pub role_map: BTreeMap<String, String>,
     pub class_names: Vec<String>,
+    /// Lossless parsed ClassMap values, including unknown attributes and namespaces.
+    pub class_map: BTreeMap<String, PdfObject>,
     pub elements: Vec<TaggedPdfStructureElement>,
     pub parent_tree_entries: usize,
     pub findings: Vec<TaggedPdfFinding>,
@@ -137,9 +140,17 @@ pub struct TaggedPdfValidationReport {
 /// Inspect and validate the tagged structure of an existing PDF.
 ///
 /// The traversal validates structure-element parent links and the page
-/// `/StructParents` -> structure `/ParentTree` -> MCID owner association.  It
-/// does not claim full PDF/UA conformance: language, headings, tables, lists,
-/// links and alternate-text rules will build on this structural foundation.
+/// `/StructParents` -> structure `/ParentTree` -> MCID owner association. It
+/// also reports initial PDF/UA-oriented rules for catalog language, numbered
+/// heading order, and text alternatives for figures and formulas. It does not
+/// claim complete PDF/UA conformance; table, list, link, artifact, and complete
+/// reading-order rules are not yet implemented.
+///
+/// # Errors
+///
+/// Returns an error when the PDF cannot be parsed or decoded safely, is locked,
+/// or exceeds a configured traversal or decoded-content limit. Structural and
+/// PDF/UA findings are returned in the report rather than as function errors.
 pub fn validate_tagged_pdf(
     pdf: &[u8],
     options: &TaggedPdfValidationOptions,
@@ -163,12 +174,15 @@ struct Validator<'a, R: Read + Seek> {
     findings: Vec<TaggedPdfFinding>,
     role_map: BTreeMap<String, String>,
     class_names: Vec<String>,
+    class_map: BTreeMap<String, PdfObject>,
     parent_tree: BTreeMap<i64, PdfObject>,
     direct_mcid_counts: HashMap<TaggedPdfObjectRef, usize>,
     page_mcids: HashMap<TaggedPdfObjectRef, HashSet<i64>>,
     decoded_content_bytes: usize,
-    saw_language: bool,
+    catalog_language: bool,
     last_heading_level: Option<u8>,
+    saw_generic_heading: bool,
+    saw_numbered_heading: bool,
 }
 
 impl<'a, R: Read + Seek> Validator<'a, R> {
@@ -183,18 +197,21 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             findings: Vec::new(),
             role_map: BTreeMap::new(),
             class_names: Vec::new(),
+            class_map: BTreeMap::new(),
             parent_tree: BTreeMap::new(),
             direct_mcid_counts: HashMap::new(),
             page_mcids: HashMap::new(),
             decoded_content_bytes: 0,
-            saw_language: false,
+            catalog_language: false,
             last_heading_level: None,
+            saw_generic_heading: false,
+            saw_numbered_heading: false,
         }
     }
 
     fn run(mut self) -> Result<TaggedPdfValidationReport> {
         let catalog = self.reader.catalog()?.clone();
-        self.saw_language = text_value(catalog.get("Lang")).is_some();
+        self.catalog_language = text_value(catalog.get("Lang")).is_some();
         let Some(root_value) = catalog.get("StructTreeRoot").cloned() else {
             self.finding(
                 TaggedPdfFindingSeverity::Warning,
@@ -206,6 +223,15 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             return Ok(self.report(false, None));
         };
         let root_ref = root_value.as_reference().map(Into::into);
+        if root_ref.is_none() {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::InvalidStructureTreeRoot,
+                "/Catalog/StructTreeRoot",
+                "StructTreeRoot must be an indirect object",
+                None,
+            );
+        }
         let Some(root) = self.resolve_dict(&root_value)? else {
             self.finding(
                 TaggedPdfFindingSeverity::Error,
@@ -225,8 +251,8 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                 root_ref,
             );
         }
-        self.read_name_map(root.get("RoleMap").cloned(), true)?;
-        self.read_name_map(root.get("ClassMap").cloned(), false)?;
+        self.read_role_map(root.get("RoleMap").cloned())?;
+        self.read_class_map(root.get("ClassMap").cloned())?;
         self.validate_role_map();
 
         if let Some(parent_tree) = root.get("ParentTree").cloned() {
@@ -244,12 +270,12 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         if let Some(kids) = root.get("K").cloned() {
             self.walk_structure_value(&kids, root_ref, None, 0, "/StructTreeRoot/K")?;
         }
-        if !self.saw_language {
+        if !self.catalog_language {
             self.finding(
                 TaggedPdfFindingSeverity::Error,
                 TaggedPdfFindingCode::MissingDocumentLanguage,
                 "/Catalog/Lang",
-                "tagged document has no language on the catalog or any structure element",
+                "tagged document catalog has no non-empty Lang entry",
                 root_ref,
             );
         }
@@ -276,6 +302,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             structure_tree_root: root,
             role_map: self.role_map,
             class_names: self.class_names,
+            class_map: self.class_map,
             elements: self.elements,
             parent_tree_entries: self.parent_tree.len(),
             findings: self.findings,
@@ -297,20 +324,50 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             .or_else(|| object.as_stream().map(|stream| stream.dict.clone())))
     }
 
-    fn read_name_map(&mut self, value: Option<PdfObject>, role_map: bool) -> Result<()> {
+    fn read_role_map(&mut self, value: Option<PdfObject>) -> Result<()> {
         let Some(value) = value else { return Ok(()) };
         let Some(dict) = self.resolve_dict(&value)? else {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::InvalidRoleMap,
+                "/StructTreeRoot/RoleMap",
+                "RoleMap must be a dictionary",
+                value.as_reference().map(Into::into),
+            );
             return Ok(());
         };
         for (name, value) in &dict.0 {
-            if role_map {
-                if let Some(target) = value.as_name() {
-                    self.role_map
-                        .insert(name.0.clone(), target.as_str().to_string());
-                }
+            if let Some(target) = value.as_name() {
+                self.role_map
+                    .insert(name.0.clone(), target.as_str().to_string());
             } else {
-                self.class_names.push(name.0.clone());
+                self.finding(
+                    TaggedPdfFindingSeverity::Error,
+                    TaggedPdfFindingCode::InvalidRoleMap,
+                    format!("/StructTreeRoot/RoleMap/{}", name.0),
+                    "RoleMap values must be names",
+                    None,
+                );
             }
+        }
+        Ok(())
+    }
+
+    fn read_class_map(&mut self, value: Option<PdfObject>) -> Result<()> {
+        let Some(value) = value else { return Ok(()) };
+        let Some(dict) = self.resolve_dict(&value)? else {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::InvalidClassMap,
+                "/StructTreeRoot/ClassMap",
+                "ClassMap must be a dictionary",
+                value.as_reference().map(Into::into),
+            );
+            return Ok(());
+        };
+        for (name, value) in dict.0 {
+            self.class_names.push(name.0.clone());
+            self.class_map.insert(name.0, value);
         }
         Ok(())
     }
@@ -470,11 +527,13 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             }
         }
         let language = text_value(dict.get("Lang"));
-        self.saw_language |= language.is_some();
         let alternate_text = text_value(dict.get("Alt"));
         let actual_text = text_value(dict.get("ActualText"));
         let title = text_value(dict.get("T"));
-        if matches!(structure_type.as_deref(), Some("Figure" | "Formula"))
+        let resolved_type = structure_type
+            .as_deref()
+            .and_then(|name| self.resolve_role(name).ok());
+        if matches!(resolved_type.as_deref(), Some("Figure" | "Formula"))
             && alternate_text.is_none()
             && actual_text.is_none()
         {
@@ -486,16 +545,34 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                 object_ref,
             );
         }
-        if let Some(level) = structure_type.as_deref().and_then(heading_level) {
-            if self
-                .last_heading_level
-                .is_some_and(|previous| level > previous + 1)
-            {
+        if resolved_type.as_deref() == Some("H") {
+            self.saw_generic_heading = true;
+            if self.saw_numbered_heading {
                 self.finding(
                     TaggedPdfFindingSeverity::Error,
                     TaggedPdfFindingCode::InvalidHeadingOrder,
                     format!("{path}/S"),
-                    "heading level skips an intermediate level in structure order",
+                    "generic H and numbered H1-H6 headings must not be mixed",
+                    object_ref,
+                );
+            }
+        } else if let Some(level) = resolved_type.as_deref().and_then(heading_level) {
+            self.saw_numbered_heading = true;
+            let invalid = if let Some(previous) = self.last_heading_level {
+                level > previous + 1
+            } else {
+                level != 1
+            };
+            if invalid || self.saw_generic_heading {
+                self.finding(
+                    TaggedPdfFindingSeverity::Error,
+                    TaggedPdfFindingCode::InvalidHeadingOrder,
+                    format!("{path}/S"),
+                    if self.saw_generic_heading {
+                        "generic H and numbered H1-H6 headings must not be mixed"
+                    } else {
+                        "numbered headings must start at H1 and not skip levels"
+                    },
                     object_ref,
                 );
             }
@@ -672,6 +749,16 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             .reader
             .get_object(page.object_number, page.generation)?
             .clone();
+        if dict.contains_key("Stm") && dict.get("Stm").and_then(PdfObject::as_reference).is_none() {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::InvalidMarkedContentReference,
+                format!("{path}/Stm"),
+                "MCR Stm must be an indirect stream reference",
+                owner,
+            );
+            return Ok(true);
+        }
         let context = dict
             .get("Stm")
             .and_then(PdfObject::as_reference)
@@ -745,43 +832,44 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         if let Some(cached) = self.page_mcids.get(&context) {
             return Ok(cached.clone());
         }
-        let content = if let Some(stream) = object.as_stream() {
-            vec![stream.decode(self.reader.options())?]
-        } else if let Some(dict) = object.as_dict() {
-            match dict.get("Contents") {
-                Some(contents) => self.decode_content_objects(contents, 0)?,
-                None => Vec::new(),
-            }
-        } else {
-            Vec::new()
-        };
         let resources = self.effective_resources(object, 0)?;
         let mut mcids = HashSet::new();
-        for bytes in content {
-            self.decoded_content_bytes = self
-                .decoded_content_bytes
-                .checked_add(bytes.len())
-                .ok_or_else(|| self.limit_error("decoded content bytes", usize::MAX))?;
-            if self.decoded_content_bytes > self.limits.max_decoded_content_bytes {
-                return Err(self.limit_error(
-                    "decoded content bytes",
-                    self.limits.max_decoded_content_bytes,
-                ));
-            }
-            for operation in ContentParser::parse(&bytes)? {
-                if let ContentOperation::BeginMarkedContentWithProps(_, properties) = operation {
-                    if let Some(mcid) =
-                        self.mcid_from_properties(&properties, resources.as_ref())?
-                    {
-                        if mcid >= 0 {
-                            mcids.insert(mcid);
-                        }
+        if let Some(stream) = object.as_stream() {
+            let bytes = stream.decode(self.reader.options())?;
+            self.process_content_bytes(&bytes, resources.as_ref(), &mut mcids)?;
+        } else if let Some(contents) = object.as_dict().and_then(|dict| dict.get("Contents")) {
+            self.process_content_objects(contents, resources.as_ref(), &mut mcids, 0)?;
+        }
+        self.page_mcids.insert(context, mcids.clone());
+        Ok(mcids)
+    }
+
+    fn process_content_bytes(
+        &mut self,
+        bytes: &[u8],
+        resources: Option<&PdfDictionary>,
+        mcids: &mut HashSet<i64>,
+    ) -> Result<()> {
+        self.decoded_content_bytes = self
+            .decoded_content_bytes
+            .checked_add(bytes.len())
+            .ok_or_else(|| self.limit_error("decoded content bytes", usize::MAX))?;
+        if self.decoded_content_bytes > self.limits.max_decoded_content_bytes {
+            return Err(self.limit_error(
+                "decoded content bytes",
+                self.limits.max_decoded_content_bytes,
+            ));
+        }
+        for operation in ContentParser::parse(bytes)? {
+            if let ContentOperation::BeginMarkedContentWithProps(_, properties) = operation {
+                if let Some(mcid) = self.mcid_from_properties(&properties, resources)? {
+                    if mcid >= 0 {
+                        mcids.insert(mcid);
                     }
                 }
             }
         }
-        self.page_mcids.insert(context, mcids.clone());
-        Ok(mcids)
+        Ok(())
     }
 
     fn mcid_from_properties(
@@ -835,26 +923,32 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         self.effective_resources(&parent, depth + 1)
     }
 
-    fn decode_content_objects(&mut self, value: &PdfObject, depth: usize) -> Result<Vec<Vec<u8>>> {
+    fn process_content_objects(
+        &mut self,
+        value: &PdfObject,
+        resources: Option<&PdfDictionary>,
+        mcids: &mut HashSet<i64>,
+        depth: usize,
+    ) -> Result<()> {
         self.check_depth(depth)?;
         let resolved = self.resolve(value)?;
         if let Some(stream) = resolved.as_stream() {
-            return Ok(vec![stream.decode(self.reader.options())?]);
+            let bytes = stream.decode(self.reader.options())?;
+            return self.process_content_bytes(&bytes, resources, mcids);
         }
         if let Some(array) = resolved.as_array() {
-            let mut streams = Vec::new();
             for child in &array.0 {
                 self.bump_entry()?;
-                streams.extend(self.decode_content_objects(child, depth + 1)?);
+                self.process_content_objects(child, resources, mcids, depth + 1)?;
             }
-            return Ok(streams);
+            return Ok(());
         }
         Err(PdfError::InvalidStructure(
             "page /Contents is neither a stream nor an array of streams".to_string(),
         ))
     }
 
-    fn walk_number_tree(&mut self, value: &PdfObject, depth: usize) -> Result<()> {
+    fn walk_number_tree(&mut self, value: &PdfObject, depth: usize) -> Result<Option<(i64, i64)>> {
         self.check_depth(depth)?;
         let reference = value.as_reference().map(TaggedPdfObjectRef::from);
         if let Some(reference) = reference {
@@ -866,7 +960,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                     "cycle or duplicate node in ParentTree",
                     Some(reference),
                 );
-                return Ok(());
+                return Ok(None);
             }
             if self.visited.len() > self.limits.max_objects {
                 return Err(self.limit_error("indirect objects", self.limits.max_objects));
@@ -880,7 +974,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                 "ParentTree node is not a dictionary",
                 reference,
             );
-            return Ok(());
+            return Ok(None);
         };
         if dict.contains_key("Nums") && dict.contains_key("Kids") {
             self.finding(
@@ -916,6 +1010,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         } else {
             None
         };
+        let mut effective_limits = None;
         if let Some(nums) = dict.get("Nums") {
             let nums = self.resolve(nums)?;
             let Some(array) = nums.as_array() else {
@@ -926,7 +1021,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                     "number-tree Nums is not an array",
                     reference,
                 );
-                return Ok(());
+                return Ok(None);
             };
             if array.0.len() % 2 != 0 {
                 self.finding(
@@ -942,15 +1037,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                 .first()
                 .and_then(PdfObject::as_integer)
                 .zip(array.0.iter().rev().nth(1).and_then(PdfObject::as_integer));
-            if declared_limits.is_some() && declared_limits != actual_limits {
-                self.finding(
-                    TaggedPdfFindingSeverity::Error,
-                    TaggedPdfFindingCode::InvalidParentTree,
-                    "/StructTreeRoot/ParentTree/Limits",
-                    "number-tree Limits do not match the first and last Nums keys",
-                    reference,
-                );
-            }
+            effective_limits = actual_limits;
             let mut previous_key = None;
             for pair in array.0.chunks_exact(2) {
                 self.bump_entry()?;
@@ -997,9 +1084,25 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         if let Some(kids) = dict.get("Kids") {
             let kids = self.resolve(kids)?;
             if let Some(array) = kids.as_array() {
+                let mut previous = None;
                 for kid in &array.0 {
                     self.bump_entry()?;
-                    self.walk_number_tree(kid, depth + 1)?;
+                    if let Some(range) = self.walk_number_tree(kid, depth + 1)? {
+                        if previous.is_some_and(|(_, last)| range.0 <= last) {
+                            self.finding(
+                                TaggedPdfFindingSeverity::Error,
+                                TaggedPdfFindingCode::InvalidParentTree,
+                                "/StructTreeRoot/ParentTree/Kids",
+                                "number-tree child ranges overlap or are out of order",
+                                reference,
+                            );
+                        }
+                        effective_limits = Some(match effective_limits {
+                            Some((first, _)) => (first, range.1),
+                            None => range,
+                        });
+                        previous = Some(range);
+                    }
                 }
             } else {
                 self.finding(
@@ -1011,7 +1114,16 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                 );
             }
         }
-        Ok(())
+        if declared_limits.is_some() && declared_limits != effective_limits {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::InvalidParentTree,
+                "/StructTreeRoot/ParentTree/Limits",
+                "number-tree Limits do not match the effective subtree range",
+                reference,
+            );
+        }
+        Ok(effective_limits)
     }
 
     fn check_depth(&self, depth: usize) -> Result<()> {
@@ -1160,7 +1272,7 @@ mod tests {
 
     fn valid_tagged_pdf() -> Vec<u8> {
         pdf(&[
-            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R >>",
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R /Lang (en-US) >>",
             "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R >>",
             "<< /Length 22 >>\nstream\n/P <</MCID 0>> BDC EMC\nendstream",
@@ -1183,12 +1295,16 @@ mod tests {
             Some("P")
         );
         assert_eq!(report.class_names, ["C1"]);
+        assert!(matches!(
+            report.class_map.get("C1"),
+            Some(PdfObject::Dictionary(_))
+        ));
     }
 
     #[test]
     fn reports_parent_tree_owner_mismatch() {
         let bytes = pdf(&[
-            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R >>",
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R /Lang (en-US) >>",
             "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R >>",
             "<< /Length 22 >>\nstream\n/P <</MCID 0>> BDC EMC\nendstream",
@@ -1207,7 +1323,7 @@ mod tests {
     #[test]
     fn rejects_structure_cycles_without_recursing_forever() {
         let bytes = pdf(&[
-            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R >>",
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
             "<< /Type /Pages /Count 0 /Kids [] >>",
             "null",
             "<< /Type /StructTreeRoot /K 5 0 R /ParentTree 6 0 R >>",
@@ -1306,7 +1422,7 @@ mod tests {
     #[test]
     fn resolves_mcid_from_a_resource_property_list() {
         let bytes = pdf(&[
-            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R >>",
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R /Lang (en-US) >>",
             "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R /Resources << /Properties << /MC0 << /MCID 0 >> >> >> >>",
             "<< /Length 15 >>\nstream\n/P /MC0 BDC EMC\nendstream",
@@ -1321,7 +1437,7 @@ mod tests {
     #[test]
     fn validates_objr_through_struct_parent() {
         let bytes = pdf(&[
-            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R >>",
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
             "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
             "<< /Type /StructTreeRoot /K 5 0 R /ParentTree 6 0 R >>",
@@ -1416,5 +1532,130 @@ mod tests {
             .findings
             .iter()
             .any(|finding| finding.code == TaggedPdfFindingCode::InvalidHeadingOrder));
+    }
+
+    #[test]
+    fn rejects_a_direct_structure_tree_root() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /Lang (en-US) /StructTreeRoot << /Type /StructTreeRoot /K [] /ParentTree << /Nums [] >> >> >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| finding.code == TaggedPdfFindingCode::InvalidStructureTreeRoot));
+    }
+
+    #[test]
+    fn reports_malformed_role_and_class_maps() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K [] /ParentTree 5 0 R /RoleMap << /Custom 42 >> /ClassMap 7 >>",
+            "<< /Nums [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| finding.code == TaggedPdfFindingCode::InvalidRoleMap));
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| finding.code == TaggedPdfFindingCode::InvalidClassMap));
+    }
+
+    #[test]
+    fn element_language_does_not_replace_catalog_language() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K 5 0 R /ParentTree 6 0 R >>",
+            "<< /Type /StructElem /S /Document /P 4 0 R /Lang (en-US) >>",
+            "<< /Nums [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| finding.code == TaggedPdfFindingCode::MissingDocumentLanguage));
+    }
+
+    #[test]
+    fn applies_semantic_rules_after_role_mapping() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K 5 0 R /ParentTree 6 0 R /RoleMap << /Illustration /Figure >> >>",
+            "<< /Type /StructElem /S /Illustration /P 4 0 R >>",
+            "<< /Nums [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| finding.code == TaggedPdfFindingCode::MissingAlternateText));
+    }
+
+    #[test]
+    fn numbered_headings_must_start_at_h1_and_not_mix_with_h() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K [5 0 R 6 0 R] /ParentTree 7 0 R >>",
+            "<< /Type /StructElem /S /H3 /P 4 0 R >>",
+            "<< /Type /StructElem /S /H /P 4 0 R >>",
+            "<< /Nums [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(
+            report
+                .findings
+                .iter()
+                .filter(|finding| finding.code == TaggedPdfFindingCode::InvalidHeadingOrder)
+                .count()
+                >= 2
+        );
+    }
+
+    #[test]
+    fn rejects_overlapping_parent_tree_child_ranges() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K [] /ParentTree 5 0 R >>",
+            "<< /Limits [0 2] /Kids [6 0 R 7 0 R] >>",
+            "<< /Limits [0 1] /Nums [0 null 1 null] >>",
+            "<< /Limits [1 2] /Nums [1 null 2 null] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report.findings.iter().any(|finding| {
+            finding.code == TaggedPdfFindingCode::InvalidParentTree
+                && finding.message.contains("overlap")
+        }));
+    }
+
+    #[test]
+    fn rejects_direct_mcr_stream_associations() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R >>",
+            "<< /Length 22 >>\nstream\n/P <</MCID 0>> BDC EMC\nendstream",
+            "<< /Type /StructTreeRoot /K 6 0 R /ParentTree 7 0 R >>",
+            "<< /Type /StructElem /S /P /P 5 0 R /K << /Type /MCR /Pg 3 0 R /Stm << /Length 0 >> /MCID 0 >> >>",
+            "<< /Nums [0 [6 0 R]] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| finding.code == TaggedPdfFindingCode::InvalidMarkedContentReference));
     }
 }

@@ -1011,6 +1011,12 @@ impl<W: Write> PdfWriter<W> {
             if !struct_tree.is_empty() {
                 let struct_tree_root_id = self.write_struct_tree(struct_tree)?;
                 catalog.set("StructTreeRoot", Object::Reference(struct_tree_root_id));
+                if let Some(language) = struct_tree
+                    .root()
+                    .and_then(|root| root.attributes.lang.as_ref())
+                {
+                    catalog.set("Lang", Object::String(language.clone()));
+                }
                 // Mark as Tagged PDF
                 catalog.set("MarkInfo", {
                     let mut mark_info = Dictionary::new();
