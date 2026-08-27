@@ -11,7 +11,7 @@ exclude = [
 resolver = "2"
 
 [workspace.package]
-version = "4.7.0"
+version = "4.8.0"
 edition = "2021"
 rust-version = "1.88"  # MSRV - dependency floor: subprocess (let-chains), image 0.25.10, time 0.3.47 all require 1.88
 authors = ["Santiago Fernández Muñoz"]
@@ -29,17 +29,6 @@ thiserror = "2.0.12"
 anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 lazy_static = "1.4"
-
-# CLI dependencies
-clap = { version = "4.5", features = ["derive"] }
-
-# API dependencies
-axum = "0.8.4"
-tower = "0.5.2"
-tower-http = { version = "0.6.6", features = ["cors", "trace"] }
-
-# Async runtime
-tokio = { version = "1.40", features = ["full"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -67,16 +56,11 @@ rand = "0.10"
 hex = "0.4"
 regex = "1.11"
 
-# Pro dependencies
-base64 = "0.21"
-uuid = { version = "1.0", features = ["v4"] }
 # XMP metadata parsing uses only the streaming pull-parser (Reader/Event); the
 # `serialize` (serde) feature was enabled but never used. Pinned >= 0.41 to
 # clear RUSTSEC-2026-0194/0195 (DoS in NsReader / duplicate-attribute check).
 # See issue #416.
 quick-xml = { version = "0.41" }
-reqwest = { version = "0.11", features = ["json"] }
-
 [profile.release]
 lto = true
 codegen-units = 1

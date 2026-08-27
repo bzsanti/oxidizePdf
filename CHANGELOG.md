@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [4.8.0] - 2026-08-27
+
 ### Fixed
 
 - **Semantic redaction no longer presents visual masking as irreversible
@@ -28,6 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Revision-aware semantic PDF comparison** (#543). A bounded comparison API
+  reports visual, textual, structural, metadata, security, and serialization
+  differences, attributes changes to incremental revisions, and normalizes
+  irrelevant serialization and timestamp noise.
+- **Lossless tagged-PDF validation and incremental editing** (#544). Public APIs
+  inspect structure trees and PDF/UA findings, then apply bounded edits for
+  attributes, MCID associations, ParentTree repair, element creation, and
+  reparenting while preserving unrelated bytes and enforcing DocMDP policy.
+- **Public outline and bookmark reading** (#548). `PdfDocument` can now parse
+  bounded bookmark hierarchies, styles, open state, direct and named
+  destinations, GoTo actions, and all standard destination view modes into
+  stable zero-based page indexes.
 - **Lossless incremental OCR text layers** (#542). Positioned, invisible
   Unicode text can now be appended to existing pages without rebuilding the
   document graph or changing the source-byte prefix. The editor exposes a
