@@ -26,6 +26,18 @@ fn validates_a_tagged_pdf_created_by_the_public_writer() {
     assert!(report.valid, "{:?}", report.findings);
     assert_eq!(report.elements.len(), 2);
     assert_eq!(report.parent_tree_entries, 1);
+    let root = report
+        .elements
+        .iter()
+        .find(|element| element.structure_type.as_deref() == Some("Document"))
+        .unwrap();
+    let paragraph = report
+        .elements
+        .iter()
+        .find(|element| element.structure_type.as_deref() == Some("P"))
+        .unwrap();
+    assert_eq!(root.marked_content_count, 0);
+    assert_eq!(paragraph.marked_content_count, 1);
 }
 
 #[test]
