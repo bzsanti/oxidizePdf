@@ -14,11 +14,25 @@ use std::io::Cursor;
 /// One controlled tagged-structure mutation.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TaggedPdfMutation {
+    /// Create a new indirect StructElem and insert it below an existing parent.
+    CreateElement {
+        parent: TaggedPdfObjectRef,
+        structure_type: String,
+        attributes: PdfDictionary,
+        index: Option<usize>,
+    },
     /// Set or remove a non-structural entry on an existing StructElem dictionary.
     SetElementAttribute {
         element: TaggedPdfObjectRef,
         key: String,
         value: Option<PdfObject>,
+    },
+    /// Move an existing structure element under another element or StructTreeRoot.
+    ReparentElement {
+        element: TaggedPdfObjectRef,
+        new_parent: TaggedPdfObjectRef,
+        /// Child position in the new parent's `/K`; append when omitted.
+        index: Option<usize>,
     },
     /// Associate an MCID already present in page content with a structure element.
     AssociateMcid {
@@ -34,6 +48,7 @@ pub enum TaggedPdfMutation {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TaggedPdfChangedObjectKind {
     StructureElement,
+    StructureTreeRoot,
     ParentTree,
     CrossReference,
 }
@@ -114,11 +129,43 @@ impl<'a> IncrementalTaggedPdfEditor<'a> {
 
         let parent_tree = parent_tree_reference(&mut reader)?;
         let mut replacements = BTreeMap::<TaggedPdfObjectRef, PdfDictionary>::new();
+        let mut update = IncrementalUpdate::from_reader(self.base_bytes, &reader)?;
         let mut parent_entries = validation_before.parent_tree.clone();
+        let mut current_parents: BTreeMap<_, _> = validation_before
+            .elements
+            .iter()
+            .map(|element| (element.object, element.parent))
+            .collect();
         let mut touches_parent_tree = false;
 
         for mutation in &plan.mutations {
             match mutation {
+                TaggedPdfMutation::CreateElement {
+                    parent,
+                    structure_type,
+                    attributes,
+                    index,
+                } => {
+                    let id = update.allocate_id()?;
+                    let reference = TaggedPdfObjectRef::from(id);
+                    let mut dictionary = attributes.clone();
+                    dictionary.insert(
+                        "Type".to_string(),
+                        PdfObject::Name(PdfName("StructElem".to_string())),
+                    );
+                    dictionary.insert(
+                        "S".to_string(),
+                        PdfObject::Name(PdfName(structure_type.clone())),
+                    );
+                    dictionary.insert(
+                        "P".to_string(),
+                        PdfObject::Reference(parent.object_number, parent.generation),
+                    );
+                    let parent_dictionary =
+                        replacement_dictionary(&mut reader, &mut replacements, *parent)?;
+                    insert_child_reference(parent_dictionary, reference, *index)?;
+                    update.replace(id, PdfObject::Dictionary(dictionary))?;
+                }
                 TaggedPdfMutation::SetElementAttribute {
                     element,
                     key,
@@ -127,6 +174,30 @@ impl<'a> IncrementalTaggedPdfEditor<'a> {
                     let dictionary =
                         replacement_dictionary(&mut reader, &mut replacements, *element)?;
                     set_dictionary_value(dictionary, key, value.clone());
+                }
+                TaggedPdfMutation::ReparentElement {
+                    element,
+                    new_parent,
+                    index,
+                } => {
+                    let old_parent = current_parents
+                        .get(element)
+                        .copied()
+                        .flatten()
+                        .ok_or_else(|| invalid("reparented element has no indirect parent"))?;
+                    let old_dictionary =
+                        replacement_dictionary(&mut reader, &mut replacements, old_parent)?;
+                    remove_child_reference(old_dictionary, *element)?;
+                    let new_dictionary =
+                        replacement_dictionary(&mut reader, &mut replacements, *new_parent)?;
+                    insert_child_reference(new_dictionary, *element, *index)?;
+                    let element_dictionary =
+                        replacement_dictionary(&mut reader, &mut replacements, *element)?;
+                    element_dictionary.insert(
+                        "P".to_string(),
+                        PdfObject::Reference(new_parent.object_number, new_parent.generation),
+                    );
+                    current_parents.insert(*element, Some(*new_parent));
                 }
                 TaggedPdfMutation::AssociateMcid {
                     element,
@@ -162,7 +233,6 @@ impl<'a> IncrementalTaggedPdfEditor<'a> {
             write_flat_parent_tree(dictionary, &parent_entries);
         }
 
-        let mut update = IncrementalUpdate::from_reader(self.base_bytes, &reader)?;
         for (reference, dictionary) in replacements {
             update.replace(
                 (reference.object_number, reference.generation),
@@ -212,8 +282,42 @@ fn validate_mutations(
         .iter()
         .map(|element| element.object)
         .collect();
+    let structure_root = report.structure_tree_root;
+    let mut parents: BTreeMap<_, _> = report
+        .elements
+        .iter()
+        .map(|element| (element.object, element.parent))
+        .collect();
     for mutation in mutations {
         match mutation {
+            TaggedPdfMutation::CreateElement {
+                parent,
+                structure_type,
+                attributes,
+                index,
+            } => {
+                if !elements.contains(parent) && Some(*parent) != structure_root {
+                    return Err(invalid(
+                        "creation parent is not a structure element or StructTreeRoot",
+                    ));
+                }
+                if structure_type.is_empty()
+                    || structure_type
+                        .bytes()
+                        .any(|byte| byte.is_ascii_whitespace())
+                {
+                    return Err(invalid("new structure type must be a non-empty PDF name"));
+                }
+                if ["Type", "S", "P", "K"]
+                    .iter()
+                    .any(|key| attributes.contains_key(key))
+                {
+                    return Err(invalid(
+                        "new-element attributes contain a core structure key",
+                    ));
+                }
+                validate_child_index(reader, *parent, *index, false)?;
+            }
             TaggedPdfMutation::SetElementAttribute { element, key, .. } => {
                 if !elements.contains(element) {
                     return Err(invalid(
@@ -225,6 +329,43 @@ fn validate_mutations(
                         "core structure keys cannot be edited as attributes",
                     ));
                 }
+            }
+            TaggedPdfMutation::ReparentElement {
+                element,
+                new_parent,
+                index,
+            } => {
+                if !elements.contains(element) {
+                    return Err(invalid(
+                        "reparent target is not an inspected structure element",
+                    ));
+                }
+                if !elements.contains(new_parent) && Some(*new_parent) != structure_root {
+                    return Err(invalid(
+                        "new parent is not a structure element or StructTreeRoot",
+                    ));
+                }
+                if element == new_parent {
+                    return Err(invalid("a structure element cannot parent itself"));
+                }
+                let mut ancestor = Some(*new_parent);
+                let mut seen = BTreeSet::new();
+                while let Some(candidate) = ancestor {
+                    if candidate == *element {
+                        return Err(invalid("reparenting would create a structure cycle"));
+                    }
+                    if !seen.insert(candidate) {
+                        return Err(invalid("existing parent chain contains a cycle"));
+                    }
+                    ancestor = parents.get(&candidate).copied().flatten();
+                }
+                validate_child_index(
+                    reader,
+                    *new_parent,
+                    *index,
+                    parents.get(element).copied().flatten() == Some(*new_parent),
+                )?;
+                parents.insert(*element, Some(*new_parent));
             }
             TaggedPdfMutation::AssociateMcid {
                 element,
@@ -285,8 +426,25 @@ fn build_plan(
     let mut changed = BTreeSet::new();
     let mut parent_tree_changed = false;
     let mut effective = Vec::new();
+    let mut update = IncrementalUpdate::from_reader(base_bytes, reader)?;
     for mutation in mutations {
         match mutation {
+            TaggedPdfMutation::CreateElement { parent, .. } => {
+                let object = TaggedPdfObjectRef::from(update.allocate_id()?);
+                changed.insert(TaggedPdfChangedObject {
+                    object,
+                    kind: TaggedPdfChangedObjectKind::StructureElement,
+                });
+                changed.insert(TaggedPdfChangedObject {
+                    object: *parent,
+                    kind: if Some(*parent) == report.structure_tree_root {
+                        TaggedPdfChangedObjectKind::StructureTreeRoot
+                    } else {
+                        TaggedPdfChangedObjectKind::StructureElement
+                    },
+                });
+                effective.push(mutation.clone());
+            }
             TaggedPdfMutation::SetElementAttribute {
                 element,
                 key,
@@ -300,6 +458,34 @@ fn build_plan(
                     object: *element,
                     kind: TaggedPdfChangedObjectKind::StructureElement,
                 });
+                effective.push(mutation.clone());
+            }
+            TaggedPdfMutation::ReparentElement {
+                element,
+                new_parent,
+                index,
+            } => {
+                let source = report
+                    .elements
+                    .iter()
+                    .find(|candidate| candidate.object == *element)
+                    .ok_or_else(|| invalid("reparent target disappeared"))?;
+                if source.parent == Some(*new_parent) && index.is_none() {
+                    continue;
+                }
+                let old_parent = source
+                    .parent
+                    .ok_or_else(|| invalid("reparent target has no indirect parent"))?;
+                for object in [*element, old_parent, *new_parent] {
+                    changed.insert(TaggedPdfChangedObject {
+                        object,
+                        kind: if Some(object) == report.structure_tree_root {
+                            TaggedPdfChangedObjectKind::StructureTreeRoot
+                        } else {
+                            TaggedPdfChangedObjectKind::StructureElement
+                        },
+                    });
+                }
                 effective.push(mutation.clone());
             }
             TaggedPdfMutation::AssociateMcid { element, .. } => {
@@ -327,7 +513,7 @@ fn build_plan(
         });
     }
     if !changed.is_empty() {
-        if let Some(reference) = IncrementalUpdate::from_reader(base_bytes, reader)?
+        if let Some(reference) = update
             .pending_xref_stream_id()
             .map(TaggedPdfObjectRef::from)
         {
@@ -388,6 +574,28 @@ fn replacement_dictionary<'a>(
         .expect("inserted replacement"))
 }
 
+fn validate_child_index(
+    reader: &mut PdfReader<Cursor<&[u8]>>,
+    parent: TaggedPdfObjectRef,
+    index: Option<usize>,
+    moving_within_parent: bool,
+) -> Result<()> {
+    let Some(index) = index else { return Ok(()) };
+    let dictionary = resolve_dictionary(reader, parent)?;
+    let mut child_count = match dictionary.get("K") {
+        None => 0,
+        Some(PdfObject::Array(children)) => children.0.len(),
+        Some(_) => 1,
+    };
+    if moving_within_parent {
+        child_count = child_count.saturating_sub(1);
+    }
+    if index > child_count {
+        return Err(invalid("new-parent child index is out of bounds"));
+    }
+    Ok(())
+}
+
 fn set_dictionary_value(dictionary: &mut PdfDictionary, key: &str, value: Option<PdfObject>) {
     if let Some(value) = value {
         dictionary.insert(key.to_string(), value);
@@ -419,6 +627,52 @@ fn append_mcid(dictionary: &mut PdfDictionary, page: TaggedPdfObjectRef, mcid: u
             PdfObject::Array(PdfArray(vec![existing, mcr])),
         ),
     }
+}
+
+fn remove_child_reference(dictionary: &mut PdfDictionary, child: TaggedPdfObjectRef) -> Result<()> {
+    let target = (child.object_number, child.generation);
+    match dictionary.get("K").cloned() {
+        Some(PdfObject::Reference(number, generation)) if (number, generation) == target => {
+            dictionary.0.remove(&PdfName("K".to_string()));
+            Ok(())
+        }
+        Some(PdfObject::Array(mut children)) => {
+            let before = children.0.len();
+            children
+                .0
+                .retain(|value| value.as_reference() != Some(target));
+            if children.0.len() == before {
+                return Err(invalid("old parent does not contain the reparented child"));
+            }
+            if children.0.is_empty() {
+                dictionary.0.remove(&PdfName("K".to_string()));
+            } else {
+                dictionary.insert("K".to_string(), PdfObject::Array(children));
+            }
+            Ok(())
+        }
+        _ => Err(invalid("old parent does not contain the reparented child")),
+    }
+}
+
+fn insert_child_reference(
+    dictionary: &mut PdfDictionary,
+    child: TaggedPdfObjectRef,
+    index: Option<usize>,
+) -> Result<()> {
+    let child = PdfObject::Reference(child.object_number, child.generation);
+    let mut children = match dictionary.get("K").cloned() {
+        None => PdfArray::new(),
+        Some(PdfObject::Array(children)) => children,
+        Some(existing) => PdfArray(vec![existing]),
+    };
+    let index = index.unwrap_or(children.0.len());
+    if index > children.0.len() {
+        return Err(invalid("new-parent child index is out of bounds"));
+    }
+    children.0.insert(index, child);
+    dictionary.insert("K".to_string(), PdfObject::Array(children));
+    Ok(())
 }
 
 fn set_parent_owner(
@@ -529,5 +783,103 @@ mod tests {
                 PdfObject::Reference(6, 0),
             ])))
         );
+    }
+
+    #[test]
+    fn reparents_an_element_losslessly_and_rejects_cycles() {
+        let base = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K [5 0 R 6 0 R] /ParentTree 8 0 R >>",
+            "<< /Type /StructElem /S /Sect /P 4 0 R /K 7 0 R /OldKey /Preserved >>",
+            "<< /Type /StructElem /S /Sect /P 4 0 R /NewKey /Preserved >>",
+            "<< /Type /StructElem /S /P /P 5 0 R /CustomNS << /Value 9 >> >>",
+            "<< /Nums [] >>",
+        ]);
+        let mutation = TaggedPdfMutation::ReparentElement {
+            element: TaggedPdfObjectRef::from((7, 0)),
+            new_parent: TaggedPdfObjectRef::from((6, 0)),
+            index: Some(0),
+        };
+        let editor = IncrementalTaggedPdfEditor::new(&base);
+        let plan = editor.plan(std::slice::from_ref(&mutation)).unwrap();
+        assert_eq!(plan.changed_objects.len(), 3);
+        let update = editor.apply(&[mutation]).unwrap();
+        assert!(update.pdf_bytes.starts_with(&base));
+        assert!(
+            update.validation_after.valid,
+            "{:?}",
+            update.validation_after.findings
+        );
+        let moved = update
+            .validation_after
+            .elements
+            .iter()
+            .find(|element| element.object == TaggedPdfObjectRef::from((7, 0)))
+            .unwrap();
+        assert_eq!(moved.parent, Some(TaggedPdfObjectRef::from((6, 0))));
+        assert!(moved.dictionary.contains_key("CustomNS"));
+
+        let cycle = TaggedPdfMutation::ReparentElement {
+            element: TaggedPdfObjectRef::from((6, 0)),
+            new_parent: TaggedPdfObjectRef::from((7, 0)),
+            index: None,
+        };
+        assert!(IncrementalTaggedPdfEditor::new(&update.pdf_bytes)
+            .plan(&[cycle])
+            .is_err());
+
+        let collective_cycle = [
+            TaggedPdfMutation::ReparentElement {
+                element: TaggedPdfObjectRef::from((5, 0)),
+                new_parent: TaggedPdfObjectRef::from((6, 0)),
+                index: None,
+            },
+            TaggedPdfMutation::ReparentElement {
+                element: TaggedPdfObjectRef::from((6, 0)),
+                new_parent: TaggedPdfObjectRef::from((5, 0)),
+                index: None,
+            },
+        ];
+        assert!(IncrementalTaggedPdfEditor::new(&base)
+            .plan(&collective_cycle)
+            .is_err());
+
+        let mut attributes = PdfDictionary::new();
+        attributes.insert("CustomCreated".to_string(), PdfObject::Boolean(true));
+        let creation = TaggedPdfMutation::CreateElement {
+            parent: TaggedPdfObjectRef::from((6, 0)),
+            structure_type: "Span".to_string(),
+            attributes,
+            index: None,
+        };
+        let mut invalid_index = creation.clone();
+        if let TaggedPdfMutation::CreateElement { index, .. } = &mut invalid_index {
+            *index = Some(usize::MAX);
+        }
+        assert!(IncrementalTaggedPdfEditor::new(&update.pdf_bytes)
+            .plan(&[invalid_index])
+            .is_err());
+        let editor = IncrementalTaggedPdfEditor::new(&update.pdf_bytes);
+        let plan = editor.plan(std::slice::from_ref(&creation)).unwrap();
+        let created = plan
+            .changed_objects
+            .iter()
+            .find(|changed| {
+                changed.kind == TaggedPdfChangedObjectKind::StructureElement
+                    && changed.object.object_number > 8
+            })
+            .unwrap()
+            .object;
+        let created_update = editor.apply(&[creation]).unwrap();
+        let created_element = created_update
+            .validation_after
+            .elements
+            .iter()
+            .find(|element| element.object == created)
+            .unwrap();
+        assert_eq!(created_element.structure_type.as_deref(), Some("Span"));
+        assert!(created_element.dictionary.contains_key("CustomCreated"));
     }
 }

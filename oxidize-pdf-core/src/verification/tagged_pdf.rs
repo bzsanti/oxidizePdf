@@ -202,6 +202,7 @@ struct Validator<'a, R: Read + Seek> {
     current_content_context: Option<TaggedPdfObjectRef>,
     active_content: HashSet<TaggedPdfObjectRef>,
     last_mcid_by_owner: HashMap<TaggedPdfObjectRef, i64>,
+    last_mcid_by_context: HashMap<TaggedPdfObjectRef, i64>,
     objr_counts: HashMap<TaggedPdfObjectRef, usize>,
     decoded_content_bytes: usize,
     catalog_language: bool,
@@ -230,6 +231,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             current_content_context: None,
             active_content: HashSet::new(),
             last_mcid_by_owner: HashMap::new(),
+            last_mcid_by_context: HashMap::new(),
             objr_counts: HashMap::new(),
             decoded_content_bytes: 0,
             catalog_language: false,
@@ -526,7 +528,13 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         };
         let kind = dict.get_type();
         if kind == Some("OBJR") {
-            self.validate_objr(&dict, expected_parent, inherited_page, path)?;
+            self.validate_objr(
+                &dict,
+                expected_parent,
+                expected_parent_type,
+                inherited_page,
+                path,
+            )?;
             if let Some(reference) = object_ref {
                 self.active.remove(&reference);
             }
@@ -584,6 +592,9 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             path,
             object_ref,
         );
+        if matches!(resolved_type.as_deref(), Some("TH" | "TD")) {
+            self.validate_table_cell(&dict, resolved_type.as_deref().unwrap(), path, object_ref);
+        }
         if matches!(resolved_type.as_deref(), Some("Figure" | "Formula"))
             && alternate_text.is_none()
             && actual_text.is_none()
@@ -745,10 +756,59 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         }
     }
 
+    fn validate_table_cell(
+        &mut self,
+        dict: &PdfDictionary,
+        cell_type: &str,
+        path: &str,
+        object: Option<TaggedPdfObjectRef>,
+    ) {
+        for key in ["RowSpan", "ColSpan"] {
+            if table_attribute(dict, key)
+                .and_then(PdfObject::as_integer)
+                .is_some_and(|span| span < 1)
+            {
+                self.finding(
+                    TaggedPdfFindingSeverity::Error,
+                    TaggedPdfFindingCode::InvalidTableStructure,
+                    format!("{path}/A/{key}"),
+                    format!("table-cell {key} must be a positive integer"),
+                    object,
+                );
+            }
+        }
+        if cell_type != "TH" {
+            return;
+        }
+        let scope = table_attribute(dict, "Scope").and_then(PdfObject::as_name);
+        if scope.is_some_and(|scope| !matches!(scope.as_str(), "Row" | "Column" | "Both")) {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::InvalidTableStructure,
+                format!("{path}/A/Scope"),
+                "TH Scope must be Row, Column, or Both",
+                object,
+            );
+        }
+        let has_headers = table_attribute(dict, "Headers")
+            .and_then(PdfObject::as_array)
+            .is_some_and(|headers| !headers.0.is_empty());
+        if scope.is_none() && !has_headers {
+            self.finding(
+                TaggedPdfFindingSeverity::Warning,
+                TaggedPdfFindingCode::InvalidTableStructure,
+                format!("{path}/A"),
+                "TH should define Scope or Headers so data cells can identify their headers",
+                object,
+            );
+        }
+    }
+
     fn validate_objr(
         &mut self,
         dict: &PdfDictionary,
         owner: Option<TaggedPdfObjectRef>,
+        owner_type: Option<&str>,
         inherited_page: Option<TaggedPdfObjectRef>,
         path: &str,
     ) -> Result<()> {
@@ -773,6 +833,34 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             .reader
             .get_object(object.object_number, object.generation)?
             .clone();
+        if owner_type == Some("Link") {
+            let annotation = referenced
+                .as_dict()
+                .or_else(|| referenced.as_stream().map(|stream| &stream.dict));
+            if annotation
+                .and_then(|dictionary| dictionary.get("Subtype"))
+                .and_then(PdfObject::as_name)
+                .is_none_or(|subtype| subtype.as_str() != "Link")
+            {
+                self.finding(
+                    TaggedPdfFindingSeverity::Error,
+                    TaggedPdfFindingCode::InvalidLinkStructure,
+                    format!("{path}/Obj/Subtype"),
+                    "OBJR child of Link must reference a Link annotation",
+                    owner,
+                );
+            } else if annotation.is_some_and(|dictionary| {
+                !dictionary.contains_key("A") && !dictionary.contains_key("Dest")
+            }) {
+                self.finding(
+                    TaggedPdfFindingSeverity::Error,
+                    TaggedPdfFindingCode::InvalidLinkStructure,
+                    format!("{path}/Obj"),
+                    "Link annotation has neither an action nor a destination",
+                    owner,
+                );
+            }
+        }
         let Some(key) = referenced
             .as_dict()
             .or_else(|| referenced.as_stream().map(|stream| &stream.dict))
@@ -898,6 +986,19 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             .and_then(PdfObject::as_reference)
             .map(TaggedPdfObjectRef::from)
             .unwrap_or(page);
+        if self
+            .last_mcid_by_context
+            .insert(context, mcid)
+            .is_some_and(|previous| mcid <= previous)
+        {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::InvalidReadingOrder,
+                format!("{path}/MCID"),
+                "logical structure order does not follow marked-content order in its content context",
+                owner,
+            );
+        }
         let context_object = if context == page {
             page_object
         } else {
@@ -1508,6 +1609,17 @@ fn text_value(value: Option<&PdfObject>) -> Option<String> {
         .filter(|value| !value.trim().is_empty())
 }
 
+fn table_attribute<'a>(dictionary: &'a PdfDictionary, key: &str) -> Option<&'a PdfObject> {
+    dictionary.get(key).or_else(|| match dictionary.get("A") {
+        Some(PdfObject::Dictionary(attributes)) => attributes.get(key),
+        Some(PdfObject::Array(attributes)) => attributes
+            .0
+            .iter()
+            .find_map(|value| value.as_dict().and_then(|attributes| attributes.get(key))),
+        _ => None,
+    })
+}
+
 fn artifact_subtype(properties: &MarkedContentProps) -> Option<String> {
     match properties {
         MarkedContentProps::Inline(values) => values.get("Subtype").and_then(|value| match value {
@@ -2007,5 +2119,48 @@ mod tests {
             .findings
             .iter()
             .any(|finding| finding.code == TaggedPdfFindingCode::InvalidReadingOrder));
+    }
+
+    #[test]
+    fn rejects_logical_order_that_reverses_page_content() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] /StructParents 0 /Contents 4 0 R >>",
+            "<< /Length 44 >>\nstream\n/P <</MCID 0>> BDC EMC /P <</MCID 1>> BDC EMC\nendstream",
+            "<< /Type /StructTreeRoot /K [7 0 R 6 0 R] /ParentTree 8 0 R >>",
+            "<< /Type /StructElem /S /P /P 5 0 R /Pg 3 0 R /K 0 >>",
+            "<< /Type /StructElem /S /P /P 5 0 R /Pg 3 0 R /K 1 >>",
+            "<< /Nums [0 [6 0 R 7 0 R]] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report.findings.iter().any(|finding| {
+            finding.code == TaggedPdfFindingCode::InvalidReadingOrder
+                && finding.message.contains("logical structure order")
+        }));
+    }
+
+    #[test]
+    fn validates_table_header_attributes_and_link_annotation_semantics() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K [5 0 R 6 0 R] /ParentTree 9 0 R >>",
+            "<< /Type /StructElem /S /TH /P 4 0 R /A << /O /Table /Scope /Invalid /RowSpan 0 >> >>",
+            "<< /Type /StructElem /S /Link /P 4 0 R /K << /Type /OBJR /Obj 7 0 R >> >>",
+            "<< /Type /Annot /Subtype /Text /StructParent 0 >>",
+            "null",
+            "<< /Nums [0 6 0 R] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report.findings.iter().any(|finding| {
+            finding.code == TaggedPdfFindingCode::InvalidTableStructure
+                && finding.path.ends_with("RowSpan")
+        }));
+        assert!(report.findings.iter().any(|finding| {
+            finding.code == TaggedPdfFindingCode::InvalidLinkStructure
+                && finding.path.ends_with("Subtype")
+        }));
     }
 }
