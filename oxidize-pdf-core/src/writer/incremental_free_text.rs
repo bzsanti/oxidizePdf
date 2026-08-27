@@ -3,8 +3,12 @@
 use super::incremental_annotations::{subtype, AnnotationContainer, AnnotationSnapshot, PageState};
 use super::incremental_update::IncrementalUpdate;
 use crate::error::{PdfError, Result};
-use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfString};
+use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfStream, PdfString};
+use crate::parser::PdfReader;
+use crate::signatures::{ensure_modification_allowed, IncrementalModification};
+use crate::text::{escape_pdf_string_literal, TextEncoding};
 use std::collections::{HashMap, HashSet};
+use std::io::Cursor;
 
 /// Stable indirect-object identity of a free-text annotation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -161,6 +165,7 @@ impl<'a> IncrementalFreeTextEditor<'a> {
             });
         }
         validate_batch(&snapshot, mutations)?;
+        validate_policy(self.base_bytes)?;
 
         let mut update = IncrementalUpdate::from_base(self.base_bytes)?;
         let mut changed_pages = HashSet::new();
@@ -176,8 +181,17 @@ impl<'a> IncrementalFreeTextEditor<'a> {
                     alignment,
                 } => {
                     let id = update.allocate_id()?;
-                    let dictionary =
-                        new_dictionary(*rect, contents, default_appearance, *alignment);
+                    let appearance_id = update.allocate_id()?;
+                    let appearance =
+                        build_appearance(*rect, contents, default_appearance, *alignment)?;
+                    update.replace(appearance_id, PdfObject::Stream(appearance))?;
+                    let dictionary = new_dictionary(
+                        *rect,
+                        contents,
+                        default_appearance,
+                        *alignment,
+                        appearance_id,
+                    );
                     update.replace(id, PdfObject::Dictionary(dictionary.clone()))?;
                     snapshot.pages[*page_index as usize]
                         .annotations
@@ -201,15 +215,29 @@ impl<'a> IncrementalFreeTextEditor<'a> {
                 } => {
                     let state = target(&snapshot, *id)?;
                     let mut dictionary = state.dictionary.clone();
+                    let appearance_id = update.allocate_id()?;
+                    let appearance =
+                        build_appearance(*rect, contents, default_appearance, *alignment)?;
+                    update.replace(appearance_id, PdfObject::Stream(appearance))?;
                     set_properties(
                         &mut dictionary,
                         *rect,
                         contents,
                         default_appearance,
                         *alignment,
+                        appearance_id,
                     );
                     rewritten.insert(*id, dictionary.clone());
-                    snapshot.annotations.get_mut(id).unwrap().dictionary = dictionary;
+                    snapshot
+                        .annotations
+                        .get_mut(id)
+                        .ok_or_else(|| {
+                            PdfError::InvalidStructure(format!(
+                                "annotation {} {} disappeared during batch application",
+                                id.object_number, id.generation_number
+                            ))
+                        })?
+                        .dictionary = dictionary;
                 }
                 FreeTextMutation::Remove { id } => {
                     let page_index = target(&snapshot, *id)?.page_index;
@@ -422,12 +450,7 @@ fn validate_contents(contents: &str) -> Result<()> {
 }
 
 fn validate_default_appearance(value: &str) -> Result<()> {
-    if value.trim().is_empty() || !value.is_ascii() || value.contains('\0') {
-        return Err(PdfError::InvalidStructure(
-            "free-text default appearance must be non-empty ASCII and contain no NUL".to_string(),
-        ));
-    }
-    Ok(())
+    AppearanceSpec::parse(value).map(|_| ())
 }
 
 fn parse_rectangle(dictionary: &PdfDictionary) -> Result<[f64; 4]> {
@@ -473,11 +496,215 @@ fn required_text(dictionary: &PdfDictionary, key: &str) -> Result<String> {
         })
 }
 
+struct AppearanceSpec {
+    resource_name: String,
+    base_font: &'static str,
+    font_size: f64,
+}
+
+impl AppearanceSpec {
+    fn parse(value: &str) -> Result<Self> {
+        if value.trim().is_empty() || !value.is_ascii() || value.contains('\0') {
+            return Err(PdfError::InvalidStructure(
+                "free-text default appearance must be non-empty ASCII and contain no NUL"
+                    .to_string(),
+            ));
+        }
+        let tokens: Vec<_> = value.split_whitespace().collect();
+        let font_at = tokens
+            .windows(3)
+            .position(|window| window[0].starts_with('/') && window[2] == "Tf")
+            .ok_or_else(|| {
+                PdfError::InvalidStructure(
+                    "free-text default appearance must contain '/Font size Tf'".to_string(),
+                )
+            })?;
+        let resource_name = &tokens[font_at][1..];
+        let base_font = base_font(resource_name).ok_or_else(|| {
+            PdfError::InvalidStructure(format!(
+                "free-text default appearance font /{resource_name} is not a supported non-symbolic base-14 font"
+            ))
+        })?;
+        let font_size = parse_finite(tokens[font_at + 1], "font size")?;
+        if font_size <= 0.0 {
+            return Err(PdfError::InvalidStructure(
+                "free-text default appearance font size must be positive".to_string(),
+            ));
+        }
+
+        let remaining: Vec<_> = tokens
+            .iter()
+            .enumerate()
+            .filter_map(|(index, token)| {
+                (!(font_at..font_at + 3).contains(&index)).then_some(*token)
+            })
+            .collect();
+        validate_color_tokens(&remaining)?;
+        Ok(Self {
+            resource_name: resource_name.to_string(),
+            base_font,
+            font_size,
+        })
+    }
+}
+
+fn parse_finite(token: &str, description: &str) -> Result<f64> {
+    let value = token.parse::<f64>().map_err(|_| {
+        PdfError::InvalidStructure(format!(
+            "free-text default appearance {description} is not numeric"
+        ))
+    })?;
+    if !value.is_finite() {
+        return Err(PdfError::InvalidStructure(format!(
+            "free-text default appearance {description} must be finite"
+        )));
+    }
+    Ok(value)
+}
+
+fn validate_color_tokens(tokens: &[&str]) -> Result<()> {
+    let component_count = match tokens.last().copied() {
+        None => return Ok(()),
+        Some("g") if tokens.len() == 2 => 1,
+        Some("rg") if tokens.len() == 4 => 3,
+        Some("k") if tokens.len() == 5 => 4,
+        _ => {
+            return Err(PdfError::InvalidStructure(
+                "free-text default appearance may contain only one base-14 font and an optional g, rg, or k color"
+                    .to_string(),
+            ))
+        }
+    };
+    for token in &tokens[..component_count] {
+        let component = parse_finite(token, "color component")?;
+        if !(0.0..=1.0).contains(&component) {
+            return Err(PdfError::InvalidStructure(
+                "free-text default appearance color components must be in the range 0..=1"
+                    .to_string(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn base_font(resource_name: &str) -> Option<&'static str> {
+    match resource_name {
+        "Helv" | "Helvetica" => Some("Helvetica"),
+        "Helvetica-Bold" => Some("Helvetica-Bold"),
+        "Helvetica-Oblique" => Some("Helvetica-Oblique"),
+        "Helvetica-BoldOblique" => Some("Helvetica-BoldOblique"),
+        "Times-Roman" => Some("Times-Roman"),
+        "Times-Bold" => Some("Times-Bold"),
+        "Times-Italic" => Some("Times-Italic"),
+        "Times-BoldItalic" => Some("Times-BoldItalic"),
+        "Courier" => Some("Courier"),
+        "Courier-Bold" => Some("Courier-Bold"),
+        "Courier-Oblique" => Some("Courier-Oblique"),
+        "Courier-BoldOblique" => Some("Courier-BoldOblique"),
+        _ => None,
+    }
+}
+
+fn build_appearance(
+    rect: [f64; 4],
+    contents: &str,
+    default_appearance: &str,
+    alignment: FreeTextAlignment,
+) -> Result<PdfStream> {
+    let spec = AppearanceSpec::parse(default_appearance)?;
+    let width = rect[2] - rect[0];
+    let height = rect[3] - rect[1];
+    let padding = 2.0;
+    let line_height = spec.font_size * 1.2;
+    let mut content = format!(
+        "q\n0 0 {} {} re W n\nBT\n",
+        pdf_number(width),
+        pdf_number(height)
+    );
+    content.push_str(default_appearance);
+    content.push('\n');
+    for (line_index, line) in contents.lines().enumerate() {
+        let encoded = TextEncoding::WinAnsiEncoding.encode(line);
+        let estimated_width = encoded.len() as f64 * spec.font_size * 0.5;
+        let x = match alignment {
+            FreeTextAlignment::Left => padding,
+            FreeTextAlignment::Center => ((width - estimated_width) / 2.0).max(padding),
+            FreeTextAlignment::Right => (width - estimated_width - padding).max(padding),
+        };
+        let y = height - padding - spec.font_size - line_index as f64 * line_height;
+        if y < 0.0 {
+            break;
+        }
+        content.push_str(&format!(
+            "1 0 0 1 {} {} Tm\n({}) Tj\n",
+            pdf_number(x),
+            pdf_number(y),
+            escape_pdf_string_literal(&encoded)
+        ));
+    }
+    content.push_str("ET\nQ");
+
+    let mut font = PdfDictionary::new();
+    font.insert("Type".to_string(), name("Font"));
+    font.insert("Subtype".to_string(), name("Type1"));
+    font.insert("BaseFont".to_string(), name(spec.base_font));
+    font.insert("Encoding".to_string(), name("WinAnsiEncoding"));
+    let mut fonts = PdfDictionary::new();
+    fonts.insert(spec.resource_name, PdfObject::Dictionary(font));
+    let mut resources = PdfDictionary::new();
+    resources.insert("Font".to_string(), PdfObject::Dictionary(fonts));
+
+    let mut dictionary = PdfDictionary::new();
+    dictionary.insert("Type".to_string(), name("XObject"));
+    dictionary.insert("Subtype".to_string(), name("Form"));
+    dictionary.insert("FormType".to_string(), PdfObject::Integer(1));
+    dictionary.insert("BBox".to_string(), rectangle([0.0, 0.0, width, height]));
+    dictionary.insert("Resources".to_string(), PdfObject::Dictionary(resources));
+    Ok(PdfStream {
+        dict: dictionary,
+        data: content.into_bytes(),
+    })
+}
+
+fn pdf_number(value: f64) -> String {
+    let mut formatted = format!("{value:.6}");
+    while formatted.contains('.') && formatted.ends_with('0') {
+        formatted.pop();
+    }
+    if formatted.ends_with('.') {
+        formatted.pop();
+    }
+    if formatted == "-0" {
+        "0".to_string()
+    } else {
+        formatted
+    }
+}
+
+fn name(value: &str) -> PdfObject {
+    PdfObject::Name(PdfName(value.to_string()))
+}
+
+fn validate_policy(bytes: &[u8]) -> Result<()> {
+    let mut reader = PdfReader::new(Cursor::new(bytes))
+        .map_err(|error| PdfError::InvalidStructure(format!("parse base PDF: {error}")))?;
+    let catalog = reader
+        .catalog()
+        .map_err(|error| PdfError::InvalidStructure(format!("read catalog: {error}")))?
+        .clone();
+    ensure_modification_allowed(
+        &mut reader,
+        &catalog,
+        IncrementalModification::AddAnnotation,
+    )
+}
+
 fn new_dictionary(
     rect: [f64; 4],
     contents: &str,
     default_appearance: &str,
     alignment: FreeTextAlignment,
+    appearance_id: (u32, u16),
 ) -> PdfDictionary {
     let mut dictionary = PdfDictionary::new();
     dictionary.insert(
@@ -494,6 +721,7 @@ fn new_dictionary(
         contents,
         default_appearance,
         alignment,
+        appearance_id,
     );
     dictionary
 }
@@ -504,6 +732,7 @@ fn set_properties(
     contents: &str,
     default_appearance: &str,
     alignment: FreeTextAlignment,
+    appearance_id: (u32, u16),
 ) {
     dictionary.insert("Rect".to_string(), rectangle(rect));
     dictionary.insert("Contents".to_string(), unicode_text(contents));
@@ -512,6 +741,12 @@ fn set_properties(
         PdfObject::String(PdfString(default_appearance.as_bytes().to_vec())),
     );
     dictionary.insert("Q".to_string(), PdfObject::Integer(alignment.pdf_value()));
+    let mut appearance = PdfDictionary::new();
+    appearance.insert(
+        "N".to_string(),
+        PdfObject::Reference(appearance_id.0, appearance_id.1),
+    );
+    dictionary.insert("AP".to_string(), PdfObject::Dictionary(appearance));
 }
 
 fn rectangle(rect: [f64; 4]) -> PdfObject {

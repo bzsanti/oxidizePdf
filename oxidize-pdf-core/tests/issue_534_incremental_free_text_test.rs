@@ -11,9 +11,10 @@ fn classic_base() -> Vec<u8> {
         (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
         (2, b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
         (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots 6 0 R /CustomPageKey 42 >>"),
-        (4, b"<< /Type /Annot /Subtype /FreeText /Rect [10 20 140 70] /Contents (old) /DA (/Helv 10 Tf 0 g) /Q 0 /CustomKey (preserve-me) >>"),
+        (4, b"<< /Type /Annot /Subtype /FreeText /Rect [10 20 140 70] /Contents (old) /DA (/Helv 10 Tf 0 g) /Q 0 /AP << /N 7 0 R >> /CustomKey (preserve-me) >>"),
         (5, b"<< /Type /Annot /Subtype /Link /Rect [1 1 5 5] /CustomLinkKey 99 >>"),
         (6, b"[4 0 R 5 0 R]"),
+        (7, b"<< /Type /XObject /Subtype /Form /BBox [0 0 130 50] /Length 3 >>\nstream\nold\nendstream"),
     ])
 }
 
@@ -36,6 +37,43 @@ fn build_classic(objects: &[(u32, &[u8])]) -> Vec<u8> {
         format!("trailer\n<< /Size {size} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n").as_bytes(),
     );
     out
+}
+
+fn build_classic_generations(objects: &[(u32, u16, &[u8])]) -> Vec<u8> {
+    let mut out = b"%PDF-1.7\n".to_vec();
+    let size = objects.iter().map(|item| item.0).max().unwrap_or(0) + 1;
+    let mut entries = vec![None; size as usize];
+    for (number, generation, body) in objects {
+        entries[*number as usize] = Some((out.len(), *generation));
+        out.extend_from_slice(format!("{number} {generation} obj\n").as_bytes());
+        out.extend_from_slice(body);
+        out.extend_from_slice(b"\nendobj\n");
+    }
+    let xref = out.len();
+    out.extend_from_slice(format!("xref\n0 {size}\n0000000000 65535 f \n").as_bytes());
+    for entry in entries.iter().skip(1) {
+        match entry {
+            Some((offset, generation)) => {
+                out.extend_from_slice(format!("{offset:010} {generation:05} n \n").as_bytes())
+            }
+            None => out.extend_from_slice(b"0000000000 00000 f \n"),
+        }
+    }
+    out.extend_from_slice(
+        format!("trailer\n<< /Size {size} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n").as_bytes(),
+    );
+    out
+}
+
+fn replace_policy(source: &[u8], permission: u8) -> Vec<u8> {
+    let mut result = source.to_vec();
+    let marker = b"/P 2";
+    let offset = result
+        .windows(marker.len())
+        .position(|window| window == marker)
+        .expect("fixture must contain DocMDP P=2");
+    result[offset + 3] = b'0' + permission;
+    result
 }
 
 fn xref_stream_base() -> Vec<u8> {
@@ -170,8 +208,70 @@ fn mixed_batch_is_atomic_round_trips_unicode_and_preserves_unknown_keys() {
         "preserve-me"
     );
     assert_eq!(dictionary.get("Q"), Some(&PdfObject::Integer(2)));
+    let appearance_id = dictionary
+        .get("AP")
+        .and_then(PdfObject::as_dict)
+        .and_then(|appearance| appearance.get("N"))
+        .and_then(PdfObject::as_reference)
+        .expect("updated annotation must reference a normal appearance stream");
+    assert_ne!(appearance_id, (7, 0), "stale appearance must be replaced");
+    let appearance = reader
+        .get_object(appearance_id.0, appearance_id.1)
+        .unwrap()
+        .as_stream()
+        .unwrap();
+    assert!(appearance
+        .data
+        .windows(8)
+        .any(|window| window == b"l\\355nea"));
+    assert!(appearance.dict.get("Resources").is_some());
     let link = reader.get_object(5, 0).unwrap().as_dict().unwrap();
     assert_eq!(link.get("CustomLinkKey"), Some(&PdfObject::Integer(99)));
+}
+
+#[test]
+fn preserves_nonzero_generation_identities() {
+    let base = build_classic_generations(&[
+        (1, 0, b"<< /Type /Catalog /Pages 2 0 R >>"),
+        (2, 0, b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
+        (3, 0, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots [4 7 R] >>"),
+        (4, 7, b"<< /Type /Annot /Subtype /FreeText /Rect [10 20 140 70] /Contents (generation) /DA (/Helv 10 Tf 0 g) >>"),
+    ]);
+    let annotations = IncrementalFreeTextEditor::new(&base).annotations().unwrap();
+    assert_eq!(annotations[0].id, FreeTextId::new(4, 7));
+    let update = IncrementalFreeTextEditor::new(&base)
+        .apply(&[FreeTextMutation::Update {
+            id: FreeTextId::new(4, 7),
+            rect: [20.0, 30.0, 150.0, 80.0],
+            contents: "updated".to_string(),
+            default_appearance: "/Helv 11 Tf 0 g".to_string(),
+            alignment: FreeTextAlignment::Left,
+        }])
+        .unwrap();
+    assert_eq!(update.annotations[0].id, FreeTextId::new(4, 7));
+}
+
+#[test]
+fn enforces_docmdp_and_preserves_approval_signed_prefixes() {
+    let certified_p2 = include_bytes!("fixtures/signatures/docmdp_p2_rsa.pdf");
+    for source in [replace_policy(certified_p2, 1), certified_p2.to_vec()] {
+        let error = IncrementalFreeTextEditor::new(&source)
+            .apply(&[add_mutation("forbidden")])
+            .unwrap_err();
+        assert!(matches!(error, PdfError::PermissionDenied(message) if message.contains("DocMDP")));
+    }
+
+    let certified_p3 = replace_policy(certified_p2, 3);
+    let allowed = IncrementalFreeTextEditor::new(&certified_p3)
+        .apply(&[add_mutation("allowed")])
+        .unwrap();
+    assert!(allowed.pdf_bytes.starts_with(&certified_p3));
+
+    let approval = include_bytes!("fixtures/signatures/signed_rsa_incremental.pdf");
+    let approval_update = IncrementalFreeTextEditor::new(approval)
+        .apply(&[add_mutation("approval")])
+        .unwrap();
+    assert!(approval_update.pdf_bytes.starts_with(approval));
 }
 
 #[test]
@@ -302,6 +402,25 @@ fn rejects_invalid_properties_pages_stale_ids_and_conflicting_batches() {
         IncrementalFreeTextEditor::new(&base).apply(&[non_ascii_appearance]),
         "ASCII",
     );
+    for appearance in [
+        "/Unknown 10 Tf 0 g",
+        "/Helv nope Tf 0 g",
+        "/Helv 0 Tf 0 g",
+        "/Helv 10 Tf 2 0 0 rg",
+        "/Helv 10 Tf q",
+    ] {
+        let mutation = FreeTextMutation::Add {
+            page_index: 0,
+            rect: [20.0, 100.0, 180.0, 150.0],
+            contents: "valid".to_string(),
+            default_appearance: appearance.to_string(),
+            alignment: FreeTextAlignment::Left,
+        };
+        assert_invalid(
+            IncrementalFreeTextEditor::new(&base).apply(&[mutation]),
+            "default appearance",
+        );
+    }
     assert_invalid(
         IncrementalFreeTextEditor::new(&base).apply(&[FreeTextMutation::Remove {
             id: FreeTextId::new(99, 0),
