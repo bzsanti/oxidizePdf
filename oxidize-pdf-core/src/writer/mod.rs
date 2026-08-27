@@ -5,6 +5,7 @@ mod incremental_annotations;
 mod incremental_form_fill;
 mod incremental_highlights;
 mod incremental_ocr_layer;
+mod incremental_tagged_pdf;
 mod incremental_text_notes;
 mod incremental_update;
 mod object_streams;
@@ -23,6 +24,10 @@ pub use incremental_highlights::{
 };
 pub use incremental_ocr_layer::{
     IncrementalOcrLayerEditor, OcrLayerFragment, OcrLayerPage, OcrLayerPlan, OcrLayerUpdate,
+};
+pub use incremental_tagged_pdf::{
+    IncrementalTaggedPdfEditor, TaggedPdfChangedObject, TaggedPdfChangedObjectKind,
+    TaggedPdfEditPlan, TaggedPdfMutation, TaggedPdfMutationReport,
 };
 pub use incremental_text_notes::{
     IncrementalTextNoteEditor, TextNote, TextNoteId, TextNoteMutation, TextNoteUpdate,
