@@ -123,20 +123,22 @@ impl<R: Read + Seek> OutlineParser<'_, R> {
             if dictionary.get("Prev").and_then(PdfObject::as_reference) != previous {
                 return Err(malformed("outline item Prev link is inconsistent"));
             }
-            let title = dictionary
-                .get("Title")
+            let title = self
+                .resolve_optional(dictionary.get("Title"))?
+                .as_ref()
                 .and_then(PdfObject::as_string)
                 .map(|title| title.to_text())
                 .ok_or_else(|| malformed("outline item has no string Title"))?;
             let destination = self.read_item_destination(&dictionary, path)?;
-            let flags = dictionary
-                .get("F")
+            let flags = self
+                .resolve_optional(dictionary.get("F"))?
+                .as_ref()
                 .and_then(PdfObject::as_integer)
                 .unwrap_or(0);
             if flags < 0 || flags & !3 != 0 {
                 return Err(malformed("outline item F contains unsupported flag bits"));
             }
-            let color = read_color(dictionary.get("C"))?;
+            let color = read_color(self.resolve_optional(dictionary.get("C"))?.as_ref())?;
             let first_child = dictionary
                 .get("First")
                 .map(|value| require_reference(value, "outline First"))
@@ -156,8 +158,9 @@ impl<R: Read + Seek> OutlineParser<'_, R> {
                 }
                 None => Vec::new(),
             };
-            let open = dictionary
-                .get("Count")
+            let open = self
+                .resolve_optional(dictionary.get("Count"))?
+                .as_ref()
                 .and_then(PdfObject::as_integer)
                 .map_or(true, |count| count >= 0);
             result.push(OutlineItem {
@@ -213,6 +216,12 @@ impl<R: Read + Seek> OutlineParser<'_, R> {
             .get("D")
             .ok_or_else(|| malformed("GoTo action has no D destination"))?;
         self.resolve_destination(value, path).map(Some)
+    }
+
+    fn resolve_optional(&mut self, value: Option<&PdfObject>) -> ParseResult<Option<PdfObject>> {
+        value
+            .map(|value| resolve_object(self.reader, value))
+            .transpose()
     }
 
     fn resolve_destination(&mut self, value: &PdfObject, path: &str) -> ParseResult<Destination> {
@@ -380,7 +389,7 @@ fn read_name_tree<R: Read + Seek>(
     nodes: &mut usize,
     result: &mut HashMap<Vec<u8>, PdfObject>,
     options: &OutlineReadOptions,
-) -> ParseResult<()> {
+) -> ParseResult<Option<(Vec<u8>, Vec<u8>)>> {
     if depth > options.max_depth {
         return Err(malformed("destination name tree exceeds configured depth"));
     }
@@ -401,7 +410,7 @@ fn read_name_tree<R: Read + Seek>(
         return Err(malformed("name-tree node contains both Names and Kids"));
     }
     let limits = dictionary.get("Limits").map(read_name_limits).transpose()?;
-    if let Some(names) = dictionary.get("Names") {
+    let actual_range = if let Some(names) = dictionary.get("Names") {
         let names = resolve_object(reader, names)?;
         let names = names
             .as_array()
@@ -426,27 +435,47 @@ fn read_name_tree<R: Read + Seek>(
             previous = Some(key.clone());
             insert_named(result, key, pair[1].clone(), options)?;
         }
-        if let Some((lower, upper)) = limits {
-            if first_key.as_deref() != Some(lower.as_slice())
-                || last_key.as_deref() != Some(upper.as_slice())
-            {
-                return Err(malformed("name-tree Limits do not match leaf keys"));
-            }
-        }
-    }
-    if let Some(kids) = dictionary.get("Kids") {
+        first_key.zip(last_key)
+    } else if let Some(kids) = dictionary.get("Kids") {
         let kids = resolve_object(reader, kids)?;
         let kids = kids
             .as_array()
             .ok_or_else(|| malformed("name-tree Kids is not an array"))?;
+        let mut first_key = None;
+        let mut last_key: Option<Vec<u8>> = None;
         for child in &kids.0 {
-            read_name_tree(reader, child, depth + 1, active, nodes, result, options)?;
+            let child_range =
+                read_name_tree(reader, child, depth + 1, active, nodes, result, options)?;
+            let Some((lower, upper)) = child_range else {
+                continue;
+            };
+            if last_key.as_ref().is_some_and(|previous| previous >= &lower) {
+                return Err(malformed(
+                    "name-tree child ranges overlap or are not strictly increasing",
+                ));
+            }
+            first_key.get_or_insert_with(|| lower.clone());
+            last_key = Some(upper);
         }
+        first_key.zip(last_key)
+    } else {
+        None
+    };
+    match (limits, actual_range.as_ref()) {
+        (Some((lower, upper)), Some((actual_lower, actual_upper)))
+            if lower != *actual_lower || upper != *actual_upper =>
+        {
+            return Err(malformed("name-tree Limits do not match subtree keys"));
+        }
+        (Some(_), None) => {
+            return Err(malformed("empty name-tree node has non-empty Limits"));
+        }
+        _ => {}
     }
     if let Some(reference) = reference {
         active.remove(&reference);
     }
-    Ok(())
+    Ok(actual_range)
 }
 
 fn read_name_limits(value: &PdfObject) -> ParseResult<(Vec<u8>, Vec<u8>)> {

@@ -247,6 +247,9 @@ impl<R: Read + Seek> PdfDocument<R> {
         &self,
         options: &super::outline::OutlineReadOptions,
     ) -> ParseResult<Option<crate::structure::OutlineTree>> {
+        if !self.catalog_dictionary()?.contains_key("Outlines") {
+            return Ok(None);
+        }
         let count = self.page_count()?;
         let mut pages = HashMap::with_capacity(count as usize);
         for index in 0..count {
