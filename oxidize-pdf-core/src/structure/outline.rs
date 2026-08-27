@@ -6,7 +6,7 @@ use crate::structure::destination::Destination;
 use std::collections::VecDeque;
 
 /// Outline item flags
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct OutlineFlags {
     /// Italic text
     pub italic: bool,
@@ -30,7 +30,7 @@ impl OutlineFlags {
 }
 
 /// Outline item (bookmark)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OutlineItem {
     /// Item title
     pub title: String,
@@ -116,6 +116,7 @@ impl OutlineItem {
 }
 
 /// Outline tree structure
+#[derive(Debug, Clone, PartialEq)]
 pub struct OutlineTree {
     /// Root items
     pub items: Vec<OutlineItem>,

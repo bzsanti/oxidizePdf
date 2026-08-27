@@ -142,6 +142,7 @@ pub mod lexer;
 pub mod object_stream;
 pub mod objects;
 pub mod optimized_reader;
+pub mod outline;
 pub mod page_tree;
 pub mod reader;
 pub mod stack_safe;
@@ -170,6 +171,7 @@ pub use self::encryption_handler::{
 };
 pub use self::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfStream, PdfString};
 pub use self::optimized_reader::OptimizedPdfReader;
+pub use self::outline::OutlineReadOptions;
 pub use self::page_tree::ParsedPage;
 pub use self::reader::{DocumentMetadata, PdfReader};
 
