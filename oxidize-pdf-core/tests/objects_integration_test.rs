@@ -11,7 +11,7 @@ fn test_object_creation_and_conversion() {
     let null = PdfObject::Null;
     let boolean = PdfObject::Boolean(true);
     let integer = PdfObject::Integer(42);
-    let real = PdfObject::Real(3.14159);
+    let real = PdfObject::Real(2.75);
     let string = PdfObject::String(PdfString::new(b"Hello PDF".to_vec()));
     let name = PdfObject::Name(PdfName::new("Type".to_string()));
 
@@ -247,7 +247,7 @@ fn test_object_equality() {
 fn test_object_type_conversions() {
     let boolean = PdfObject::Boolean(true);
     let integer = PdfObject::Integer(42);
-    let real = PdfObject::Real(3.14);
+    let real = PdfObject::Real(2.5);
     let string = PdfObject::String(PdfString::new(b"text".to_vec()));
 
     // Test as_* methods
