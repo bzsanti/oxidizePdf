@@ -227,6 +227,37 @@ pub struct PdfDocument<R: Read + Seek> {
 }
 
 impl<R: Read + Seek> PdfDocument<R> {
+    /// Read the complete document outline with default resource limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the page tree, outline hierarchy, sibling links,
+    /// or a referenced destination is malformed or exceeds a configured limit.
+    pub fn outline(&self) -> ParseResult<Option<crate::structure::OutlineTree>> {
+        self.outline_with_options(&super::outline::OutlineReadOptions::default())
+    }
+
+    /// Read the complete document outline with explicit resource limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the page tree, outline hierarchy, sibling links,
+    /// or a referenced destination is malformed or exceeds `options`.
+    pub fn outline_with_options(
+        &self,
+        options: &super::outline::OutlineReadOptions,
+    ) -> ParseResult<Option<crate::structure::OutlineTree>> {
+        if !self.catalog_dictionary()?.contains_key("Outlines") {
+            return Ok(None);
+        }
+        let count = self.page_count()?;
+        let mut pages = HashMap::with_capacity(count as usize);
+        for index in 0..count {
+            pages.insert(self.get_page(index)?.obj_ref, index);
+        }
+        super::outline::read_outline(&mut self.reader.borrow_mut(), &pages, options)
+    }
+
     /// Create a new PDF document from a reader
     pub fn new(reader: PdfReader<R>) -> Self {
         Self {

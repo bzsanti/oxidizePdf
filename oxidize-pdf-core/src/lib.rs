@@ -342,7 +342,8 @@ pub use recovery::{
 // Re-export structure types
 pub use structure::{
     Destination, DestinationType, NameTree, NameTreeNode, NamedDestinations, OutlineBuilder,
-    OutlineItem, OutlineTree, PageDestination, PageTree, PageTreeBuilder, PageTreeNode,
+    OutlineFlags, OutlineItem, OutlineTree, PageDestination, PageTree, PageTreeBuilder,
+    PageTreeNode,
 };
 
 // Re-export action types
