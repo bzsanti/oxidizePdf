@@ -5,10 +5,11 @@ use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfString};
 use crate::parser::PdfReader;
 use std::io::{Cursor, Read, Seek};
 
-pub(super) struct IncrementalUpdate<'a> {
+pub(crate) struct IncrementalUpdate<'a> {
     base: &'a [u8],
     previous_xref: u64,
     root: (u32, u16),
+    info: Option<(u32, u16)>,
     original_size: u32,
     next_id: u32,
     first_id: Option<Vec<u8>>,
@@ -46,6 +47,7 @@ impl<'a> IncrementalUpdate<'a> {
             base,
             previous_xref: trailer.xref_offset,
             root,
+            info: trailer.info(),
             original_size: size,
             next_id: size,
             first_id,
@@ -54,7 +56,7 @@ impl<'a> IncrementalUpdate<'a> {
         })
     }
 
-    pub(super) fn from_base(base: &'a [u8]) -> Result<Self> {
+    pub(crate) fn from_base(base: &'a [u8]) -> Result<Self> {
         let reader = PdfReader::new(Cursor::new(base))
             .map_err(|e| PdfError::InvalidStructure(format!("parse base PDF: {e}")))?;
         if reader.is_encrypted() {
@@ -73,7 +75,7 @@ impl<'a> IncrementalUpdate<'a> {
         Ok(id)
     }
 
-    pub(super) fn replace(&mut self, id: (u32, u16), object: PdfObject) -> Result<()> {
+    pub(crate) fn replace(&mut self, id: (u32, u16), object: PdfObject) -> Result<()> {
         if self
             .replacements
             .iter()
@@ -88,7 +90,11 @@ impl<'a> IncrementalUpdate<'a> {
         Ok(())
     }
 
-    pub(super) fn finish(mut self) -> Result<Vec<u8>> {
+    pub(crate) fn pending_xref_stream_id(&self) -> Option<(u32, u16)> {
+        (self.xref_kind == XrefKind::Stream).then_some((self.next_id, 0))
+    }
+
+    pub(crate) fn finish(mut self) -> Result<Vec<u8>> {
         self.replacements
             .sort_by_key(|(number, generation, _)| (*number, *generation));
         let mut out = Vec::with_capacity(self.base.len() + self.replacements.len() * 256 + 512);
@@ -129,6 +135,7 @@ impl<'a> IncrementalUpdate<'a> {
                 &changed,
                 self.previous_xref,
                 self.root,
+                self.info,
                 size,
                 id_pair,
             )?,
@@ -138,6 +145,7 @@ impl<'a> IncrementalUpdate<'a> {
                     &mut out,
                     self.previous_xref,
                     self.root,
+                    self.info,
                     size,
                     xref_position,
                     id_pair,
@@ -201,10 +209,16 @@ pub(super) fn write_object(out: &mut Vec<u8>, object: &PdfObject) -> Result<()> 
             out.push(b']');
         }
         PdfObject::Dictionary(dictionary) => write_dictionary(out, dictionary)?,
-        PdfObject::Stream(_) => {
-            return Err(PdfError::InvalidStructure(
-                "generic incremental object writer does not accept streams".to_string(),
-            ))
+        PdfObject::Stream(stream) => {
+            let mut dictionary = stream.dict.clone();
+            dictionary.insert(
+                "Length".to_string(),
+                PdfObject::Integer(stream.data.len() as i64),
+            );
+            write_dictionary(out, &dictionary)?;
+            out.extend_from_slice(b"\nstream\n");
+            out.extend_from_slice(&stream.data);
+            out.extend_from_slice(b"\nendstream");
         }
     }
     Ok(())
@@ -318,6 +332,7 @@ fn write_xref_stream(
     changed: &[(u32, u16, u64)],
     previous_xref: u64,
     root: (u32, u16),
+    info: Option<(u32, u16)>,
     size: u32,
     id_pair: Option<(Vec<u8>, Vec<u8>)>,
 ) -> Result<()> {
@@ -338,6 +353,9 @@ fn write_xref_stream(
     );
     dictionary.insert("Size".to_string(), PdfObject::Integer(i64::from(size)));
     dictionary.insert("Root".to_string(), PdfObject::Reference(root.0, root.1));
+    if let Some((number, generation)) = info {
+        dictionary.insert("Info".to_string(), PdfObject::Reference(number, generation));
+    }
     dictionary.insert(
         "Prev".to_string(),
         PdfObject::Integer(i64::try_from(previous_xref).map_err(|_| {
@@ -416,6 +434,7 @@ fn write_trailer(
     out: &mut Vec<u8>,
     previous_xref: u64,
     root: (u32, u16),
+    info: Option<(u32, u16)>,
     size: u32,
     xref_position: u64,
     id_pair: Option<(Vec<u8>, Vec<u8>)>,
@@ -427,6 +446,9 @@ fn write_trailer(
         )
         .as_bytes(),
     );
+    if let Some((number, generation)) = info {
+        out.extend_from_slice(format!("/Info {number} {generation} R ").as_bytes());
+    }
     if let Some((first, second)) = id_pair {
         let hex = |bytes: &[u8]| {
             bytes

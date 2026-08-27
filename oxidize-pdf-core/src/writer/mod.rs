@@ -4,6 +4,8 @@ mod content_stream_utils;
 mod incremental_annotations;
 mod incremental_form_fill;
 mod incremental_highlights;
+mod incremental_ocr_layer;
+mod incremental_tagged_pdf;
 mod incremental_text_notes;
 mod incremental_update;
 mod object_streams;
@@ -20,9 +22,17 @@ pub use incremental_highlights::{
     Highlight, HighlightColor, HighlightId, HighlightMutation, HighlightOpacity, HighlightQuad,
     HighlightUpdate, IncrementalHighlightEditor,
 };
+pub use incremental_ocr_layer::{
+    IncrementalOcrLayerEditor, OcrLayerFragment, OcrLayerPage, OcrLayerPlan, OcrLayerUpdate,
+};
+pub use incremental_tagged_pdf::{
+    IncrementalTaggedPdfEditor, TaggedPdfChangedObject, TaggedPdfChangedObjectKind,
+    TaggedPdfEditPlan, TaggedPdfMutation, TaggedPdfMutationReport,
+};
 pub use incremental_text_notes::{
     IncrementalTextNoteEditor, TextNote, TextNoteId, TextNoteMutation, TextNoteUpdate,
 };
+pub(crate) use incremental_update::IncrementalUpdate;
 pub use object_streams::{ObjectStream, ObjectStreamConfig, ObjectStreamStats, ObjectStreamWriter};
 pub use pdf_writer::{PdfWriter, WriterConfig};
 pub(crate) use signature::{Edition, PdfSignature};

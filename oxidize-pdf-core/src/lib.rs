@@ -303,8 +303,8 @@ pub use parser::{
 // Re-export operations
 pub use operations::{
     extract_images_from_pages, extract_images_from_pdf, merge_pdfs, move_pdf_page, overlay_pdf,
-    reorder_pdf_pages, reverse_pdf_pages, rotate_pdf_pages, split_pdf, swap_pdf_pages,
-    ExtractImagesOptions, ExtractedImage, ExtractedImageData, ImageExtractionError,
+    reorder_pdf_pages, reorder_pdf_pages_lossless, reverse_pdf_pages, rotate_pdf_pages, split_pdf,
+    swap_pdf_pages, ExtractImagesOptions, ExtractedImage, ExtractedImageData, ImageExtractionError,
     ImageExtractionLimits, ImageExtractionResult, ImageExtractor, OverlayOptions, OverlayPosition,
     ReorderOptions,
 };
@@ -342,7 +342,8 @@ pub use recovery::{
 // Re-export structure types
 pub use structure::{
     Destination, DestinationType, NameTree, NameTreeNode, NamedDestinations, OutlineBuilder,
-    OutlineItem, OutlineTree, PageDestination, PageTree, PageTreeBuilder, PageTreeNode,
+    OutlineFlags, OutlineItem, OutlineTree, PageDestination, PageTree, PageTreeBuilder,
+    PageTreeNode,
 };
 
 // Re-export action types
@@ -373,6 +374,11 @@ pub use verification::compliance_report::{
     format_report_markdown, generate_compliance_report, ComplianceReport,
 };
 pub use verification::iso_matrix::{load_default_matrix, load_matrix, ComplianceStats, IsoMatrix};
+pub use verification::semantic_comparison::{
+    compare_pdfs_semantically, PdfRevisionSummary, RevisionObjectChange, RevisionObjectChangeKind,
+    SemanticComparisonLimits, SemanticComparisonOptions, SemanticComparisonResult,
+    SemanticDifferenceClass, SemanticPdfDifference,
+};
 pub use verification::validators::{
     check_available_validators, validate_external, validate_with_qpdf,
 };

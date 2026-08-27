@@ -29,7 +29,7 @@ pub enum DestinationType {
 }
 
 /// Page destination reference
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PageDestination {
     /// Page number (0-based)
     PageNumber(u32),
@@ -38,7 +38,7 @@ pub enum PageDestination {
 }
 
 /// PDF destination
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Destination {
     /// Target page
     pub page: PageDestination,

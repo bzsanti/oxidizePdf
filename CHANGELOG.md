@@ -8,6 +8,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [4.8.0] - 2026-08-27
+
+### Fixed
+
+- **Semantic redaction no longer presents visual masking as irreversible
+  removal** (#541). Reports explicitly identify recoverable masking risks, and
+  the security-grade API now removes exact direct-page ASCII `Tj` operands and
+  complete literal `TJ` arrays backed by verified non-symbolic Standard-14
+  fonts. Both `Tj` and `TJ` replacements preserve the original text advance,
+  including AFM glyph widths, numeric adjustments, character spacing, and word
+  spacing. The API rebuilds the file without prior revisions or document-level
+  auxiliary data and verifies output page streams before reporting
+  irreversible success.
+  It correlates each match with its declared bounding box, audits retained page
+  resources and metadata during forensic reparse, and enforces input, page,
+  entity, decoded-content, and operation budgets. It fails closed for
+  annotations, XObjects, shadings, inline images, marked content, custom or
+  ambiguous font encodings, partial or ambiguous matches, and malformed
+  streams.
+
+### Added
+
+- **Revision-aware semantic PDF comparison** (#543). A bounded comparison API
+  reports visual, textual, structural, metadata, security, and serialization
+  differences, attributes changes to incremental revisions, and normalizes
+  irrelevant serialization and timestamp noise.
+- **Lossless tagged-PDF validation and incremental editing** (#544). Public APIs
+  inspect structure trees and PDF/UA findings, then apply bounded edits for
+  attributes, MCID associations, ParentTree repair, element creation, and
+  reparenting while preserving unrelated bytes and enforcing DocMDP policy.
+- **Public outline and bookmark reading** (#548). `PdfDocument` can now parse
+  bounded bookmark hierarchies, styles, open state, direct and named
+  destinations, GoTo actions, and all standard destination view modes into
+  stable zero-based page indexes.
+- **Lossless incremental OCR text layers** (#542). Positioned, invisible
+  Unicode text can now be appended to existing pages without rebuilding the
+  document graph or changing the source-byte prefix. The editor exposes a
+  policy-aware dry run, isolated streams and font resources, language,
+  confidence, source-region and reading-order metadata, duplicate-layer
+  detection, deterministic output, xref-table and xref-stream support, and
+  validated atomic publication through `PdfOcrConverter`. Encrypted inputs and
+  every DocMDP certification level fail closed because OCR changes page
+  content.
+- **Lossless incremental page reordering** (#531). The new
+  `reorder_pdf_pages_lossless` API preserves the source bytes, indirect page
+  identities, inherited page attributes, and unrelated document objects while
+  atomically applying an exact page permutation. Encrypted inputs fail closed.
+- **DocMDP enforcement for incremental structural edits** (#532). Lossless
+  page reordering now permits ordinary approval signatures while parsing and
+  enforcing certification transforms, rejecting every certified, malformed,
+  ambiguous, or unsupported policy that cannot authorize the structural edit.
+
 ## [4.7.0] - 2026-08-25
 
 ### Added

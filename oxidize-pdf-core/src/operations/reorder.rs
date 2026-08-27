@@ -3,11 +3,35 @@
 //! This module provides functionality to reorder pages within a PDF document.
 
 use super::{OperationError, OperationResult};
+use crate::error::PdfError;
+use crate::parser::objects::{PdfArray, PdfDictionary, PdfObject};
 use crate::parser::page_tree::ParsedPage;
 use crate::parser::{PdfDocument, PdfReader};
+use crate::signatures::{ensure_modification_allowed, IncrementalModification};
+use crate::writer::IncrementalUpdate;
 use crate::{Document, Page};
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::path::Path;
+
+const INHERITABLE_PAGE_KEYS: [&str; 4] = ["Resources", "MediaBox", "CropBox", "Rotate"];
+const MAX_PAGE_TREE_DEPTH: usize = 256;
+const MAX_PAGE_COUNT: usize = 100_000;
+
+#[derive(Debug)]
+struct LosslessPage {
+    reference: (u32, u16),
+    dictionary: PdfDictionary,
+    effective_inherited: HashMap<&'static str, PdfObject>,
+}
+
+#[derive(Debug)]
+struct LosslessValidation {
+    root_reference: (u32, u16),
+    catalog: PdfDictionary,
+    pages: Vec<((u32, u16), HashMap<&'static str, PdfObject>)>,
+}
 
 /// Options for page reordering
 #[derive(Debug, Clone)]
@@ -154,6 +178,419 @@ pub fn reorder_pdf_pages<P: AsRef<Path>, Q: AsRef<Path>>(
 
     let reorderer = PageReorderer::new(document, options);
     reorderer.reorder_to_file(output_path)
+}
+
+/// Reorder every page as one lossless incremental revision.
+///
+/// Unlike [`reorder_pdf_pages`], this API retains the original bytes and
+/// indirect page identities. The order must be an exact permutation of all
+/// source pages. Encrypted and signed inputs are rejected until their security
+/// policies can be enforced safely.
+pub fn reorder_pdf_pages_lossless<P: AsRef<Path>, Q: AsRef<Path>>(
+    input_path: P,
+    output_path: Q,
+    page_order: &[usize],
+) -> OperationResult<()> {
+    let base = std::fs::read(input_path)?;
+    let (updated, expected) = reorder_pdf_bytes_lossless(&base, page_order)?;
+    validate_lossless_output(&base, &updated, &expected)?;
+
+    let output_path = output_path.as_ref();
+    let parent = output_path
+        .parent()
+        .filter(|path| !path.as_os_str().is_empty());
+    let mut temporary = tempfile::NamedTempFile::new_in(parent.unwrap_or_else(|| Path::new(".")))?;
+    temporary.write_all(&updated)?;
+    temporary.flush()?;
+    temporary.as_file().sync_all()?;
+
+    validate_lossless_file(&base, temporary.path(), &expected)?;
+
+    temporary
+        .persist(output_path)
+        .map_err(|error| OperationError::Io(error.error))?;
+    Ok(())
+}
+
+fn reorder_pdf_bytes_lossless(
+    base: &[u8],
+    page_order: &[usize],
+) -> Result<(Vec<u8>, LosslessValidation), PdfError> {
+    let mut reader = PdfReader::new(Cursor::new(base))
+        .map_err(|error| invalid_lossless(format!("parse source PDF: {error}")))?;
+    if reader.is_encrypted() {
+        return Err(PdfError::PermissionDenied(
+            "lossless page reordering does not support encrypted PDFs".to_string(),
+        ));
+    }
+
+    let catalog = reader
+        .catalog()
+        .map_err(|error| invalid_lossless(format!("read document catalog: {error}")))?
+        .clone();
+    ensure_modification_allowed(
+        &mut reader,
+        &catalog,
+        IncrementalModification::PageTreeReorder,
+    )?;
+
+    let root_reference = catalog
+        .get("Pages")
+        .and_then(PdfObject::as_reference)
+        .ok_or_else(|| invalid_lossless("catalog /Pages must be an indirect reference"))?;
+    let root_dictionary = object_dictionary(&mut reader, root_reference, "page-tree root")?;
+
+    let mut pages = Vec::new();
+    let mut visited = HashSet::new();
+    let inherited = HashMap::new();
+    walk_page_tree(
+        &mut reader,
+        root_reference,
+        None,
+        inherited,
+        &mut visited,
+        &mut pages,
+        0,
+    )?;
+    validate_exact_permutation(page_order, pages.len())?;
+
+    let expected_order: Vec<_> = page_order
+        .iter()
+        .map(|index| pages[*index].reference)
+        .collect();
+    let root_inherited = inherited_values(&root_dictionary);
+    let mut root_replacement = root_dictionary;
+    root_replacement.insert(
+        "Kids".to_string(),
+        PdfObject::Array(PdfArray(
+            expected_order
+                .iter()
+                .map(|(number, generation)| PdfObject::Reference(*number, *generation))
+                .collect(),
+        )),
+    );
+    root_replacement.insert("Count".to_string(), PdfObject::Integer(pages.len() as i64));
+
+    let mut update = IncrementalUpdate::from_base(base)?;
+    update.replace(root_reference, PdfObject::Dictionary(root_replacement))?;
+    let mut validation_pages = Vec::with_capacity(pages.len());
+    for page in pages {
+        let mut dictionary = page.dictionary;
+        let mut changed =
+            dictionary.get("Parent").and_then(PdfObject::as_reference) != Some(root_reference);
+        if changed {
+            dictionary.insert(
+                "Parent".to_string(),
+                PdfObject::Reference(root_reference.0, root_reference.1),
+            );
+        }
+        for (key, value) in &page.effective_inherited {
+            if dictionary.contains_key(key) {
+                continue;
+            }
+            if root_inherited.get(key) != Some(value) {
+                dictionary.insert((*key).to_string(), value.clone());
+                changed = true;
+            }
+        }
+        validation_pages.push((page.reference, page.effective_inherited));
+        if changed {
+            update.replace(page.reference, PdfObject::Dictionary(dictionary))?;
+        }
+    }
+    let updated = update.finish()?;
+    let ordered_pages = page_order
+        .iter()
+        .map(|index| validation_pages[*index].clone())
+        .collect();
+    Ok((
+        updated,
+        LosslessValidation {
+            root_reference,
+            catalog,
+            pages: ordered_pages,
+        },
+    ))
+}
+
+fn inherited_values(dictionary: &PdfDictionary) -> HashMap<&'static str, PdfObject> {
+    INHERITABLE_PAGE_KEYS
+        .into_iter()
+        .filter_map(|key| dictionary.get(key).cloned().map(|value| (key, value)))
+        .collect()
+}
+
+fn walk_page_tree<R: Read + std::io::Seek>(
+    reader: &mut PdfReader<R>,
+    node_reference: (u32, u16),
+    expected_parent: Option<(u32, u16)>,
+    inherited: HashMap<&'static str, PdfObject>,
+    visited: &mut HashSet<(u32, u16)>,
+    pages: &mut Vec<LosslessPage>,
+    depth: usize,
+) -> Result<usize, PdfError> {
+    if depth > MAX_PAGE_TREE_DEPTH {
+        return Err(invalid_lossless("page tree exceeds the supported depth"));
+    }
+    if !visited.insert(node_reference) {
+        return Err(invalid_lossless(format!(
+            "page tree contains a cycle or duplicate reference at {} {} R",
+            node_reference.0, node_reference.1
+        )));
+    }
+    let dictionary = object_dictionary(reader, node_reference, "page-tree node")?;
+    if let Some(parent) = expected_parent {
+        if dictionary.get("Parent").and_then(PdfObject::as_reference) != Some(parent) {
+            return Err(invalid_lossless(format!(
+                "page-tree node {} {} R has an inconsistent /Parent",
+                node_reference.0, node_reference.1
+            )));
+        }
+    } else if dictionary.contains_key("Parent") {
+        return Err(invalid_lossless(
+            "the root /Pages node must not have a /Parent",
+        ));
+    }
+
+    match dictionary.get_type() {
+        Some("Page") => {
+            if pages.len() >= MAX_PAGE_COUNT {
+                return Err(invalid_lossless(
+                    "page tree exceeds the supported page count",
+                ));
+            }
+            let mut effective_inherited = inherited;
+            for key in INHERITABLE_PAGE_KEYS {
+                if let Some(value) = dictionary.get(key) {
+                    effective_inherited.insert(key, value.clone());
+                }
+            }
+            if !effective_inherited.contains_key("MediaBox") {
+                return Err(invalid_lossless(format!(
+                    "page {} {} R has no effective /MediaBox",
+                    node_reference.0, node_reference.1
+                )));
+            }
+            pages.push(LosslessPage {
+                reference: node_reference,
+                dictionary,
+                effective_inherited,
+            });
+            Ok(1)
+        }
+        Some("Pages") => {
+            let mut child_inherited = inherited;
+            for key in INHERITABLE_PAGE_KEYS {
+                if let Some(value) = dictionary.get(key) {
+                    child_inherited.insert(key, value.clone());
+                }
+            }
+            let kids = resolve_reference_array(reader, dictionary.get("Kids"), "/Kids")?;
+            let declared_count = dictionary
+                .get("Count")
+                .and_then(PdfObject::as_integer)
+                .ok_or_else(|| invalid_lossless("every /Pages node must have an integer /Count"))?;
+            if declared_count < 0 {
+                return Err(invalid_lossless("a /Pages /Count cannot be negative"));
+            }
+            let mut actual_count = 0usize;
+            for child in kids {
+                actual_count = actual_count
+                    .checked_add(walk_page_tree(
+                        reader,
+                        child,
+                        Some(node_reference),
+                        child_inherited.clone(),
+                        visited,
+                        pages,
+                        depth + 1,
+                    )?)
+                    .ok_or_else(|| invalid_lossless("page count overflow"))?;
+            }
+            let declared_count = usize::try_from(declared_count)
+                .map_err(|_| invalid_lossless("a /Pages /Count does not fit in memory"))?;
+            if declared_count != actual_count {
+                return Err(invalid_lossless(format!(
+                    "/Pages node {} {} R declares /Count {} but contains {} pages",
+                    node_reference.0, node_reference.1, declared_count, actual_count
+                )));
+            }
+            Ok(actual_count)
+        }
+        other => Err(invalid_lossless(format!(
+            "page-tree node {} {} R has unsupported /Type {:?}",
+            node_reference.0, node_reference.1, other
+        ))),
+    }
+}
+
+fn object_dictionary<R: Read + std::io::Seek>(
+    reader: &mut PdfReader<R>,
+    reference: (u32, u16),
+    role: &str,
+) -> Result<PdfDictionary, PdfError> {
+    reader
+        .get_object(reference.0, reference.1)
+        .map_err(|error| {
+            invalid_lossless(format!(
+                "resolve {role} {} {} R: {error}",
+                reference.0, reference.1
+            ))
+        })?
+        .as_dict()
+        .cloned()
+        .ok_or_else(|| {
+            invalid_lossless(format!(
+                "{role} {} {} R must be a dictionary",
+                reference.0, reference.1
+            ))
+        })
+}
+
+fn resolve_reference_array<R: Read + std::io::Seek>(
+    reader: &mut PdfReader<R>,
+    value: Option<&PdfObject>,
+    role: &str,
+) -> Result<Vec<(u32, u16)>, PdfError> {
+    let value = value.ok_or_else(|| invalid_lossless(format!("missing {role}")))?;
+    let resolved = match value {
+        PdfObject::Array(array) => PdfObject::Array(array.clone()),
+        PdfObject::Reference(number, generation) => reader
+            .get_object(*number, *generation)
+            .map_err(|error| invalid_lossless(format!("resolve indirect {role}: {error}")))?
+            .clone(),
+        _ => return Err(invalid_lossless(format!("{role} must be an array"))),
+    };
+    let array = match resolved {
+        PdfObject::Array(array) => array,
+        _ => {
+            return Err(invalid_lossless(format!(
+                "indirect {role} must resolve to an array"
+            )))
+        }
+    };
+    array
+        .0
+        .iter()
+        .map(|item| {
+            item.as_reference()
+                .ok_or_else(|| invalid_lossless(format!("{role} must contain only references")))
+        })
+        .collect()
+}
+
+fn validate_exact_permutation(page_order: &[usize], page_count: usize) -> Result<(), PdfError> {
+    if page_order.len() != page_count {
+        return Err(invalid_lossless(format!(
+            "page order must contain exactly {page_count} entries, got {}",
+            page_order.len()
+        )));
+    }
+    let mut seen = vec![false; page_count];
+    for &index in page_order {
+        if index >= page_count {
+            return Err(invalid_lossless(format!(
+                "page index {index} is out of bounds for {page_count} pages"
+            )));
+        }
+        if std::mem::replace(&mut seen[index], true) {
+            return Err(invalid_lossless(format!(
+                "page index {index} is duplicated"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn validate_lossless_output(
+    base: &[u8],
+    updated: &[u8],
+    expected: &LosslessValidation,
+) -> OperationResult<()> {
+    if !updated.starts_with(base) {
+        return Err(OperationError::ProcessingError(
+            "incremental output does not preserve the source bytes as an exact prefix".to_string(),
+        ));
+    }
+    let reader = PdfReader::new(Cursor::new(updated))
+        .map_err(|error| OperationError::ParseError(format!("reopen output PDF: {error}")))?;
+    validate_lossless_reader(reader, expected)
+}
+
+fn validate_lossless_file(
+    base: &[u8],
+    path: &Path,
+    expected: &LosslessValidation,
+) -> OperationResult<()> {
+    let mut file = File::open(path)?;
+    let mut chunk = [0u8; 64 * 1024];
+    for expected_chunk in base.chunks(chunk.len()) {
+        file.read_exact(&mut chunk[..expected_chunk.len()])?;
+        if &chunk[..expected_chunk.len()] != expected_chunk {
+            return Err(OperationError::ProcessingError(
+                "temporary output does not preserve the source bytes as an exact prefix"
+                    .to_string(),
+            ));
+        }
+    }
+    file.seek(SeekFrom::Start(0))?;
+    let reader = PdfReader::new(file)
+        .map_err(|error| OperationError::ParseError(format!("reopen temporary PDF: {error}")))?;
+    validate_lossless_reader(reader, expected)
+}
+
+fn validate_lossless_reader<R: Read + Seek>(
+    mut reader: PdfReader<R>,
+    expected: &LosslessValidation,
+) -> OperationResult<()> {
+    let catalog = reader
+        .catalog()
+        .map_err(|error| OperationError::ParseError(format!("validate output catalog: {error}")))?;
+    if catalog != &expected.catalog {
+        return Err(OperationError::ProcessingError(
+            "output catalog differs from the source catalog".to_string(),
+        ));
+    }
+
+    let mut actual_pages = Vec::new();
+    let mut visited = HashSet::new();
+    walk_page_tree(
+        &mut reader,
+        expected.root_reference,
+        None,
+        HashMap::new(),
+        &mut visited,
+        &mut actual_pages,
+        0,
+    )
+    .map_err(|error| OperationError::ParseError(format!("validate output page tree: {error}")))?;
+    if actual_pages.len() != expected.pages.len() {
+        return Err(OperationError::ProcessingError(format!(
+            "output contains {} pages, expected {}",
+            actual_pages.len(),
+            expected.pages.len()
+        )));
+    }
+    for (index, (actual, (expected_reference, expected_inherited))) in
+        actual_pages.iter().zip(&expected.pages).enumerate()
+    {
+        if actual.reference != *expected_reference {
+            return Err(OperationError::ProcessingError(format!(
+                "output page {index} references {} {} R, expected {} {} R",
+                actual.reference.0, actual.reference.1, expected_reference.0, expected_reference.1
+            )));
+        }
+        if &actual.effective_inherited != expected_inherited {
+            return Err(OperationError::ProcessingError(format!(
+                "output page {index} does not preserve its effective inherited attributes"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn invalid_lossless(message: impl Into<String>) -> PdfError {
+    PdfError::InvalidStructure(message.into())
 }
 
 /// Reverse all pages in a PDF

@@ -30,7 +30,7 @@ use std::io::Cursor;
 /// approximate real Verdana metrics.
 fn widths_array() -> String {
     // widths[i] corresponds to code (32+i), for codes 32..=64 inclusive.
-    let mut widths = vec![500u32; 64 - 32 + 1];
+    let mut widths = [500u32; 64 - 32 + 1];
     widths[0] = 278; // space (32)
     widths[45 - 32] = 333; // '-'
     for digit_code in 48..=57 {

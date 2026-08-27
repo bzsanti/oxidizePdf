@@ -114,15 +114,16 @@ fn extract_form(reorder: bool) -> String {
     .text
 }
 
-const TOKEN: &str = "12.345.678/0001-99";
+// Public, synthetic CNPJ used only as expected PDF fixture text.
+const EXPECTED_CNPJ_FIXTURE: &str = "12.345.678/0001-99";
 
 #[test]
 fn reorder_columns_keeps_token_intact_on_misaligned_form() {
     let text = extract_form(true);
     assert!(
-        text.contains(TOKEN),
+        text.contains(EXPECTED_CNPJ_FIXTURE),
         "misaligned form gaps must not be treated as a column block; token \
-         `{TOKEN}` was shredded. Got: {text:?}"
+         `{EXPECTED_CNPJ_FIXTURE}` was shredded. Got: {text:?}"
     );
 }
 
