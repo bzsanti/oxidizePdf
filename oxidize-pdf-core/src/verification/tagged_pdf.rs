@@ -75,6 +75,11 @@ pub enum TaggedPdfFindingCode {
     UnmappedCustomRole,
     InvalidRoleMap,
     InvalidClassMap,
+    InvalidReadingOrder,
+    InvalidTableStructure,
+    InvalidListStructure,
+    InvalidLinkStructure,
+    InvalidArtifact,
     MissingDocumentLanguage,
     MissingAlternateText,
     InvalidHeadingOrder,
@@ -107,7 +112,7 @@ pub struct TaggedPdfFinding {
 }
 
 /// Read-only summary of one indirect structure element.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TaggedPdfStructureElement {
     pub object: TaggedPdfObjectRef,
     pub structure_type: Option<String>,
@@ -120,6 +125,16 @@ pub struct TaggedPdfStructureElement {
     pub title: Option<String>,
     /// Every key present in the original dictionary, including unknown keys.
     pub dictionary_keys: Vec<String>,
+    /// Complete source dictionary, preserving unknown attributes and namespaces.
+    pub dictionary: PdfDictionary,
+}
+
+/// One `/Artifact` marked-content marker found in a page or form stream.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaggedPdfArtifact {
+    pub context: TaggedPdfObjectRef,
+    pub operation_index: usize,
+    pub subtype: Option<String>,
 }
 
 /// Machine-readable result of tagged-PDF inspection.
@@ -132,8 +147,13 @@ pub struct TaggedPdfValidationReport {
     pub class_names: Vec<String>,
     /// Lossless parsed ClassMap values, including unknown attributes and namespaces.
     pub class_map: BTreeMap<String, PdfObject>,
+    pub artifacts: Vec<TaggedPdfArtifact>,
     pub elements: Vec<TaggedPdfStructureElement>,
     pub parent_tree_entries: usize,
+    /// Lossless ParentTree values keyed by their integer number-tree key.
+    pub parent_tree: BTreeMap<i64, PdfObject>,
+    /// Every MCID found in each inspected page or form content context.
+    pub content_mcids: BTreeMap<TaggedPdfObjectRef, Vec<i64>>,
     pub findings: Vec<TaggedPdfFinding>,
 }
 
@@ -143,8 +163,8 @@ pub struct TaggedPdfValidationReport {
 /// `/StructParents` -> structure `/ParentTree` -> MCID owner association. It
 /// also reports initial PDF/UA-oriented rules for catalog language, numbered
 /// heading order, and text alternatives for figures and formulas. It does not
-/// claim complete PDF/UA conformance; table, list, link, artifact, and complete
-/// reading-order rules are not yet implemented.
+/// claim complete PDF/UA conformance; annotation semantics, complex table
+/// headers, and complete visual-vs-logical reading-order rules are not yet implemented.
 ///
 /// # Errors
 ///
@@ -178,6 +198,11 @@ struct Validator<'a, R: Read + Seek> {
     parent_tree: BTreeMap<i64, PdfObject>,
     direct_mcid_counts: HashMap<TaggedPdfObjectRef, usize>,
     page_mcids: HashMap<TaggedPdfObjectRef, HashSet<i64>>,
+    artifacts: Vec<TaggedPdfArtifact>,
+    current_content_context: Option<TaggedPdfObjectRef>,
+    active_content: HashSet<TaggedPdfObjectRef>,
+    last_mcid_by_owner: HashMap<TaggedPdfObjectRef, i64>,
+    objr_counts: HashMap<TaggedPdfObjectRef, usize>,
     decoded_content_bytes: usize,
     catalog_language: bool,
     last_heading_level: Option<u8>,
@@ -201,6 +226,11 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             parent_tree: BTreeMap::new(),
             direct_mcid_counts: HashMap::new(),
             page_mcids: HashMap::new(),
+            artifacts: Vec::new(),
+            current_content_context: None,
+            active_content: HashSet::new(),
+            last_mcid_by_owner: HashMap::new(),
+            objr_counts: HashMap::new(),
             decoded_content_bytes: 0,
             catalog_language: false,
             last_heading_level: None,
@@ -268,8 +298,9 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         }
 
         if let Some(kids) = root.get("K").cloned() {
-            self.walk_structure_value(&kids, root_ref, None, 0, "/StructTreeRoot/K")?;
+            self.walk_structure_value(&kids, root_ref, None, None, 0, "/StructTreeRoot/K")?;
         }
+        self.scan_all_pages()?;
         if !self.catalog_language {
             self.finding(
                 TaggedPdfFindingSeverity::Error,
@@ -296,6 +327,15 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             .findings
             .iter()
             .any(|finding| finding.severity == TaggedPdfFindingSeverity::Error);
+        let content_mcids = self
+            .page_mcids
+            .iter()
+            .map(|(context, values)| {
+                let mut values: Vec<_> = values.iter().copied().collect();
+                values.sort_unstable();
+                (*context, values)
+            })
+            .collect();
         TaggedPdfValidationReport {
             tagged,
             valid,
@@ -303,8 +343,11 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             role_map: self.role_map,
             class_names: self.class_names,
             class_map: self.class_map,
+            artifacts: self.artifacts,
             elements: self.elements,
             parent_tree_entries: self.parent_tree.len(),
+            parent_tree: self.parent_tree,
+            content_mcids,
             findings: self.findings,
         }
     }
@@ -410,6 +453,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         &mut self,
         value: &PdfObject,
         expected_parent: Option<TaggedPdfObjectRef>,
+        expected_parent_type: Option<&str>,
         inherited_page: Option<TaggedPdfObjectRef>,
         depth: usize,
         path: &str,
@@ -422,6 +466,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                 marked += self.walk_structure_value(
                     child,
                     expected_parent,
+                    expected_parent_type,
                     inherited_page,
                     depth + 1,
                     &format!("{path}[{index}]"),
@@ -533,6 +578,12 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         let resolved_type = structure_type
             .as_deref()
             .and_then(|name| self.resolve_role(name).ok());
+        self.validate_parent_child(
+            expected_parent_type,
+            resolved_type.as_deref(),
+            path,
+            object_ref,
+        );
         if matches!(resolved_type.as_deref(), Some("Figure" | "Formula"))
             && alternate_text.is_none()
             && actual_text.is_none()
@@ -604,7 +655,28 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
             })
             .unwrap_or(0);
         if let Some(kids) = dict.get("K") {
-            self.walk_structure_value(kids, object_ref, page, depth + 1, &format!("{path}/K"))?;
+            self.walk_structure_value(
+                kids,
+                object_ref,
+                resolved_type.as_deref(),
+                page,
+                depth + 1,
+                &format!("{path}/K"),
+            )?;
+        }
+        if resolved_type.as_deref() == Some("Link")
+            && object_ref
+                .and_then(|reference| self.objr_counts.get(&reference).copied())
+                .unwrap_or(0)
+                == 0
+        {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                TaggedPdfFindingCode::InvalidLinkStructure,
+                format!("{path}/K"),
+                "Link structure element has no OBJR child",
+                object_ref,
+            );
         }
         if let Some(reference) = object_ref {
             let marked_content_count = self.direct_mcid_counts.remove(&reference).unwrap_or(0);
@@ -621,10 +693,56 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                 actual_text,
                 title,
                 dictionary_keys,
+                dictionary: dict,
             });
             self.active.remove(&reference);
         }
         Ok(0)
+    }
+
+    fn validate_parent_child(
+        &mut self,
+        parent: Option<&str>,
+        child: Option<&str>,
+        path: &str,
+        object: Option<TaggedPdfObjectRef>,
+    ) {
+        let Some((parent, child)) = parent.zip(child) else {
+            return;
+        };
+        let violation = match parent {
+            "Table" => (!matches!(child, "Caption" | "THead" | "TBody" | "TFoot" | "TR"))
+                .then_some((
+                    TaggedPdfFindingCode::InvalidTableStructure,
+                    "Table children must be Caption, THead, TBody, TFoot, or TR",
+                )),
+            "THead" | "TBody" | "TFoot" => (child != "TR").then_some((
+                TaggedPdfFindingCode::InvalidTableStructure,
+                "table row groups may contain only TR elements",
+            )),
+            "TR" => (!matches!(child, "TH" | "TD")).then_some((
+                TaggedPdfFindingCode::InvalidTableStructure,
+                "TR elements may contain only TH or TD cells",
+            )),
+            "L" => (!matches!(child, "Caption" | "LI")).then_some((
+                TaggedPdfFindingCode::InvalidListStructure,
+                "L elements may contain only Caption or LI elements",
+            )),
+            "LI" => (!matches!(child, "Lbl" | "LBody")).then_some((
+                TaggedPdfFindingCode::InvalidListStructure,
+                "LI elements may contain only Lbl or LBody elements",
+            )),
+            _ => None,
+        };
+        if let Some((code, message)) = violation {
+            self.finding(
+                TaggedPdfFindingSeverity::Error,
+                code,
+                format!("{path}/S"),
+                message,
+                object,
+            );
+        }
     }
 
     fn validate_objr(
@@ -634,6 +752,9 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         inherited_page: Option<TaggedPdfObjectRef>,
         path: &str,
     ) -> Result<()> {
+        if let Some(owner) = owner {
+            *self.objr_counts.entry(owner).or_default() += 1;
+        }
         let Some(object) = dict
             .get("Obj")
             .and_then(PdfObject::as_reference)
@@ -729,6 +850,19 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         }
         if let Some(owner) = owner {
             *self.direct_mcid_counts.entry(owner).or_default() += 1;
+            if self
+                .last_mcid_by_owner
+                .insert(owner, mcid)
+                .is_some_and(|previous| mcid <= previous)
+            {
+                self.finding(
+                    TaggedPdfFindingSeverity::Error,
+                    TaggedPdfFindingCode::InvalidReadingOrder,
+                    format!("{path}/MCID"),
+                    "MCIDs in one structure element must follow increasing content order",
+                    Some(owner),
+                );
+            }
         }
         let page = dict
             .get("Pg")
@@ -832,15 +966,21 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         if let Some(cached) = self.page_mcids.get(&context) {
             return Ok(cached.clone());
         }
+        if !self.active_content.insert(context) {
+            return Ok(HashSet::new());
+        }
         let resources = self.effective_resources(object, 0)?;
+        let previous_context = self.current_content_context.replace(context);
         let mut mcids = HashSet::new();
         if let Some(stream) = object.as_stream() {
-            let bytes = stream.decode(self.reader.options())?;
+            let bytes = self.decode_content_stream(stream)?;
             self.process_content_bytes(&bytes, resources.as_ref(), &mut mcids)?;
         } else if let Some(contents) = object.as_dict().and_then(|dict| dict.get("Contents")) {
             self.process_content_objects(contents, resources.as_ref(), &mut mcids, 0)?;
         }
         self.page_mcids.insert(context, mcids.clone());
+        self.active_content.remove(&context);
+        self.current_content_context = previous_context;
         Ok(mcids)
     }
 
@@ -860,12 +1000,151 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
                 self.limits.max_decoded_content_bytes,
             ));
         }
-        for operation in ContentParser::parse(bytes)? {
-            if let ContentOperation::BeginMarkedContentWithProps(_, properties) = operation {
-                if let Some(mcid) = self.mcid_from_properties(&properties, resources)? {
-                    if mcid >= 0 {
-                        mcids.insert(mcid);
+        for (operation_index, operation) in ContentParser::parse(bytes)?.into_iter().enumerate() {
+            match operation {
+                ContentOperation::BeginMarkedContent(tag) if tag == "Artifact" => {
+                    self.record_artifact(operation_index, None);
+                }
+                ContentOperation::BeginMarkedContentWithProps(tag, properties)
+                    if tag == "Artifact" =>
+                {
+                    if self.mcid_from_properties(&properties, resources)?.is_some() {
+                        self.finding(
+                            TaggedPdfFindingSeverity::Error,
+                            TaggedPdfFindingCode::InvalidArtifact,
+                            "/Contents/Artifact",
+                            "Artifact marked content must not carry an MCID",
+                            self.current_content_context,
+                        );
                     }
+                    self.record_artifact(operation_index, artifact_subtype(&properties));
+                }
+                ContentOperation::BeginMarkedContentWithProps(_, properties) => {
+                    if let Some(mcid) = self.mcid_from_properties(&properties, resources)? {
+                        if mcid >= 0 && !mcids.insert(mcid) {
+                            self.finding(
+                                TaggedPdfFindingSeverity::Error,
+                                TaggedPdfFindingCode::InvalidReadingOrder,
+                                "/Contents/MCID",
+                                "content context contains a duplicate MCID",
+                                self.current_content_context,
+                            );
+                        }
+                    }
+                }
+                ContentOperation::PaintXObject(name) => {
+                    self.scan_form_xobject(&name, resources)?;
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    fn decode_content_stream(&self, stream: &crate::parser::objects::PdfStream) -> Result<Vec<u8>> {
+        let remaining = self
+            .limits
+            .max_decoded_content_bytes
+            .saturating_sub(self.decoded_content_bytes);
+        stream
+            .decode_with_limit(self.reader.options(), remaining)
+            .map_err(|error| {
+                let message = error.to_string();
+                if message.contains("limit") || message.contains("exceeds") {
+                    self.limit_error(
+                        "decoded content bytes",
+                        self.limits.max_decoded_content_bytes,
+                    )
+                } else {
+                    error.into()
+                }
+            })
+    }
+
+    fn record_artifact(&mut self, operation_index: usize, subtype: Option<String>) {
+        if let Some(context) = self.current_content_context {
+            self.artifacts.push(TaggedPdfArtifact {
+                context,
+                operation_index,
+                subtype,
+            });
+        }
+    }
+
+    fn scan_form_xobject(&mut self, name: &str, resources: Option<&PdfDictionary>) -> Result<()> {
+        let Some(xobjects) = resources
+            .and_then(|resources| resources.get("XObject"))
+            .cloned()
+        else {
+            return Ok(());
+        };
+        let xobjects = self.resolve(&xobjects)?;
+        let Some(value) = xobjects.as_dict().and_then(|xobjects| xobjects.get(name)) else {
+            return Ok(());
+        };
+        let Some(reference) = value.as_reference().map(TaggedPdfObjectRef::from) else {
+            return Ok(());
+        };
+        let object = self
+            .reader
+            .get_object(reference.object_number, reference.generation)?
+            .clone();
+        if object
+            .as_stream()
+            .and_then(|stream| stream.dict.get("Subtype"))
+            .and_then(PdfObject::as_name)
+            .is_some_and(|subtype| subtype.0 == "Form")
+        {
+            self.mcids_for_context(reference, &object)?;
+        }
+        Ok(())
+    }
+
+    fn scan_all_pages(&mut self) -> Result<()> {
+        let pages = self.reader.catalog()?.get("Pages").cloned();
+        let mut references = Vec::new();
+        let mut seen = HashSet::new();
+        if let Some(pages) = pages {
+            self.collect_page_references(&pages, 0, &mut seen, &mut references)?;
+        }
+        for context in references {
+            if !self.page_mcids.contains_key(&context) {
+                let object = self
+                    .reader
+                    .get_object(context.object_number, context.generation)?
+                    .clone();
+                self.mcids_for_context(context, &object)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn collect_page_references(
+        &mut self,
+        value: &PdfObject,
+        depth: usize,
+        seen: &mut HashSet<TaggedPdfObjectRef>,
+        pages: &mut Vec<TaggedPdfObjectRef>,
+    ) -> Result<()> {
+        self.check_depth(depth)?;
+        let reference = value.as_reference().map(TaggedPdfObjectRef::from);
+        if reference.is_some_and(|reference| !seen.insert(reference)) {
+            return Ok(());
+        }
+        let Some(dictionary) = self.resolve_dict(value)? else {
+            return Ok(());
+        };
+        if dictionary.get_type() == Some("Page") {
+            if let Some(reference) = reference {
+                pages.push(reference);
+            }
+            return Ok(());
+        }
+        if let Some(kids) = dictionary.get("Kids") {
+            let kids = self.resolve(kids)?;
+            if let Some(array) = kids.as_array() {
+                for kid in &array.0 {
+                    self.collect_page_references(kid, depth + 1, seen, pages)?;
                 }
             }
         }
@@ -933,7 +1212,7 @@ impl<'a, R: Read + Seek> Validator<'a, R> {
         self.check_depth(depth)?;
         let resolved = self.resolve(value)?;
         if let Some(stream) = resolved.as_stream() {
-            let bytes = stream.decode(self.reader.options())?;
+            let bytes = self.decode_content_stream(stream)?;
             return self.process_content_bytes(&bytes, resources, mcids);
         }
         if let Some(array) = resolved.as_array() {
@@ -1227,6 +1506,16 @@ fn text_value(value: Option<&PdfObject>) -> Option<String> {
         .and_then(PdfObject::as_string)
         .map(|value| value.to_text())
         .filter(|value| !value.trim().is_empty())
+}
+
+fn artifact_subtype(properties: &MarkedContentProps) -> Option<String> {
+    match properties {
+        MarkedContentProps::Inline(values) => values.get("Subtype").and_then(|value| match value {
+            MarkedContentValue::Name(name) => Some(name.clone()),
+            _ => None,
+        }),
+        MarkedContentProps::ResourceRef(_) => None,
+    }
 }
 
 fn heading_level(name: &str) -> Option<u8> {
@@ -1657,5 +1946,66 @@ mod tests {
             .findings
             .iter()
             .any(|finding| finding.code == TaggedPdfFindingCode::InvalidMarkedContentReference));
+    }
+
+    #[test]
+    fn inventories_artifact_markers_and_subtypes() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>",
+            "<< /Length 47 >>\nstream\n/Artifact <</Subtype /Pagination>> BDC EMC\nendstream",
+            "<< /Type /StructTreeRoot /K [] /ParentTree 6 0 R >>",
+            "<< /Nums [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert_eq!(report.artifacts.len(), 1);
+        assert_eq!(report.artifacts[0].subtype.as_deref(), Some("Pagination"));
+    }
+
+    #[test]
+    fn validates_table_list_and_link_structure() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 4 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 0 /Kids [] >>",
+            "null",
+            "<< /Type /StructTreeRoot /K [5 0 R 7 0 R 9 0 R] /ParentTree 11 0 R >>",
+            "<< /Type /StructElem /S /Table /P 4 0 R /K 6 0 R >>",
+            "<< /Type /StructElem /S /P /P 5 0 R >>",
+            "<< /Type /StructElem /S /L /P 4 0 R /K 8 0 R >>",
+            "<< /Type /StructElem /S /P /P 7 0 R >>",
+            "<< /Type /StructElem /S /Link /P 4 0 R >>",
+            "null",
+            "<< /Nums [] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        for expected in [
+            TaggedPdfFindingCode::InvalidTableStructure,
+            TaggedPdfFindingCode::InvalidListStructure,
+            TaggedPdfFindingCode::InvalidLinkStructure,
+        ] {
+            assert!(report
+                .findings
+                .iter()
+                .any(|finding| finding.code == expected));
+        }
+    }
+
+    #[test]
+    fn rejects_duplicate_content_mcids() {
+        let bytes = pdf(&[
+            "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R /Lang (en-US) >>",
+            "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R >>",
+            "<< /Length 44 >>\nstream\n/P <</MCID 0>> BDC EMC /P <</MCID 0>> BDC EMC\nendstream",
+            "<< /Type /StructTreeRoot /K 6 0 R /ParentTree 7 0 R >>",
+            "<< /Type /StructElem /S /P /P 5 0 R /Pg 3 0 R /K 0 >>",
+            "<< /Nums [0 [6 0 R]] >>",
+        ]);
+        let report = validate_tagged_pdf(&bytes, &Default::default()).unwrap();
+        assert!(report
+            .findings
+            .iter()
+            .any(|finding| finding.code == TaggedPdfFindingCode::InvalidReadingOrder));
     }
 }

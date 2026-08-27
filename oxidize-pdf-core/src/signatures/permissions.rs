@@ -13,6 +13,7 @@ pub(crate) enum IncrementalModification {
     AddSignature,
     AddAnnotation,
     OcrTextLayer,
+    TaggedStructure,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -339,6 +340,7 @@ fn enforce_permission(
         IncrementalModification::AddSignature => "adding signatures",
         IncrementalModification::AddAnnotation => "adding annotations",
         IncrementalModification::OcrTextLayer => "adding an OCR text layer",
+        IncrementalModification::TaggedStructure => "editing tagged-PDF structure",
     };
     Err(PdfError::PermissionDenied(format!(
         "DocMDP {description} does not permit {edit}"
@@ -403,6 +405,19 @@ mod tests {
             DocMdpPermission::FormFillSignAndAnnotate,
         ] {
             assert!(enforce_permission(IncrementalModification::OcrTextLayer, permission).is_err());
+        }
+    }
+
+    #[test]
+    fn tagged_structure_edits_are_forbidden_at_every_permission_level() {
+        for permission in [
+            DocMdpPermission::NoChanges,
+            DocMdpPermission::FormFillAndSign,
+            DocMdpPermission::FormFillSignAndAnnotate,
+        ] {
+            assert!(
+                enforce_permission(IncrementalModification::TaggedStructure, permission).is_err()
+            );
         }
     }
 }

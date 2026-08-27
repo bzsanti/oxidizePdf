@@ -90,6 +90,10 @@ impl<'a> IncrementalUpdate<'a> {
         Ok(())
     }
 
+    pub(crate) fn pending_xref_stream_id(&self) -> Option<(u32, u16)> {
+        (self.xref_kind == XrefKind::Stream).then_some((self.next_id, 0))
+    }
+
     pub(crate) fn finish(mut self) -> Result<Vec<u8>> {
         self.replacements
             .sort_by_key(|(number, generation, _)| (*number, *generation));

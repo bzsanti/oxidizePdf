@@ -1441,28 +1441,25 @@ impl<W: Write> PdfWriter<W> {
         let mut struct_tree_root = Dictionary::new();
         struct_tree_root.set("Type", Object::Name("StructTreeRoot".to_string()));
 
-        if !page_owners.is_empty() {
-            let parent_tree_id = self.allocate_object_id();
-            let mut nums = Vec::new();
-            for (struct_parent_key, (_page_index, owners)) in page_owners.iter().enumerate() {
-                let max_mcid = *owners.keys().next_back().expect("non-empty owner map");
-                let mut owner_array = vec![Object::Null; max_mcid as usize + 1];
-                for (&mcid, &element_index) in owners {
-                    owner_array[mcid as usize] = Object::Reference(element_ids[element_index]);
-                }
-                nums.push(Object::Integer(struct_parent_key as i64));
-                nums.push(Object::Array(owner_array));
+        let parent_tree_id = self.allocate_object_id();
+        let mut nums = Vec::new();
+        for (struct_parent_key, (_page_index, owners)) in page_owners.iter().enumerate() {
+            let max_mcid = *owners.keys().next_back().expect("non-empty owner map");
+            let mut owner_array = vec![Object::Null; max_mcid as usize + 1];
+            for (&mcid, &element_index) in owners {
+                owner_array[mcid as usize] = Object::Reference(element_ids[element_index]);
             }
-
-            let mut parent_tree = Dictionary::new();
-            parent_tree.set("Nums", Object::Array(nums));
-            self.write_object(parent_tree_id, Object::Dictionary(parent_tree))?;
-            struct_tree_root.set("ParentTree", Object::Reference(parent_tree_id));
-            struct_tree_root.set(
-                "ParentTreeNextKey",
-                Object::Integer(page_owners.len() as i64),
-            );
+            nums.push(Object::Integer(struct_parent_key as i64));
+            nums.push(Object::Array(owner_array));
         }
+        let mut parent_tree = Dictionary::new();
+        parent_tree.set("Nums", Object::Array(nums));
+        self.write_object(parent_tree_id, Object::Dictionary(parent_tree))?;
+        struct_tree_root.set("ParentTree", Object::Reference(parent_tree_id));
+        struct_tree_root.set(
+            "ParentTreeNextKey",
+            Object::Integer(page_owners.len() as i64),
+        );
 
         // Add root element(s) as K entry
         if let Some(root_index) = struct_tree.root_index() {
