@@ -136,7 +136,7 @@ fn build_cmap_format12_font(groups: &[(u32, u32, u32)]) -> Vec<u8> {
     let mut table_entries: Vec<(u32, u32)> = Vec::new(); // (offset, length)
     for (_, data) in &tables {
         // Align to 4-byte boundary
-        while current_offset % 4 != 0 {
+        while !current_offset.is_multiple_of(4) {
             current_offset += 1;
         }
         table_entries.push((current_offset as u32, data.len() as u32));
@@ -340,7 +340,7 @@ fn build_cmap_format4_font(segments: &[Format4Segment], max_gid: u16) -> Vec<u8>
     let mut current_offset = header_size;
     let mut table_entries: Vec<(u32, u32)> = Vec::new();
     for (_, data) in &tables {
-        while current_offset % 4 != 0 {
+        while !current_offset.is_multiple_of(4) {
             current_offset += 1;
         }
         table_entries.push((current_offset as u32, data.len() as u32));
