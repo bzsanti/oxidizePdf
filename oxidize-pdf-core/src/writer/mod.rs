@@ -5,6 +5,7 @@ mod incremental_annotations;
 mod incremental_form_fill;
 mod incremental_free_text;
 mod incremental_highlights;
+mod incremental_ink;
 mod incremental_ocr_layer;
 mod incremental_tagged_pdf;
 mod incremental_text_notes;
@@ -26,6 +27,10 @@ pub use incremental_free_text::{
 pub use incremental_highlights::{
     Highlight, HighlightColor, HighlightId, HighlightMutation, HighlightOpacity, HighlightQuad,
     HighlightUpdate, IncrementalHighlightEditor,
+};
+pub use incremental_ink::{
+    IncrementalInkEditor, Ink, InkColor, InkId, InkMutation, InkOpacity, InkStroke, InkUpdate,
+    InkWidth,
 };
 pub use incremental_ocr_layer::{
     IncrementalOcrLayerEditor, OcrLayerFragment, OcrLayerPage, OcrLayerPlan, OcrLayerUpdate,

@@ -52,6 +52,13 @@ jobs:
           qpdf_accepts_classic_and_xref_stream_highlight_revisions
           -- --ignored --exact
 
+      - name: Validate incremental ink annotations
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_536_incremental_ink_test
+          qpdf_accepts_classic_and_xref_stream_ink_revisions
+          -- --ignored --exact
+
       - name: Validate incremental OCR layers
         run: >
           cargo test -p oxidize-pdf
