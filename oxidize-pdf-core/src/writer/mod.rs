@@ -3,6 +3,7 @@
 mod content_stream_utils;
 mod incremental_annotations;
 mod incremental_form_fill;
+mod incremental_free_text;
 mod incremental_highlights;
 mod incremental_ocr_layer;
 mod incremental_tagged_pdf;
@@ -18,6 +19,10 @@ pub(crate) use content_stream_utils::{
     apply_font_rename_map, collision_font_mapping, rewrite_font_references, INJECTED_BASE_FONT_KEYS,
 };
 pub use incremental_form_fill::IncrementalFormFiller;
+pub use incremental_free_text::{
+    FreeText, FreeTextAlignment, FreeTextId, FreeTextMutation, FreeTextUpdate,
+    IncrementalFreeTextEditor,
+};
 pub use incremental_highlights::{
     Highlight, HighlightColor, HighlightId, HighlightMutation, HighlightOpacity, HighlightQuad,
     HighlightUpdate, IncrementalHighlightEditor,
