@@ -59,6 +59,13 @@ jobs:
           qpdf_accepts_classic_and_xref_stream_ink_revisions
           -- --ignored --exact
 
+      - name: Validate incremental geometric annotations
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_537_incremental_geometric_test
+          qpdf_accepts_classic_and_xref_stream_geometric_revisions
+          -- --ignored --exact
+
       - name: Validate incremental OCR layers
         run: >
           cargo test -p oxidize-pdf
