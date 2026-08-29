@@ -107,6 +107,11 @@ enum PlannedPage {
     },
 }
 
+struct ImportedDocument {
+    reader: PdfReader<Cursor<Vec<u8>>>,
+    pages: Vec<LosslessPage>,
+}
+
 /// Options for page reordering
 #[derive(Debug, Clone)]
 pub struct ReorderOptions {
@@ -255,12 +260,24 @@ pub fn reorder_pdf_pages<P: AsRef<Path>, Q: AsRef<Path>>(
 }
 
 /// Inspect an atomic page-tree mutation without writing an output file.
+///
+/// This is an exact dry run: imported object graphs and reachability are
+/// analyzed in memory, but the prospective revision is neither serialized nor
+/// reopened. It returns the same object report as [`mutate_pdf_pages_lossless`]
+/// without creating or replacing a destination file.
+///
+/// # Errors
+///
+/// Returns an error for malformed or encrypted PDFs, forbidden DocMDP edits,
+/// invalid indexes, dangling semantic references, unsupported page labels,
+/// or imports that require catalog-level AcroForm, tagged-PDF, named-
+/// destination, or optional-content remapping.
 pub fn plan_pdf_page_mutations<P: AsRef<Path>>(
     input_path: P,
     batch: &PageMutationBatch,
 ) -> OperationResult<PageMutationReport> {
     let base = std::fs::read(input_path)?;
-    let (_, _, report) = mutate_pdf_bytes_lossless(&base, batch)?;
+    let (_, _, report) = mutate_pdf_bytes_lossless(&base, batch, false)?;
     Ok(report)
 }
 
@@ -268,13 +285,21 @@ pub fn plan_pdf_page_mutations<P: AsRef<Path>>(
 ///
 /// The source bytes remain an exact prefix. The completed temporary file is
 /// reopened and checked before it atomically replaces `output_path`.
+///
+/// # Errors
+///
+/// Returns an error under the same conditions as
+/// [`plan_pdf_page_mutations`], or when temporary-file creation, validation,
+/// syncing, or atomic publication fails. The destination is not replaced when
+/// validation fails.
 pub fn mutate_pdf_pages_lossless<P: AsRef<Path>, Q: AsRef<Path>>(
     input_path: P,
     output_path: Q,
     batch: &PageMutationBatch,
 ) -> OperationResult<PageMutationReport> {
     let base = std::fs::read(input_path)?;
-    let (updated, expected, report) = mutate_pdf_bytes_lossless(&base, batch)?;
+    let (updated, expected, report) = mutate_pdf_bytes_lossless(&base, batch, true)?;
+    let updated = updated.expect("materialized page mutation must return bytes");
     validate_lossless_output(&base, &updated, &expected)?;
 
     let output_path = output_path.as_ref();
@@ -295,7 +320,8 @@ pub fn mutate_pdf_pages_lossless<P: AsRef<Path>, Q: AsRef<Path>>(
 fn mutate_pdf_bytes_lossless(
     base: &[u8],
     batch: &PageMutationBatch,
-) -> Result<(Vec<u8>, LosslessValidation, PageMutationReport), PdfError> {
+    materialize: bool,
+) -> Result<(Option<Vec<u8>>, LosslessValidation, PageMutationReport), PdfError> {
     if batch.operations.is_empty() {
         return Err(invalid_lossless("page mutation batch cannot be empty"));
     }
@@ -310,6 +336,16 @@ fn mutate_pdf_bytes_lossless(
         .catalog()
         .map_err(|error| invalid_lossless(format!("read document catalog: {error}")))?
         .clone();
+    if catalog.contains_key("PageLabels")
+        && batch
+            .operations
+            .iter()
+            .any(|operation| !matches!(operation, PageMutation::Rotate { .. }))
+    {
+        return Err(invalid_lossless(
+            "page reordering, insertion, duplication, or deletion with catalog /PageLabels is unsupported because label indexes require remapping",
+        ));
+    }
     ensure_modification_allowed(
         &mut reader,
         &catalog,
@@ -381,12 +417,28 @@ fn mutate_pdf_bytes_lossless(
     let source_reachable = reachable_from_catalog(&mut reader, &catalog)?;
 
     let root_inherited = inherited_values(&root_dictionary);
+    let root_preserved_values: Vec<_> = root_dictionary
+        .0
+        .iter()
+        .filter(|(key, _)| !matches!(key.0.as_str(), "Kids" | "Count"))
+        .map(|(_, value)| value.clone())
+        .collect();
     let mut update = IncrementalUpdate::from_base(base)?;
     let mut added_objects = Vec::new();
     let mut final_pages = Vec::with_capacity(planned.len());
     let mut validation_pages = Vec::with_capacity(planned.len());
     let mut replacements = HashSet::new();
+    let mut preserved_source_refs = HashSet::new();
     replacements.insert(root_reference);
+    let mut imported_documents = HashMap::new();
+    for source in planned.iter().filter_map(|page| match page {
+        PlannedPage::Import { source, .. } => Some(source),
+        _ => None,
+    }) {
+        if !imported_documents.contains_key(source) {
+            imported_documents.insert(source.clone(), load_imported_document(source)?);
+        }
+    }
 
     for plan in planned {
         match plan {
@@ -435,6 +487,7 @@ fn mutate_pdf_bytes_lossless(
                     false,
                     &mut update,
                     &mut added_objects,
+                    &mut preserved_source_refs,
                 )?;
                 let object = object_from_pending(&added_objects, id);
                 final_pages.push(id);
@@ -445,51 +498,24 @@ fn mutate_pdf_bytes_lossless(
                 source_index,
                 rotation,
             } => {
-                let bytes = std::fs::read(&source).map_err(|error| {
-                    invalid_lossless(format!("read imported PDF {}: {error}", source.display()))
-                })?;
-                let mut imported_reader = PdfReader::new(Cursor::new(&bytes)).map_err(|error| {
-                    invalid_lossless(format!("parse imported PDF {}: {error}", source.display()))
-                })?;
-                if imported_reader.is_encrypted() {
-                    return Err(PdfError::PermissionDenied(format!(
-                        "cannot import a page from encrypted PDF {}",
-                        source.display()
-                    )));
-                }
-                let imported_catalog = imported_reader
-                    .catalog()
-                    .map_err(|error| invalid_lossless(format!("read imported catalog: {error}")))?
-                    .clone();
-                let imported_root = imported_catalog
-                    .get("Pages")
-                    .and_then(PdfObject::as_reference)
-                    .ok_or_else(|| invalid_lossless("imported catalog /Pages is not indirect"))?;
-                let mut imported_pages = Vec::new();
-                let mut imported_visited = HashSet::new();
-                walk_page_tree(
-                    &mut imported_reader,
-                    imported_root,
-                    None,
-                    HashMap::new(),
-                    &mut imported_visited,
-                    &mut imported_pages,
-                    0,
-                )?;
-                let page = imported_pages.get(source_index).ok_or_else(|| {
+                let imported = imported_documents
+                    .get_mut(&source)
+                    .ok_or_else(|| invalid_lossless("planned import source was not loaded"))?;
+                let page = imported.pages.get(source_index).ok_or_else(|| {
                     invalid_lossless(format!(
                         "imported page index {source_index} is out of bounds for {} pages",
-                        imported_pages.len()
+                        imported.pages.len()
                     ))
                 })?;
                 let id = clone_page_into_update(
-                    &mut imported_reader,
+                    &mut imported.reader,
                     page,
                     root_reference,
                     rotation,
                     true,
                     &mut update,
                     &mut added_objects,
+                    &mut preserved_source_refs,
                 )?;
                 let object = object_from_pending(&added_objects, id);
                 final_pages.push(id);
@@ -516,15 +542,15 @@ fn mutate_pdf_bytes_lossless(
     for (id, object) in &added_objects {
         update.replace(*id, object.clone())?;
     }
-    let updated = update.finish()?;
-
-    let mut output_reader = PdfReader::new(Cursor::new(&updated))
-        .map_err(|error| invalid_lossless(format!("reopen page mutation: {error}")))?;
-    let output_catalog = output_reader
-        .catalog()
-        .map_err(|error| invalid_lossless(format!("read output catalog: {error}")))?
-        .clone();
-    let output_reachable = reachable_from_catalog(&mut output_reader, &output_catalog)?;
+    let output_reachable = prospective_source_references(
+        &mut reader,
+        &catalog,
+        root_reference,
+        &root_preserved_values,
+        &source_pages,
+        &retained,
+        &preserved_source_refs,
+    )?;
     let mut unreachable_objects: Vec<_> = source_reachable
         .difference(&output_reachable)
         .copied()
@@ -540,6 +566,29 @@ fn mutate_pdf_bytes_lossless(
         unreachable_objects,
         page_count: final_pages.len(),
     };
+    let updated = if materialize {
+        let bytes = update.finish()?;
+        let mut output_reader = PdfReader::new(Cursor::new(&bytes))
+            .map_err(|error| invalid_lossless(format!("reopen page mutation: {error}")))?;
+        let output_catalog = output_reader
+            .catalog()
+            .map_err(|error| invalid_lossless(format!("read output catalog: {error}")))?
+            .clone();
+        let actual_reachable = reachable_from_catalog(&mut output_reader, &output_catalog)?;
+        let mut actual_unreachable: Vec<_> = source_reachable
+            .difference(&actual_reachable)
+            .copied()
+            .collect();
+        actual_unreachable.sort_unstable();
+        if actual_unreachable != report.unreachable_objects {
+            return Err(invalid_lossless(
+                "dry-run reachability report differs from the materialized revision",
+            ));
+        }
+        Some(bytes)
+    } else {
+        None
+    };
     Ok((
         updated,
         LosslessValidation {
@@ -549,6 +598,40 @@ fn mutate_pdf_bytes_lossless(
         },
         report,
     ))
+}
+
+fn load_imported_document(path: &Path) -> Result<ImportedDocument, PdfError> {
+    let bytes = std::fs::read(path).map_err(|error| {
+        invalid_lossless(format!("read imported PDF {}: {error}", path.display()))
+    })?;
+    let mut reader = PdfReader::new(Cursor::new(bytes)).map_err(|error| {
+        invalid_lossless(format!("parse imported PDF {}: {error}", path.display()))
+    })?;
+    if reader.is_encrypted() {
+        return Err(PdfError::PermissionDenied(format!(
+            "cannot import a page from encrypted PDF {}",
+            path.display()
+        )));
+    }
+    let catalog = reader
+        .catalog()
+        .map_err(|error| invalid_lossless(format!("read imported catalog: {error}")))?
+        .clone();
+    let root = catalog
+        .get("Pages")
+        .and_then(PdfObject::as_reference)
+        .ok_or_else(|| invalid_lossless("imported catalog /Pages is not indirect"))?;
+    let mut pages = Vec::new();
+    walk_page_tree(
+        &mut reader,
+        root,
+        None,
+        HashMap::new(),
+        &mut HashSet::new(),
+        &mut pages,
+        0,
+    )?;
+    Ok(ImportedDocument { reader, pages })
 }
 
 fn apply_page_mutation(
@@ -704,6 +787,7 @@ fn clone_page_into_update<R: Read + Seek>(
     external: bool,
     update: &mut IncrementalUpdate<'_>,
     added: &mut Vec<((u32, u16), PdfObject)>,
+    preserved_source_refs: &mut HashSet<(u32, u16)>,
 ) -> Result<(u32, u16), PdfError> {
     ensure_page_can_be_cloned(reader, page, external)?;
     let page_id = update.allocate_id()?;
@@ -728,6 +812,7 @@ fn clone_page_into_update<R: Read + Seek>(
             update,
             added,
             &mut mapping,
+            preserved_source_refs,
             0,
         )?;
         dictionary.0.insert(key, cloned);
@@ -757,6 +842,9 @@ fn ensure_page_can_be_cloned<R: Read + Seek>(
         return Err(invalid_lossless(format!(
             "cannot {action} a tagged page without remapping its parent-tree entry"
         )));
+    }
+    if external {
+        ensure_import_graph_supported(reader, page)?;
     }
     let Some(annots) = page.dictionary.get("Annots") else {
         return Ok(());
@@ -798,6 +886,81 @@ fn ensure_page_can_be_cloned<R: Read + Seek>(
     Ok(())
 }
 
+fn ensure_import_graph_supported<R: Read + Seek>(
+    reader: &mut PdfReader<R>,
+    page: &LosslessPage,
+) -> Result<(), PdfError> {
+    let mut pending: Vec<_> = page
+        .dictionary
+        .0
+        .iter()
+        .filter(|(key, _)| key.0 != "Parent")
+        .map(|(_, value)| value.clone())
+        .collect();
+    let mut visited = HashSet::new();
+    while let Some(object) = pending.pop() {
+        match object {
+            PdfObject::Reference(number, generation) => {
+                let id = (number, generation);
+                if !visited.insert(id) {
+                    continue;
+                }
+                if visited.len() > MAX_CLONED_OBJECTS_PER_PAGE {
+                    return Err(invalid_lossless(
+                        "imported page graph exceeds the supported object count",
+                    ));
+                }
+                pending.push(
+                    reader
+                        .get_object(number, generation)
+                        .map_err(|error| {
+                            invalid_lossless(format!("inspect imported page graph: {error}"))
+                        })?
+                        .clone(),
+                );
+            }
+            PdfObject::Array(array) => pending.extend(array.0),
+            PdfObject::Dictionary(dictionary) => {
+                reject_unsupported_import_dictionary(&dictionary)?;
+                pending.extend(dictionary.0.into_values());
+            }
+            PdfObject::Stream(stream) => {
+                reject_unsupported_import_dictionary(&stream.dict)?;
+                pending.extend(stream.dict.0.into_values());
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn reject_unsupported_import_dictionary(dictionary: &PdfDictionary) -> Result<(), PdfError> {
+    if dictionary
+        .get_type()
+        .is_some_and(|kind| matches!(kind, "OCG" | "OCMD"))
+    {
+        return Err(invalid_lossless(
+            "cannot import optional-content groups without remapping catalog /OCProperties",
+        ));
+    }
+    let named_destination = dictionary
+        .get("Dest")
+        .is_some_and(|value| matches!(value, PdfObject::Name(_) | PdfObject::String(_)))
+        || (dictionary
+            .get("S")
+            .and_then(PdfObject::as_name)
+            .is_some_and(|name| name.0 == "GoTo")
+            && dictionary
+                .get("D")
+                .is_some_and(|value| matches!(value, PdfObject::Name(_) | PdfObject::String(_))));
+    if named_destination {
+        return Err(invalid_lossless(
+            "cannot import a named destination without remapping the destination name tree",
+        ));
+    }
+    Ok(())
+}
+
 fn clone_page_object<R: Read + Seek>(
     reader: &mut PdfReader<R>,
     object: &PdfObject,
@@ -806,6 +969,7 @@ fn clone_page_object<R: Read + Seek>(
     update: &mut IncrementalUpdate<'_>,
     added: &mut Vec<((u32, u16), PdfObject)>,
     mapping: &mut HashMap<(u32, u16), (u32, u16)>,
+    preserved_source_refs: &mut HashSet<(u32, u16)>,
     depth: usize,
 ) -> Result<PdfObject, PdfError> {
     if depth > MAX_OBJECT_GRAPH_DEPTH {
@@ -827,16 +991,23 @@ fn clone_page_object<R: Read + Seek>(
                     ))
                 })?
                 .clone();
-            let structural_type = source_object
-                .as_dict()
-                .and_then(PdfDictionary::get_type)
-                .is_some_and(|kind| matches!(kind, "Page" | "Pages" | "Catalog"));
-            if structural_type {
+            let object_type = source_object.as_dict().and_then(PdfDictionary::get_type);
+            if object_type.is_some_and(|kind| matches!(kind, "Page" | "Pages" | "Catalog")) {
                 if external {
                     return Err(invalid_lossless(format!(
                         "imported page graph references foreign structural object {number} {generation} R"
                     )));
                 }
+                preserved_source_refs.insert(source_id);
+                return Ok(object.clone());
+            }
+            if object_type.is_some_and(|kind| matches!(kind, "OCG" | "OCMD")) {
+                if external {
+                    return Err(invalid_lossless(
+                        "cannot import optional-content groups without remapping catalog /OCProperties",
+                    ));
+                }
+                preserved_source_refs.insert(source_id);
                 return Ok(object.clone());
             }
             if mapping.len() >= MAX_CLONED_OBJECTS_PER_PAGE {
@@ -854,6 +1025,7 @@ fn clone_page_object<R: Read + Seek>(
                 update,
                 added,
                 mapping,
+                preserved_source_refs,
                 depth + 1,
             )?;
             added.push((id, cloned));
@@ -872,6 +1044,7 @@ fn clone_page_object<R: Read + Seek>(
                         update,
                         added,
                         mapping,
+                        preserved_source_refs,
                         depth + 1,
                     )
                 })
@@ -891,6 +1064,7 @@ fn clone_page_object<R: Read + Seek>(
                     update,
                     added,
                     mapping,
+                    preserved_source_refs,
                     depth + 1,
                 )?;
                 dictionary.0.insert(key, cloned);
@@ -911,6 +1085,7 @@ fn clone_page_object<R: Read + Seek>(
                     update,
                     added,
                     mapping,
+                    preserved_source_refs,
                     depth + 1,
                 )?;
                 stream.dict.0.insert(key, cloned);
@@ -956,6 +1131,89 @@ fn reachable_from_catalog<R: Read + Seek>(
                         })?
                         .clone(),
                 );
+            }
+            PdfObject::Array(array) => pending.extend(array.0),
+            PdfObject::Dictionary(dictionary) => pending.extend(dictionary.0.into_values()),
+            PdfObject::Stream(stream) => pending.extend(stream.dict.0.into_values()),
+            _ => {}
+        }
+    }
+    Ok(reachable)
+}
+
+fn prospective_source_references<R: Read + Seek>(
+    reader: &mut PdfReader<R>,
+    catalog: &PdfDictionary,
+    page_root: (u32, u16),
+    root_preserved_values: &[PdfObject],
+    pages: &[LosslessPage],
+    retained: &HashSet<usize>,
+    preserved: &HashSet<(u32, u16)>,
+) -> Result<HashSet<(u32, u16)>, PdfError> {
+    let mut pending: Vec<_> = catalog
+        .0
+        .iter()
+        .filter(|(key, _)| key.0 != "Pages")
+        .map(|(_, value)| value.clone())
+        .collect();
+    pending.extend(root_preserved_values.iter().cloned());
+    pending.extend(
+        pages
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| retained.contains(index))
+            .flat_map(|(_, page)| {
+                page.dictionary
+                    .0
+                    .iter()
+                    .filter(|(key, _)| key.0 != "Parent")
+                    .map(|(_, value)| value.clone())
+            }),
+    );
+    pending.extend(preserved.iter().map(|id| PdfObject::Reference(id.0, id.1)));
+
+    let mut reachable = HashSet::from([page_root]);
+    reachable.extend(
+        pages
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| retained.contains(index))
+            .map(|(_, page)| page.reference),
+    );
+    while let Some(object) = pending.pop() {
+        match object {
+            PdfObject::Reference(number, generation) => {
+                let id = (number, generation);
+                if !reachable.insert(id) || id == page_root {
+                    continue;
+                }
+                if reachable.len() > MAX_CLONED_OBJECTS_PER_PAGE {
+                    return Err(invalid_lossless(
+                        "prospective document graph exceeds the supported object count",
+                    ));
+                }
+                let object = reader
+                    .get_object(number, generation)
+                    .map_err(|error| {
+                        invalid_lossless(format!("plan prospective object graph: {error}"))
+                    })?
+                    .clone();
+                match object {
+                    PdfObject::Dictionary(dictionary)
+                        if dictionary
+                            .get_type()
+                            .is_some_and(|kind| matches!(kind, "Pages" | "Catalog")) => {}
+                    PdfObject::Dictionary(dictionary) if dictionary.get_type() == Some("Page") => {
+                        pending.extend(
+                            dictionary
+                                .0
+                                .into_iter()
+                                .filter(|(key, _)| key.0 != "Parent")
+                                .map(|(_, value)| value),
+                        );
+                    }
+                    object => pending.push(object),
+                }
             }
             PdfObject::Array(array) => pending.extend(array.0),
             PdfObject::Dictionary(dictionary) => pending.extend(dictionary.0.into_values()),

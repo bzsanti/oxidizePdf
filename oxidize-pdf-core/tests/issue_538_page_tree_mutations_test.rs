@@ -255,6 +255,156 @@ fn supports_xref_stream_input_and_rejects_invalid_batches() {
 }
 
 #[test]
+fn rejects_encryption_docmdp_and_page_labels_without_replacing_output() {
+    let directory = TempDir::new().unwrap();
+    let output = directory.path().join("output.pdf");
+    fs::write(&output, b"keep").unwrap();
+
+    let encrypted = directory.path().join("encrypted.pdf");
+    let mut document = Document::new();
+    document.add_page(Page::a4());
+    document.encrypt_with_passwords("user", "owner");
+    fs::write(&encrypted, document.to_bytes().unwrap()).unwrap();
+    let rotate = PageMutationBatch {
+        operations: vec![PageMutation::Rotate {
+            page: 0,
+            degrees: 90,
+        }],
+    };
+    let error = mutate_pdf_pages_lossless(&encrypted, &output, &rotate)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("encrypted PDFs"), "{error}");
+
+    let certified = directory.path().join("certified.pdf");
+    fs::write(
+        &certified,
+        include_bytes!("fixtures/signatures/docmdp_p2_rsa.pdf"),
+    )
+    .unwrap();
+    let error = mutate_pdf_pages_lossless(&certified, &output, &rotate)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("DocMDP"), "{error}");
+
+    let labelled = directory.path().join("labelled.pdf");
+    fs::write(
+        &labelled,
+        assemble_pdf(&[
+            b"<< /Type /Catalog /Pages 2 0 R /PageLabels << /Nums [0 << /S /D >>] >> >>".to_vec(),
+            b"<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 /MediaBox [0 0 10 10] >>".to_vec(),
+            b"<< /Type /Page /Parent 2 0 R >>".to_vec(),
+            b"<< /Type /Page /Parent 2 0 R >>".to_vec(),
+        ]),
+    )
+    .unwrap();
+    let error = mutate_pdf_pages_lossless(
+        &labelled,
+        &output,
+        &PageMutationBatch {
+            operations: vec![PageMutation::Delete { page: 1 }],
+        },
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(error.contains("PageLabels"), "{error}");
+    mutate_pdf_pages_lossless(&labelled, &output, &rotate)
+        .expect("rotation does not change page-label indexes");
+}
+
+#[test]
+fn rejects_imports_with_named_destinations_or_optional_content() {
+    let directory = TempDir::new().unwrap();
+    let target = directory.path().join("target.pdf");
+    let output = directory.path().join("output.pdf");
+    fs::write(&target, base_pdf("")).unwrap();
+
+    let named = directory.path().join("named.pdf");
+    fs::write(
+        &named,
+        assemble_pdf(&[
+            b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 /MediaBox [0 0 10 10] >>".to_vec(),
+            b"<< /Type /Page /Parent 2 0 R /Annots [4 0 R] >>".to_vec(),
+            b"<< /Type /Annot /Subtype /Link /Rect [0 0 1 1] /Dest /chapter >>".to_vec(),
+        ]),
+    )
+    .unwrap();
+    let insert = |source| PageMutationBatch {
+        operations: vec![PageMutation::Insert {
+            source,
+            page: 0,
+            at: 0,
+        }],
+    };
+    let error = plan_pdf_page_mutations(&target, &insert(named))
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("named destination"), "{error}");
+
+    let ocg = directory.path().join("ocg.pdf");
+    fs::write(
+        &ocg,
+        assemble_pdf(&[
+            b"<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [5 0 R] >> >>".to_vec(),
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 /MediaBox [0 0 10 10] >>".to_vec(),
+            b"<< /Type /Page /Parent 2 0 R /Resources << /Properties << /Layer 5 0 R >> >> >>"
+                .to_vec(),
+            b"null".to_vec(),
+            b"<< /Type /OCG /Name (Layer) >>".to_vec(),
+        ]),
+    )
+    .unwrap();
+    let error = plan_pdf_page_mutations(&target, &insert(ocg))
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("optional-content"), "{error}");
+    assert!(!output.exists());
+}
+
+#[test]
+fn mutates_a_nested_page_tree_and_preserves_effective_inheritance() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("nested.pdf");
+    let output = directory.path().join("output.pdf");
+    fs::write(
+        &input,
+        assemble_pdf(&[
+            b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+            b"<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>".to_vec(),
+            b"<< /Type /Pages /Parent 2 0 R /Kids [5 0 R] /Count 1 /MediaBox [0 0 100 200] >>".to_vec(),
+            b"<< /Type /Pages /Parent 2 0 R /Kids [6 0 R] /Count 1 /MediaBox [0 0 300 400] /Rotate 90 >>".to_vec(),
+            b"<< /Type /Page /Parent 3 0 R >>".to_vec(),
+            b"<< /Type /Page /Parent 4 0 R >>".to_vec(),
+        ]),
+    )
+    .unwrap();
+    mutate_pdf_pages_lossless(
+        &input,
+        &output,
+        &PageMutationBatch {
+            operations: vec![
+                PageMutation::Move { from: 1, to: 0 },
+                PageMutation::Rotate {
+                    page: 0,
+                    degrees: 90,
+                },
+            ],
+        },
+    )
+    .unwrap();
+    let bytes = fs::read(output).unwrap();
+    assert_eq!(page_refs(&bytes), vec![(6, 0), (5, 0)]);
+    let mut reader = PdfReader::new(Cursor::new(bytes)).unwrap();
+    let page = reader.get_object(6, 0).unwrap().as_dict().unwrap();
+    assert_eq!(
+        page.get("Rotate").and_then(PdfObject::as_integer),
+        Some(180)
+    );
+    assert!(page.contains_key("MediaBox"));
+}
+
+#[test]
 #[ignore = "requires qpdf and Poppler command-line tools"]
 fn qpdf_and_poppler_accept_classic_and_xref_stream_page_mutations() {
     for (name, config) in [
