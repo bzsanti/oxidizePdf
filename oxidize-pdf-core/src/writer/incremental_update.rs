@@ -67,7 +67,7 @@ impl<'a> IncrementalUpdate<'a> {
         Self::from_reader(base, &reader)
     }
 
-    pub(super) fn allocate_id(&mut self) -> Result<(u32, u16)> {
+    pub(crate) fn allocate_id(&mut self) -> Result<(u32, u16)> {
         let id = (self.next_id, 0);
         self.next_id = self.next_id.checked_add(1).ok_or_else(|| {
             PdfError::InvalidStructure("PDF object number space is exhausted".to_string())

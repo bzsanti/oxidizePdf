@@ -31,8 +31,9 @@ pub use page_extraction::{
 };
 pub use pdf_ocr_converter::{ConversionOptions, ConversionResult, PdfOcrConverter};
 pub use reorder::{
-    move_pdf_page, reorder_pdf_pages, reorder_pdf_pages_lossless, reverse_pdf_pages,
-    swap_pdf_pages, PageReorderer, ReorderOptions,
+    move_pdf_page, mutate_pdf_pages_lossless, plan_pdf_page_mutations, reorder_pdf_pages,
+    reorder_pdf_pages_lossless, reverse_pdf_pages, swap_pdf_pages, PageMutation, PageMutationBatch,
+    PageMutationReport, PageReorderer, ReorderOptions,
 };
 pub use rotate::{rotate_all_pages, rotate_pdf_pages, PageRotator, RotateOptions, RotationAngle};
 pub use semantic_redactor::{
