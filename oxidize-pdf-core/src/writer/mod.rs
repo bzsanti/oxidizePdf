@@ -4,6 +4,7 @@ mod content_stream_utils;
 mod incremental_annotations;
 mod incremental_form_fill;
 mod incremental_free_text;
+mod incremental_geometric;
 mod incremental_highlights;
 mod incremental_ink;
 mod incremental_ocr_layer;
@@ -23,6 +24,11 @@ pub use incremental_form_fill::IncrementalFormFiller;
 pub use incremental_free_text::{
     FreeText, FreeTextAlignment, FreeTextId, FreeTextMutation, FreeTextUpdate,
     IncrementalFreeTextEditor,
+};
+pub use incremental_geometric::{
+    GeometricAnnotation, GeometricColor, GeometricDashPattern, GeometricGeometry, GeometricId,
+    GeometricMutation, GeometricOpacity, GeometricStyle, GeometricUpdate, GeometricWidth,
+    IncrementalGeometricEditor, LineEnding,
 };
 pub use incremental_highlights::{
     Highlight, HighlightColor, HighlightId, HighlightMutation, HighlightOpacity, HighlightQuad,

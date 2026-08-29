@@ -33,6 +33,14 @@ pub(super) struct AnnotationSnapshot {
 
 impl AnnotationSnapshot {
     pub(super) fn parse(bytes: &[u8], target_subtype: &str, feature: &str) -> Result<Self> {
+        Self::parse_subtypes(bytes, &[target_subtype], feature)
+    }
+
+    pub(super) fn parse_subtypes(
+        bytes: &[u8],
+        target_subtypes: &[&str],
+        feature: &str,
+    ) -> Result<Self> {
         let reader = PdfReader::new(Cursor::new(bytes))
             .map_err(|e| PdfError::InvalidStructure(format!("parse base PDF: {e}")))?;
         if reader.is_encrypted() {
@@ -115,8 +123,10 @@ impl AnnotationSnapshot {
                         );
                     }
                     PdfObject::Dictionary(dictionary)
-                        if subtype(dictionary) == Some(target_subtype) =>
+                        if subtype(dictionary)
+                            .is_some_and(|value| target_subtypes.contains(&value)) =>
                     {
+                        let target_subtype = subtype(dictionary).unwrap_or("unknown");
                         return Err(PdfError::InvalidStructure(format!(
                             "inline /{target_subtype} annotations have no stable object identity"
                         )));
