@@ -2,6 +2,10 @@
 //!
 //! This module provides functionality to split PDF documents into multiple files
 //! based on page ranges or other criteria.
+//!
+//! This legacy API reconstructs a new [`crate::Document`]. Use
+//! [`super::split_pdf_lossless`] when complete reachable source semantics must
+//! be retained or rejected explicitly through a dry-run report.
 
 use super::{OperationError, OperationResult, PageRange};
 use crate::parser::page_tree::ParsedPage;

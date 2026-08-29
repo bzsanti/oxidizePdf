@@ -600,6 +600,27 @@ fn mutate_pdf_bytes_lossless(
     ))
 }
 
+/// Plan a mutation against an immutable caller-owned source snapshot.
+pub(crate) fn plan_pdf_page_mutations_from_bytes(
+    base: &[u8],
+    batch: &PageMutationBatch,
+) -> OperationResult<PageMutationReport> {
+    let (_, _, report) = mutate_pdf_bytes_lossless(base, batch, false)?;
+    Ok(report)
+}
+
+/// Materialize and validate a mutation without publishing a destination.
+pub(crate) fn materialize_pdf_page_mutations_from_bytes(
+    base: &[u8],
+    batch: &PageMutationBatch,
+) -> OperationResult<(Vec<u8>, PageMutationReport)> {
+    let (updated, expected, report) = mutate_pdf_bytes_lossless(base, batch, true)?;
+    let updated =
+        updated.ok_or_else(|| invalid_lossless("materialized mutation returned no bytes"))?;
+    validate_lossless_output(base, &updated, &expected)?;
+    Ok((updated, report))
+}
+
 fn load_imported_document(path: &Path) -> Result<ImportedDocument, PdfError> {
     let bytes = std::fs::read(path).map_err(|error| {
         invalid_lossless(format!("read imported PDF {}: {error}", path.display()))

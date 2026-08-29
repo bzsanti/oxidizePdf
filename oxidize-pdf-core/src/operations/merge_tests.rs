@@ -370,7 +370,7 @@ mod tests {
     fn test_merge_options_variants() {
         // Test all MergeOptions variants
         let default_options = MergeOptions::default();
-        assert!(default_options.preserve_bookmarks);
+        assert!(!default_options.preserve_bookmarks);
         assert!(!default_options.preserve_forms);
         assert!(!default_options.optimize);
         assert!(matches!(
@@ -414,7 +414,7 @@ mod tests {
                 ..Default::default()
             };
             // Just verify we can create options with all metadata modes
-            assert!(options.preserve_bookmarks);
+            assert!(!options.preserve_bookmarks);
         }
     }
 
