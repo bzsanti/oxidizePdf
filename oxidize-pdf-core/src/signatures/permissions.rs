@@ -9,6 +9,7 @@ use std::io::{Read, Seek};
 #[allow(dead_code)] // Additional variants are the shared contract for upcoming editors.
 pub(crate) enum IncrementalModification {
     PageTreeReorder,
+    PageTreeMutation,
     FormFill,
     AddSignature,
     AddAnnotation,
@@ -336,6 +337,7 @@ fn enforce_permission(
     }
     let edit = match modification {
         IncrementalModification::PageTreeReorder => "page-tree reordering",
+        IncrementalModification::PageTreeMutation => "page-tree mutation",
         IncrementalModification::FormFill => "form filling",
         IncrementalModification::AddSignature => "adding signatures",
         IncrementalModification::AddAnnotation => "adding annotations",
@@ -393,6 +395,19 @@ mod tests {
         ] {
             assert!(
                 enforce_permission(IncrementalModification::PageTreeReorder, permission).is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn page_tree_mutations_are_forbidden_at_every_permission_level() {
+        for permission in [
+            DocMdpPermission::NoChanges,
+            DocMdpPermission::FormFillAndSign,
+            DocMdpPermission::FormFillSignAndAnnotate,
+        ] {
+            assert!(
+                enforce_permission(IncrementalModification::PageTreeMutation, permission).is_err()
             );
         }
     }
