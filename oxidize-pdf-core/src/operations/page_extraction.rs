@@ -3,6 +3,10 @@
 //! This module provides functionality to extract individual pages or ranges of pages
 //! from PDF documents. It builds upon the split module but provides a more focused
 //! API specifically for page extraction use cases.
+//!
+//! This legacy API returns a reconstructed [`crate::Document`]. Use
+//! [`super::extract_pdf_pages_lossless`] when annotations and document-level
+//! structures must be retained or rejected explicitly before writing.
 
 use super::{OperationError, OperationResult, PageRange};
 use crate::parser::{ParsedPage, PdfDocument, PdfReader};

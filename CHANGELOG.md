@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [4.9.0] - 2026-08-30
+
+### Added
+
+- **Provider-neutral incremental PDF signing** (#540, #558). New two-phase
+  preparation and finalization APIs support caller-produced CMS signatures,
+  visible and invisible fields, existing-field selection, successive
+  signatures, xref tables and streams, and DocMDP and FieldMDP enforcement
+  while preserving the source PDF as an exact byte prefix.
+- **Lossless incremental FreeText annotation editing** (#534, #553). A typed
+  editor can enumerate, add, update, and remove FreeText annotations without
+  rebuilding unrelated document content.
+- **Lossless incremental Ink annotation editing** (#536, #554). Typed APIs can
+  enumerate and atomically mutate ink strokes, appearance properties, and
+  annotation metadata while preserving prior PDF bytes.
+- **Lossless incremental geometric annotation editing** (#537, #555). Typed
+  editors support line, square, circle, polygon, and polyline annotations,
+  including geometry, color, opacity, width, dash patterns, and line endings.
+- **Atomic page-tree mutation batches** (#538, #556). New planning and mutation
+  APIs can reorder, insert, duplicate, and remove pages in one validated,
+  lossless incremental revision.
+- **Document-semantic preservation for structural operations** (#539, #557).
+  Merge, split, extraction, and page mutation APIs preserve or safely reconcile
+  outlines, named destinations, page labels, AcroForm state, metadata, and
+  associated document structures.
+
+### Changed
+
+- **Obsolete CLI and API release artifacts were retired** (#552). The
+  `oxidize-pdf` library is now the sole maintained and published artifact.
+
 ## [4.8.0] - 2026-08-27
 
 ### Fixed

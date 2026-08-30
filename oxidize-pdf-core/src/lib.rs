@@ -302,11 +302,16 @@ pub use parser::{
 
 // Re-export operations
 pub use operations::{
-    extract_images_from_pages, extract_images_from_pdf, merge_pdfs, move_pdf_page, overlay_pdf,
-    reorder_pdf_pages, reorder_pdf_pages_lossless, reverse_pdf_pages, rotate_pdf_pages, split_pdf,
-    swap_pdf_pages, ExtractImagesOptions, ExtractedImage, ExtractedImageData, ImageExtractionError,
-    ImageExtractionLimits, ImageExtractionResult, ImageExtractor, OverlayOptions, OverlayPosition,
-    ReorderOptions,
+    extract_images_from_pages, extract_images_from_pdf, extract_pdf_pages_lossless, merge_pdfs,
+    merge_pdfs_lossless, move_pdf_page, mutate_pdf_pages_lossless, overlay_pdf,
+    plan_extract_pdf_pages_lossless, plan_merge_pdfs_lossless, plan_pdf_page_mutations,
+    plan_split_pdf_lossless, reorder_pdf_pages, reorder_pdf_pages_lossless, reverse_pdf_pages,
+    rotate_pdf_pages, split_pdf, split_pdf_lossless, swap_pdf_pages, DocumentStructure,
+    ExtractImagesOptions, ExtractedImage, ExtractedImageData, ImageExtractionError,
+    ImageExtractionLimits, ImageExtractionResult, ImageExtractor, InputSemanticReport,
+    InputSemanticRole, LosslessMergeInput, OverlayOptions, OverlayPosition, PageMutation,
+    PageMutationBatch, PageMutationReport, ReorderOptions, SemanticPreservationReport,
+    StructureDisposition, StructureSemanticReport,
 };
 
 // Re-export dashboard types

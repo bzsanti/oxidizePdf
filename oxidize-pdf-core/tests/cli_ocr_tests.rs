@@ -326,6 +326,5 @@ mod cli_ocr_disabled_tests {
     #[test]
     fn test_cli_without_ocr_feature() {
         println!("CLI OCR tests are disabled when 'ocr-tesseract' feature is not enabled");
-        assert!(true, "This is expected behavior");
     }
 }

@@ -1,5 +1,11 @@
 # Release Process Guidelines
 
+## Supported artifact
+
+`oxidize-pdf` is the only maintained and published artifact. The former
+`oxidize-pdf-cli` and `oxidize-pdf-api` crates are discontinued and are not
+part of this repository or its release process.
+
 ## ⚠️ Critical Rules
 
 ### 1. **NEVER create a release tag without green CI**
@@ -17,7 +23,7 @@
 - [ ] Run `cargo test --workspace` locally
 - [ ] Run `cargo clippy --workspace -- -D warnings` locally
 - [ ] All CI checks pass on the target branch
-- [ ] Version numbers are updated in all Cargo.toml files
+- [ ] The workspace version is updated in `Cargo.toml`
 - [ ] CHANGELOG.md is updated with release notes
 - [ ] ISO_COMPLIANCE_REPORT.md is current
 
@@ -92,8 +98,6 @@ The release workflow now includes:
 
 When preparing a release, update versions in:
 - `Cargo.toml` (workspace version)
-- `oxidize-pdf-cli/Cargo.toml`
-- `oxidize-pdf-api/Cargo.toml`
 - Update `ISO_COMPLIANCE_REPORT.md` if compliance changed
 - Update `CHANGELOG.md` with new features/fixes
 
@@ -103,7 +107,6 @@ After successful release:
 1. ✅ Verify `cargo search oxidize-pdf` shows new version
 2. ✅ Check GitHub Release is properly formatted
 3. ✅ Confirm CI is green on main branch
-4. ✅ Test installation: `cargo install oxidize-pdf-cli --version X.X.X`
 
 ## ❌ What NOT to Do
 
@@ -124,5 +127,5 @@ If the release process is broken:
 
 ---
 
-*Last updated: August 2025*
+*Last updated: August 2026*
 *This document reflects lessons learned from v1.1.9 release issues*

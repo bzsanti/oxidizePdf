@@ -13,9 +13,17 @@ use std::path::{Path, PathBuf};
 pub struct MergeOptions {
     /// Page ranges to include from each input file
     pub page_ranges: Option<Vec<PageRange>>,
-    /// Whether to preserve bookmarks/outlines
+    /// Unsupported legacy request to preserve bookmarks/outlines.
+    ///
+    /// The `Document` reconstruction API cannot preserve arbitrary source
+    /// outline graphs. Setting this to `true` returns an error; use
+    /// `plan_merge_pdfs_lossless` and `merge_pdfs_lossless` instead.
     pub preserve_bookmarks: bool,
-    /// Whether to preserve form fields
+    /// Unsupported legacy request to preserve form fields.
+    ///
+    /// The `Document` reconstruction API cannot preserve arbitrary source
+    /// field trees. Setting this to `true` returns an error; use the lossless
+    /// merge API when forms must be retained.
     pub preserve_forms: bool,
     /// Whether to optimize the output
     pub optimize: bool,
@@ -27,7 +35,7 @@ impl Default for MergeOptions {
     fn default() -> Self {
         Self {
             page_ranges: None,
-            preserve_bookmarks: true,
+            preserve_bookmarks: false,
             preserve_forms: false,
             optimize: false,
             metadata_mode: MetadataMode::FromFirst,
@@ -107,6 +115,12 @@ impl PdfMerger {
 
     /// Merge all input files into a single document
     pub fn merge(&mut self) -> OperationResult<Document> {
+        if self.options.preserve_bookmarks || self.options.preserve_forms {
+            return Err(OperationError::ProcessingError(
+                "legacy Document reconstruction cannot honor preserve_bookmarks or preserve_forms; use merge_pdfs_lossless"
+                    .to_string(),
+            ));
+        }
         if self.inputs.is_empty() {
             return Err(OperationError::NoPagesToProcess);
         }
@@ -249,10 +263,23 @@ mod tests {
     fn test_merge_options_default() {
         let options = MergeOptions::default();
         assert!(options.page_ranges.is_none());
-        assert!(options.preserve_bookmarks);
+        assert!(!options.preserve_bookmarks);
         assert!(!options.preserve_forms);
         assert!(!options.optimize);
         assert!(matches!(options.metadata_mode, MetadataMode::FromFirst));
+    }
+
+    #[test]
+    fn legacy_preservation_flags_fail_instead_of_being_ignored() {
+        let mut merger = PdfMerger::new(MergeOptions {
+            preserve_bookmarks: true,
+            ..MergeOptions::default()
+        });
+        let error = match merger.merge() {
+            Ok(_) => panic!("legacy preservation flag must be rejected"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("merge_pdfs_lossless"));
     }
 
     #[test]

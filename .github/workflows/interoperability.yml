@@ -52,6 +52,27 @@ jobs:
           qpdf_accepts_classic_and_xref_stream_highlight_revisions
           -- --ignored --exact
 
+      - name: Validate incremental ink annotations
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_536_incremental_ink_test
+          qpdf_accepts_classic_and_xref_stream_ink_revisions
+          -- --ignored --exact
+
+      - name: Validate incremental geometric annotations
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_537_incremental_geometric_test
+          qpdf_accepts_classic_and_xref_stream_geometric_revisions
+          -- --ignored --exact
+
+      - name: Validate lossless page-tree mutations
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_538_page_tree_mutations_test
+          qpdf_and_poppler_accept_classic_and_xref_stream_page_mutations
+          -- --ignored --exact
+
       - name: Validate incremental OCR layers
         run: >
           cargo test -p oxidize-pdf

@@ -12,6 +12,7 @@ pub mod page_extraction;
 pub mod pdf_ocr_converter;
 pub mod reorder;
 pub mod rotate;
+pub mod semantic_preservation;
 pub mod semantic_redactor;
 pub mod source_highlighter;
 pub mod split;
@@ -31,10 +32,17 @@ pub use page_extraction::{
 };
 pub use pdf_ocr_converter::{ConversionOptions, ConversionResult, PdfOcrConverter};
 pub use reorder::{
-    move_pdf_page, reorder_pdf_pages, reorder_pdf_pages_lossless, reverse_pdf_pages,
-    swap_pdf_pages, PageReorderer, ReorderOptions,
+    move_pdf_page, mutate_pdf_pages_lossless, plan_pdf_page_mutations, reorder_pdf_pages,
+    reorder_pdf_pages_lossless, reverse_pdf_pages, swap_pdf_pages, PageMutation, PageMutationBatch,
+    PageMutationReport, PageReorderer, ReorderOptions,
 };
 pub use rotate::{rotate_all_pages, rotate_pdf_pages, PageRotator, RotateOptions, RotationAngle};
+pub use semantic_preservation::{
+    extract_pdf_pages_lossless, merge_pdfs_lossless, plan_extract_pdf_pages_lossless,
+    plan_merge_pdfs_lossless, plan_split_pdf_lossless, split_pdf_lossless, DocumentStructure,
+    InputSemanticReport, InputSemanticRole, LosslessMergeInput, SemanticPreservationReport,
+    StructureDisposition, StructureSemanticReport,
+};
 pub use semantic_redactor::{
     RedactionConfig, RedactionEntry, RedactionMode, RedactionReport, RedactionStyle,
     SemanticRedactor, SemanticRedactorError, SemanticRedactorResult,
