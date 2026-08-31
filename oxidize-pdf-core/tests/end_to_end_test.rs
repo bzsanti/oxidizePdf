@@ -2,8 +2,8 @@
 //! Tests complete workflows from PDF creation to parsing and manipulation
 
 use oxidize_pdf::graphics::Color;
-use oxidize_pdf::operations::{
-    merge_pdfs, split_pdf, MergeInput, MergeOptions, SplitMode, SplitOptions,
+use oxidize_pdf::operations::reconstruct::{
+    merge_pdfs, split_pdf, MergeInput, MetadataMode, SplitMode,
 };
 use oxidize_pdf::parser::PdfReader;
 use oxidize_pdf::text::Font;
@@ -219,18 +219,12 @@ fn test_split_pdf() -> std::result::Result<(), Box<dyn std::error::Error>> {
     fs::write(&input_path, pdf_bytes)?;
 
     // Split into individual pages
-    let options = SplitOptions {
-        mode: SplitMode::SinglePages,
-        output_pattern: temp_dir
-            .path()
-            .join("page_{}.pdf")
-            .to_string_lossy()
-            .to_string(),
-        preserve_metadata: true,
-        optimize: false,
-    };
-
-    split_pdf(&input_path, options)?;
+    split_pdf(
+        &input_path,
+        SplitMode::SinglePages,
+        temp_dir.path().join("page_{}.pdf").to_string_lossy(),
+        true,
+    )?;
 
     // Verify output files
     for i in 1..=6 {
@@ -270,9 +264,7 @@ fn test_merge_pdfs() -> std::result::Result<(), Box<dyn std::error::Error>> {
     ];
 
     let output_path = temp_dir.path().join("merged.pdf");
-    let options = MergeOptions::default();
-
-    merge_pdfs(inputs, &output_path, options)?;
+    merge_pdfs(inputs, &output_path, MetadataMode::FromFirst)?;
 
     // Verify merged PDF
     assert!(output_path.exists());
@@ -422,18 +414,12 @@ fn test_complex_document_workflow() -> std::result::Result<(), Box<dyn std::erro
     writer.write_document(&mut document)?;
 
     // Step 3: Split into chunks
-    let split_options = SplitOptions {
-        mode: SplitMode::ChunkSize(3),
-        output_pattern: temp_dir
-            .path()
-            .join("chunk_{}.pdf")
-            .to_string_lossy()
-            .to_string(),
-        preserve_metadata: true,
-        optimize: false,
-    };
-
-    let split_files = split_pdf(&original_path, split_options)?;
+    let split_files = split_pdf(
+        &original_path,
+        SplitMode::ChunkSize(3),
+        temp_dir.path().join("chunk_{}.pdf").to_string_lossy(),
+        true,
+    )?;
 
     // Step 4: Merge some chunks
     // Use the actual file names created
@@ -452,7 +438,7 @@ fn test_complex_document_workflow() -> std::result::Result<(), Box<dyn std::erro
     let merge_inputs = vec![MergeInput::new(chunk1), MergeInput::new(chunk2)];
 
     let merged_path = temp_dir.path().join("merged_chunks.pdf");
-    merge_pdfs(merge_inputs, &merged_path, MergeOptions::default())?;
+    merge_pdfs(merge_inputs, &merged_path, MetadataMode::FromFirst)?;
 
     // Step 5: Verify final result
     assert!(merged_path.exists());

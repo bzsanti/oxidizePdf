@@ -143,7 +143,7 @@ fn test_unlock_with_password_on_unencrypted_pdf() {
         // Unlocking unencrypted PDF should return Ok(true)
         let result = reader.unlock_with_password("any_password");
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), true);
+        assert!(result.unwrap());
     }
 }
 
@@ -156,7 +156,7 @@ fn test_try_empty_password_on_unencrypted_pdf() {
         // Trying empty password on unencrypted PDF should return Ok(true)
         let result = reader.try_empty_password();
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), true);
+        assert!(result.unwrap());
     }
 }
 
@@ -522,7 +522,7 @@ fn test_open_and_parse_unicode_pdf() {
         // Exercise get_all_pages
         let pages_result = reader.get_all_pages();
         if let Ok(pages) = pages_result {
-            assert!(pages.len() >= 1, "Should have at least 1 page");
+            assert!(!pages.is_empty(), "Should have at least 1 page");
         }
 
         // Exercise object retrieval
@@ -603,10 +603,10 @@ fn test_parse_complex_pdf_with_many_objects() {
         // Exercise get_all_pages with many pages
         let pages_result = reader.get_all_pages();
         if let Ok(pages) = pages_result {
-            assert!(pages.len() > 0, "Should return page array");
+            assert!(!pages.is_empty(), "Should return page array");
 
             // Exercise get_page for first page
-            if pages.len() > 0 {
+            if !pages.is_empty() {
                 let page_result = reader.get_page(0);
                 let _ = page_result; // May succeed or fail, but exercises code
             }

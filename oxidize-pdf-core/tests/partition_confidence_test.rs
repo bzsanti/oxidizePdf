@@ -112,7 +112,7 @@ fn test_title_confidence_lower_near_threshold() {
     if !titles.is_empty() {
         let c = titles[0].metadata().confidence;
         assert!(
-            c >= 0.5 && c < 0.9,
+            (0.5..0.9).contains(&c),
             "Title cerca del threshold debe tener confidence 0.5..0.9, got {}",
             c
         );

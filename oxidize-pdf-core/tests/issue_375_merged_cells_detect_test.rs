@@ -40,7 +40,7 @@ fn frag(t: &str, x: f64, y: f64) -> TextFragment {
 
 fn build_graphics(h: Vec<VectorLine>, v: Vec<VectorLine>) -> ExtractedGraphics {
     let mut g = ExtractedGraphics::new();
-    for line in h.into_iter().chain(v.into_iter()) {
+    for line in h.into_iter().chain(v) {
         g.add_line(line);
     }
     g

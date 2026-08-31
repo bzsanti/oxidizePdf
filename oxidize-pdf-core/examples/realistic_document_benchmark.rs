@@ -67,13 +67,10 @@ fn generate_paragraph(page_num: usize, para_idx: usize) -> String {
     let outcome_idx = (page_num * 13 + para_idx * 7) % outcomes.len();
 
     format!(
-        "{}, {} {}, {}",
+        "{}, {} with quantifiable metrics showing {}% improvement, {}",
         contexts[context_idx],
         topics[topic_idx],
-        format!(
-            "with quantifiable metrics showing {}% improvement",
-            5 + ((page_num + para_idx) * 7) % 45
-        ),
+        5 + ((page_num + para_idx) * 7) % 45,
         outcomes[outcome_idx]
     )
 }

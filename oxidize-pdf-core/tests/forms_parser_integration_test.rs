@@ -557,7 +557,7 @@ fn test_parse_field_flags() {
 /// Test 10: Parse malformed form dictionaries gracefully
 #[test]
 fn test_parse_malformed_form_dictionaries() {
-    let malformed_cases = vec![
+    let malformed_cases = [
         // Case 1: Missing field type
         {
             let mut dict = Dictionary::new();
@@ -670,7 +670,7 @@ fn test_parse_form_field_options() {
     choice_dict.set("T", Object::String("test_choices".to_string()));
 
     // Test different option formats
-    let option_formats = vec![
+    let option_formats = [
         // Format 1: Simple string array
         vec![
             Object::String("Option1".to_string()),
