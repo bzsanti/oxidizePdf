@@ -198,7 +198,7 @@ fn test_extract_key_info_comprehensive() {
     // Should extract organizations (2 orgs: "Acme Corporation" and "BelowZero Solutions LLC")
     assert!(extracted.contains_key("organizations"));
     let orgs = &extracted["organizations"];
-    assert!(orgs.len() >= 1); // At least 1 organization (lowered from 2 to be safe)
+    assert!(!orgs.is_empty()); // At least 1 organization (lowered from 2 to be safe)
 }
 
 #[test]
@@ -220,13 +220,11 @@ fn test_extract_key_info_no_patterns() {
     let extracted = validator.extract_key_info(text);
 
     // Should return empty or minimal map
-    assert!(extracted.get("dates").map_or(true, |v| v.is_empty()));
+    assert!(extracted.get("dates").is_none_or(|v| v.is_empty()));
     assert!(extracted
         .get("monetary_amounts")
-        .map_or(true, |v| v.is_empty()));
-    assert!(extracted
-        .get("organizations")
-        .map_or(true, |v| v.is_empty()));
+        .is_none_or(|v| v.is_empty()));
+    assert!(extracted.get("organizations").is_none_or(|v| v.is_empty()));
 }
 
 // ============================================================================

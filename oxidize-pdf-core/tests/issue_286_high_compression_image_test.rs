@@ -46,7 +46,6 @@ fn options(out: std::path::PathBuf) -> ExtractImagesOptions {
             force_grayscale: false,
             ..Default::default()
         },
-        ..Default::default()
     }
 }
 
@@ -56,7 +55,7 @@ fn test_high_compression_images_all_extract() {
     // ("expected 1085400, got 0") and aborted the whole batch.
     let out = std::env::temp_dir().join("oxidize_issue286_hc_all");
     let _ = std::fs::remove_dir_all(&out);
-    let images = extract_images_from_pdf(&fixture(), options(out))
+    let images = extract_images_from_pdf(fixture(), options(out))
         .expect("extraction must not fail on highly-compressible images");
     assert_eq!(
         images.len(),
@@ -73,8 +72,7 @@ fn test_high_ratio_image_decodes_full_size_not_empty() {
     // bytes. The bug produced 0 bytes; a truncated decode would produce fewer.
     let out = std::env::temp_dir().join("oxidize_issue286_hc_pixels");
     let _ = std::fs::remove_dir_all(&out);
-    let images =
-        extract_images_from_pdf(&fixture(), options(out)).expect("extraction must succeed");
+    let images = extract_images_from_pdf(fixture(), options(out)).expect("extraction must succeed");
 
     let big = images
         .iter()
@@ -241,14 +239,13 @@ fn test_smask_composited_into_rgba_alpha() {
     // The mask is a real shape, not a constant: it has both transparent and
     // opaque pixels.
     assert!(
-        expected_alpha.iter().any(|&a| a == 0) && expected_alpha.iter().any(|&a| a == 255),
+        expected_alpha.contains(&0) && expected_alpha.contains(&255),
         "SMask must carry a real shape (both 0 and 255 present)"
     );
 
     let out = std::env::temp_dir().join("oxidize_issue286_smask");
     let _ = std::fs::remove_dir_all(&out);
-    let images =
-        extract_images_from_pdf(&fixture(), options(out)).expect("extraction must succeed");
+    let images = extract_images_from_pdf(fixture(), options(out)).expect("extraction must succeed");
     let big = images
         .iter()
         .find(|img| img.width == 600 && img.height == 603)

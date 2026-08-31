@@ -311,14 +311,11 @@ fn test_marked_content_with_different_tags() {
     let _tree = StructTree::new();
 
     let tags = vec!["H1", "P", "Div", "Span", "Figure"];
-    let mut mcid_counter = 0;
-
-    for tag in tags {
+    for (expected_mcid, tag) in tags.into_iter().enumerate() {
         let mcid = page
             .begin_marked_content(tag)
             .expect("Failed to begin marked content");
-        assert_eq!(mcid, mcid_counter);
-        mcid_counter += 1;
+        assert_eq!(mcid as usize, expected_mcid);
 
         page.text()
             .set_font(Font::Helvetica, 12.0)

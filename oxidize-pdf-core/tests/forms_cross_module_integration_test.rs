@@ -94,7 +94,7 @@ fn test_forms_graphics_integration() {
     let mut form_manager = FormManager::new();
 
     // Create form fields with various graphic appearances
-    let color_test_cases = vec![
+    let color_test_cases = [
         (
             "rgb_field",
             Color::rgb(1.0, 0.0, 0.0),
@@ -653,7 +653,7 @@ fn test_forms_pdf_objects_integration() {
     additional_dict.set("CustomProperty", Object::String("Custom Value".to_string()));
     additional_dict.set("NumericProperty", Object::Integer(42));
     additional_dict.set("BooleanProperty", Object::Boolean(true));
-    additional_dict.set("RealProperty", Object::Real(3.14159));
+    additional_dict.set("RealProperty", Object::Real(3.125));
 
     // Create array with mixed object types
     let mixed_array = vec![
@@ -705,10 +705,7 @@ fn test_forms_pdf_objects_integration() {
             custom_dict.get("BooleanProperty"),
             Some(&Object::Boolean(true))
         );
-        assert_eq!(
-            custom_dict.get("RealProperty"),
-            Some(&Object::Real(3.14159))
-        );
+        assert_eq!(custom_dict.get("RealProperty"), Some(&Object::Real(3.125)));
 
         // Mixed array should be preserved
         if let Some(Object::Array(mixed_arr)) = custom_dict.get("MixedArray") {

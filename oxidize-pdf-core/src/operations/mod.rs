@@ -12,7 +12,7 @@ pub mod page_extraction;
 pub mod pdf_ocr_converter;
 pub mod reorder;
 pub mod rotate;
-pub mod semantic_preservation;
+mod semantic_preservation;
 pub mod semantic_redactor;
 pub mod source_highlighter;
 pub mod split;
@@ -40,8 +40,11 @@ pub use rotate::{rotate_all_pages, rotate_pdf_pages, PageRotator, RotateOptions,
 pub use semantic_preservation::{
     extract_pdf_pages_lossless, merge_pdfs_lossless, plan_extract_pdf_pages_lossless,
     plan_merge_pdfs_lossless, plan_split_pdf_lossless, split_pdf_lossless, DocumentStructure,
-    InputSemanticReport, InputSemanticRole, LosslessMergeInput, SemanticPreservationReport,
-    StructureDisposition, StructureSemanticReport,
+    DocumentStructurePolicy, ExistingDocumentEngine, ExistingDocumentExecutionPlan,
+    ExistingDocumentMergeInput, ExistingDocumentPolicy, InputSemanticReport, InputSemanticRole,
+    LosslessMergeInput, PreserveBasePolicy, ReconstructMetadataPolicy, ReconstructPolicy,
+    SecondaryStructurePolicy, SemanticPreservationReport, StructureDisposition,
+    StructureSemanticReport,
 };
 pub use semantic_redactor::{
     RedactionConfig, RedactionEntry, RedactionMode, RedactionReport, RedactionStyle,
@@ -52,6 +55,72 @@ pub use source_highlighter::{
     SourceHighlighterError, SourceHighlighterResult, TextPositionIndex,
 };
 pub use split::{split_into_pages, split_pdf, PdfSplitter, SplitMode, SplitOptions};
+
+/// Preview of the unified existing-document API planned for the next major.
+///
+/// Keeping the preview in a namespace preserves every v4 entry point. The
+/// next major can promote these functions after removing their ambiguous
+/// legacy names.
+pub mod existing_document {
+    pub use super::semantic_preservation::{
+        extract_pdf_pages, merge_pdfs, plan_extract_pdf_pages, plan_merge_pdfs, plan_split_pdf,
+        split_pdf, DocumentStructure, DocumentStructurePolicy, ExistingDocumentEngine,
+        ExistingDocumentExecutionPlan, ExistingDocumentMergeInput, ExistingDocumentPolicy,
+        InputSemanticReport, InputSemanticRole, PreserveBasePolicy, ReconstructMetadataPolicy,
+        ReconstructPolicy, SecondaryStructurePolicy, SemanticPreservationReport,
+        StructureDisposition, StructureSemanticReport,
+    };
+}
+
+/// Deliberately reconstructive operations for callers that accept semantic loss.
+///
+/// These APIs are isolated from the primary preservation-first operations so
+/// selecting reconstruction is visible at every call site.
+pub mod reconstruct {
+    pub use super::merge::{merge_pdf_files, MergeInput, MetadataMode};
+    pub use super::page_extraction::{
+        extract_page, extract_page_range, extract_page_range_to_file, extract_page_to_file,
+        extract_pages, extract_pages_to_file,
+    };
+    pub use super::split::{split_into_pages, SplitMode};
+
+    use super::{merge, split, OperationResult};
+    use std::path::{Path, PathBuf};
+
+    /// Reconstruct several PDFs, deliberately accepting semantic loss.
+    pub fn merge_pdfs(
+        inputs: Vec<MergeInput>,
+        output: impl AsRef<Path>,
+        metadata_mode: MetadataMode,
+    ) -> OperationResult<()> {
+        merge::merge_pdfs(
+            inputs,
+            output,
+            merge::MergeOptions {
+                metadata_mode,
+                ..merge::MergeOptions::default()
+            },
+        )
+    }
+
+    /// Reconstruct split outputs, deliberately accepting semantic loss.
+    pub fn split_pdf(
+        input: impl AsRef<Path>,
+        mode: SplitMode,
+        output_pattern: impl Into<String>,
+        preserve_metadata: bool,
+    ) -> OperationResult<Vec<PathBuf>> {
+        split::split_pdf(
+            input,
+            split::SplitOptions {
+                mode,
+                output_pattern: output_pattern.into(),
+                preserve_metadata,
+                optimize: false,
+            },
+        )
+    }
+}
 
 use crate::error::PdfError;
 

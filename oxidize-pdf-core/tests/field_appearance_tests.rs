@@ -21,12 +21,14 @@ fn test_appearance_characteristics_default() {
 
 #[test]
 fn test_appearance_characteristics_to_dict() {
-    let mut chars = AppearanceCharacteristics::default();
-    chars.rotation = 90;
-    chars.border_color = Some(Color::rgb(0.0, 0.0, 1.0)); // Blue
-    chars.background_color = Some(Color::rgb(1.0, 1.0, 1.0)); // White
-    chars.normal_caption = Some("Click Me".to_string());
-    chars.text_position = TextPosition::CaptionBelowIcon;
+    let chars = AppearanceCharacteristics {
+        rotation: 90,
+        border_color: Some(Color::rgb(0.0, 0.0, 1.0)), // Blue
+        background_color: Some(Color::rgb(1.0, 1.0, 1.0)), // White
+        normal_caption: Some("Click Me".to_string()),
+        text_position: TextPosition::CaptionBelowIcon,
+        ..AppearanceCharacteristics::default()
+    };
 
     let dict = chars.to_dict();
 

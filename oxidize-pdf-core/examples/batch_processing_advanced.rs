@@ -207,7 +207,7 @@ impl AdvancedBatchProcessor {
             println!(
                 "Processing chunk {} of {} ({} files)",
                 chunk_idx + 1,
-                (pdf_files.len() + chunk_size - 1) / chunk_size,
+                pdf_files.len().div_ceil(chunk_size),
                 chunk.len()
             );
 
