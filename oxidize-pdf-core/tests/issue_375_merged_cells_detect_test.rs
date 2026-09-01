@@ -21,21 +21,7 @@ fn vline(x: f64, y1: f64, y2: f64) -> VectorLine {
 }
 
 fn frag(t: &str, x: f64, y: f64) -> TextFragment {
-    TextFragment {
-        text: t.into(),
-        x,
-        y,
-        width: 30.0,
-        height: 10.0,
-        font_size: 10.0,
-        font_name: None,
-        is_bold: false,
-        is_italic: false,
-        color: None,
-        space_decisions: Vec::new(),
-        mcid: None,
-        struct_tag: None,
-    }
+    TextFragment::new(t, x, y, 30.0, 10.0, 10.0)
 }
 
 fn build_graphics(h: Vec<VectorLine>, v: Vec<VectorLine>) -> ExtractedGraphics {

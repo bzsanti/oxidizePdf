@@ -186,7 +186,9 @@ jobs:
         with:
           package: oxidize-pdf
           # Development accumulates backward-compatible API changes before a
-          # release version is chosen. Allow minor-level changes on develop,
-          # while release/main checks continue deriving the required bump from
+          # release version is chosen. PRs explicitly labelled `semver-major`
+          # belong to a planned major release train and may contain breaking
+          # API changes. Other changes targeting develop remain limited to a
+          # minor release; release/main checks derive the required bump from
           # Cargo.toml and the published baseline.
-          release-type: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'develop') || github.ref == 'refs/heads/develop') && 'minor' || '' }}
+          release-type: ${{ (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'semver-major') && 'major') || (((github.event_name == 'pull_request' && github.base_ref == 'develop') || github.ref == 'refs/heads/develop') && 'minor') || '' }}
