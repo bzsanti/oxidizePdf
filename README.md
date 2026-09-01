@@ -6,7 +6,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-72%25-yellow)](https://github.com/bzsanti/oxidizePdf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-7%2C993-brightgreen)](https://github.com/bzsanti/oxidizePdf)
-[![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-%3E%3D1.88-orange.svg)](https://www.rust-lang.org)
 
 **The Rust PDF library built for AI.** Parse any PDF into structure-aware, embedding-ready chunks with one line of code. Pure Rust, zero C dependencies, 99.3% success rate on 9,000+ real-world PDFs.
 
@@ -34,7 +34,7 @@ Most PDF libraries give you a wall of text. oxidize-pdf gives you **structured, 
 
 ```toml
 [dependencies]
-oxidize-pdf = "4.9.0"
+oxidize-pdf = "5.0.0"
 ```
 
 ### RAG Pipeline -- One Liner

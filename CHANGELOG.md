@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.0.0] - 2026-09-01
+
+### Added
+
+- **Text extraction now exposes the active PDF rendering mode** (#477, #562).
+  Every `TextFragment` reports its `Tr` mode, including invisible OCR text and
+  `/ActualText` replacements. Graphics-state restoration preserves the mode,
+  malformed operands are handled without integer truncation, and layout
+  reconstruction never fuses fragments across rendering-mode boundaries.
+
+### Changed
+
+- **Existing-PDF operations now use one policy-driven API** (#560, #561).
+  Merge, split, extraction, reordering, batch processing, signing, and related
+  workflows share explicit preservation, validation, and permission policies.
+  This major release retires ambiguous legacy entry points; see
+  `docs/migration/v5-existing-pdf-operations.md` for migration guidance.
+- **`TextFragment` is now non-exhaustive** (#477, #562). External callers must
+  construct synthetic fragments with `TextFragment::new` and then set any
+  non-default public fields, allowing future extraction metadata to be added
+  without another source-breaking struct-field change.
+
 ## [4.9.0] - 2026-08-30
 
 ### Added
