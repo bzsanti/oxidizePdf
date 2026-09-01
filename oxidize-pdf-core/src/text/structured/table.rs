@@ -276,6 +276,7 @@ mod tests {
             is_bold: false,
             is_italic: false,
             color: None,
+            render_mode: Default::default(),
             space_decisions: Vec::new(),
             mcid: None,
             struct_tag: None,

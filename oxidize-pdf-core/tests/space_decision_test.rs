@@ -18,21 +18,7 @@ fn test_space_decision_struct_creation() {
 // Cycle 7.2
 #[test]
 fn test_text_fragment_has_space_decisions_field() {
-    let frag = TextFragment {
-        text: "hello".to_string(),
-        x: 0.0,
-        y: 0.0,
-        width: 50.0,
-        height: 12.0,
-        font_size: 12.0,
-        font_name: None,
-        is_bold: false,
-        is_italic: false,
-        color: None,
-        space_decisions: Vec::new(),
-        mcid: None,
-        struct_tag: None,
-    };
+    let frag = TextFragment::new("hello".to_string(), 0.0, 0.0, 50.0, 12.0, 12.0);
     assert!(frag.space_decisions.is_empty());
 }
 
