@@ -14,7 +14,7 @@ const FIXTURES_DIR: &str = "tests/fixtures";
 /// Test helper to read PDF bytes
 fn read_pdf_bytes(filename: &str) -> Vec<u8> {
     let path = format!("{}/{}", FIXTURES_DIR, filename);
-    std::fs::read(&path).expect(&format!("Failed to read {}", path))
+    std::fs::read(&path).unwrap_or_else(|_| panic!("Failed to read {}", path))
 }
 
 /// Extract U entry bytes from PDF (48 bytes for R5/R6)
@@ -31,7 +31,7 @@ fn extract_u_entry(pdf_bytes: &[u8]) -> Option<Vec<u8>> {
                 return Some(hex_to_bytes(hex));
             }
         } else if rest.starts_with('(') {
-            return extract_literal_string(&rest);
+            return extract_literal_string(rest);
         }
     }
     None
@@ -51,7 +51,7 @@ fn extract_ue_entry(pdf_bytes: &[u8]) -> Option<Vec<u8>> {
                 return Some(hex_to_bytes(hex));
             }
         } else if rest.starts_with('(') {
-            return extract_literal_string(&rest);
+            return extract_literal_string(rest);
         }
     }
     None
@@ -71,7 +71,7 @@ fn extract_perms_entry(pdf_bytes: &[u8]) -> Option<Vec<u8>> {
                 return Some(hex_to_bytes(hex));
             }
         } else if rest.starts_with('(') {
-            return extract_literal_string(&rest);
+            return extract_literal_string(rest);
         }
     }
     None

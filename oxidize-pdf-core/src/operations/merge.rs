@@ -10,22 +10,11 @@ use std::path::{Path, PathBuf};
 
 /// Options for PDF merging
 #[derive(Debug, Clone)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub struct MergeOptions {
-    /// Page ranges to include from each input file
     pub page_ranges: Option<Vec<PageRange>>,
-    /// Unsupported legacy request to preserve bookmarks/outlines.
-    ///
-    /// The `Document` reconstruction API cannot preserve arbitrary source
-    /// outline graphs. Setting this to `true` returns an error; use
-    /// `plan_merge_pdfs_lossless` and `merge_pdfs_lossless` instead.
     pub preserve_bookmarks: bool,
-    /// Unsupported legacy request to preserve form fields.
-    ///
-    /// The `Document` reconstruction API cannot preserve arbitrary source
-    /// field trees. Setting this to `true` returns an error; use the lossless
-    /// merge API when forms must be retained.
     pub preserve_forms: bool,
-    /// Whether to optimize the output
     pub optimize: bool,
     /// How to handle metadata
     pub metadata_mode: MetadataMode,
@@ -104,6 +93,7 @@ impl PdfMerger {
     }
 
     /// Add an input file to merge
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn add_input(&mut self, input: MergeInput) {
         self.inputs.push(input);
     }
@@ -117,8 +107,7 @@ impl PdfMerger {
     pub fn merge(&mut self) -> OperationResult<Document> {
         if self.options.preserve_bookmarks || self.options.preserve_forms {
             return Err(OperationError::ProcessingError(
-                "legacy Document reconstruction cannot honor preserve_bookmarks or preserve_forms; use merge_pdfs_lossless"
-                    .to_string(),
+                "reconstruction cannot preserve bookmarks or forms".to_string(),
             ));
         }
         if self.inputs.is_empty() {
@@ -279,7 +268,9 @@ mod tests {
             Ok(_) => panic!("legacy preservation flag must be rejected"),
             Err(error) => error,
         };
-        assert!(error.to_string().contains("merge_pdfs_lossless"));
+        assert!(error
+            .to_string()
+            .contains("cannot preserve bookmarks or forms"));
     }
 
     #[test]

@@ -16,9 +16,10 @@
 //! Fixture: `Cold_Email_Hacks.pdf` page 16 (1-based) carries one image with a
 //! soft mask (poppler: one `smask` row, object 31). The other pages are plain.
 
-use oxidize_pdf::operations::{
-    extract_page_to_file, merge_pdfs, split_into_pages, MergeInput, MergeOptions, PageRange,
+use oxidize_pdf::operations::reconstruct::{
+    extract_page_to_file, merge_pdfs, split_into_pages, MergeInput, MetadataMode,
 };
+use oxidize_pdf::operations::PageRange;
 use std::path::Path;
 use std::process::Command;
 
@@ -100,7 +101,7 @@ fn merge_preserves_smask() {
         MergeInput::with_pages(src, PageRange::Single(SMASK_PAGE_0BASED)),
     ];
     let out = std::env::temp_dir().join("issue465_merge.pdf");
-    merge_pdfs(inputs, &out, MergeOptions::default()).expect("merge");
+    merge_pdfs(inputs, &out, MetadataMode::FromFirst).expect("merge");
 
     let got = poppler_smask_count(&out, 2, 2).expect("output smask");
     assert_eq!(

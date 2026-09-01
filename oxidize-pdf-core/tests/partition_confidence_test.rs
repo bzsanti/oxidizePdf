@@ -2,21 +2,16 @@ use oxidize_pdf::pipeline::{Element, ElementMetadata, PartitionConfig, TableElem
 use oxidize_pdf::text::extraction::TextFragment;
 
 fn frag(text: &str, x: f64, y: f64, font_size: f64, bold: bool) -> TextFragment {
-    TextFragment {
-        text: text.to_string(),
+    let mut fragment = TextFragment::new(
+        text,
         x,
         y,
-        width: text.len() as f64 * font_size * 0.5,
-        height: font_size,
+        text.len() as f64 * font_size * 0.5,
         font_size,
-        font_name: None,
-        is_bold: bold,
-        is_italic: false,
-        color: None,
-        space_decisions: Vec::new(),
-        mcid: None,
-        struct_tag: None,
-    }
+        font_size,
+    );
+    fragment.is_bold = bold;
+    fragment
 }
 
 // Cycle 2.1
@@ -112,7 +107,7 @@ fn test_title_confidence_lower_near_threshold() {
     if !titles.is_empty() {
         let c = titles[0].metadata().confidence;
         assert!(
-            c >= 0.5 && c < 0.9,
+            (0.5..0.9).contains(&c),
             "Title cerca del threshold debe tener confidence 0.5..0.9, got {}",
             c
         );

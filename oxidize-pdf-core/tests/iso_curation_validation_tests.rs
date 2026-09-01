@@ -222,10 +222,11 @@ mod curation {
         if DATE_PARENS_PATTERN.is_match(text) && ORG_PATTERN.is_match(text) {
             return true;
         }
-        if ORG_PATTERN.is_match(text) && !NORMATIVE_PATTERN.is_match(text) {
-            if text.trim().ends_with('.') || text.trim().ends_with("Incorporated") {
-                return true;
-            }
+        if ORG_PATTERN.is_match(text)
+            && !NORMATIVE_PATTERN.is_match(text)
+            && (text.trim().ends_with('.') || text.trim().ends_with("Incorporated"))
+        {
+            return true;
         }
         false
     }

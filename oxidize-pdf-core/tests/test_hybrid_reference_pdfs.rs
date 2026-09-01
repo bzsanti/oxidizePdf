@@ -12,9 +12,11 @@ const COLD_EMAIL_HACKS_PDF: &str = "tests/fixtures/Cold_Email_Hacks.pdf";
 
 #[test]
 fn test_hybrid_reference_pdf_opens() {
-    let mut options = ParseOptions::default();
-    options.collect_warnings = true;
-    options.lenient_syntax = true;
+    let options = ParseOptions {
+        collect_warnings: true,
+        lenient_syntax: true,
+        ..ParseOptions::default()
+    };
 
     let result = PdfReader::open_with_options(COLD_EMAIL_HACKS_PDF, options);
     assert!(result.is_ok(), "Failed to open hybrid-reference PDF");
@@ -22,9 +24,11 @@ fn test_hybrid_reference_pdf_opens() {
 
 #[test]
 fn test_hybrid_reference_pdf_page_count() {
-    let mut options = ParseOptions::default();
-    options.collect_warnings = true;
-    options.lenient_syntax = true;
+    let options = ParseOptions {
+        collect_warnings: true,
+        lenient_syntax: true,
+        ..ParseOptions::default()
+    };
 
     let reader =
         PdfReader::open_with_options(COLD_EMAIL_HACKS_PDF, options).expect("Failed to open PDF");
@@ -36,9 +40,11 @@ fn test_hybrid_reference_pdf_page_count() {
 
 #[test]
 fn test_hybrid_reference_pdf_all_pages_accessible() {
-    let mut options = ParseOptions::default();
-    options.collect_warnings = true;
-    options.lenient_syntax = true;
+    let options = ParseOptions {
+        collect_warnings: true,
+        lenient_syntax: true,
+        ..ParseOptions::default()
+    };
 
     let reader =
         PdfReader::open_with_options(COLD_EMAIL_HACKS_PDF, options).expect("Failed to open PDF");
@@ -60,9 +66,11 @@ fn test_hybrid_reference_pdf_all_pages_accessible() {
 
 #[test]
 fn test_hybrid_reference_pdf_text_extraction() {
-    let mut options = ParseOptions::default();
-    options.collect_warnings = true;
-    options.lenient_syntax = true;
+    let options = ParseOptions {
+        collect_warnings: true,
+        lenient_syntax: true,
+        ..ParseOptions::default()
+    };
 
     let reader =
         PdfReader::open_with_options(COLD_EMAIL_HACKS_PDF, options).expect("Failed to open PDF");
@@ -126,9 +134,11 @@ fn test_hybrid_reference_pdf_text_extraction() {
 
 #[test]
 fn test_hybrid_reference_pdf_object_reconstruction() {
-    let mut options = ParseOptions::default();
-    options.collect_warnings = true;
-    options.lenient_syntax = true;
+    let options = ParseOptions {
+        collect_warnings: true,
+        lenient_syntax: true,
+        ..ParseOptions::default()
+    };
 
     let mut reader =
         PdfReader::open_with_options(COLD_EMAIL_HACKS_PDF, options).expect("Failed to open PDF");
@@ -157,9 +167,11 @@ fn test_hybrid_reference_pdf_object_reconstruction() {
 
 #[test]
 fn test_hybrid_reference_pdf_xref_chain() {
-    let mut options = ParseOptions::default();
-    options.collect_warnings = true;
-    options.lenient_syntax = true;
+    let options = ParseOptions {
+        collect_warnings: true,
+        lenient_syntax: true,
+        ..ParseOptions::default()
+    };
 
     let reader =
         PdfReader::open_with_options(COLD_EMAIL_HACKS_PDF, options).expect("Failed to open PDF");
@@ -173,9 +185,11 @@ fn test_hybrid_reference_pdf_xref_chain() {
 
 #[test]
 fn test_hybrid_reference_pdf_type_inference() {
-    let mut options = ParseOptions::default();
-    options.collect_warnings = true;
-    options.lenient_syntax = true;
+    let options = ParseOptions {
+        collect_warnings: true,
+        lenient_syntax: true,
+        ..ParseOptions::default()
+    };
 
     let reader =
         PdfReader::open_with_options(COLD_EMAIL_HACKS_PDF, options).expect("Failed to open PDF");
@@ -199,9 +213,11 @@ fn test_hybrid_reference_pdf_type_inference() {
 
 #[test]
 fn test_hybrid_reference_pdf_random_page_access() {
-    let mut options = ParseOptions::default();
-    options.collect_warnings = true;
-    options.lenient_syntax = true;
+    let options = ParseOptions {
+        collect_warnings: true,
+        lenient_syntax: true,
+        ..ParseOptions::default()
+    };
 
     let reader =
         PdfReader::open_with_options(COLD_EMAIL_HACKS_PDF, options).expect("Failed to open PDF");
@@ -246,9 +262,11 @@ fn test_hybrid_reference_pdf_random_page_access() {
 
 #[test]
 fn test_hybrid_reference_pdf_metadata() {
-    let mut options = ParseOptions::default();
-    options.collect_warnings = true;
-    options.lenient_syntax = true;
+    let options = ParseOptions {
+        collect_warnings: true,
+        lenient_syntax: true,
+        ..ParseOptions::default()
+    };
 
     let reader =
         PdfReader::open_with_options(COLD_EMAIL_HACKS_PDF, options).expect("Failed to open PDF");

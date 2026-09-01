@@ -27,9 +27,9 @@ fn extract_u_entry(pdf_bytes: &[u8]) -> Option<Vec<u8>> {
             let start = pos + pattern.len() - 1;
             let rest = &pdf_str[start..];
 
-            if rest.starts_with('<') {
-                if let Some(end) = rest[1..].find('>') {
-                    let hex = &rest[1..end + 1];
+            if let Some(stripped) = rest.strip_prefix('<') {
+                if let Some(end) = stripped.find('>') {
+                    let hex = &stripped[..end];
                     return Some(hex_to_bytes(hex));
                 }
             } else if rest.starts_with('(') {
@@ -49,9 +49,9 @@ fn extract_ue_entry(pdf_bytes: &[u8]) -> Option<Vec<u8>> {
             let start = pos + pattern.len() - 1;
             let rest = &pdf_str[start..];
 
-            if rest.starts_with('<') {
-                if let Some(end) = rest[1..].find('>') {
-                    let hex = &rest[1..end + 1];
+            if let Some(stripped) = rest.strip_prefix('<') {
+                if let Some(end) = stripped.find('>') {
+                    let hex = &stripped[..end];
                     return Some(hex_to_bytes(hex));
                 }
             } else if rest.starts_with('(') {
@@ -71,9 +71,9 @@ fn extract_perms_entry(pdf_bytes: &[u8]) -> Option<Vec<u8>> {
             let start = pos + pattern.len() - 1;
             let rest = &pdf_str[start..];
 
-            if rest.starts_with('<') {
-                if let Some(end) = rest[1..].find('>') {
-                    let hex = &rest[1..end + 1];
+            if let Some(stripped) = rest.strip_prefix('<') {
+                if let Some(end) = stripped.find('>') {
+                    let hex = &stripped[..end];
                     return Some(hex_to_bytes(hex));
                 }
             } else if rest.starts_with('(') {

@@ -301,14 +301,18 @@ pub fn batch_split_pdfs<P: AsRef<Path>>(
 
     for file in files {
         let path = file.as_ref();
+        let output_name = format!(
+            "{}_page_%d.pdf",
+            path.file_stem()
+                .and_then(|stem| stem.to_str())
+                .unwrap_or("output")
+        );
         processor.add_job(BatchJob::Split {
             input: path.to_path_buf(),
-            output_pattern: format!(
-                "{}_page_%d.pdf",
-                path.file_stem()
-                    .and_then(|stem| stem.to_str())
-                    .unwrap_or("output")
-            ),
+            output_pattern: path
+                .with_file_name(output_name)
+                .to_string_lossy()
+                .into_owned(),
             pages_per_file,
         });
     }

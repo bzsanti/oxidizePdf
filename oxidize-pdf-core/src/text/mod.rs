@@ -73,9 +73,10 @@ use std::collections::{HashMap, HashSet};
 /// Text rendering mode for PDF text operations.
 ///
 /// Re-exported via `oxidize_pdf::text::TextRenderingMode`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum TextRenderingMode {
     /// Fill text (default)
+    #[default]
     Fill = 0,
     /// Stroke text
     Stroke = 1,
@@ -91,6 +92,42 @@ pub enum TextRenderingMode {
     FillStrokeClip = 6,
     /// Add text to path for clipping (invisible)
     Clip = 7,
+}
+
+impl TryFrom<u8> for TextRenderingMode {
+    type Error = u8;
+
+    fn try_from(value: u8) -> std::result::Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Fill),
+            1 => Ok(Self::Stroke),
+            2 => Ok(Self::FillStroke),
+            3 => Ok(Self::Invisible),
+            4 => Ok(Self::FillClip),
+            5 => Ok(Self::StrokeClip),
+            6 => Ok(Self::FillStrokeClip),
+            7 => Ok(Self::Clip),
+            value => Err(value),
+        }
+    }
+}
+
+impl TryFrom<i32> for TextRenderingMode {
+    type Error = i32;
+
+    fn try_from(value: i32) -> std::result::Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Fill),
+            1 => Ok(Self::Stroke),
+            2 => Ok(Self::FillStroke),
+            3 => Ok(Self::Invisible),
+            4 => Ok(Self::FillClip),
+            5 => Ok(Self::StrokeClip),
+            6 => Ok(Self::FillStrokeClip),
+            7 => Ok(Self::Clip),
+            value => Err(value),
+        }
+    }
 }
 
 /// Build the show-text IR op for `text` rendered with `font`. Single

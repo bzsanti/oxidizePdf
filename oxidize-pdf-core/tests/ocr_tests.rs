@@ -316,6 +316,6 @@ mod ocr_disabled_tests {
         // When OCR feature is disabled, we should still be able to compile
         // but OCR functionality won't be available
         println!("OCR features are disabled - this is expected when 'ocr-tesseract' feature is not enabled");
-        assert!(true, "Compilation successful without OCR features");
+        // Reaching this branch confirms compilation without OCR features.
     }
 }

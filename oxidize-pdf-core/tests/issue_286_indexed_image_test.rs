@@ -47,7 +47,7 @@ fn test_indexed_image_extraction_does_not_fail_with_size_error() {
         ..Default::default()
     };
 
-    let images = extract_images_from_pdf(&fixture(), options)
+    let images = extract_images_from_pdf(fixture(), options)
         .expect("extraction must not fail on Indexed colour space");
 
     // The five pages reference 28 image XObjects (6+6+6+7+3), all above the
@@ -75,7 +75,7 @@ fn test_indexed_image_is_expanded_to_rgb_png() {
         ..Default::default()
     };
 
-    let images = extract_images_from_pdf(&fixture(), options).expect("extraction must succeed");
+    let images = extract_images_from_pdf(fixture(), options).expect("extraction must succeed");
 
     // The Indexed image is 600x603.
     let indexed = images
@@ -289,9 +289,8 @@ fn test_indexed_image_matches_independent_decode() {
             force_grayscale: false,
             ..Default::default()
         },
-        ..Default::default()
     };
-    let images = extract_images_from_pdf(&fixture(), options).expect("extraction must succeed");
+    let images = extract_images_from_pdf(fixture(), options).expect("extraction must succeed");
     let indexed = images
         .iter()
         .find(|img| img.width == 600 && img.height == 603)

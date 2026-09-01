@@ -264,7 +264,7 @@ fn t2_generator_diversity() {
     if !report.by_generator.is_empty() {
         println!("\n=== T2 Generator Diversity ===");
         let mut generators: Vec<_> = report.by_generator.iter().collect();
-        generators.sort_by(|a, b| b.1.total.cmp(&a.1.total));
+        generators.sort_by_key(|generator| std::cmp::Reverse(generator.1.total));
 
         let top_n = 20.min(generators.len());
         for (gen, stats) in generators.iter().take(top_n) {

@@ -13,11 +13,9 @@
 //! crate's own extractor: it reads the *bytes we wrote*, so a passing test means
 //! the written PDF is correct for any reader, not just ours.
 
+use oxidize_pdf::operations::reconstruct::{extract_page_to_file, split_into_pages};
 use oxidize_pdf::operations::PageRange;
-use oxidize_pdf::operations::{
-    extract_page_to_file, reorder_pdf_pages, rotate_pdf_pages, split_into_pages, RotateOptions,
-    RotationAngle,
-};
+use oxidize_pdf::operations::{reorder_pdf_pages, rotate_pdf_pages, RotateOptions, RotationAngle};
 use std::path::Path;
 use std::process::Command;
 

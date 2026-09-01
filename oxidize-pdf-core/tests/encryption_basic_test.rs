@@ -102,8 +102,7 @@ fn test_aes_encryption_decryption_128() {
     let aes = Aes::new(key.clone());
     let result = aes.encrypt_cbc(plaintext, &iv);
 
-    if result.is_ok() {
-        let ciphertext = result.unwrap();
+    if let Ok(ciphertext) = result {
         assert_ne!(ciphertext, plaintext);
         assert!(ciphertext.len() >= plaintext.len());
 
@@ -111,8 +110,7 @@ fn test_aes_encryption_decryption_128() {
         let aes_decrypt = Aes::new(key);
         let decrypt_result = aes_decrypt.decrypt_cbc(&ciphertext, &iv);
 
-        if decrypt_result.is_ok() {
-            let decrypted = decrypt_result.unwrap();
+        if let Ok(decrypted) = decrypt_result {
             // Compare only the original plaintext bytes (16 bytes)
             // The rest may be PKCS7 padding (values 1-16, not null bytes)
             let original_len = plaintext.len();
@@ -157,16 +155,14 @@ fn test_aes_encryption_decryption_256() {
     let aes = Aes::new(key.clone());
     let result = aes.encrypt_cbc(plaintext, &iv);
 
-    if result.is_ok() {
-        let ciphertext = result.unwrap();
+    if let Ok(ciphertext) = result {
         assert_ne!(ciphertext, plaintext);
         assert!(ciphertext.len() >= plaintext.len());
 
         let aes_decrypt = Aes::new(key);
         let decrypt_result = aes_decrypt.decrypt_cbc(&ciphertext, &iv);
 
-        if decrypt_result.is_ok() {
-            let decrypted = decrypt_result.unwrap();
+        if let Ok(decrypted) = decrypt_result {
             // Compare only the original plaintext bytes (16 bytes)
             // The rest may be PKCS7 padding (values 1-16, not null bytes)
             let original_len = plaintext.len();
@@ -360,10 +356,12 @@ fn test_permissions_creation() {
 
 #[test]
 fn test_permissions_from_flags() {
-    let mut flags = PermissionFlags::default();
-    flags.print = true;
-    flags.modify_contents = true;
-    flags.copy = true;
+    let flags = PermissionFlags {
+        print: true,
+        modify_contents: true,
+        copy: true,
+        ..PermissionFlags::default()
+    };
 
     let permissions = Permissions::from_flags(flags);
 
@@ -535,8 +533,7 @@ fn test_full_aes_workflow() {
     let plaintext = b"AES encrypted   "; // 16 bytes
     let encrypt_result = aes.encrypt_cbc(plaintext, &iv);
 
-    if encrypt_result.is_ok() {
-        let ciphertext = encrypt_result.unwrap();
+    if let Ok(ciphertext) = encrypt_result {
         assert_ne!(ciphertext, plaintext);
         assert!(ciphertext.len() >= plaintext.len());
 
@@ -544,8 +541,7 @@ fn test_full_aes_workflow() {
         let aes_decrypt = Aes::new(aes_key);
         let decrypt_result = aes_decrypt.decrypt_cbc(&ciphertext, &iv);
 
-        if decrypt_result.is_ok() {
-            let decrypted = decrypt_result.unwrap();
+        if let Ok(decrypted) = decrypt_result {
             // Remove potential padding for comparison
             let trimmed: Vec<u8> = decrypted.iter().take_while(|&&b| b != 0).cloned().collect();
             assert!(trimmed.starts_with(b"AES encrypted"));

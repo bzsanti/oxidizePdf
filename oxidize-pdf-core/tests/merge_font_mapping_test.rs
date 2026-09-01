@@ -1,7 +1,6 @@
 //! Tests for font and XObject mapping in merge operations
 
-use oxidize_pdf::operations::merge::MetadataMode;
-use oxidize_pdf::operations::{merge_pdfs, MergeInput, MergeOptions};
+use oxidize_pdf::operations::reconstruct::{merge_pdfs, MergeInput, MetadataMode};
 use oxidize_pdf::{Document, Page};
 use std::fs;
 use tempfile::TempDir;
@@ -52,16 +51,8 @@ fn test_font_mapping_in_merge() {
 
     // Merge the PDFs
     let output_path = temp_dir.path().join("merged.pdf");
-    let options = MergeOptions {
-        preserve_bookmarks: false,
-        preserve_forms: false,
-        optimize: false,
-        metadata_mode: MetadataMode::FromFirst,
-        page_ranges: None,
-    };
-
     let inputs = vec![MergeInput::new(pdf1_path), MergeInput::new(pdf2_path)];
-    merge_pdfs(inputs, &output_path, options).unwrap();
+    merge_pdfs(inputs, &output_path, MetadataMode::FromFirst).unwrap();
 
     // Verify the merged PDF exists and has 2 pages
     assert!(output_path.exists());
@@ -86,10 +77,8 @@ fn test_xobject_mapping_placeholder() {
 
     // Merge with itself to test XObject mapping
     let output_path = temp_dir.path().join("merged_xobject.pdf");
-    let options = MergeOptions::default();
-
     let inputs = vec![MergeInput::new(pdf_path.clone()), MergeInput::new(pdf_path)];
-    merge_pdfs(inputs, &output_path, options).unwrap();
+    merge_pdfs(inputs, &output_path, MetadataMode::FromFirst).unwrap();
 
     // Verify the merge completed
     assert!(output_path.exists());

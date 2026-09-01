@@ -47,6 +47,14 @@ pub enum DocumentStructure {
     MetadataStream,
     /// Page-label number tree.
     PageLabels,
+    /// Digital signature fields with a signature value.
+    DigitalSignatures,
+    /// Trailer-level encryption dictionary.
+    Encryption,
+    /// Page annotations reachable from selected pages.
+    Annotations,
+    /// Trailer `/Info` document metadata.
+    DocumentInfo,
 }
 
 /// Policy applied to a detected document structure.
@@ -58,6 +66,17 @@ pub enum StructureDisposition {
     FirstInputWins,
     /// The combination cannot be represented safely and planning fails.
     Rejected,
+    /// Deliberately omitted by the selected reconstructive engine.
+    Discarded,
+}
+
+/// Engine selected for an existing-document operation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExistingDocumentEngine {
+    /// Preserve the first input as an exact byte prefix and mutate incrementally.
+    PreserveBase,
+    /// Rebuild page appearance/content and explicitly discard catalog semantics.
+    Reconstruct,
 }
 
 /// One detected structure and its explicit operation policy.
@@ -76,6 +95,8 @@ pub enum InputSemanticRole {
     PreservedBase,
     /// The input contributes cloned page graphs.
     ImportedPages,
+    /// The input contributes page appearance/content through reconstruction.
+    ReconstructedPages,
 }
 
 /// Semantic inventory for one input.
@@ -94,22 +115,234 @@ pub struct InputSemanticReport {
 /// Exact dry-run report returned before a lossless operation writes output.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SemanticPreservationReport {
+    /// Engine that will execute, or executed, the operation.
+    pub engine: ExistingDocumentEngine,
     /// Per-input semantic inventory and policy.
     pub inputs: Vec<InputSemanticReport>,
-    /// Exact object-level page mutation plan.
-    pub mutation: PageMutationReport,
+    /// Concrete execution plan, whose shape identifies the selected engine.
+    pub plan: ExistingDocumentExecutionPlan,
 }
 
-/// Input to a lossless merge.
+/// Engine-specific plan for an existing-document operation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExistingDocumentExecutionPlan {
+    /// Exact object-level incremental mutation.
+    Incremental(PageMutationReport),
+    /// Reconstruct selected page appearance/content into a new document.
+    Reconstruct {
+        /// Number of pages in the reconstructed output.
+        page_count: usize,
+    },
+}
+
+impl ExistingDocumentExecutionPlan {
+    /// Number of pages in the planned output.
+    pub const fn page_count(&self) -> usize {
+        match self {
+            Self::Incremental(report) => report.page_count,
+            Self::Reconstruct { page_count } => *page_count,
+        }
+    }
+}
+
+/// Policy for one detected document-level structure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DocumentStructurePolicy {
+    /// Reject the operation before writing output.
+    Reject,
+    /// Keep the first input's value and deliberately ignore the secondary value.
+    FirstInputWins,
+}
+
+/// v4-preview compatibility name for [`DocumentStructurePolicy`].
+pub type SecondaryStructurePolicy = DocumentStructurePolicy;
+
+/// Policies for structures detected in secondary inputs of a preserving merge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PreserveBasePolicy {
+    /// Interactive forms.
+    forms: DocumentStructurePolicy,
+    /// Outline tree.
+    outlines: DocumentStructurePolicy,
+    /// Name trees and attachments.
+    names_and_attachments: DocumentStructurePolicy,
+    /// Legacy named destinations.
+    named_destinations: DocumentStructurePolicy,
+    /// Optional-content configuration.
+    optional_content: DocumentStructurePolicy,
+    /// Tagged-PDF structure tree.
+    structure_tree: DocumentStructurePolicy,
+    /// Catalog metadata stream.
+    metadata: DocumentStructurePolicy,
+    /// Page labels.
+    page_labels: DocumentStructurePolicy,
+    /// Digital signatures.
+    digital_signatures: DocumentStructurePolicy,
+    /// Encryption.
+    encryption: DocumentStructurePolicy,
+    /// Page annotations.
+    annotations: DocumentStructurePolicy,
+    /// Trailer document information.
+    document_info: DocumentStructurePolicy,
+}
+
+impl PreserveBasePolicy {
+    const fn fail_closed() -> Self {
+        Self {
+            forms: DocumentStructurePolicy::Reject,
+            outlines: DocumentStructurePolicy::Reject,
+            names_and_attachments: DocumentStructurePolicy::Reject,
+            named_destinations: DocumentStructurePolicy::Reject,
+            optional_content: DocumentStructurePolicy::Reject,
+            structure_tree: DocumentStructurePolicy::Reject,
+            metadata: DocumentStructurePolicy::FirstInputWins,
+            page_labels: DocumentStructurePolicy::Reject,
+            digital_signatures: DocumentStructurePolicy::Reject,
+            encryption: DocumentStructurePolicy::Reject,
+            annotations: DocumentStructurePolicy::Reject,
+            document_info: DocumentStructurePolicy::FirstInputWins,
+        }
+    }
+
+    /// Set the policy for page labels found in secondary merge inputs.
+    pub const fn with_page_labels(mut self, policy: DocumentStructurePolicy) -> Self {
+        self.page_labels = policy;
+        self
+    }
+
+    fn disposition(self, structure: DocumentStructure) -> StructureDisposition {
+        let policy = match structure {
+            DocumentStructure::Forms => self.forms,
+            DocumentStructure::Outlines => self.outlines,
+            DocumentStructure::NamesAndAttachments => self.names_and_attachments,
+            DocumentStructure::NamedDestinations => self.named_destinations,
+            DocumentStructure::OptionalContent => self.optional_content,
+            DocumentStructure::StructureTree => self.structure_tree,
+            DocumentStructure::MetadataStream => self.metadata,
+            DocumentStructure::PageLabels => self.page_labels,
+            DocumentStructure::DigitalSignatures => self.digital_signatures,
+            DocumentStructure::Encryption => self.encryption,
+            DocumentStructure::Annotations => self.annotations,
+            DocumentStructure::DocumentInfo => self.document_info,
+        };
+        match policy {
+            DocumentStructurePolicy::Reject => StructureDisposition::Rejected,
+            DocumentStructurePolicy::FirstInputWins => StructureDisposition::FirstInputWins,
+        }
+    }
+}
+
+/// Metadata handling supported by the reconstructive engine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReconstructMetadataPolicy {
+    /// Discard document information metadata.
+    Discard,
+    /// Copy document information metadata from the first input.
+    FirstInputWins,
+}
+
+/// Valid policy for the reconstructive engine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReconstructPolicy {
+    metadata: ReconstructMetadataPolicy,
+}
+
+impl ReconstructPolicy {
+    /// Metadata policy selected for reconstruction.
+    pub const fn metadata(self) -> ReconstructMetadataPolicy {
+        self.metadata
+    }
+}
+
+/// Explicit, type-safe policy for existing-document operations.
+///
+/// There is deliberately no [`Default`] implementation: every call site must
+/// choose preservation or reconstruction. Engine-specific policy values also
+/// cannot be assembled from arbitrary structure dispositions.
+///
+/// ```compile_fail
+/// use oxidize_pdf::operations::ExistingDocumentPolicy;
+///
+/// let policy = ExistingDocumentPolicy::default();
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExistingDocumentPolicy {
+    /// Preserve the first input byte-for-byte and control secondary structures.
+    PreserveBase(PreserveBasePolicy),
+    /// Reconstruct page appearance/content and deliberately lose other semantics.
+    Reconstruct(ReconstructPolicy),
+}
+
+impl ExistingDocumentPolicy {
+    /// Preserve the base and reject ambiguous secondary structures.
+    pub const fn preserve_base() -> Self {
+        Self::PreserveBase(PreserveBasePolicy::fail_closed())
+    }
+
+    /// Reconstruct page appearance/content and explicitly discard every
+    /// detected document-level structure.
+    pub const fn reconstruct() -> Self {
+        Self::Reconstruct(ReconstructPolicy {
+            metadata: ReconstructMetadataPolicy::Discard,
+        })
+    }
+
+    /// Reconstruct pages while copying document information from the first input.
+    pub const fn reconstruct_with_metadata_from_first() -> Self {
+        Self::Reconstruct(ReconstructPolicy {
+            metadata: ReconstructMetadataPolicy::FirstInputWins,
+        })
+    }
+
+    /// Return the selected execution engine.
+    pub const fn engine(self) -> ExistingDocumentEngine {
+        match self {
+            Self::PreserveBase(_) => ExistingDocumentEngine::PreserveBase,
+            Self::Reconstruct(_) => ExistingDocumentEngine::Reconstruct,
+        }
+    }
+
+    /// Configure page labels in secondary inputs of a preserving merge.
+    /// Reconstructive policies are unchanged because they always discard them.
+    pub const fn with_page_labels(self, policy: DocumentStructurePolicy) -> Self {
+        match self {
+            Self::PreserveBase(preserve) => Self::PreserveBase(preserve.with_page_labels(policy)),
+            reconstruct @ Self::Reconstruct(_) => reconstruct,
+        }
+    }
+
+    fn disposition(
+        self,
+        role: InputSemanticRole,
+        structure: DocumentStructure,
+    ) -> StructureDisposition {
+        match self {
+            Self::PreserveBase(_) if role == InputSemanticRole::PreservedBase => {
+                StructureDisposition::Preserved
+            }
+            Self::PreserveBase(policy) => policy.disposition(structure),
+            Self::Reconstruct(policy) => match structure {
+                DocumentStructure::DocumentInfo
+                    if policy.metadata == ReconstructMetadataPolicy::FirstInputWins =>
+                {
+                    StructureDisposition::FirstInputWins
+                }
+                _ => StructureDisposition::Discarded,
+            },
+        }
+    }
+}
+
+/// Input to a semantic merge of existing PDF documents.
 #[derive(Debug, Clone)]
-pub struct LosslessMergeInput {
+pub struct ExistingDocumentMergeInput {
     /// PDF path.
     pub path: PathBuf,
     /// Pages to include, or all pages when omitted.
     pub pages: Option<PageRange>,
 }
 
-impl LosslessMergeInput {
+impl ExistingDocumentMergeInput {
     /// Include every page from `path`.
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {
@@ -127,20 +360,25 @@ impl LosslessMergeInput {
     }
 }
 
+/// v4 compatibility name for a preservation-first merge input.
+pub type LosslessMergeInput = ExistingDocumentMergeInput;
+
 fn inspect_input_bytes(
     path: &Path,
     bytes: &[u8],
     role: InputSemanticRole,
     range: Option<&PageRange>,
+    policy: ExistingDocumentPolicy,
 ) -> OperationResult<InputSemanticReport> {
     let mut reader = PdfReader::new(Cursor::new(bytes)).map_err(|error| {
         OperationError::ParseError(format!("open snapshot of {}: {error}", path.display()))
     })?;
     if reader.is_encrypted() {
+        let disposition = policy.disposition(role, DocumentStructure::Encryption);
         return Err(OperationError::PdfError(crate::PdfError::PermissionDenied(
             format!(
-                "lossless semantic operations do not support encrypted PDF {}",
-                path.display()
+                "existing-document operation cannot process encrypted PDF {} (policy disposition: {:?})",
+                path.display(), disposition
             ),
         )));
     }
@@ -154,25 +392,53 @@ fn inspect_input_bytes(
     let catalog = reader.catalog().map_err(|error| {
         OperationError::ParseError(format!("read catalog in {}: {error}", path.display()))
     })?;
-    let structures = DOCUMENT_STRUCTURES
+    let mut structures: Vec<_> = DOCUMENT_STRUCTURES
         .iter()
         .filter_map(|(key, structure)| {
             catalog
                 .contains_key(key)
                 .then_some(StructureSemanticReport {
                     structure: *structure,
-                    disposition: match role {
-                        InputSemanticRole::PreservedBase => StructureDisposition::Preserved,
-                        InputSemanticRole::ImportedPages
-                            if *structure == DocumentStructure::MetadataStream =>
-                        {
-                            StructureDisposition::FirstInputWins
-                        }
-                        InputSemanticRole::ImportedPages => StructureDisposition::Rejected,
-                    },
+                    disposition: policy.disposition(role, *structure),
                 })
         })
         .collect();
+    let signatures = crate::signatures::detect_signature_fields(&mut reader).map_err(|error| {
+        OperationError::ParseError(format!("inspect signatures in {}: {error}", path.display()))
+    })?;
+    if !signatures.is_empty() {
+        structures.push(StructureSemanticReport {
+            structure: DocumentStructure::DigitalSignatures,
+            disposition: policy.disposition(role, DocumentStructure::DigitalSignatures),
+        });
+    }
+    if reader.trailer().info().is_some() {
+        structures.push(StructureSemanticReport {
+            structure: DocumentStructure::DocumentInfo,
+            disposition: policy.disposition(role, DocumentStructure::DocumentInfo),
+        });
+    }
+    let document = PdfReader::new(Cursor::new(bytes))
+        .map_err(|error| OperationError::ParseError(error.to_string()))?
+        .into_document();
+    let has_annotations = selected_pages.iter().try_fold(false, |found, page| {
+        if found {
+            return Ok(true);
+        }
+        document
+            .get_page(*page as u32)
+            .map(|page| {
+                page.get_annotations()
+                    .is_some_and(|annots| !annots.is_empty())
+            })
+            .map_err(|error| OperationError::ParseError(error.to_string()))
+    })?;
+    if has_annotations {
+        structures.push(StructureSemanticReport {
+            structure: DocumentStructure::Annotations,
+            disposition: policy.disposition(role, DocumentStructure::Annotations),
+        });
+    }
     Ok(InputSemanticReport {
         path: path.to_path_buf(),
         role,
@@ -318,9 +584,10 @@ fn materialize_batch(
 ///
 /// Returns an error for invalid page indexes, encrypted or restricted inputs,
 /// and catalog/page structures that reference pages being removed.
-pub fn plan_extract_pdf_pages_lossless(
+fn plan_extract_pdf_pages_preserving(
     input: impl AsRef<Path>,
     pages: &[usize],
+    policy: ExistingDocumentPolicy,
 ) -> OperationResult<SemanticPreservationReport> {
     let input = input.as_ref();
     if pages.is_empty() {
@@ -328,7 +595,13 @@ pub fn plan_extract_pdf_pages_lossless(
     }
     let range = PageRange::List(pages.to_vec());
     let base = read_snapshot(input)?;
-    let report = inspect_input_bytes(input, &base, InputSemanticRole::PreservedBase, Some(&range))?;
+    let report = inspect_input_bytes(
+        input,
+        &base,
+        InputSemanticRole::PreservedBase,
+        Some(&range),
+        policy,
+    )?;
     let page_count = PdfReader::new(Cursor::new(&base))
         .map_err(|error| OperationError::ParseError(error.to_string()))?
         .page_count()
@@ -337,8 +610,9 @@ pub fn plan_extract_pdf_pages_lossless(
     let batch = selection_batch(page_count, &report.selected_pages)?;
     let mutation = plan_batch(&base, &batch, page_count)?;
     Ok(SemanticPreservationReport {
+        engine: ExistingDocumentEngine::PreserveBase,
         inputs: vec![report],
-        mutation,
+        plan: ExistingDocumentExecutionPlan::Incremental(mutation),
     })
 }
 
@@ -350,18 +624,24 @@ pub fn plan_extract_pdf_pages_lossless(
 /// # Errors
 ///
 /// Returns an error under the same conditions as
-/// [`plan_extract_pdf_pages_lossless`], or when atomic publication fails.
-pub fn extract_pdf_pages_lossless(
+/// [`plan_extract_pdf_pages_preserving`], or when atomic publication fails.
+fn extract_pdf_pages_preserving(
     input: impl AsRef<Path>,
     output: impl AsRef<Path>,
     pages: &[usize],
+    policy: ExistingDocumentPolicy,
 ) -> OperationResult<SemanticPreservationReport> {
     let input = input.as_ref();
     let output = output.as_ref();
     let base = read_snapshot(input)?;
     let range = PageRange::List(pages.to_vec());
-    let input_report =
-        inspect_input_bytes(input, &base, InputSemanticRole::PreservedBase, Some(&range))?;
+    let input_report = inspect_input_bytes(
+        input,
+        &base,
+        InputSemanticRole::PreservedBase,
+        Some(&range),
+        policy,
+    )?;
     let actual_count = PdfReader::new(Cursor::new(&base))
         .map_err(|error| OperationError::ParseError(error.to_string()))?
         .page_count()
@@ -381,8 +661,9 @@ pub fn extract_pdf_pages_lossless(
         .persist(output)
         .map_err(|error| OperationError::Io(error.error))?;
     let report = SemanticPreservationReport {
+        engine: ExistingDocumentEngine::PreserveBase,
         inputs: vec![input_report],
-        mutation: planned,
+        plan: ExistingDocumentExecutionPlan::Incremental(planned),
     };
     Ok(report)
 }
@@ -393,9 +674,10 @@ pub fn extract_pdf_pages_lossless(
 ///
 /// Returns an error when a range is empty or cannot be represented while
 /// preserving the source's reachable document semantics.
-pub fn plan_split_pdf_lossless(
+fn plan_split_pdf_preserving(
     input: impl AsRef<Path>,
     ranges: &[PageRange],
+    policy: ExistingDocumentPolicy,
 ) -> OperationResult<Vec<SemanticPreservationReport>> {
     let input = input.as_ref();
     if ranges.is_empty() {
@@ -412,13 +694,19 @@ pub fn plan_split_pdf_lossless(
         .iter()
         .map(|range| {
             let pages = range.get_indices(page_count)?;
-            let report =
-                inspect_input_bytes(input, &base, InputSemanticRole::PreservedBase, Some(range))?;
+            let report = inspect_input_bytes(
+                input,
+                &base,
+                InputSemanticRole::PreservedBase,
+                Some(range),
+                policy,
+            )?;
             let batch = selection_batch(page_count, &pages)?;
             let mutation = plan_batch(&base, &batch, page_count)?;
             Ok(SemanticPreservationReport {
+                engine: ExistingDocumentEngine::PreserveBase,
                 inputs: vec![report],
-                mutation,
+                plan: ExistingDocumentExecutionPlan::Incremental(mutation),
             })
         })
         .collect()
@@ -435,10 +723,11 @@ pub fn plan_split_pdf_lossless(
 ///
 /// Returns an error when the range/output counts differ, paths alias, any dry
 /// run fails, or an output cannot be validated and transactionally published.
-pub fn split_pdf_lossless(
+fn split_pdf_preserving(
     input: impl AsRef<Path>,
     ranges: &[PageRange],
     outputs: &[PathBuf],
+    policy: ExistingDocumentPolicy,
 ) -> OperationResult<Vec<SemanticPreservationReport>> {
     if ranges.len() != outputs.len() {
         return Err(OperationError::InvalidPath {
@@ -476,8 +765,13 @@ pub fn split_pdf_lossless(
     let mut materialized = Vec::with_capacity(ranges.len());
     for range in ranges {
         let pages = range.get_indices(page_count)?;
-        let input_report =
-            inspect_input_bytes(input, &base, InputSemanticRole::PreservedBase, Some(range))?;
+        let input_report = inspect_input_bytes(
+            input,
+            &base,
+            InputSemanticRole::PreservedBase,
+            Some(range),
+            policy,
+        )?;
         let batch = selection_batch(page_count, &pages)?;
         let planned = plan_batch(&base, &batch, page_count)?;
         let (bytes, written) = materialize_batch(&base, &batch, page_count)?;
@@ -488,8 +782,9 @@ pub fn split_pdf_lossless(
             ));
         }
         reports.push(SemanticPreservationReport {
+            engine: ExistingDocumentEngine::PreserveBase,
             inputs: vec![input_report],
-            mutation: planned,
+            plan: ExistingDocumentExecutionPlan::Incremental(planned),
         });
         materialized.push(bytes);
     }
@@ -541,8 +836,9 @@ pub fn split_pdf_lossless(
 /// Returns an error for fewer than one input, invalid selections, encrypted or
 /// restricted PDFs, unsupported imported page graphs, or secondary document
 /// structures that cannot be combined safely.
-pub fn plan_merge_pdfs_lossless(
-    inputs: &[LosslessMergeInput],
+fn plan_merge_pdfs_preserving(
+    inputs: &[ExistingDocumentMergeInput],
+    policy: ExistingDocumentPolicy,
 ) -> OperationResult<SemanticPreservationReport> {
     let Some(first) = inputs.first() else {
         return Err(OperationError::NoPagesToProcess);
@@ -551,11 +847,13 @@ pub fn plan_merge_pdfs_lossless(
         .iter()
         .map(|input| read_snapshot(&input.path))
         .collect::<OperationResult<Vec<_>>>()?;
+    let snapshot_files = snapshot_files(&snapshots)?;
     let base = inspect_input_bytes(
         &first.path,
         &snapshots[0],
         InputSemanticRole::PreservedBase,
         first.pages.as_ref(),
+        policy,
     )?;
     let base_count = PdfReader::new(Cursor::new(&snapshots[0]))
         .map_err(|error| OperationError::ParseError(error.to_string()))?
@@ -565,17 +863,18 @@ pub fn plan_merge_pdfs_lossless(
     let mut batch = selection_batch(base_count, &base.selected_pages)?;
     let mut reports = vec![base];
     let mut insertion_index = reports[0].selected_pages.len();
-    for (input, snapshot) in inputs.iter().skip(1).zip(snapshots.iter().skip(1)) {
+    for (index, (input, snapshot)) in inputs.iter().zip(&snapshots).enumerate().skip(1) {
         let report = inspect_input_bytes(
             &input.path,
             snapshot,
             InputSemanticRole::ImportedPages,
             input.pages.as_ref(),
+            policy,
         )?;
         reject_secondary_document_structures(&report)?;
         for &page in &report.selected_pages {
             batch.operations.push(PageMutation::Insert {
-                source: input.path.clone(),
+                source: snapshot_files[index].path().to_path_buf(),
                 page,
                 at: insertion_index,
             });
@@ -588,8 +887,9 @@ pub fn plan_merge_pdfs_lossless(
         ensure_snapshot_unchanged(&input.path, snapshot)?;
     }
     Ok(SemanticPreservationReport {
+        engine: ExistingDocumentEngine::PreserveBase,
         inputs: reports,
-        mutation,
+        plan: ExistingDocumentExecutionPlan::Incremental(mutation),
     })
 }
 
@@ -597,11 +897,12 @@ pub fn plan_merge_pdfs_lossless(
 ///
 /// # Errors
 ///
-/// Returns an error under the same conditions as [`plan_merge_pdfs_lossless`],
+/// Returns an error under the same conditions as [`plan_merge_pdfs_preserving`],
 /// or when atomic publication or output validation fails.
-pub fn merge_pdfs_lossless(
-    inputs: &[LosslessMergeInput],
+fn merge_pdfs_preserving(
+    inputs: &[ExistingDocumentMergeInput],
     output: impl AsRef<Path>,
+    policy: ExistingDocumentPolicy,
 ) -> OperationResult<SemanticPreservationReport> {
     let Some(first) = inputs.first() else {
         return Err(OperationError::NoPagesToProcess);
@@ -610,11 +911,13 @@ pub fn merge_pdfs_lossless(
         .iter()
         .map(|input| read_snapshot(&input.path))
         .collect::<OperationResult<Vec<_>>>()?;
+    let snapshot_files = snapshot_files(&snapshots)?;
     let base_report = inspect_input_bytes(
         &first.path,
         &snapshots[0],
         InputSemanticRole::PreservedBase,
         first.pages.as_ref(),
+        policy,
     )?;
     let base_count = PdfReader::new(Cursor::new(&snapshots[0]))
         .map_err(|error| OperationError::ParseError(error.to_string()))?
@@ -624,17 +927,18 @@ pub fn merge_pdfs_lossless(
     let mut batch = selection_batch(base_count, &base_report.selected_pages)?;
     let mut reports = vec![base_report];
     let mut at = reports[0].selected_pages.len();
-    for (input, snapshot) in inputs.iter().zip(&snapshots).skip(1) {
+    for (index, (input, snapshot)) in inputs.iter().zip(&snapshots).enumerate().skip(1) {
         let input_report = inspect_input_bytes(
             &input.path,
             snapshot,
             InputSemanticRole::ImportedPages,
             input.pages.as_ref(),
+            policy,
         )?;
         reject_secondary_document_structures(&input_report)?;
         for &page in &input_report.selected_pages {
             batch.operations.push(PageMutation::Insert {
-                source: input.path.clone(),
+                source: snapshot_files[index].path().to_path_buf(),
                 page,
                 at,
             });
@@ -658,10 +962,449 @@ pub fn merge_pdfs_lossless(
         .persist(output)
         .map_err(|error| OperationError::Io(error.error))?;
     let report = SemanticPreservationReport {
+        engine: ExistingDocumentEngine::PreserveBase,
         inputs: reports,
-        mutation: planned,
+        plan: ExistingDocumentExecutionPlan::Incremental(planned),
     };
     Ok(report)
+}
+
+fn reconstructive_report(
+    inputs: &[ExistingDocumentMergeInput],
+    policy: ExistingDocumentPolicy,
+) -> OperationResult<SemanticPreservationReport> {
+    let snapshots = inputs
+        .iter()
+        .map(|input| read_snapshot(&input.path))
+        .collect::<OperationResult<Vec<_>>>()?;
+    reconstructive_report_from_snapshots(inputs, &snapshots, policy)
+}
+
+fn reconstructive_report_from_snapshots(
+    inputs: &[ExistingDocumentMergeInput],
+    snapshots: &[Vec<u8>],
+    policy: ExistingDocumentPolicy,
+) -> OperationResult<SemanticPreservationReport> {
+    let mut reports = Vec::with_capacity(inputs.len());
+    let mut page_count = 0usize;
+    for (input, bytes) in inputs.iter().zip(snapshots) {
+        let report = inspect_input_bytes(
+            &input.path,
+            bytes,
+            InputSemanticRole::ReconstructedPages,
+            input.pages.as_ref(),
+            policy,
+        )?;
+        page_count = page_count
+            .checked_add(report.selected_pages.len())
+            .ok_or_else(|| OperationError::ProcessingError("page count overflow".to_string()))?;
+        reports.push(report);
+    }
+    if reports.is_empty() || page_count == 0 {
+        return Err(OperationError::NoPagesToProcess);
+    }
+    Ok(SemanticPreservationReport {
+        engine: ExistingDocumentEngine::Reconstruct,
+        inputs: reports,
+        plan: ExistingDocumentExecutionPlan::Reconstruct { page_count },
+    })
+}
+
+fn reject_output_aliases(output: &Path, inputs: &[&Path]) -> OperationResult<()> {
+    let normalized_output = normalized_path(output)?;
+    for input in inputs {
+        if normalized_output == normalized_path(input)? {
+            return Err(OperationError::InvalidPath {
+                reason: format!(
+                    "output {} aliases input {}",
+                    output.display(),
+                    input.display()
+                ),
+            });
+        }
+    }
+    Ok(())
+}
+
+fn snapshot_files(snapshots: &[Vec<u8>]) -> OperationResult<Vec<tempfile::NamedTempFile>> {
+    snapshots
+        .iter()
+        .map(|bytes| stage_output(Path::new("snapshot.pdf"), bytes))
+        .collect()
+}
+
+fn reconstructive_extract_report(
+    input: &Path,
+    pages: &[usize],
+    policy: ExistingDocumentPolicy,
+) -> OperationResult<SemanticPreservationReport> {
+    if pages.is_empty() {
+        return Err(OperationError::NoPagesToProcess);
+    }
+    reconstructive_report(
+        &[ExistingDocumentMergeInput::with_pages(
+            input,
+            PageRange::List(pages.to_vec()),
+        )],
+        policy,
+    )
+}
+
+/// Plan a semantic merge using an explicit preservation policy.
+///
+/// Unlike the legacy reconstruction API, this operation cannot silently
+/// discard document semantics.
+///
+/// # Errors
+///
+/// Returns an error for missing inputs, invalid selections, encrypted or
+/// restricted PDFs, unsafe imported graphs, or policy-rejected structures.
+pub fn plan_merge_pdfs(
+    inputs: &[ExistingDocumentMergeInput],
+    policy: ExistingDocumentPolicy,
+) -> OperationResult<SemanticPreservationReport> {
+    match policy {
+        ExistingDocumentPolicy::PreserveBase(_) => plan_merge_pdfs_preserving(inputs, policy),
+        ExistingDocumentPolicy::Reconstruct(_) => reconstructive_report(inputs, policy),
+    }
+}
+
+/// Merge existing PDFs using an explicit preservation policy.
+///
+/// # Errors
+///
+/// Returns the planning errors described by [`plan_merge_pdfs`], or an error
+/// if validation or atomic publication fails. No output is published on error.
+pub fn merge_pdfs(
+    inputs: &[ExistingDocumentMergeInput],
+    output: impl AsRef<Path>,
+    policy: ExistingDocumentPolicy,
+) -> OperationResult<SemanticPreservationReport> {
+    let output = output.as_ref();
+    let input_paths: Vec<_> = inputs.iter().map(|input| input.path.as_path()).collect();
+    reject_output_aliases(output, &input_paths)?;
+    match policy {
+        ExistingDocumentPolicy::PreserveBase(_) => merge_pdfs_preserving(inputs, output, policy),
+        ExistingDocumentPolicy::Reconstruct(reconstruct) => {
+            let snapshots = inputs
+                .iter()
+                .map(|input| read_snapshot(&input.path))
+                .collect::<OperationResult<Vec<_>>>()?;
+            let report = reconstructive_report_from_snapshots(inputs, &snapshots, policy)?;
+            let snapshot_files = snapshot_files(&snapshots)?;
+            let legacy_inputs = inputs
+                .iter()
+                .zip(&snapshot_files)
+                .map(|(input, snapshot)| super::merge::MergeInput {
+                    path: snapshot.path().to_path_buf(),
+                    pages: input.pages.clone(),
+                })
+                .collect();
+            let metadata_mode = match reconstruct.metadata() {
+                ReconstructMetadataPolicy::Discard => super::merge::MetadataMode::None,
+                ReconstructMetadataPolicy::FirstInputWins => super::merge::MetadataMode::FromFirst,
+            };
+            let temporary = tempfile::NamedTempFile::new_in(
+                output
+                    .parent()
+                    .filter(|parent| !parent.as_os_str().is_empty())
+                    .unwrap_or_else(|| Path::new(".")),
+            )?;
+            super::merge::merge_pdfs(
+                legacy_inputs,
+                temporary.path(),
+                super::merge::MergeOptions {
+                    metadata_mode,
+                    ..super::merge::MergeOptions::default()
+                },
+            )?;
+            temporary.as_file().sync_all()?;
+            temporary
+                .persist(output)
+                .map_err(|error| OperationError::Io(error.error))?;
+            Ok(report)
+        }
+    }
+}
+
+/// Plan sparse extraction using an explicit preservation policy.
+///
+/// # Errors
+///
+/// Returns an error for an empty or invalid page selection, encrypted or
+/// restricted input, or references that make removing pages unsafe.
+pub fn plan_extract_pdf_pages(
+    input: impl AsRef<Path>,
+    pages: &[usize],
+    policy: ExistingDocumentPolicy,
+) -> OperationResult<SemanticPreservationReport> {
+    match policy {
+        ExistingDocumentPolicy::PreserveBase(_) => {
+            plan_extract_pdf_pages_preserving(input, pages, policy)
+        }
+        ExistingDocumentPolicy::Reconstruct(_) => {
+            reconstructive_extract_report(input.as_ref(), pages, policy)
+        }
+    }
+}
+
+/// Extract pages from an existing PDF using an explicit preservation policy.
+///
+/// # Errors
+///
+/// Returns the planning errors described by [`plan_extract_pdf_pages`], or an
+/// error if the source changes, validation fails, or publication fails.
+pub fn extract_pdf_pages(
+    input: impl AsRef<Path>,
+    output: impl AsRef<Path>,
+    pages: &[usize],
+    policy: ExistingDocumentPolicy,
+) -> OperationResult<SemanticPreservationReport> {
+    let input = input.as_ref();
+    let output = output.as_ref();
+    reject_output_aliases(output, &[input])?;
+    match policy {
+        ExistingDocumentPolicy::PreserveBase(_) => {
+            extract_pdf_pages_preserving(input, output, pages, policy)
+        }
+        ExistingDocumentPolicy::Reconstruct(_) => {
+            let snapshot = read_snapshot(input)?;
+            let merge_input =
+                ExistingDocumentMergeInput::with_pages(input, PageRange::List(pages.to_vec()));
+            let report = reconstructive_report_from_snapshots(
+                std::slice::from_ref(&merge_input),
+                std::slice::from_ref(&snapshot),
+                policy,
+            )?;
+            let snapshot_file = stage_output(Path::new("snapshot.pdf"), &snapshot)?;
+            let temporary = tempfile::NamedTempFile::new_in(
+                output
+                    .parent()
+                    .filter(|parent| !parent.as_os_str().is_empty())
+                    .unwrap_or_else(|| Path::new(".")),
+            )?;
+            super::page_extraction::extract_pages_to_file(
+                snapshot_file.path(),
+                pages,
+                temporary.path(),
+            )?;
+            temporary.as_file().sync_all()?;
+            temporary
+                .persist(output)
+                .map_err(|error| OperationError::Io(error.error))?;
+            Ok(report)
+        }
+    }
+}
+
+/// Plan a split using an explicit preservation policy.
+///
+/// # Errors
+///
+/// Returns an error for empty or invalid ranges, encrypted or restricted input,
+/// or retained structures that reference pages removed from an output.
+pub fn plan_split_pdf(
+    input: impl AsRef<Path>,
+    ranges: &[PageRange],
+    policy: ExistingDocumentPolicy,
+) -> OperationResult<Vec<SemanticPreservationReport>> {
+    match policy {
+        ExistingDocumentPolicy::PreserveBase(_) => plan_split_pdf_preserving(input, ranges, policy),
+        ExistingDocumentPolicy::Reconstruct(_) => {
+            if ranges.is_empty() {
+                return Err(OperationError::NoPagesToProcess);
+            }
+            let input = input.as_ref();
+            let snapshot = read_snapshot(input)?;
+            let mut reader = PdfReader::new(Cursor::new(&snapshot))
+                .map_err(|error| OperationError::ParseError(error.to_string()))?;
+            let page_count = reader
+                .page_count()
+                .map_err(|error| OperationError::ParseError(error.to_string()))?
+                as usize;
+            ranges
+                .iter()
+                .map(|range| {
+                    let pages = range.get_indices(page_count)?;
+                    let merge_input =
+                        ExistingDocumentMergeInput::with_pages(input, PageRange::List(pages));
+                    reconstructive_report_from_snapshots(
+                        std::slice::from_ref(&merge_input),
+                        std::slice::from_ref(&snapshot),
+                        policy,
+                    )
+                })
+                .collect()
+        }
+    }
+}
+
+/// Split an existing PDF using an explicit preservation policy.
+///
+/// # Errors
+///
+/// Returns the planning errors described by [`plan_split_pdf`], mismatched or
+/// aliased paths, validation failures, or transactional publication failures.
+pub fn split_pdf(
+    input: impl AsRef<Path>,
+    ranges: &[PageRange],
+    outputs: &[PathBuf],
+    policy: ExistingDocumentPolicy,
+) -> OperationResult<Vec<SemanticPreservationReport>> {
+    if ranges.is_empty() {
+        return Err(OperationError::NoPagesToProcess);
+    }
+    match policy {
+        ExistingDocumentPolicy::PreserveBase(_) => {
+            split_pdf_preserving(input, ranges, outputs, policy)
+        }
+        ExistingDocumentPolicy::Reconstruct(_) => {
+            if ranges.len() != outputs.len() {
+                return Err(OperationError::InvalidPath {
+                    reason: format!(
+                        "split has {} ranges but {} output paths",
+                        ranges.len(),
+                        outputs.len()
+                    ),
+                });
+            }
+            let input = input.as_ref();
+            let normalized_input = normalized_path(input)?;
+            let mut normalized_outputs = BTreeSet::new();
+            for output in outputs {
+                let normalized = normalized_path(output)?;
+                if normalized == normalized_input || !normalized_outputs.insert(normalized) {
+                    return Err(OperationError::InvalidPath {
+                        reason: format!("invalid or duplicate split output {}", output.display()),
+                    });
+                }
+            }
+            let snapshot = read_snapshot(input)?;
+            let mut reader = PdfReader::new(Cursor::new(&snapshot))
+                .map_err(|error| OperationError::ParseError(error.to_string()))?;
+            let page_count = reader
+                .page_count()
+                .map_err(|error| OperationError::ParseError(error.to_string()))?
+                as usize;
+            let reports = ranges
+                .iter()
+                .map(|range| {
+                    let pages = range.get_indices(page_count)?;
+                    let merge_input =
+                        ExistingDocumentMergeInput::with_pages(input, PageRange::List(pages));
+                    reconstructive_report_from_snapshots(
+                        std::slice::from_ref(&merge_input),
+                        std::slice::from_ref(&snapshot),
+                        policy,
+                    )
+                })
+                .collect::<OperationResult<Vec<_>>>()?;
+            let snapshot_file = stage_output(Path::new("snapshot.pdf"), &snapshot)?;
+            let mut staged = Vec::with_capacity(outputs.len());
+            for (report, output) in reports.iter().zip(outputs) {
+                let parent = output
+                    .parent()
+                    .filter(|parent| !parent.as_os_str().is_empty())
+                    .unwrap_or_else(|| Path::new("."));
+                let temporary = tempfile::NamedTempFile::new_in(parent)?;
+                super::page_extraction::extract_pages_to_file(
+                    snapshot_file.path(),
+                    &report.inputs[0].selected_pages,
+                    temporary.path(),
+                )?;
+                temporary.as_file().sync_all()?;
+                staged.push(temporary);
+            }
+            let backups = outputs
+                .iter()
+                .map(|path| {
+                    if path.exists() {
+                        std::fs::read(path).map(Some)
+                    } else {
+                        Ok(None)
+                    }
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            for index in 0..staged.len() {
+                let temporary = staged.remove(0);
+                if let Err(error) = temporary.persist(&outputs[index]) {
+                    for rollback in 0..index {
+                        match &backups[rollback] {
+                            Some(bytes) => {
+                                stage_output(&outputs[rollback], bytes)?
+                                    .persist(&outputs[rollback])
+                                    .map_err(|persist| OperationError::Io(persist.error))?;
+                            }
+                            None => {
+                                let _ = std::fs::remove_file(&outputs[rollback]);
+                            }
+                        }
+                    }
+                    return Err(OperationError::Io(error.error));
+                }
+            }
+            Ok(reports)
+        }
+    }
+}
+
+/// Plan a v4 preservation-first extraction.
+pub fn plan_extract_pdf_pages_lossless(
+    input: impl AsRef<Path>,
+    pages: &[usize],
+) -> OperationResult<SemanticPreservationReport> {
+    plan_extract_pdf_pages(input, pages, ExistingDocumentPolicy::preserve_base())
+}
+
+/// Execute a v4 preservation-first extraction.
+pub fn extract_pdf_pages_lossless(
+    input: impl AsRef<Path>,
+    output: impl AsRef<Path>,
+    pages: &[usize],
+) -> OperationResult<SemanticPreservationReport> {
+    extract_pdf_pages(
+        input,
+        output,
+        pages,
+        ExistingDocumentPolicy::preserve_base(),
+    )
+}
+
+/// Plan a v4 preservation-first split.
+pub fn plan_split_pdf_lossless(
+    input: impl AsRef<Path>,
+    ranges: &[PageRange],
+) -> OperationResult<Vec<SemanticPreservationReport>> {
+    plan_split_pdf(input, ranges, ExistingDocumentPolicy::preserve_base())
+}
+
+/// Execute a v4 preservation-first split.
+pub fn split_pdf_lossless(
+    input: impl AsRef<Path>,
+    ranges: &[PageRange],
+    outputs: &[PathBuf],
+) -> OperationResult<Vec<SemanticPreservationReport>> {
+    split_pdf(
+        input,
+        ranges,
+        outputs,
+        ExistingDocumentPolicy::preserve_base(),
+    )
+}
+
+/// Plan a v4 preservation-first merge.
+pub fn plan_merge_pdfs_lossless(
+    inputs: &[LosslessMergeInput],
+) -> OperationResult<SemanticPreservationReport> {
+    plan_merge_pdfs(inputs, ExistingDocumentPolicy::preserve_base())
+}
+
+/// Execute a v4 preservation-first merge.
+pub fn merge_pdfs_lossless(
+    inputs: &[LosslessMergeInput],
+    output: impl AsRef<Path>,
+) -> OperationResult<SemanticPreservationReport> {
+    merge_pdfs(inputs, output, ExistingDocumentPolicy::preserve_base())
 }
 
 #[cfg(test)]
@@ -669,13 +1412,19 @@ mod tests {
     use super::*;
 
     fn semantic_fixture() -> Vec<u8> {
+        semantic_fixture_with_field(
+            b"<< /Type /Annot /Subtype /Widget /FT /Tx /T (field) /P 3 0 R /Rect [0 0 10 10] >>",
+        )
+    }
+
+    fn semantic_fixture_with_field(field: &[u8]) -> Vec<u8> {
         let objects = [
             b"<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [6 0 R] >> /Outlines << /Type /Outlines /Count 0 >> /Names << /EmbeddedFiles << /Names [(attachment.txt) << /F (attachment.txt) >>] >> >> /Dests << >> /OCProperties << /OCGs [] /D << >> >> /StructTreeRoot << /Type /StructTreeRoot /K [] >> /Metadata 4 0 R /PageLabels << /Nums [] >> >>".as_slice(),
             b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".as_slice(),
             b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> /StructParents 0 /Annots [5 0 R 6 0 R] >>".as_slice(),
             b"<< /Type /Metadata /Subtype /XML /Length 0 >>\nstream\n\nendstream".as_slice(),
             b"<< /Type /Annot /Subtype /Link /Rect [0 0 10 10] /Dest [3 0 R /Fit] >>".as_slice(),
-            b"<< /Type /Annot /Subtype /Widget /FT /Tx /T (field) /P 3 0 R /Rect [0 0 10 10] >>".as_slice(),
+            field,
         ];
         let mut bytes = b"%PDF-1.7\n".to_vec();
         let mut offsets = Vec::new();
@@ -697,20 +1446,77 @@ mod tests {
     }
 
     #[test]
+    fn inventories_digital_signatures_separately_from_forms() {
+        let bytes = semantic_fixture_with_field(
+            b"<< /Type /Annot /Subtype /Widget /FT /Sig /T (signature) /P 3 0 R /Rect [0 0 10 10] /V << /Type /Sig /Filter /Adobe.PPKLite /ByteRange [0 0 0 0] /Contents () >> >>",
+        );
+        let report = inspect_input_bytes(
+            Path::new("signed.pdf"),
+            &bytes,
+            InputSemanticRole::PreservedBase,
+            None,
+            ExistingDocumentPolicy::preserve_base(),
+        )
+        .unwrap();
+
+        assert!(report.structures.iter().any(|entry| {
+            entry.structure == DocumentStructure::DigitalSignatures
+                && entry.disposition == StructureDisposition::Preserved
+        }));
+    }
+
+    #[test]
+    fn empty_annotations_array_is_not_reported_as_document_semantics() {
+        let fixture = String::from_utf8(semantic_fixture()).unwrap();
+        let bytes = fixture
+            .replace("/Annots [5 0 R 6 0 R]", "/Annots []")
+            .into_bytes();
+        let report = inspect_input_bytes(
+            Path::new("empty-annots.pdf"),
+            &bytes,
+            InputSemanticRole::ImportedPages,
+            None,
+            ExistingDocumentPolicy::preserve_base(),
+        )
+        .unwrap();
+
+        assert!(!report
+            .structures
+            .iter()
+            .any(|entry| entry.structure == DocumentStructure::Annotations));
+    }
+
+    #[test]
     fn inventories_every_required_catalog_structure_with_explicit_dispositions() {
         let bytes = semantic_fixture();
         let path = Path::new("semantic-fixture.pdf");
-        let base =
-            inspect_input_bytes(path, &bytes, InputSemanticRole::PreservedBase, None).unwrap();
-        assert_eq!(base.structures.len(), DOCUMENT_STRUCTURES.len());
+        let base = inspect_input_bytes(
+            path,
+            &bytes,
+            InputSemanticRole::PreservedBase,
+            None,
+            ExistingDocumentPolicy::preserve_base(),
+        )
+        .unwrap();
+        assert_eq!(base.structures.len(), DOCUMENT_STRUCTURES.len() + 1);
         assert!(base
             .structures
             .iter()
             .all(|entry| entry.disposition == StructureDisposition::Preserved));
 
-        let imported =
-            inspect_input_bytes(path, &bytes, InputSemanticRole::ImportedPages, None).unwrap();
-        assert_eq!(imported.structures.len(), DOCUMENT_STRUCTURES.len());
+        let imported = inspect_input_bytes(
+            path,
+            &bytes,
+            InputSemanticRole::ImportedPages,
+            None,
+            ExistingDocumentPolicy::preserve_base(),
+        )
+        .unwrap();
+        assert_eq!(imported.structures.len(), DOCUMENT_STRUCTURES.len() + 1);
+        assert!(imported.structures.iter().any(|entry| {
+            entry.structure == DocumentStructure::Annotations
+                && entry.disposition == StructureDisposition::Rejected
+        }));
         assert!(imported
             .structures
             .iter()
@@ -722,7 +1528,7 @@ mod tests {
                 .iter()
                 .filter(|entry| entry.disposition == StructureDisposition::Rejected)
                 .count(),
-            DOCUMENT_STRUCTURES.len() - 1
+            DOCUMENT_STRUCTURES.len()
         );
     }
 

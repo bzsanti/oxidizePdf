@@ -56,53 +56,50 @@ fn test_jpeg_extraction_no_byte_duplication() {
             let mut found_jpeg = false;
             for results_dir in &results_dirs {
                 if let Ok(entries) = std::fs::read_dir(results_dir) {
-                    for entry in entries {
-                        if let Ok(entry) = entry {
-                            let path = entry.path();
-                            if path.extension().and_then(|s| s.to_str()) == Some("jpg") {
-                                if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                                    if filename.starts_with("extracted_") {
-                                        found_jpeg = true;
-                                        // Validate the JPEG file to ensure no byte duplication bug
-                                        let jpeg_data = std::fs::read(&path)
-                                            .expect("Failed to read extracted JPEG");
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.extension().and_then(|s| s.to_str()) == Some("jpg") {
+                            if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
+                                if filename.starts_with("extracted_") {
+                                    found_jpeg = true;
+                                    // Validate the JPEG file to ensure no byte duplication bug
+                                    let jpeg_data = std::fs::read(&path)
+                                        .expect("Failed to read extracted JPEG");
 
-                                        // Check basic JPEG structure
-                                        if jpeg_data.len() > 4 {
-                                            assert_eq!(
-                                                jpeg_data[0], 0xFF,
-                                                "Missing JPEG SOI marker (FF)"
-                                            );
-                                            assert_eq!(
-                                                jpeg_data[1], 0xD8,
-                                                "Missing JPEG SOI marker (D8)"
-                                            );
+                                    // Check basic JPEG structure
+                                    if jpeg_data.len() > 4 {
+                                        assert_eq!(
+                                            jpeg_data[0], 0xFF,
+                                            "Missing JPEG SOI marker (FF)"
+                                        );
+                                        assert_eq!(
+                                            jpeg_data[1], 0xD8,
+                                            "Missing JPEG SOI marker (D8)"
+                                        );
 
-                                            // Count the specific 17-byte pattern that was being duplicated
-                                            let problematic_pattern = [
-                                                0x1a, 0x1f, 0x28, 0x42, 0x2b, 0x28, 0x24, 0x24,
-                                                0x28, 0x51, 0x3a, 0x3d, 0x30, 0x42, 0x60, 0x55,
-                                                0x64,
-                                            ];
+                                        // Count the specific 17-byte pattern that was being duplicated
+                                        let problematic_pattern = [
+                                            0x1a, 0x1f, 0x28, 0x42, 0x2b, 0x28, 0x24, 0x24, 0x28,
+                                            0x51, 0x3a, 0x3d, 0x30, 0x42, 0x60, 0x55, 0x64,
+                                        ];
 
-                                            let mut occurrences = 0;
-                                            for window in jpeg_data.windows(17) {
-                                                if window == problematic_pattern {
-                                                    occurrences += 1;
-                                                }
+                                        let mut occurrences = 0;
+                                        for window in jpeg_data.windows(17) {
+                                            if window == problematic_pattern {
+                                                occurrences += 1;
                                             }
+                                        }
 
-                                            // This is the key test: the pattern should appear at most once
-                                            // If it appears more than once, it suggests the byte duplication bug
-                                            assert!(
+                                        // This is the key test: the pattern should appear at most once
+                                        // If it appears more than once, it suggests the byte duplication bug
+                                        assert!(
                                                 occurrences <= 1,
                                                 "The problematic 17-byte pattern appears {} times in {:?}, but should appear at most once. \
                                                  Multiple occurrences indicate the byte duplication bug has returned!",
                                                 occurrences, path
                                             );
 
-                                            println!("✅ JPEG validation passed for {:?} - pattern appears {} times", path, occurrences);
-                                        }
+                                        println!("✅ JPEG validation passed for {:?} - pattern appears {} times", path, occurrences);
                                     }
                                 }
                             }

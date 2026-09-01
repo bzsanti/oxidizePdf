@@ -5,7 +5,7 @@
 //! API specifically for page extraction use cases.
 //!
 //! This legacy API returns a reconstructed [`crate::Document`]. Use
-//! [`super::extract_pdf_pages_lossless`] when annotations and document-level
+//! [`super::existing_document::extract_pdf_pages`] when annotations and document-level
 //! structures must be retained or rejected explicitly before writing.
 
 use super::{OperationError, OperationResult, PageRange};
@@ -16,14 +16,12 @@ use std::path::Path;
 
 /// Options for page extraction
 #[derive(Debug, Clone)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub struct PageExtractionOptions {
     /// Whether to preserve document metadata
     pub preserve_metadata: bool,
-    /// Whether to preserve annotations
     pub preserve_annotations: bool,
-    /// Whether to preserve form fields
     pub preserve_forms: bool,
-    /// Whether to optimize the extracted pages
     pub optimize: bool,
 }
 
@@ -54,6 +52,7 @@ impl PageExtractor {
     }
 
     /// Create a new page extractor with custom options
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn with_options(document: PdfDocument<File>, options: PageExtractionOptions) -> Self {
         Self { document, options }
     }

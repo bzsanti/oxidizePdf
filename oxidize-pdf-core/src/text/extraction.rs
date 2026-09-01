@@ -12,6 +12,7 @@ use crate::parser::ParseResult;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
 use crate::text::flat_reading_order;
 use crate::text::graphics_state_stack::GraphicsStateStack;
+use crate::text::TextRenderingMode;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -207,6 +208,7 @@ pub struct SpaceDecision {
 
 /// A fragment of text with position information
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct TextFragment {
     /// Text content
     pub text: String,
@@ -228,6 +230,9 @@ pub struct TextFragment {
     pub is_italic: bool,
     /// Fill color of the text (from graphics state)
     pub color: Option<Color>,
+    /// PDF text rendering mode (`Tr`) active when this fragment was emitted.
+    /// Invisible text is retained so OCR layers remain available to callers.
+    pub render_mode: TextRenderingMode,
     /// Space insertion decisions (empty unless `track_space_decisions` is true).
     pub space_decisions: Vec<SpaceDecision>,
     /// Marked-content identifier from the innermost ancestor BDC with `/MCID`
@@ -238,6 +243,35 @@ pub struct TextFragment {
     /// `"Artifact"`). Set on the same ancestor that supplied `mcid`. Phase 3
     /// will consume this for partitioner classification; Phase 1 only carries it.
     pub struct_tag: Option<String>,
+}
+
+impl TextFragment {
+    /// Create a text fragment with default style and metadata.
+    pub fn new(
+        text: impl Into<String>,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        font_size: f64,
+    ) -> Self {
+        Self {
+            text: text.into(),
+            x,
+            y,
+            width,
+            height,
+            font_size,
+            font_name: None,
+            is_bold: false,
+            is_italic: false,
+            color: None,
+            render_mode: TextRenderingMode::Fill,
+            space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
+        }
+    }
 }
 
 /// One entry on the marked-content stack maintained by `TextState`.
@@ -292,6 +326,8 @@ struct PendingActualText {
     is_italic: bool,
     /// Fill color at first suppression.
     color: Option<Color>,
+    /// Rendering mode active at the first suppressed text-show operation.
+    render_mode: TextRenderingMode,
     /// Depth in `mc_stack` at which this run was opened. When the entry at
     /// this depth is popped, the pending run is flushed.
     stack_depth: usize,
@@ -363,8 +399,8 @@ struct TextState {
     font_size: f64,
     /// Current font name
     font_name: Option<String>,
-    /// Render mode (0 = fill, 1 = stroke, etc.)
-    render_mode: u8,
+    /// Current PDF text rendering mode.
+    render_mode: TextRenderingMode,
     /// Fill color (for text rendering)
     fill_color: Option<Color>,
     /// Graphics state stack for `q`/`Q` operators. Each entry holds the CTM
@@ -435,7 +471,7 @@ struct SavedGraphicsState {
     text_rise: f64,
     font_size: f64,
     font_name: Option<String>,
-    render_mode: u8,
+    render_mode: TextRenderingMode,
 }
 
 impl SavedGraphicsState {
@@ -537,7 +573,7 @@ impl Default for TextState {
             text_rise: 0.0,
             font_size: 0.0,
             font_name: None,
-            render_mode: 0,
+            render_mode: TextRenderingMode::Fill,
             fill_color: None,
             saved_states: GraphicsStateStack::default(),
             mc_stack: Vec::new(),
@@ -606,7 +642,7 @@ const PARAGRAPH_STYLE_SIZE_TOLERANCE: f64 = 0.05;
 /// so `partition` classifies the whole block as a `Title` and its text becomes
 /// the `heading_path` breadcrumb of everything that follows.
 fn same_paragraph_style(a: &TextFragment, b: &TextFragment) -> bool {
-    if a.is_bold != b.is_bold {
+    if a.is_bold != b.is_bold || a.render_mode != b.render_mode {
         return false;
     }
     let scale = a.font_size.abs().max(b.font_size.abs());
@@ -800,7 +836,9 @@ impl TextExtractor {
                 && lines.last_mut().is_some_and(|line| {
                     let head = line[0].1;
                     let tol = (head.height.min(frag.height)) * 0.2;
-                    (head.y - frag.y).abs() < tol && head.mcid == frag.mcid
+                    (head.y - frag.y).abs() < tol
+                        && head.mcid == frag.mcid
+                        && head.render_mode == frag.render_mode
                 });
             if placed {
                 lines.last_mut().unwrap().push((idx, frag));
@@ -972,6 +1010,7 @@ impl TextExtractor {
             is_bold: head.is_bold,
             is_italic: head.is_italic,
             color: head.color,
+            render_mode: head.render_mode,
             space_decisions: Vec::new(),
             mcid: head.mcid,
             struct_tag: head.struct_tag.clone(),
@@ -1042,6 +1081,7 @@ impl TextExtractor {
                 is_bold: current.is_bold,
                 is_italic: current.is_italic,
                 color: current.color,
+                render_mode: current.render_mode,
                 space_decisions: Vec::new(),
                 mcid: current.mcid,
                 struct_tag: current.struct_tag.clone(),
@@ -2082,7 +2122,7 @@ impl TextExtractor {
                 }
 
                 ContentOperation::SetTextRenderMode(mode) => {
-                    state.render_mode = mode as u8;
+                    state.render_mode = TextRenderingMode::try_from(mode).unwrap_or_default();
                 }
 
                 ContentOperation::SetTransformMatrix(a, b, c, d, e, f) => {
@@ -2181,6 +2221,7 @@ impl TextExtractor {
                             is_bold: false, // overwritten on first Tj
                             is_italic: false,
                             color: state.fill_color,
+                            render_mode: state.render_mode,
                             stack_depth: state.mc_stack.len(), // BEFORE the push below
                             populated: false,
                         });
@@ -2262,6 +2303,7 @@ impl TextExtractor {
                                             is_bold: run.is_bold,
                                             is_italic: run.is_italic,
                                             color: run.color,
+                                            render_mode: run.render_mode,
                                             space_decisions: Vec::new(),
                                             mcid,
                                             struct_tag,
@@ -2491,6 +2533,7 @@ impl TextExtractor {
                 .map(|(prev_region, prev)| {
                     *prev_region == region_id
                         && prev.text.ends_with('-')
+                        && prev.render_mode == fragment.render_mode
                         && is_line_wrap_geometry(prev, &fragment, self.options.newline_threshold)
                 })
                 .unwrap_or(false);
@@ -2964,7 +3007,8 @@ impl TextExtractor {
             let should_merge = y_diff < y_tol
                 && x_gap >= -SAME_LINE_EPS  // Fragment is to the right (within FP rounding noise)
                 && x_gap < fragment.font_size * 0.5 // Gap less than 50% of font size
-                && current.mcid == fragment.mcid;
+                && current.mcid == fragment.mcid
+                && current.render_mode == fragment.render_mode;
 
             if should_merge {
                 // Merge this fragment into current, preserving word boundaries
@@ -3457,6 +3501,7 @@ fn emit_text_fragment(
     // to avoid borrow-checker conflicts with the disjoint fields.
     let local_font_name = state.font_name.clone();
     let local_fill_color = state.fill_color;
+    let local_render_mode = state.render_mode;
     if let Some(pending) = state.pending_actualtext.as_mut() {
         if !pending.populated {
             pending.first_x = x;
@@ -3466,6 +3511,7 @@ fn emit_text_fragment(
             pending.is_bold = is_bold;
             pending.is_italic = is_italic;
             pending.color = local_fill_color;
+            pending.render_mode = local_render_mode;
             pending.populated = true;
         }
         pending.width += effective_width;
@@ -3485,6 +3531,7 @@ fn emit_text_fragment(
         is_bold,
         is_italic,
         color: state.fill_color,
+        render_mode: local_render_mode,
         space_decisions: Vec::new(),
         mcid,
         struct_tag,
@@ -4703,6 +4750,7 @@ mod tests {
             is_bold: false,
             is_italic: false,
             color: None,
+            render_mode: Default::default(),
             space_decisions: Vec::new(),
             mcid: None,
             struct_tag: None,
@@ -4729,6 +4777,7 @@ mod tests {
                 is_bold: false,
                 is_italic: false,
                 color: None,
+                render_mode: Default::default(),
                 space_decisions: Vec::new(),
                 mcid: None,
                 struct_tag: None,
@@ -4744,6 +4793,7 @@ mod tests {
                 is_bold: false,
                 is_italic: false,
                 color: None,
+                render_mode: Default::default(),
                 space_decisions: Vec::new(),
                 mcid: None,
                 struct_tag: None,
@@ -4775,7 +4825,7 @@ mod tests {
         assert_eq!(state.text_rise, 0.0);
         assert_eq!(state.font_size, 0.0);
         assert!(state.font_name.is_none());
-        assert_eq!(state.render_mode, 0);
+        assert_eq!(state.render_mode, TextRenderingMode::Fill);
     }
 
     #[test]
@@ -5527,6 +5577,7 @@ mod tests {
             is_bold: false,
             is_italic: false,
             color: None,
+            render_mode: Default::default(),
             space_decisions: Vec::new(),
             mcid: None,
             struct_tag: None,
@@ -5898,6 +5949,40 @@ mod tests {
     }
 
     #[test]
+    fn merge_close_fragments_preserves_render_mode_boundaries() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let visible = tf("visible", 50.0, 400.0, 25.0, 10.0);
+        let mut hidden = tf("hidden", 75.0, 400.0, 20.0, 10.0);
+        hidden.render_mode = TextRenderingMode::Invisible;
+
+        let merged = extractor.merge_close_fragments(&[visible, hidden]);
+
+        assert_eq!(merged.len(), 2, "close runs with different Tr must split");
+    }
+
+    #[test]
+    fn merge_into_lines_preserves_render_mode_boundaries() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let visible = tf("visible", 50.0, 400.0, 25.0, 10.0);
+        let mut hidden = tf("hidden", 80.0, 400.0, 20.0, 10.0);
+        hidden.render_mode = TextRenderingMode::Invisible;
+
+        let lines = extractor.merge_into_lines(&[visible, hidden]);
+
+        assert_eq!(
+            lines.len(),
+            2,
+            "same-baseline runs with different Tr must split"
+        );
+    }
+
+    #[test]
     fn merge_into_paragraphs_groups_consecutive_lines() {
         let extractor = TextExtractor::with_options(ExtractionOptions {
             reconstruct_paragraphs: true,
@@ -5977,6 +6062,42 @@ mod tests {
         assert_eq!(paragraphs[0].text, "Overview");
         assert!(paragraphs[0].is_bold);
         assert_eq!(paragraphs[1].text, "Body line.");
+    }
+
+    #[test]
+    fn merge_into_paragraphs_preserves_render_mode_boundaries() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let visible = tf("Visible line.", 50.0, 400.0, 70.0, 12.0);
+        let mut hidden = tf("Hidden line.", 50.0, 386.0, 70.0, 12.0);
+        hidden.render_mode = TextRenderingMode::Invisible;
+
+        let paragraphs = extractor.merge_into_paragraphs(&[visible, hidden]);
+
+        assert_eq!(
+            paragraphs.len(),
+            2,
+            "consecutive lines with different Tr must split"
+        );
+    }
+
+    #[test]
+    fn hyphen_wrap_fusion_preserves_render_mode_boundaries() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            merge_hyphenated: true,
+            ..Default::default()
+        });
+        let visible = tf("visi-", 50.0, 400.0, 25.0, 10.0);
+        let mut hidden = tf("ble", 50.0, 385.0, 15.0, 10.0);
+        hidden.render_mode = TextRenderingMode::Invisible;
+
+        let merged = extractor.merge_hyphenated_line_wraps_in_emission_order(vec![visible, hidden]);
+
+        assert_eq!(merged.len(), 2, "hyphen wraps with different Tr must split");
+        assert_eq!(merged[0].text, "visi-");
+        assert_eq!(merged[1].text, "ble");
     }
 
     /// Sub-point rounding (11.96pt vs 12pt from a scaled text matrix) is not a

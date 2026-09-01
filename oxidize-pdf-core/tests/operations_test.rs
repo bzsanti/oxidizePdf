@@ -1,8 +1,7 @@
 //! Integration tests for PDF operations
 
-use oxidize_pdf::operations::{
-    merge_pdf_files, rotate_all_pages, split_into_pages, PageRange, RotationAngle,
-};
+use oxidize_pdf::operations::reconstruct::{merge_pdf_files, split_into_pages};
+use oxidize_pdf::operations::{rotate_all_pages, PageRange, RotationAngle};
 use oxidize_pdf::{Document, Page};
 use std::path::Path;
 use tempfile::TempDir;

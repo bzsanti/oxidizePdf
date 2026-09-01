@@ -13,21 +13,9 @@
 use oxidize_pdf::text::{ExtractionOptions, TextExtractor, TextFragment};
 
 fn frag(text: &str, x: f64, y: f64, width: f64, font_size: f64) -> TextFragment {
-    TextFragment {
-        text: text.to_string(),
-        x,
-        y,
-        width,
-        height: font_size,
-        font_size,
-        font_name: Some("Helvetica".to_string()),
-        is_bold: false,
-        is_italic: false,
-        color: None,
-        space_decisions: Vec::new(),
-        mcid: None,
-        struct_tag: None,
-    }
+    let mut fragment = TextFragment::new(text, x, y, width, font_size, font_size);
+    fragment.font_name = Some("Helvetica".to_string());
+    fragment
 }
 
 #[test]
