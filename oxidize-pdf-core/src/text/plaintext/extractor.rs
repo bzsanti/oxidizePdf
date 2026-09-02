@@ -12,6 +12,7 @@ use crate::parser::ParseResult;
 use crate::text::encoding::TextEncoding;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
 use crate::text::graphics_state_stack::GraphicsStateStack;
+use crate::text::{ExtractionOptions, TextExtractor};
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -86,16 +87,15 @@ impl Default for TextState {
 ///
 /// # Architecture
 ///
-/// This extractor uses the same content stream parser as `TextExtractor`,
-/// but discards position metadata to provide a simpler output format. It
-/// tracks minimal position data (x, y coordinates) to determine spacing
-/// and line breaks, then returns clean text strings.
+/// The default mode tracks only the position data needed to determine spacing
+/// and line breaks. Layout-preserving mode delegates reconstruction to
+/// `TextExtractor`, then returns its text without exposing fragment metadata.
 ///
 /// # Performance Characteristics
 ///
-/// - **Memory**: O(1) position tracking vs O(n) fragments
-/// - **CPU**: No fragment sorting, no width calculations
-/// - **Performance**: Comparable to `TextExtractor` (same parser)
+/// - **Default mode**: O(1) position tracking, without fragment sorting
+/// - **Layout-preserving mode**: O(n) fragments and geometric sorting
+/// - **Performance**: Default mode avoids the layout engine's extra work
 ///
 /// # Thread Safety
 ///
@@ -223,6 +223,32 @@ impl PlainTextExtractor {
         document: &PdfDocument<R>,
         page_index: u32,
     ) -> ParseResult<PlainTextResult> {
+        // Layout-aware plain text needs the same font metrics, graphics-state
+        // handling, marked-content filtering and geometric reconstruction as
+        // the position-bearing extractor. Keeping a second partial
+        // implementation here made `preserve_layout()` less accurate than the
+        // lower-level API it is intended to simplify.
+        if self.config.preserve_layout {
+            let options = ExtractionOptions {
+                preserve_layout: true,
+                space_threshold: self.config.space_threshold,
+                tj_space_threshold: self.config.tj_space_threshold,
+                newline_threshold: self.config.newline_threshold,
+                sort_by_position: true,
+                detect_columns: false,
+                merge_hyphenated: matches!(
+                    self.config.line_break_mode,
+                    LineBreakMode::Auto | LineBreakMode::Normalize
+                ),
+                ..Default::default()
+            };
+            let extracted =
+                TextExtractor::with_options(options).extract_from_page(document, page_index)?;
+            return Ok(PlainTextResult::new(
+                self.apply_line_break_mode(&extracted.text),
+            ));
+        }
+
         // Get the page
         let page = document.get_page(page_index)?;
 

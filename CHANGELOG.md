@@ -8,6 +8,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.0.0] - 2026-09-01
+
+### Added
+
+- **Text extraction now exposes the active PDF rendering mode** (#477, #562).
+  Every `TextFragment` reports its `Tr` mode, including invisible OCR text and
+  `/ActualText` replacements. Graphics-state restoration preserves the mode,
+  malformed operands are handled without integer truncation, and layout
+  reconstruction never fuses fragments across rendering-mode boundaries.
+
+### Changed
+
+- **Existing-PDF operations now use one policy-driven API** (#560, #561).
+  Merge, split, extraction, reordering, batch processing, signing, and related
+  workflows share explicit preservation, validation, and permission policies.
+  This major release retires ambiguous legacy entry points; see
+  `docs/migration/v5-existing-pdf-operations.md` for migration guidance.
+- **`TextFragment` is now non-exhaustive** (#477, #562). External callers must
+  construct synthetic fragments with `TextFragment::new` and then set any
+  non-default public fields, allowing future extraction metadata to be added
+  without another source-breaking struct-field change.
+
+## [4.9.0] - 2026-08-30
+
+### Added
+
+- **Provider-neutral incremental PDF signing** (#540, #558). New two-phase
+  preparation and finalization APIs support caller-produced CMS signatures,
+  visible and invisible fields, existing-field selection, successive
+  signatures, xref tables and streams, and DocMDP and FieldMDP enforcement
+  while preserving the source PDF as an exact byte prefix.
+- **Lossless incremental FreeText annotation editing** (#534, #553). A typed
+  editor can enumerate, add, update, and remove FreeText annotations without
+  rebuilding unrelated document content.
+- **Lossless incremental Ink annotation editing** (#536, #554). Typed APIs can
+  enumerate and atomically mutate ink strokes, appearance properties, and
+  annotation metadata while preserving prior PDF bytes.
+- **Lossless incremental geometric annotation editing** (#537, #555). Typed
+  editors support line, square, circle, polygon, and polyline annotations,
+  including geometry, color, opacity, width, dash patterns, and line endings.
+- **Atomic page-tree mutation batches** (#538, #556). New planning and mutation
+  APIs can reorder, insert, duplicate, and remove pages in one validated,
+  lossless incremental revision.
+- **Document-semantic preservation for structural operations** (#539, #557).
+  Merge, split, extraction, and page mutation APIs preserve or safely reconcile
+  outlines, named destinations, page labels, AcroForm state, metadata, and
+  associated document structures.
+
+### Changed
+
+- **Obsolete CLI and API release artifacts were retired** (#552). The
+  `oxidize-pdf` library is now the sole maintained and published artifact.
+
 ## [4.8.0] - 2026-08-27
 
 ### Fixed
