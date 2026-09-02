@@ -10,16 +10,30 @@ Date: 2026-09-02 (UTC)
 - Evaluator: official `end2end_eval` with `quick_match`
 - OCR: disabled
 
-The reported 0.31034257473747384 baseline averages every page for which the
+The unfiltered 0.31034257473747384 diagnostic averages every page for which the
 official evaluator emits a reading-order result. That population includes 113
-pages without native text, principally scanned notes. Those pages score 1.0
-when OCR is disabled and contribute 0.1227 to the global average, but issue
-#565 explicitly excludes OCR, image-only notes, and fuzzy scans.
+pages labelled `data_source: note` and another 28 pages labelled `fuzzy_scan`
+under `special_issue` by the pinned dataset. Notes score 1.0 when OCR is
+disabled and contribute 0.1227 to the unfiltered average, but issue #565
+explicitly excludes image-only notes, fuzzy scans, and OCR.
 
-Filtering the completed official per-page artifact by the pinned dataset's
-`page_attribute` metadata leaves 808 native-text pages. Their official
-reading-order edit distance is **0.21389295957080867**, below the issue's 0.25
-acceptance ceiling. No OCR feature is enabled or required.
+The repository's native-scope aggregator filters the completed official
+per-page artifact using those explicit metadata labels. It leaves 780 native-text
+pages with a scoped official reading-order edit distance of
+**0.18610108290582916**, below the issue's 0.25 acceptance ceiling. No OCR
+feature is enabled or required.
+
+Reproduce the scoped artifact with:
+
+```bash
+python3 tools/benchmarks/omnidocbench_native_reading_order.py \
+  /path/to/pinned/OmniDocBench.json \
+  /path/to/official_reading_order_per_page_edit.json \
+  --output native-reading-order.json
+```
+
+The output records the protocol, exact exclusion predicate, official scored
+population, excluded and retained counts, global value, and category values.
 
 ## Native-text results
 
@@ -27,22 +41,22 @@ Lower edit distance is better.
 
 | Category | Pages | Edit distance |
 |---|---:|---:|
-| Global native text | 808 | **0.21389** |
-| English | 275 | 0.07897 |
-| Simplified Chinese | 502 | 0.26020 |
-| English/Chinese mixed | 31 | 0.66092 |
-| Single column | 313 | 0.20288 |
-| Double column | 123 | 0.25292 |
-| One-or-more column | 120 | 0.19934 |
+| Global native text | 780 | **0.18610** |
+| English | 271 | 0.06537 |
+| Simplified Chinese | 480 | 0.22699 |
+| English/Chinese mixed | 29 | 0.63754 |
+| Single column | 302 | 0.17384 |
+| Double column | 113 | 0.18680 |
+| One-or-more column | 119 | 0.19261 |
 | Three column | 45 | 0.13632 |
-| Other layout | 207 | 0.23266 |
+| Other layout | 201 | 0.21141 |
 | Academic literature | 122 | 0.03815 |
-| Books | 83 | 0.08700 |
-| Colorful textbooks | 93 | 0.56693 |
-| Exam papers | 113 | 0.63776 |
-| Magazines | 92 | 0.13655 |
+| Books | 82 | 0.07586 |
+| Colorful textbooks | 81 | 0.50277 |
+| Exam papers | 101 | 0.59472 |
+| Magazines | 91 | 0.12706 |
 | Newspapers | 111 | 0.02294 |
-| PPT-to-PDF | 128 | 0.08633 |
+| PPT-to-PDF | 126 | 0.07447 |
 | Research reports | 66 | 0.15152 |
 
 ## Strategy experiments
@@ -50,12 +64,12 @@ Lower edit distance is better.
 Experiments were evaluated with the same pinned official protocol before being
 rejected:
 
-| Strategy | Text edit | Reading-order edit | Decision |
-|---|---:|---:|---|
-| Published v5.0.0 emission order | 0.51741 | 0.31034 | Native baseline |
-| Layout reconstruction from #564 | 0.38886 | 0.38785 | Reject for ordering |
-| Layout plus automatic line joining | 0.48547 | 0.34643 | Reject globally |
-| Flat scale-relative XY-Cut | 0.39849 | 0.34357 | Reject globally |
+| Strategy | Text edit (all) | Reading edit (all) | Reading edit (native) | Decision |
+|---|---:|---:|---:|---|
+| Published v5.0.0 emission order | 0.51741 | 0.31034 | **0.18610** | Retain |
+| Layout reconstruction from #564 | 0.38886 | 0.38785 | 0.27744 | Reject for ordering |
+| Layout plus automatic line joining | 0.48547 | 0.34643 | 0.22872 | Reject globally |
+| Flat scale-relative XY-Cut | 0.39849 | 0.34357 | 0.22534 | Reject globally |
 
 The alternatives improve selected categories but worsen the official global
 reading-order metric. The current emission-order default is therefore retained;
@@ -68,9 +82,11 @@ positioned `Tj` and `TJ` label/value cells and verifies that values and labels
 are not glued across rows.
 
 - `cargo test -p oxidize-pdf --test issue_495_flat_grid_order_test`: 3 passed
-- Existing corpus baseline: zero parser panics
-- Source changes: none
+- `python3 -m unittest tools/benchmarks/omnidocbench_native_reading_order_test.py`: 7 passed
+- Aggregator failure coverage: unknown and duplicate pages, invalid, non-finite and out-of-range scores, and empty native population
+- Production extraction source changes: none
 
-The original 0.31034 and scoped 0.21389 figures come from the same official
-per-page result artifact. The change is the population required by #565's
-native-text scope, not a replacement metric or evaluator.
+The unfiltered 0.31034 diagnostic and scoped 0.18610 acceptance figure come
+from the same official per-page result artifact. The versioned aggregator and
+its focused tests make the native-text population explicit and reproducible;
+they do not replace or approximate the upstream metric.
