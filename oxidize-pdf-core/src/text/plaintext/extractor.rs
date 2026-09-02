@@ -235,25 +235,18 @@ impl PlainTextExtractor {
                 tj_space_threshold: self.config.tj_space_threshold,
                 newline_threshold: self.config.newline_threshold,
                 sort_by_position: true,
-                detect_columns: true,
+                detect_columns: false,
                 merge_hyphenated: matches!(
                     self.config.line_break_mode,
                     LineBreakMode::Auto | LineBreakMode::Normalize
                 ),
                 ..Default::default()
             };
-            if let Ok(extracted) =
-                TextExtractor::with_options(options).extract_from_page(document, page_index)
-            {
-                return Ok(PlainTextResult::new(
-                    self.apply_line_break_mode(&extracted.text),
-                ));
-            }
-
-            // Keep the tolerant lightweight parser as a compatibility
-            // fallback. Some recoverable PDFs contain malformed filters that
-            // the full extractor rejects even though their direct page text
-            // stream remains readable.
+            let extracted =
+                TextExtractor::with_options(options).extract_from_page(document, page_index)?;
+            return Ok(PlainTextResult::new(
+                self.apply_line_break_mode(&extracted.text),
+            ));
         }
 
         // Get the page

@@ -27,18 +27,7 @@ fn layout_plaintext_filters_artifacts_and_honors_actualtext() {
           0 -20 Td\n/Span << /ActualText (office) >> BDC\n(ofce) Tj\nEMC\nET\n",
     );
 
-    assert!(
-        text.contains("office"),
-        "ActualText substitution was lost: {text:?}"
-    );
-    assert!(
-        !text.contains("ofce"),
-        "visual glyphs leaked beside ActualText: {text:?}"
-    );
-    assert!(
-        !text.contains("page furniture"),
-        "Artifact text leaked: {text:?}"
-    );
+    assert_eq!(text.trim_end(), "office");
 }
 
 #[test]
@@ -48,8 +37,20 @@ fn layout_plaintext_uses_standard14_metrics_for_positioned_runs() {
           (iiiiiiiiiiiiiiii) Tj\n(X) Tj\nET\n",
     );
 
-    assert!(
-        text.contains("iiiiiiiiiiiiiiiiX"),
-        "contiguous AFM runs split: {text:?}"
+    assert_eq!(text.trim_end(), "iiiiiiiiiiiiiiiiX");
+}
+
+#[test]
+fn layout_plaintext_propagates_extraction_errors() {
+    let reader = PdfReader::new(Cursor::new(build_pdf_with_content_stream(b"")))
+        .expect("synthetic PDF should parse");
+    let document = PdfDocument::new(reader);
+    let error = PlainTextExtractor::with_config(PlainTextConfig::preserve_layout())
+        .extract(&document, 1)
+        .expect_err("an out-of-range page must not silently fall back");
+
+    assert_eq!(
+        error.to_string(),
+        "Syntax error at position 0: Page index 1 out of range (document has 1 pages)"
     );
 }
