@@ -54,3 +54,21 @@ fn layout_plaintext_propagates_extraction_errors() {
         "Syntax error at position 0: Page index 1 out of range (document has 1 pages)"
     );
 }
+
+#[test]
+fn layout_plaintext_reads_interleaved_columns_left_then_right() {
+    let text = extract(
+        b"BT\n/F1 10 Tf\n\
+          1 0 0 1 330 700 Tm\n(right one) Tj\nET\n\
+          BT\n/F1 10 Tf\n1 0 0 1 40 700 Tm\n(left one) Tj\nET\n\
+          BT\n/F1 10 Tf\n1 0 0 1 330 680 Tm\n(right two) Tj\nET\n\
+          BT\n/F1 10 Tf\n1 0 0 1 40 680 Tm\n(left two) Tj\nET\n\
+          BT\n/F1 10 Tf\n1 0 0 1 330 660 Tm\n(right three) Tj\nET\n\
+          BT\n/F1 10 Tf\n1 0 0 1 40 660 Tm\n(left three) Tj\nET\n",
+    );
+
+    assert_eq!(
+        text.trim_end(),
+        "left one\nleft two\nleft three\nright one\nright two\nright three"
+    );
+}

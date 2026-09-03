@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import argparse
 import shutil
@@ -35,6 +36,7 @@ def page(name, source="book", special=None, page_no=1):
 def sealed_summary(identity=None, dataset_count=1, similarity=0.5):
     value = {
         "identity": identity or GATE.identity_fixture(),
+        "population": {"scored_pages_sha256": "pages"},
         "provenance": {"worktree_clean": True},
         "artifacts": {
             "dataset_sha256": "dataset",
@@ -92,6 +94,13 @@ class JsonAndPopulationTests(unittest.TestCase):
         entry["layout_dets"] = [{"category_type": "code_txt_caption", "text": "caption"}]
         result = GATE.summarize_scores([entry], {"caption.jpg": 0.25})
         self.assertEqual(result["counts"]["official_text_scorable"], 1)
+
+    def test_accepts_evaluator_score_for_known_page_furniture_only_page(self):
+        entry = page("header.jpg")
+        entry["layout_dets"] = [{"category_type": "header", "text": "running title"}]
+        result = GATE.summarize_scores([entry], {"header.jpg": 0.25})
+        self.assertEqual(result["counts"]["official_text_scorable"], 0)
+        self.assertEqual(result["counts"]["scored"], 1)
 
     def test_reports_distinct_global_and_native_populations(self):
         dataset = [
@@ -154,10 +163,46 @@ class IdentityAndHashTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "dirty worktree"):
                 GATE.verified_revision(root, revision, "fixture")
 
+    def test_verified_revision_accepts_only_matching_materialized_lfs_objects(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "--quiet", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.com"], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.name", "Test"], check=True)
+            content = b"materialized lfs payload"
+            pointer = (
+                "version https://git-lfs.github.com/spec/v1\n"
+                f"oid sha256:{hashlib.sha256(content).hexdigest()}\n"
+                f"size {len(content)}\n"
+            )
+            (root / "asset.bin").write_text(pointer, encoding="ascii")
+            subprocess.run(["git", "-C", str(root), "add", "asset.bin"], check=True)
+            subprocess.run(["git", "-C", str(root), "commit", "--quiet", "-m", "fixture"], check=True)
+            revision = GATE.git_output("-C", str(root), "rev-parse", "HEAD")
+
+            (root / "asset.bin").write_bytes(content)
+            provenance = GATE.verified_revision(root, revision, "fixture")
+            self.assertTrue(provenance["worktree_clean"])
+            self.assertEqual(provenance["verified_materialized_lfs_files"], 1)
+
+            (root / "asset.bin").write_bytes(content + b"tampered")
+            with self.assertRaisesRegex(ValueError, "dirty worktree"):
+                GATE.verified_revision(root, revision, "fixture")
+
     def test_population_count_mismatch_is_not_comparable(self):
         baseline = sealed_summary(dataset_count=2)
         candidate = sealed_summary(dataset_count=3)
         with self.assertRaisesRegex(ValueError, "population counts"):
+            GATE.compare_summaries(baseline, candidate)
+
+    def test_scored_page_population_mismatch_is_not_comparable(self):
+        baseline = sealed_summary()
+        candidate = sealed_summary()
+        candidate["population"]["scored_pages_sha256"] = "different-pages"
+        candidate["summary_sha256"] = GATE.canonical_hash(
+            {key: value for key, value in candidate.items() if key != "summary_sha256"}
+        )
+        with self.assertRaisesRegex(ValueError, "scored-page population"):
             GATE.compare_summaries(baseline, candidate)
 
     def test_compare_rejects_tampered_or_dirty_summaries(self):
@@ -176,6 +221,17 @@ class IdentityAndHashTests(unittest.TestCase):
 
 
 class PdfResolutionTests(unittest.TestCase):
+    def test_prefers_page_specific_pdf_when_dataset_stores_split_pages(self):
+        entry = page("source.pdf_7.jpg", page_no=7)
+        split_pdf = Path("/dataset/ori_pdfs/source.pdf_7.pdf")
+        combined_pdf = Path("/dataset/ori_pdfs/source.pdf")
+        pdfs = {
+            split_pdf.name.casefold(): split_pdf,
+            combined_pdf.name.casefold(): combined_pdf,
+        }
+
+        self.assertEqual(GATE.resolve_source_pdf(entry, pdfs), (split_pdf, 0))
+
     def test_resolves_pdf_suffix_and_one_based_page(self):
         self.assertEqual(
             GATE.source_pdf_identity(page("source.pdf_7.jpg", page_no=7)),
