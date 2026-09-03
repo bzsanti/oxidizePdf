@@ -24,13 +24,14 @@
   flattening line breaks (981 written, 1 known invalid-filter failure).
 - [x] Run pinned OmniDocBench `end2end_eval` / `quick_match`.
 - [x] Confirm official global text similarity is at least 55% (60.01%).
-- [ ] Re-run the benchmark from the final clean commit and seal its manifest.
-- [ ] Attach global, native-text, category, extraction-error, and reading-order
+- [x] Re-run the benchmark from clean implementation commit `36a9d11c` and
+  seal its manifest and summary.
+- [x] Attach global, native-text, category, extraction-error, and reading-order
   before/after metrics.
-- [ ] Keep the issue open if the exact committed candidate misses any criterion.
+- [x] Confirm the exact committed candidate misses no acceptance criterion.
 
 ## Quality review and delivery
 
-- [ ] Run the formal QR, including Kripteia test-quality and security analysis.
-- [ ] Correct every finding and repeat affected checks.
+- [x] Run the formal QR, including Kripteia test-quality and security analysis.
+- [x] Correct every confirmed finding and repeat affected checks.
 - [ ] Open a PR only after the QR has no remaining findings.

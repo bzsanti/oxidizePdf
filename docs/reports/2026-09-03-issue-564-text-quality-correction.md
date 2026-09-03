@@ -38,6 +38,12 @@ The official text artifact contains 945 scored text entries; the official
 reading-order artifact contains 921 pages, of which the versioned #565 filter
 classifies 780 as native text.
 
+The clean implementation commit is
+`36a9d11c7da38e3b959171cfad06840cc5ff724e`. Its prediction-tree SHA-256 is
+`6a9240ec5b3a8a800a5f8813942edd2ee51eabed85d33f98e9c3f0d6ce3abedf` and
+the sealed summary SHA-256 is
+`431f967ef1f64ac66cc74ddc62d304164452f10cf29be97eadd080a0081c59a0`.
+
 ## Reproducibility correction
 
 The first rerun incorrectly used the historical comparison runner, which
@@ -48,5 +54,26 @@ back to a combined source PDF (`source.pdf`, page index N-1). Its exporter write
 the extracted text unchanged, preserving the line structure used by the
 official evaluator.
 
-Final clean-commit validation and formal quality review remain pending; no PR
-will be opened before both complete.
+The final gate also verifies materialized Git LFS objects by their committed
+SHA-256 and size when `git-lfs` is unavailable, rejects altered objects, accepts
+the evaluator's prediction-dependent optional text pages only when they belong
+to the pinned dataset, and seals the exact scored-page population in the
+summary.
+
+## Validation and quality review
+
+- Library suite: 6,777 passed, 3 ignored.
+- Focused #564: 4 passed; neighboring #477/#495/#521: 9 passed.
+- T0: 21 passed, 3 maintenance generators ignored; T1: 22 passed.
+- Exporter tests: 2 passed; benchmark gate: 21 passed.
+- Formatting, Clippy, build and `git diff --check`: passed.
+- Kripteia Rust: 94/100 globally; focused #564 tests: 90/100.
+- Kripteia Python: no tests discovered; the 21 `unittest` cases above are the
+  direct test evidence.
+- Kripteia security: no issues in either Rust or Python scope.
+
+The review found and corrected misleading cross-revision extraction metadata,
+missing split-PDF resolution, Git LFS provenance handling and incomplete
+official score-population handling. A proposed `page_no` validation finding was
+disproved against the pinned dataset and was not retained. The repeated final
+review has no remaining findings. No PR was opened during validation.
