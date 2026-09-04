@@ -104,3 +104,8 @@ bytes were reclaimed. Six project-scoped benchmark paths under `/tmp` were
 inspected (about 1.83 GB total). All were created on 2026-09-03, are newer than
 the five-day cutoff, and include evidence referenced above, so all six were
 preserved. No uncertain cleanup candidates were deleted.
+
+## Delivery
+
+PR #570 was opened against `develop` after the quality review completed with no
+remaining findings: https://github.com/bzsanti/oxidizePdf/pull/570

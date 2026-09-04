@@ -34,4 +34,4 @@
 
 - [x] Run the formal QR, including Kripteia test-quality and security analysis.
 - [x] Correct every confirmed finding and repeat affected checks.
-- [ ] Open a PR only after the QR has no remaining findings.
+- [x] Open PR #570 only after the QR has no remaining findings.
