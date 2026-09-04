@@ -77,3 +77,30 @@ missing split-PDF resolution, Git LFS provenance handling and incomplete
 official score-population handling. A proposed `page_no` validation finding was
 disproved against the pinned dataset and was not retained. The repeated final
 review has no remaining findings. No PR was opened during validation.
+
+## Session handoff
+
+The session closed on branch `fix/issue-564-omnidocbench-text-quality` at
+`472f4fbc3b6ad26d3919170d62c9b444cfc7dc0b`, after refreshing
+`origin/develop` to `d1a1ab0e99098e01cc51a04aa5ee315f5772ab4d`. The diff
+against that base contains only the six #564 files listed in this report and
+plan. The quality review is complete; the only unchecked acceptance item is
+opening the PR.
+
+The worktree also contains pre-existing or user-owned changes in `README.md`,
+`docs/reports/2026-09-02-issue-565-omnidocbench-reading-order.md`,
+`oxidize-pdf-core/Cargo.toml`, and eight untracked handoff reports dated
+2026-08-25 through 2026-09-01. They are unrelated to #564 and must not be
+staged with this branch.
+
+To continue, first verify `git diff --check` and
+`git diff --name-status origin/develop...HEAD`; then push only
+`fix/issue-564-omnidocbench-text-quality` and open a PR against `develop`.
+After the PR exists, mark the final checklist item and report its CI status.
+
+For cleanup, `cargo-sweep 0.8.0` was run with both `--dry-run --time 5` and
+`--time 5` against this workspace; both reported nothing eligible, so zero
+bytes were reclaimed. Six project-scoped benchmark paths under `/tmp` were
+inspected (about 1.83 GB total). All were created on 2026-09-03, are newer than
+the five-day cutoff, and include evidence referenced above, so all six were
+preserved. No uncertain cleanup candidates were deleted.
