@@ -84,13 +84,48 @@ def git_output(*args: str) -> str:
     ).stdout.rstrip("\n")
 
 
+def _matches_lfs_pointer(root: Path, relative: str) -> bool:
+    path = root / relative
+    if not path.is_file():
+        return False
+    pointer = subprocess.run(
+        ["git", "-C", str(root), "show", f"HEAD:{relative}"],
+        check=True,
+        stdout=subprocess.PIPE,
+    ).stdout
+    lines = pointer.decode("ascii", errors="replace").splitlines()
+    if len(lines) != 3 or lines[0] != "version https://git-lfs.github.com/spec/v1":
+        return False
+    if not lines[1].startswith("oid sha256:") or not lines[2].startswith("size "):
+        return False
+    expected_hash = lines[1].removeprefix("oid sha256:")
+    try:
+        expected_size = int(lines[2].removeprefix("size "))
+    except ValueError:
+        return False
+    return path.stat().st_size == expected_size and file_hash(path) == expected_hash
+
+
 def git_provenance(allow_dirty: bool, source_root: Path | None = None) -> dict[str, Any]:
     prefix = ("-C", str(source_root.resolve())) if source_root else ()
+    root = source_root.resolve() if source_root else Path.cwd()
     sha = git_output(*prefix, "rev-parse", "HEAD")
-    status = git_output(*prefix, "status", "--porcelain=v1", "--untracked-files=all")
+    raw_status = git_output(
+        *prefix, "status", "--porcelain=v1", "-z", "--untracked-files=all"
+    )
+    entries = [entry for entry in raw_status.split("\0") if entry]
+    materialized_lfs = [
+        entry[3:]
+        for entry in entries
+        if entry.startswith(" M ") and _matches_lfs_pointer(root, entry[3:])
+    ]
+    remaining = [entry for entry in entries if entry[3:] not in materialized_lfs]
+    status = "\0".join(remaining)
     if status and not allow_dirty:
         raise ValueError("dirty worktree cannot be labelled as a clean commit; pass --allow-dirty")
     result: dict[str, Any] = {"git_sha": sha, "worktree_clean": not bool(status)}
+    if materialized_lfs:
+        result["verified_materialized_lfs_files"] = len(materialized_lfs)
     if status:
         diff = git_output(*prefix, "diff", "--binary", "HEAD")
         untracked = git_output(*prefix, "ls-files", "--others", "--exclude-standard", "-z")
@@ -191,7 +226,7 @@ def summarize_scores(
         raise ValueError("scores JSON must be an object")
     metadata = _dataset_metadata(dataset)
     expected = {name for name, item in metadata.items() if item["text_scorable"]}
-    unknown = sorted(set(scores) - expected)
+    unknown = sorted(set(scores) - set(metadata))
     missing = sorted(expected - set(scores))
     if unknown:
         raise ValueError(f"scores reference {len(unknown)} unknown pages; first: {unknown[0]}")
@@ -200,7 +235,7 @@ def summarize_scores(
 
     native: list[float] = []
     global_values: list[float] = []
-    for name in sorted(expected):
+    for name in sorted(scores):
         score = scores[name]
         if (
             not isinstance(score, (int, float))
@@ -225,6 +260,7 @@ def summarize_scores(
             "version": POPULATION_VERSION,
             "excluded_data_sources": sorted(EXCLUDED_DATA_SOURCES),
             "excluded_special_issues": sorted(EXCLUDED_SPECIAL_ISSUES),
+            "scored_pages_sha256": canonical_hash(sorted(scores)),
         },
         "counts": {
             "dataset": len(metadata),
@@ -270,6 +306,10 @@ def compare_summaries(baseline: dict[str, Any], candidate: dict[str, Any]) -> di
     ]
     if count_mismatches:
         raise ValueError(f"incompatible benchmark population counts: {', '.join(count_mismatches)}")
+    left_pages = baseline.get("population", {}).get("scored_pages_sha256")
+    right_pages = candidate.get("population", {}).get("scored_pages_sha256")
+    if not left_pages or left_pages != right_pages:
+        raise ValueError("incompatible scored-page population")
     before = baseline["metrics"]
     after = candidate["metrics"]
     return {
@@ -293,6 +333,23 @@ def source_pdf_identity(entry: dict[str, Any]) -> tuple[str, int]:
     if not source.lower().endswith(".pdf"):
         source += ".pdf"
     return source, page_no - 1
+
+
+def resolve_source_pdf(
+    entry: dict[str, Any], pdfs: dict[str, Path]
+) -> tuple[Path, int]:
+    image_name = Path(entry["page_info"]["image_path"]).name
+    split_name = f"{Path(image_name).stem}.pdf"
+    split_pdf = pdfs.get(split_name.casefold())
+    if split_pdf is not None:
+        return split_pdf, 0
+    source_name, page_index = source_pdf_identity(entry)
+    source = pdfs.get(source_name.casefold())
+    if source is None:
+        raise ValueError(
+            f"missing source PDF: tried {split_name} and {source_name}"
+        )
+    return source, page_index
 
 
 def _write_json(path: Path, value: Any) -> None:
@@ -330,10 +387,7 @@ def export_predictions(args: argparse.Namespace) -> None:
     pdfs = _pdf_index(args.pdf_root)
     jobs = []
     for entry in sorted(dataset, key=lambda item: Path(item["page_info"]["image_path"]).name):
-        source_name, page_index = source_pdf_identity(entry)
-        source = pdfs.get(source_name.casefold())
-        if source is None:
-            raise ValueError(f"missing source PDF: {source_name}")
+        source, page_index = resolve_source_pdf(entry, pdfs)
         image_name = Path(entry["page_info"]["image_path"]).name
         jobs.append({"prediction_name": str(Path(image_name).with_suffix(".md")), "pdf_path": str(source), "page_index": page_index})
 

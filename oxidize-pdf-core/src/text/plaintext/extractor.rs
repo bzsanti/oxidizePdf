@@ -224,13 +224,16 @@ impl PlainTextExtractor {
         page_index: u32,
     ) -> ParseResult<PlainTextResult> {
         // Layout-aware plain text needs the same font metrics, graphics-state
-        // handling, marked-content filtering and geometric reconstruction as
-        // the position-bearing extractor. Keeping a second partial
-        // implementation here made `preserve_layout()` less accurate than the
-        // lower-level API it is intended to simplify.
+        // handling and marked-content filtering as the position-bearing
+        // extractor. Rebuild the full engine's flat text with its scale-relative
+        // XY-cut orderer: fragment-level column reconstruction recovers slightly
+        // more benchmark text, but regresses the native reading-order gate.
         if self.config.preserve_layout {
             let options = ExtractionOptions {
-                preserve_layout: true,
+                // The public facade still preserves line structure. This flag
+                // selects the full engine's flat reconstruction so XY-cut can
+                // order complete line groups without exposing fragments.
+                preserve_layout: false,
                 space_threshold: self.config.space_threshold,
                 tj_space_threshold: self.config.tj_space_threshold,
                 newline_threshold: self.config.newline_threshold,
@@ -242,8 +245,9 @@ impl PlainTextExtractor {
                 ),
                 ..Default::default()
             };
-            let extracted =
-                TextExtractor::with_options(options).extract_from_page(document, page_index)?;
+            let extracted = TextExtractor::with_options(options)
+                .with_reading_order(true)
+                .extract_from_page(document, page_index)?;
             return Ok(PlainTextResult::new(
                 self.apply_line_break_mode(&extracted.text),
             ));
