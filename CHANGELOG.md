@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.0.1] - 2026-09-04
+
+### Fixed
+
+- **Layout-preserving plaintext extraction restores document reading quality**
+  (#564, #570). `PlainTextExtractor::preserve_layout()` now uses the complete
+  text engine and its scale-relative XY-Cut reading order, retaining
+  `/ActualText`, artifact filtering, font metrics, and error propagation. On
+  the pinned OmniDocBench protocol, global text similarity improves from
+  48.26% in v5.0.0 to 60.01%, above the 55% acceptance threshold, while native
+  reading-order edit distance remains within its 0.25 limit at 0.22639.
+
+### Changed
+
+- **OmniDocBench quality measurements are reproducible** (#565, #568). The
+  versioned gate pins dataset, evaluator, source, extraction configuration, and
+  scored-page population provenance, validates materialized Git LFS objects,
+  supports split-page PDFs, and seals prediction and summary hashes.
+
 ## [5.0.0] - 2026-09-01
 
 ### Added
