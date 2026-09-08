@@ -96,12 +96,12 @@ fn tj_hyphenated_line_wrap_merges_on_the_flat_path() {
     );
     let text = extract_flat(content);
     assert!(
-        text.contains("+55 11 30160900"),
-        "hyphen-wrapped number must fuse into one token on the flat path, got: {text:?}"
+        text.contains("+55 11 3016-0900"),
+        "hyphen-wrapped number must fuse into one token with hyphen preserved, got: {text:?}"
     );
     assert!(
-        !text.contains("3016-\n0900") && !text.contains("3016-0900"),
-        "the hyphen must be dropped, not kept alongside a newline or as-is: {text:?}"
+        !text.contains("3016-\n0900"),
+        "the newline must be dropped: {text:?}"
     );
 }
 
@@ -115,7 +115,7 @@ fn tj_array_hyphenated_line_wrap_merges_on_the_flat_path() {
     );
     let text = extract_flat(content);
     assert!(
-        text.contains("+55 11 30160900"),
+        text.contains("+55 11 3016-0900"),
         "TJ path must also fuse the hyphen-wrapped number, got: {text:?}"
     );
 }

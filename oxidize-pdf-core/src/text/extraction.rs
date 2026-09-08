@@ -1057,10 +1057,20 @@ impl TextExtractor {
 
             // Same paragraph — join
             let joined_text = if self.options.merge_hyphenated && current.text.ends_with('-') {
-                let mut s = current.text.clone();
-                s.pop(); // drop trailing hyphen
-                s.push_str(&line.text);
-                s
+                match hyphen_fusion_action(&current.text, &line.text) {
+                    HyphenFusionAction::DropHyphen => {
+                        let mut s = current.text.clone();
+                        s.pop();
+                        s.push_str(&line.text);
+                        s
+                    }
+                    HyphenFusionAction::KeepHyphen => {
+                        format!("{}{}", current.text, line.text)
+                    }
+                    HyphenFusionAction::NoFusion => {
+                        format!("{}\n{}", current.text, line.text)
+                    }
+                }
             } else {
                 format!("{}\n{}", current.text, line.text)
             };
@@ -2528,20 +2538,27 @@ impl TextExtractor {
         let region_ids = assign_layout_region_ids(&fragments);
         let mut result: Vec<(u32, TextFragment)> = Vec::with_capacity(fragments.len());
         for (region_id, fragment) in region_ids.into_iter().zip(fragments) {
-            let should_merge = result
+            let action = result
                 .last()
                 .map(|(prev_region, prev)| {
-                    *prev_region == region_id
+                    if *prev_region == region_id
                         && prev.text.ends_with('-')
                         && prev.render_mode == fragment.render_mode
                         && is_line_wrap_geometry(prev, &fragment, self.options.newline_threshold)
+                    {
+                        hyphen_fusion_action(&prev.text, &fragment.text)
+                    } else {
+                        HyphenFusionAction::NoFusion
+                    }
                 })
-                .unwrap_or(false);
+                .unwrap_or(HyphenFusionAction::NoFusion);
 
-            if should_merge {
+            if action != HyphenFusionAction::NoFusion {
                 // Safe: just checked `result.last()` is `Some` above.
                 let (_, prev) = result.last_mut().expect("checked non-empty above");
-                prev.text.pop(); // drop the trailing hyphen
+                if action == HyphenFusionAction::DropHyphen {
+                    prev.text.pop(); // drop the trailing hyphen
+                }
                 prev.text.push_str(&fragment.text);
                 // Extend the fused fragment's box to cover both lines so
                 // downstream geometry (space/newline decisions keyed on
@@ -2923,10 +2940,18 @@ impl TextExtractor {
             let y_diff = (last_y - fragment.y).abs();
             if !result.is_empty() && y_diff > self.options.newline_threshold {
                 // Handle hyphenation
-                if self.options.merge_hyphenated && last_line_ended_with_hyphen {
-                    // Remove the hyphen and don't add newline
-                    if result.ends_with('-') {
-                        result.pop();
+                if self.options.merge_hyphenated
+                    && last_line_ended_with_hyphen
+                    && result.ends_with('-')
+                {
+                    match hyphen_fusion_action(&result, &fragment.text) {
+                        HyphenFusionAction::DropHyphen => {
+                            result.pop();
+                        }
+                        HyphenFusionAction::KeepHyphen => {}
+                        HyphenFusionAction::NoFusion => {
+                            result.push('\n');
+                        }
                     }
                 } else {
                     result.push('\n');
@@ -3385,6 +3410,34 @@ struct AppendOutcome {
 /// instead of `"...3016-\n0900"`. `separator` is only ever `'\n'` here when
 /// `acc` is already non-empty (every call site gates on that), so the pop is
 /// always into at least one existing byte.
+/// Action to take when a trailing hyphen on `before` meets `next` across a requested line wrap (`\n`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum HyphenFusionAction {
+    /// Both sides are alphabetic: soft syllable hyphen (e.g. "multi-" + "\n" + "threaded").
+    /// Drop the hyphen and drop the newline -> "multithreaded".
+    DropHyphen,
+    /// Preceding or succeeding character is a digit or non-alphabetic token (e.g. "3016-" + "\n" + "0900",
+    /// "0001-" + "\n" + "96"). The hyphen is a hard separator in an identifier or number.
+    /// Keep the hyphen, but drop the newline so the token stays contiguous -> "3016-0900", "0001-96".
+    KeepHyphen,
+    /// Do not fuse: preserve both the hyphen and the newline.
+    NoFusion,
+}
+
+pub(crate) fn hyphen_fusion_action(before: &str, next: &str) -> HyphenFusionAction {
+    let before_char = before.strip_suffix('-').and_then(|s| s.chars().next_back());
+    let next_char = next.chars().next();
+    match (before_char, next_char) {
+        (Some(b), Some(n)) if b.is_alphabetic() && n.is_alphabetic() => {
+            HyphenFusionAction::DropHyphen
+        }
+        (Some(b), Some(n)) if !b.is_whitespace() && !n.is_whitespace() => {
+            HyphenFusionAction::KeepHyphen
+        }
+        _ => HyphenFusionAction::NoFusion,
+    }
+}
+
 fn append_bounded(
     acc: &mut String,
     separator: Option<char>,
@@ -3400,15 +3453,20 @@ fn append_bounded(
         };
     }
 
-    let hyphen_fusion = merge_hyphenated && separator == Some('\n') && acc.ends_with('-');
-    let separator = if hyphen_fusion { None } else { separator };
+    let action = if merge_hyphenated && separator == Some('\n') && acc.ends_with('-') {
+        hyphen_fusion_action(acc, decoded)
+    } else {
+        HyphenFusionAction::NoFusion
+    };
+
+    let separator = if action != HyphenFusionAction::NoFusion {
+        None
+    } else {
+        separator
+    };
 
     if let Some(max) = limit {
-        // Popping the hyphen frees one byte before the new run is added, so
-        // account against the post-pop length — otherwise a run that fits
-        // once the hyphen is dropped could be wrongly rejected as
-        // over-budget by one byte.
-        let base_len = if hyphen_fusion {
+        let base_len = if action == HyphenFusionAction::DropHyphen {
             acc.len() - 1
         } else {
             acc.len()
@@ -3423,7 +3481,7 @@ fn append_bounded(
         }
     }
 
-    if hyphen_fusion {
+    if action == HyphenFusionAction::DropHyphen {
         acc.pop();
     }
     if let Some(sep) = separator {
@@ -4515,8 +4573,7 @@ mod tests {
 
     #[test]
     fn test_append_bounded_fuses_hyphen_wrap_when_enabled() {
-        // Real-world shape: a hyphen-wrapped phone number split across two
-        // lines, e.g. "...3016-" / "0900" must reconstruct as "...30160900".
+        // Issue #574: numeric identifiers and phone numbers preserve the hyphen across wraps
         let mut s = String::from("+55 11 3016-");
         let mut trunc = false;
         let outcome = append_bounded(&mut s, Some('\n'), "0900", None, &mut trunc, true);
@@ -4525,7 +4582,25 @@ mod tests {
             outcome.applied_separator, None,
             "hyphen fusion applies no separator, not the requested '\\n'"
         );
-        assert_eq!(s, "+55 11 30160900", "hyphen popped, halves fused");
+        assert_eq!(s, "+55 11 3016-0900", "hyphen preserved for numeric tokens");
+
+        // Alphabetic words drop the soft hyphen
+        let mut s2 = String::from("multi-");
+        let outcome2 = append_bounded(&mut s2, Some('\n'), "threaded", None, &mut trunc, true);
+        assert!(outcome2.appended);
+        assert_eq!(outcome2.applied_separator, None);
+        assert_eq!(
+            s2, "multithreaded",
+            "soft hyphen popped for alphabetic words"
+        );
+
+        // Punctuation is also part of structured identifiers, even when the
+        // adjoining fragments do not contain ASCII digits.
+        let mut s3 = String::from("foo/-");
+        let outcome3 = append_bounded(&mut s3, Some('\n'), "bar", None, &mut trunc, true);
+        assert!(outcome3.appended);
+        assert_eq!(outcome3.applied_separator, None);
+        assert_eq!(s3, "foo/-bar", "hyphen preserved after punctuation");
     }
 
     #[test]
