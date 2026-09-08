@@ -69,10 +69,10 @@ impl Type3Font {
             return Err(syntax("font subtype is not Type3"));
         }
 
-        let font_matrix = number_array::<6>(font, "FontMatrix")?;
-        let font_bbox = number_array::<4>(font, "FontBBox")?;
-        let first = integer(font, "FirstChar")?;
-        let last = integer(font, "LastChar")?;
+        let font_matrix = number_array::<6, _>(document, font, "FontMatrix")?;
+        let font_bbox = number_array::<4, _>(document, font, "FontBBox")?;
+        let first = integer(document, font, "FirstChar")?;
+        let last = integer(document, font, "LastChar")?;
         if !(0..=255).contains(&first) || !(0..=255).contains(&last) || first > last {
             return Err(syntax("invalid Type 3 FirstChar/LastChar range"));
         }
@@ -116,7 +116,8 @@ impl Type3Font {
                     "invalid Type 3 CharProc /{name} (code {code}): {error}"
                 ))
             })?;
-            let width = widths.0[(i64::from(code) - first) as usize]
+            let width_obj = document.resolve(&widths.0[(i64::from(code) - first) as usize])?;
+            let width = width_obj
                 .as_real()
                 .ok_or_else(|| syntax("Type 3 width must be numeric"))?;
             glyphs.insert(
@@ -141,8 +142,11 @@ impl Type3Font {
         let name = font
             .get("Name")
             .or_else(|| font.get("BaseFont"))
-            .and_then(PdfObject::as_name)
-            .map(|value| value.0.clone());
+            .and_then(|value| document.resolve(value).ok())
+            .and_then(|value| match value {
+                PdfObject::Name(n) => Some(n.0),
+                _ => None,
+            });
         Ok(Self {
             name,
             font_matrix,
@@ -207,23 +211,33 @@ fn expect_dict<'a>(object: &'a PdfObject, description: &str) -> ParseResult<&'a 
         .ok_or_else(|| syntax(&format!("{description} must be a dictionary")))
 }
 
-fn integer(dict: &PdfDictionary, key: &str) -> ParseResult<i64> {
-    dict.get(key)
-        .and_then(PdfObject::as_integer)
-        .ok_or_else(|| ParseError::MissingKey(key.into()))
+fn integer<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    dict: &PdfDictionary,
+    key: &str,
+) -> ParseResult<i64> {
+    let object = resolve_required(document, dict, key)?;
+    object
+        .as_integer()
+        .ok_or_else(|| syntax(&format!("{key} must be an integer")))
 }
 
-fn number_array<const N: usize>(dict: &PdfDictionary, key: &str) -> ParseResult<[f64; N]> {
-    let array = dict
-        .get(key)
-        .and_then(PdfObject::as_array)
-        .ok_or_else(|| ParseError::MissingKey(key.into()))?;
+fn number_array<const N: usize, R: Read + Seek>(
+    document: &PdfDocument<R>,
+    dict: &PdfDictionary,
+    key: &str,
+) -> ParseResult<[f64; N]> {
+    let object = resolve_required(document, dict, key)?;
+    let array = object
+        .as_array()
+        .ok_or_else(|| syntax(&format!("{key} must be an array")))?;
     if array.0.len() != N {
         return Err(syntax(&format!("{key} must contain {N} numbers")));
     }
     let mut result = [0.0; N];
     for (target, object) in result.iter_mut().zip(&array.0) {
-        *target = object
+        let resolved = document.resolve(object)?;
+        *target = resolved
             .as_real()
             .ok_or_else(|| syntax(&format!("{key} must contain only numbers")))?;
     }

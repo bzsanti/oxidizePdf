@@ -332,77 +332,102 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         let mut metrics = FontMetrics::default();
 
         // Extract FirstChar and LastChar
-        if let Some(PdfObject::Integer(first)) = font_dict.get("FirstChar") {
-            metrics.first_char = Some(*first as u32);
-        }
+        metrics.first_char = font_dict
+            .get("FirstChar")
+            .and_then(|obj| document.resolve(obj).ok())
+            .and_then(|obj| obj.as_integer())
+            .map(|first| first as u32);
 
-        if let Some(PdfObject::Integer(last)) = font_dict.get("LastChar") {
-            metrics.last_char = Some(*last as u32);
-        }
+        metrics.last_char = font_dict
+            .get("LastChar")
+            .and_then(|obj| document.resolve(obj).ok())
+            .and_then(|obj| obj.as_integer())
+            .map(|last| last as u32);
 
-        // Extract Widths array
-        if let Some(widths_obj) = font_dict.get("Widths") {
-            match widths_obj {
-                PdfObject::Array(widths_array) => {
-                    let mut widths = Vec::new();
-                    for width_obj in &widths_array.0 {
-                        match width_obj {
-                            PdfObject::Integer(w) => widths.push(*w as f64),
-                            PdfObject::Real(w) => widths.push(*w),
-                            _ => widths.push(0.0),
-                        }
-                    }
-                    metrics.widths = Some(widths);
-                }
-                PdfObject::Reference(obj_num, gen_num) => {
-                    // Widths might be a reference to an array
-                    if let Ok(PdfObject::Array(widths_array)) =
-                        document.get_object(*obj_num, *gen_num)
-                    {
-                        let mut widths = Vec::new();
-                        for width_obj in &widths_array.0 {
-                            match width_obj {
-                                PdfObject::Integer(w) => widths.push(*w as f64),
-                                PdfObject::Real(w) => widths.push(*w),
-                                _ => widths.push(0.0),
+        // Extract FontMatrix scaling factor (relevant for Type 3 fonts).
+        // Standard simple fonts have an implicit FontMatrix [0.001 0 0 0.001 0 0].
+        // When FontMatrix is present, glyph-space widths are transformed to text space
+        // by FontMatrix[0]. We scale by FontMatrix[0] * 1000.0 to normalize to standard
+        // milli-em units (1/1000 of text space).
+        let font_matrix = font_dict
+            .get("FontMatrix")
+            .and_then(|obj| document.resolve(obj).ok())
+            .and_then(|obj| {
+                if let PdfObject::Array(arr) = obj {
+                    let mut matrix = Vec::new();
+                    for elem in &arr.0 {
+                        if let Ok(elem_resolved) = document.resolve(elem) {
+                            if let Some(val) = elem_resolved.as_real() {
+                                matrix.push(val);
                             }
                         }
-                        metrics.widths = Some(widths);
                     }
+                    if matrix.len() == 6 {
+                        Some(matrix)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
                 }
-                _ => {}
-            }
-        }
+            });
+
+        let width_scale = font_matrix.as_ref().map_or(1.0, |m| m[0] * 1000.0);
+
+        // Extract Widths array
+        metrics.widths = font_dict
+            .get("Widths")
+            .and_then(|obj| document.resolve(obj).ok())
+            .and_then(|obj| match obj {
+                PdfObject::Array(widths_array) => {
+                    let widths = widths_array
+                        .0
+                        .iter()
+                        .map(|width_obj| {
+                            let width_val = match document.resolve(width_obj) {
+                                Ok(PdfObject::Integer(w)) => w as f64,
+                                Ok(PdfObject::Real(w)) => w,
+                                _ => 0.0,
+                            };
+                            width_val * width_scale
+                        })
+                        .collect();
+                    Some(widths)
+                }
+                _ => None,
+            });
 
         // Extract MissingWidth from font descriptor
-        if let Some(desc_ref) = font_dict
+        metrics.missing_width = font_dict
             .get("FontDescriptor")
-            .and_then(|o| o.as_reference())
-        {
-            if let Ok(PdfObject::Dictionary(desc_dict)) =
-                document.get_object(desc_ref.0, desc_ref.1)
-            {
-                if let Some(missing_width_obj) = desc_dict.get("MissingWidth") {
-                    match missing_width_obj {
-                        PdfObject::Integer(w) => metrics.missing_width = Some(*w as f64),
-                        PdfObject::Real(w) => metrics.missing_width = Some(*w),
-                        _ => {}
-                    }
-                }
-            }
-        }
+            .and_then(|o| document.resolve(o).ok())
+            .and_then(|o| match o {
+                PdfObject::Dictionary(d) => d.get("MissingWidth").cloned(),
+                _ => None,
+            })
+            .and_then(|o| document.resolve(&o).ok())
+            .and_then(|o| match o {
+                PdfObject::Integer(w) => Some(w as f64),
+                PdfObject::Real(w) => Some(w),
+                _ => None,
+            });
 
         // Extract CIDFont `/W` + `/DW` (ISO 32000-1 §9.7.4.3). Only present
         // on a CIDFontType0/CIDFontType2 descendant font dictionary; a
         // simple font's dict has no `/W` key, so this is a no-op there.
         let is_cid_font = font_dict
             .get("Subtype")
-            .and_then(PdfObject::as_name)
-            .is_some_and(|subtype| matches!(subtype.0.as_str(), "CIDFontType0" | "CIDFontType2"));
-        let dw = font_dict.get("DW").and_then(|o| o.as_real());
+            .and_then(|o| document.resolve(o).ok())
+            .is_some_and(|o| match o {
+                PdfObject::Name(n) => matches!(n.0.as_str(), "CIDFontType0" | "CIDFontType2"),
+                _ => false,
+            });
+        let dw = font_dict
+            .get("DW")
+            .and_then(|o| document.resolve(o).ok())
+            .and_then(|o| o.as_real());
         let w_array: Option<Cow<[PdfObject]>> = match font_dict.get("W") {
-            Some(PdfObject::Array(array)) => Some(Cow::Borrowed(&array.0)),
-            Some(PdfObject::Reference(num, gen)) => match document.get_object(*num, *gen) {
+            Some(obj) => match document.resolve(obj) {
                 Ok(PdfObject::Array(array)) => Some(Cow::Owned(array.0)),
                 _ => None,
             },
@@ -413,46 +438,49 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             let mut ranges = Vec::new();
             let mut i = 0;
             while i < entries.len() {
-                let Some(first_cid) = entries[i].as_integer() else {
+                let first_cid = document
+                    .resolve(&entries[i])
+                    .ok()
+                    .and_then(|o| o.as_integer());
+                let Some(first_cid) = first_cid else {
                     break;
                 };
                 match entries.get(i + 1) {
                     // `c [w1 w2 ...]`: consecutive widths starting at c.
-                    Some(PdfObject::Array(w_list)) => {
-                        if let Ok(first_cid) = u32::try_from(first_cid) {
-                            for (offset, w_obj) in w_list.0.iter().enumerate() {
-                                if let (Ok(offset), Some(w)) =
-                                    (u32::try_from(offset), w_obj.as_real())
-                                {
-                                    if let Some(cid) = first_cid
-                                        .checked_add(offset)
-                                        .filter(|cid| *cid <= u16::MAX as u32)
-                                    {
-                                        widths.insert(cid, w);
+                    Some(w_list_obj) => {
+                        let resolved_w_list = document.resolve(w_list_obj).ok();
+                        if let Some(PdfObject::Array(w_list)) = resolved_w_list {
+                            if let Ok(first_cid) = u32::try_from(first_cid) {
+                                for (offset, w_obj) in w_list.0.iter().enumerate() {
+                                    let w = document.resolve(w_obj).ok().and_then(|o| o.as_real());
+                                    if let (Ok(offset), Some(w)) = (u32::try_from(offset), w) {
+                                        if let Some(cid) = first_cid
+                                            .checked_add(offset)
+                                            .filter(|cid| *cid <= u16::MAX as u32)
+                                        {
+                                            widths.insert(cid, w);
+                                        }
                                     }
                                 }
                             }
+                            i += 2;
+                        } else {
+                            // `cFirst cLast w`: uniform width across an inclusive CID range.
+                            let last_cid = resolved_w_list.as_ref().and_then(|o| o.as_integer());
+                            let w = entries
+                                .get(i + 2)
+                                .and_then(|o| document.resolve(o).ok())
+                                .and_then(|o| o.as_real());
+                            let (Some(last_cid), Some(w)) = (last_cid, w) else {
+                                break;
+                            };
+                            let first_cid = first_cid.max(0).min(u16::MAX as i64) as u32;
+                            let last_cid = last_cid.max(0).min(u16::MAX as i64) as u32;
+                            if last_cid >= first_cid {
+                                ranges.push((first_cid, last_cid, w));
+                            }
+                            i += 3;
                         }
-                        i += 2;
-                    }
-                    // `cFirst cLast w`: uniform width across an inclusive CID range.
-                    Some(last_obj) => {
-                        let (Some(last_cid), Some(w)) = (
-                            last_obj.as_integer(),
-                            entries.get(i + 2).and_then(|o| o.as_real()),
-                        ) else {
-                            break;
-                        };
-                        // CIDs from Identity-H/Identity-V decode as a u16
-                        // (§9.7.4.2), so any range past 0xFFFF is malformed;
-                        // clamp rather than materializing a huge/looping
-                        // range from a corrupt or adversarial `/W` array.
-                        let first_cid = first_cid.max(0).min(u16::MAX as i64) as u32;
-                        let last_cid = last_cid.max(0).min(u16::MAX as i64) as u32;
-                        if last_cid >= first_cid {
-                            ranges.push((first_cid, last_cid, w));
-                        }
-                        i += 3;
                     }
                     None => break,
                 }
@@ -472,20 +500,11 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         }
 
         // Extract kerning from TrueType fonts (if embedded)
-        if let Some(desc_ref) = font_dict
-            .get("FontDescriptor")
-            .and_then(|o| o.as_reference())
-        {
-            if let Ok(PdfObject::Dictionary(desc_dict)) =
-                document.get_object(desc_ref.0, desc_ref.1)
-            {
+        if let Some(desc_obj) = font_dict.get("FontDescriptor") {
+            if let Ok(PdfObject::Dictionary(desc_dict)) = document.resolve(desc_obj) {
                 // Look for embedded TrueType font (FontFile2)
-                if let Some(font_file_ref) =
-                    desc_dict.get("FontFile2").and_then(|o| o.as_reference())
-                {
-                    if let Ok(PdfObject::Stream(font_stream)) =
-                        document.get_object(font_file_ref.0, font_file_ref.1)
-                    {
+                if let Some(font_file_obj) = desc_dict.get("FontFile2") {
+                    if let Ok(PdfObject::Stream(font_stream)) = document.resolve(font_file_obj) {
                         // Try to extract kerning from TrueType font
                         if let Ok(kerning_pairs) = extract_truetype_kerning(&font_stream) {
                             if !kerning_pairs.is_empty() {
@@ -1836,5 +1855,95 @@ endcmap
             got, fallback,
             "explicit mapping must override the CID-table fallback"
         );
+    }
+
+    #[test]
+    fn extract_font_metrics_type3_font_matrix_scaling() {
+        use crate::parser::objects::PdfArray;
+        use crate::parser::PdfReader;
+        use std::io::Cursor;
+
+        // Dummy PDF document for resolving direct objects
+        let pdf = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n115\n%%EOF\n";
+        let document = PdfDocument::new(PdfReader::new(Cursor::new(&pdf[..])).unwrap());
+        let extractor = CMapTextExtractor::new();
+
+        // 1. Type 3 font with FontMatrix [1.0 0 0 1.0 0 0] and Widths [0.5, 0.75]
+        let mut font_dict = PdfDictionary::new();
+        font_dict.insert("Subtype".into(), PdfObject::Name(PdfName("Type3".into())));
+        font_dict.insert("FirstChar".into(), PdfObject::Integer(65));
+        font_dict.insert("LastChar".into(), PdfObject::Integer(66));
+        font_dict.insert(
+            "FontMatrix".into(),
+            PdfObject::Array(PdfArray(vec![
+                PdfObject::Real(1.0),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.0),
+                PdfObject::Real(1.0),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.0),
+            ])),
+        );
+        font_dict.insert(
+            "Widths".into(),
+            PdfObject::Array(PdfArray(vec![PdfObject::Real(0.5), PdfObject::Real(0.75)])),
+        );
+
+        let metrics = extractor
+            .extract_font_metrics(&font_dict, &document)
+            .unwrap();
+        assert_eq!(metrics.first_char, Some(65));
+        assert_eq!(metrics.last_char, Some(66));
+        assert_eq!(metrics.widths, Some(vec![500.0, 750.0]));
+
+        // 2. Type 3 font with FontMatrix [0.001 0 0 0.001 0 0] and Widths [500, 750]
+        let mut font_dict2 = PdfDictionary::new();
+        font_dict2.insert("Subtype".into(), PdfObject::Name(PdfName("Type3".into())));
+        font_dict2.insert("FirstChar".into(), PdfObject::Integer(65));
+        font_dict2.insert("LastChar".into(), PdfObject::Integer(66));
+        font_dict2.insert(
+            "FontMatrix".into(),
+            PdfObject::Array(PdfArray(vec![
+                PdfObject::Real(0.001),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.001),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.0),
+            ])),
+        );
+        font_dict2.insert(
+            "Widths".into(),
+            PdfObject::Array(PdfArray(vec![
+                PdfObject::Integer(500),
+                PdfObject::Integer(750),
+            ])),
+        );
+
+        let metrics2 = extractor
+            .extract_font_metrics(&font_dict2, &document)
+            .unwrap();
+        assert_eq!(metrics2.widths, Some(vec![500.0, 750.0]));
+
+        // 3. Simple font with no FontMatrix (implicit [0.001 0 0 0.001 0 0])
+        let mut font_dict3 = PdfDictionary::new();
+        font_dict3.insert(
+            "Subtype".into(),
+            PdfObject::Name(PdfName("TrueType".into())),
+        );
+        font_dict3.insert("FirstChar".into(), PdfObject::Integer(32));
+        font_dict3.insert("LastChar".into(), PdfObject::Integer(33));
+        font_dict3.insert(
+            "Widths".into(),
+            PdfObject::Array(PdfArray(vec![
+                PdfObject::Integer(250),
+                PdfObject::Integer(333),
+            ])),
+        );
+
+        let metrics3 = extractor
+            .extract_font_metrics(&font_dict3, &document)
+            .unwrap();
+        assert_eq!(metrics3.widths, Some(vec![250.0, 333.0]));
     }
 }

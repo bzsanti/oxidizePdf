@@ -172,9 +172,10 @@ impl ResolvedFontResource {
             let to_unicode = resolve_cmap(document, font.get("ToUnicode"))?;
             let mut differences = BTreeMap::new();
             let mut widths = vec![0.0; 256];
+            let width_scale = type3.font_matrix[0] * 1000.0;
             for glyph in type3.glyphs() {
                 differences.insert(glyph.code, glyph.name.clone());
-                widths[glyph.code as usize] = glyph.width;
+                widths[glyph.code as usize] = glyph.width * width_scale;
             }
             return Ok(Self {
                 resource_name: resource_name.into(),
