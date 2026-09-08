@@ -367,7 +367,7 @@ impl ResolvedFontResource {
         if matches!(self.code_encoding, CodeEncoding::Simple) {
             let value = code[0];
             if let Some(name) = self.differences.get(&value) {
-                return glyph_name_to_unicode(name).map(str::to_owned);
+                return glyph_name_to_unicode(name);
             }
             if self.symbolic {
                 return symbol_code_to_unicode(value).map(str::to_owned);
@@ -443,11 +443,14 @@ fn resolve_encoding<R: Read + Seek>(
         PdfObject::Dictionary(dict) if !composite => {
             let base = dict
                 .get("BaseEncoding")
-                .and_then(PdfObject::as_name)
-                .map(|name| name.0.clone());
+                .and_then(|obj| document.resolve(obj).ok())
+                .and_then(|obj| match obj {
+                    PdfObject::Name(name) => Some(name.0),
+                    _ => None,
+                });
             Ok((
                 base,
-                parse_differences(&dict)?,
+                parse_differences(document, &dict)?,
                 CodeEncoding::Simple,
                 WritingMode::Horizontal,
             ))
@@ -611,17 +614,25 @@ fn resolve_embedded_font<R: Read + Seek>(
     Ok(None)
 }
 
-fn parse_differences(dict: &PdfDictionary) -> ParseResult<BTreeMap<u8, String>> {
+fn parse_differences<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    dict: &PdfDictionary,
+) -> ParseResult<BTreeMap<u8, String>> {
     let mut result = BTreeMap::new();
-    let Some(array) = dict.get("Differences").and_then(PdfObject::as_array) else {
+    let Some(differences_obj) = dict.get("Differences") else {
+        return Ok(result);
+    };
+    let resolved_differences = document.resolve(differences_obj)?;
+    let Some(array) = resolved_differences.as_array() else {
         return Ok(result);
     };
     let mut code = None;
     for object in &array.0 {
-        if let Some(value) = object.as_integer() {
+        let resolved_obj = document.resolve(object)?;
+        if let Some(value) = resolved_obj.as_integer() {
             code =
                 Some(u8::try_from(value).map_err(|_| syntax("Differences code outside 0..=255"))?);
-        } else if let Some(name) = object.as_name() {
+        } else if let Some(name) = resolved_obj.as_name() {
             let current = code.ok_or_else(|| syntax("Differences name without a code"))?;
             result.insert(current, name.0.clone());
             code = current.checked_add(1);
@@ -705,15 +716,8 @@ fn be_code(code: &[u8]) -> ParseResult<u32> {
         .fold(0u32, |value, byte| (value << 8) | u32::from(*byte)))
 }
 
-fn glyph_name_to_unicode(name: &str) -> Option<&'static str> {
-    match name {
-        "bullet" => Some("•"),
-        "space" => Some(" "),
-        "hyphen" => Some("-"),
-        "minus" => Some("−"),
-        "checkmark" => Some("✓"),
-        _ => None,
-    }
+fn glyph_name_to_unicode(name: &str) -> Option<String> {
+    crate::text::extraction_cmap::glyph_name_to_unicode_sequence(name)
 }
 
 fn symbol_code_to_unicode(code: u8) -> Option<&'static str> {
