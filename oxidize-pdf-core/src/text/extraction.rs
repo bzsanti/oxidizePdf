@@ -4151,6 +4151,7 @@ fn calculate_text_width_from_codes(
 ///   - `\t` (0x09) - Tab
 ///   - `\n` (0x0A) - Line feed
 /// - Normalizes `\r` and `\r\n` to `\n`
+/// - Normalizes Unicode line and paragraph separators (`U+2028`, `U+2029`) to `\n`
 /// - Collapses multiple consecutive spaces into a single space
 ///
 /// # Examples
@@ -4245,6 +4246,14 @@ pub fn sanitize_extracted_text_with_policy(
                         }
                     }
                 }
+            }
+
+            // PDF ToUnicode CMaps may use Unicode line or paragraph separators
+            // instead of an ASCII line feed. Normalize both so downstream text
+            // consumers see one portable line-ending representation (#575).
+            '\u{2028}' | '\u{2029}' => {
+                result.push('\n');
+                last_was_space = false;
             }
 
             // Preserve allowed whitespace
