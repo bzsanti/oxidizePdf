@@ -687,6 +687,11 @@ fn ensure_fieldmdp_allows_signature(
     target: &str,
 ) -> SignatureResult<()> {
     for id in reader.object_references() {
+        // Match DocMDP discovery: an unreferenced classic xref entry at byte
+        // zero is not an object and cannot establish a FieldMDP policy.
+        if reader.object_storage_offset(id.0) == Some(0) {
+            continue;
+        }
         let object = reader
             .get_object(id.0, id.1)
             .map_err(|error| invalid(format!("inspect FieldMDP signature: {error}")))?
@@ -970,4 +975,75 @@ fn validate_pdf_name(value: &str, role: &str) -> SignatureResult<()> {
         return Err(invalid(format!("{role} is not a safe PDF name")));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pdf_with_unused_zero_offset_entry(in_use: bool, docmdp_points_to_entry: bool) -> Vec<u8> {
+        let catalog = if docmdp_points_to_entry {
+            "<< /Type /Catalog /Pages 2 0 R /Perms << /DocMDP 4 0 R >> >>"
+        } else {
+            "<< /Type /Catalog /Pages 2 0 R >>"
+        };
+        let mut pdf = b"%PDF-1.7\n".to_vec();
+        let mut offsets = Vec::new();
+        for (index, body) in [
+            catalog,
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << >> >>",
+        ]
+        .iter()
+        .enumerate()
+        {
+            offsets.push(pdf.len());
+            pdf.extend_from_slice(format!("{} 0 obj\n{}\nendobj\n", index + 1, body).as_bytes());
+        }
+        let xref = pdf.len();
+        pdf.extend_from_slice(b"xref\n0 5\n0000000000 65535 f \n");
+        for offset in offsets {
+            pdf.extend_from_slice(format!("{offset:010} 00000 n \n").as_bytes());
+        }
+        pdf.extend_from_slice(if in_use {
+            b"0000000000 00000 n \n"
+        } else {
+            b"0000000000 00000 f \n"
+        });
+        pdf.extend_from_slice(
+            format!("trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n").as_bytes(),
+        );
+        pdf
+    }
+
+    #[test]
+    fn incremental_signature_ignores_unreferenced_in_use_zero_offset_entry() {
+        let options = SignaturePreparationOptions::invisible("Signature");
+        assert!(prepare_incremental_signature(
+            &pdf_with_unused_zero_offset_entry(true, false),
+            &options,
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn incremental_signature_accepts_free_zero_offset_entry_control() {
+        let options = SignaturePreparationOptions::invisible("Signature");
+        assert!(prepare_incremental_signature(
+            &pdf_with_unused_zero_offset_entry(false, false),
+            &options,
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn incremental_signature_rejects_docmdp_reference_to_zero_offset_entry() {
+        let options = SignaturePreparationOptions::invisible("Signature");
+        let error =
+            prepare_incremental_signature(&pdf_with_unused_zero_offset_entry(true, true), &options)
+                .expect_err("a DocMDP reference to a zero-offset entry must be rejected");
+        assert!(error
+            .to_string()
+            .contains("resolve certification signature"));
+    }
 }
