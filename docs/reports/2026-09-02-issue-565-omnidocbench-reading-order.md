@@ -90,3 +90,39 @@ The unfiltered 0.31034 diagnostic and scoped 0.18610 acceptance figure come
 from the same official per-page result artifact. The versioned aggregator and
 its focused tests make the native-text population explicit and reproducible;
 they do not replace or approximate the upstream metric.
+
+## Session handoff
+
+- Status: complete. PR #567 was merged into `develop` as merge commit
+  `af44e200422a1429b7566699cc981d9811cd49ca`; issue #565 was configured to
+  close with the PR.
+- Implementation commits: `a96acf2` and `d5e2d0b` on
+  `feat/issue-565-omnidocbench-reading-order`.
+- Acceptance evidence: the pinned official artifact contains 921 scored pages;
+  excluding 113 `note` pages and 28 additional `fuzzy_scan` pages leaves 780
+  native-text pages at 0.18610108290582916, satisfying the <= 0.25 criterion.
+- Validation: 7 focused Python tests passed; the 3 regressions for issue #495
+  passed; pre-commit formatting, clippy, build, and library tests passed with
+  6,777 tests successful and 3 ignored; GitHub CI passed all 8 applicable jobs
+  with 2 configured skips; formal quality review found no remaining findings
+  and Kripteia found no security issues. Kripteia did not discover the Python
+  `unittest` tests, so its test-quality result (100, 0 tests) is not independent
+  evidence for those tests.
+- Reproduction inputs: OmniDocBench dataset revision
+  `f5f559bddf50e36f7f9899d842d0006f13ce8afc`, evaluator revision
+  `337cc26965893db3ef53ddc119a6d6bb5bde096f`, official `quick_match`, OCR
+  disabled. Run the aggregator command in the protocol section above.
+- Worktree boundary: the checkout remains on the feature branch at `d5e2d0b`.
+  Pre-existing modifications to `README.md` and `oxidize-pdf-core/Cargo.toml`,
+  plus eight untracked handoffs dated 2026-08-25 through 2026-09-01, were not
+  changed, staged, or committed during issue #565 work.
+- Next action: preserve or commit those owner-controlled changes before
+  switching branches, then update the local `develop` checkout to merge commit
+  `af44e20`. No implementation or acceptance work remains for #565.
+- Cleanup (2026-09-02 UTC): `cargo-sweep 0.8.0` previewed and then removed
+  51.07 KiB older than five days from this workspace's `target/` using
+  `cargo sweep --dry-run --time 5 <workspace>` and
+  `cargo sweep --time 5 <workspace>`. `/tmp/omnidocbench-evaluator` and
+  `/tmp/issue-565-native-reading-order-final.json` were preserved because they
+  were modified today and retain reproducibility evidence. No process was left
+  running.
