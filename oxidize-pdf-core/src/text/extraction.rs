@@ -958,6 +958,25 @@ impl TextExtractor {
         threshold * x_scale * horizontal_scale
     }
 
+    /// Boundary gaps between separate `TJ` operators are measured from page-space
+    /// pen origins, just like flat `Tj` gaps.  Scale the em-based threshold by
+    /// the active text matrix, CTM, and horizontal text scale so both sides of
+    /// the comparison use page-space units (issue #586).
+    fn tj_boundary_space_gap_threshold(&self, state: &TextState) -> f64 {
+        let (x_scale, _) = combined_text_scale(state);
+        let x_scale = if x_scale.is_finite() && x_scale > f64::EPSILON {
+            x_scale
+        } else {
+            1.0
+        };
+        let horizontal_scale = if state.horizontal_scale.is_finite() {
+            state.horizontal_scale.abs() / 100.0
+        } else {
+            1.0
+        };
+        TJ_BOUNDARY_SPACE_EM * state.font_size.abs() * x_scale * horizontal_scale
+    }
+
     /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
     /// Anchored to the font's real space-glyph advance when known — word gaps
     /// scale with the font's space metric, not with a fixed fraction of font
@@ -1690,7 +1709,7 @@ impl TextExtractor {
                                         // producer that draws one word as several
                                         // positioned runs must not be split.
                                         let boundary_space = at_array_start
-                                            && dx > TJ_BOUNDARY_SPACE_EM * state.font_size
+                                            && dx > self.tj_boundary_space_gap_threshold(&state)
                                             && !extracted_text.ends_with(' ');
                                         let separator = if extracted_text.is_empty() {
                                             None
