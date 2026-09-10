@@ -38,6 +38,14 @@ pub(crate) fn ensure_modification_allowed<R: Read + Seek>(
     let mut discovered = Vec::new();
 
     for reference in reader.object_references() {
+        // A classic xref entry marked in-use at offset zero cannot name an
+        // indirect object: byte zero is the PDF header. It is harmless when
+        // unreferenced, but must not turn this global signature discovery pass
+        // into a false DocMDP-policy error. References reached from /Perms or
+        // signature transforms are still resolved explicitly and rejected.
+        if reader.object_storage_offset(reference.0) == Some(0) {
+            continue;
+        }
         let object = reader
             .get_object(reference.0, reference.1)
             .map_err(|error| invalid_policy(format!("inspect signature object: {error}")))?
