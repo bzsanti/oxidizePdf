@@ -1388,8 +1388,13 @@ impl<R: Read + Seek> PdfDocument<R> {
             let mut annotations = Vec::new();
             let mut reader = self.reader.borrow_mut();
 
-            for annot_ref in &annots_array.0 {
-                if let Some(ref_nums) = annot_ref.as_reference() {
+            for annotation in &annots_array.0 {
+                // Annotation arrays may contain either indirect references or
+                // direct annotation dictionaries (PDF 1.7, 12.5.2). Preserve
+                // the existing best-effort behavior for malformed references.
+                if let Some(dict) = annotation.as_dict() {
+                    annotations.push(dict.clone());
+                } else if let Some(ref_nums) = annotation.as_reference() {
                     match reader.get_object(ref_nums.0, ref_nums.1) {
                         Ok(obj) => {
                             if let Some(dict) = obj.as_dict() {
