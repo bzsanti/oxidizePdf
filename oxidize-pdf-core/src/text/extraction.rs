@@ -67,6 +67,14 @@ pub struct ExtractionOptions {
     pub column_threshold: f64,
     /// Merge hyphenated words at line ends
     pub merge_hyphenated: bool,
+    /// Append URI targets from interactive `/Link` annotations to the extracted
+    /// page text. This reads only `/Annots /Subtype /Link /A /S /URI /URI`;
+    /// it never follows, opens, or otherwise executes a PDF action.
+    ///
+    /// Default `false` preserves the historical text-only output. When enabled,
+    /// URI targets are appended in `/Annots` array order, each on a new line
+    /// after the page's visible text (issue #584).
+    pub include_link_annotations: bool,
     /// Track space insertion decisions in each TextFragment (default: false).
     /// When false: zero overhead. When true: populates `TextFragment::space_decisions`.
     pub track_space_decisions: bool,
@@ -146,6 +154,7 @@ impl Default for ExtractionOptions {
             detect_columns: false,
             column_threshold: 50.0,
             merge_hyphenated: true,
+            include_link_annotations: false,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
             include_artifacts: false,
@@ -1360,6 +1369,16 @@ impl TextExtractor {
                 self.options.max_extracted_bytes,
                 &mut truncated,
             );
+
+            if self.options.include_link_annotations {
+                append_link_annotation_uris(
+                    &mut extracted_text,
+                    document,
+                    page_index,
+                    self.options.max_extracted_bytes,
+                    &mut truncated,
+                );
+            }
         }
 
         Ok(ExtractedText {
@@ -3259,6 +3278,82 @@ impl TextExtractor {
     }
 }
 
+/// Append URI action targets from a page's `/Link` annotations without
+/// executing any action. Malformed annotations and unresolved references are
+/// ignored so link discovery cannot turn an otherwise readable page into an
+/// extraction failure.
+fn append_link_annotation_uris<R: Read + Seek>(
+    extracted_text: &mut String,
+    document: &PdfDocument<R>,
+    page_index: u32,
+    max_extracted_bytes: Option<usize>,
+    truncated: &mut bool,
+) {
+    let Ok(annotations) = document.get_page_annotations(page_index) else {
+        return;
+    };
+
+    for annotation in annotations {
+        if annotation
+            .get("Subtype")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|subtype| subtype.0 != "Link")
+        {
+            continue;
+        }
+
+        let Some(action) = annotation
+            .get("A")
+            .and_then(|action| resolve_annotation_dictionary(document, action))
+        else {
+            continue;
+        };
+
+        if action
+            .get("S")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|action_type| action_type.0 != "URI")
+        {
+            continue;
+        }
+
+        let Some(uri) = action.get("URI").and_then(PdfObject::as_string) else {
+            continue;
+        };
+        let uri = uri.to_text();
+        if uri.is_empty() {
+            continue;
+        }
+
+        let separator = if extracted_text.is_empty() { "" } else { "\n" };
+        let addition_len = separator.len() + uri.len();
+        if max_extracted_bytes.is_some_and(|limit| extracted_text.len() + addition_len > limit) {
+            *truncated = true;
+            break;
+        }
+        extracted_text.push_str(separator);
+        extracted_text.push_str(&uri);
+    }
+}
+
+/// Resolve a direct or indirect action dictionary. The caller intentionally
+/// treats errors as absent data because annotation actions are optional.
+fn resolve_annotation_dictionary<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    object: &PdfObject,
+) -> Option<PdfDictionary> {
+    if let Some(dictionary) = object.as_dict() {
+        return Some(dictionary.clone());
+    }
+
+    let (number, generation) = object.as_reference()?;
+    document
+        .get_object(number, generation)
+        .ok()?
+        .as_dict()
+        .cloned()
+}
+
 impl Default for TextExtractor {
     fn default() -> Self {
         Self::new()
@@ -4719,6 +4814,7 @@ mod tests {
         assert!(!options.detect_columns);
         assert_eq!(options.column_threshold, 50.0);
         assert!(options.merge_hyphenated);
+        assert!(!options.include_link_annotations);
         assert_eq!(
             CarriageReturnHandling::default(),
             CarriageReturnHandling::Remove
@@ -4736,6 +4832,7 @@ mod tests {
             detect_columns: true,
             column_threshold: 75.0,
             merge_hyphenated: false,
+            include_link_annotations: true,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
             include_artifacts: false,
@@ -4750,6 +4847,7 @@ mod tests {
         assert!(options.detect_columns);
         assert_eq!(options.column_threshold, 75.0);
         assert!(!options.merge_hyphenated);
+        assert!(options.include_link_annotations);
     }
 
     #[test]
@@ -4942,6 +5040,7 @@ mod tests {
             detect_columns: true,
             column_threshold: 60.0,
             merge_hyphenated: false,
+            include_link_annotations: true,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
             include_artifacts: false,
@@ -4959,6 +5058,10 @@ mod tests {
         assert_eq!(extractor.options.detect_columns, options.detect_columns);
         assert_eq!(extractor.options.column_threshold, options.column_threshold);
         assert_eq!(extractor.options.merge_hyphenated, options.merge_hyphenated);
+        assert_eq!(
+            extractor.options.include_link_annotations,
+            options.include_link_annotations
+        );
     }
 
     // =========================================================================
