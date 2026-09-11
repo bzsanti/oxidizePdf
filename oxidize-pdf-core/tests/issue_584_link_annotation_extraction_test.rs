@@ -42,10 +42,7 @@ fn appends_direct_and_indirect_link_annotation_uris_only_when_enabled() {
     assert!(!without_links.text.contains("mailto:help@example.com"));
     assert!(!without_links.text.contains("https://example.com/target"));
 
-    let mut extractor = TextExtractor::with_options(ExtractionOptions {
-        include_link_annotations: true,
-        ..Default::default()
-    });
+    let mut extractor = TextExtractor::new().with_link_annotation_extraction(true);
     let with_links = extractor
         .extract_from_page(&document, 0)
         .expect("extract with links");
@@ -65,20 +62,20 @@ fn keeps_link_uris_within_the_extraction_byte_budget() {
         .into_document();
 
     let exact_budget = TextExtractor::with_options(ExtractionOptions {
-        include_link_annotations: true,
         max_extracted_bytes: Some(uri.len()),
         ..Default::default()
     })
+    .with_link_annotation_extraction(true)
     .extract_from_page(&document, 0)
     .expect("extract with exact budget");
     assert_eq!(exact_budget.text, uri);
     assert!(!exact_budget.truncated);
 
     let insufficient_budget = TextExtractor::with_options(ExtractionOptions {
-        include_link_annotations: true,
         max_extracted_bytes: Some(uri.len() - 1),
         ..Default::default()
     })
+    .with_link_annotation_extraction(true)
     .extract_from_page(&document, 0)
     .expect("extract with insufficient budget");
     assert!(insufficient_budget.text.is_empty());
@@ -91,12 +88,10 @@ fn ignores_non_uri_and_malformed_link_actions() {
     let document = PdfReader::new(Cursor::new(link_only_fixture(annotations)))
         .expect("parse fixture")
         .into_document();
-    let extracted = TextExtractor::with_options(ExtractionOptions {
-        include_link_annotations: true,
-        ..Default::default()
-    })
-    .extract_from_page(&document, 0)
-    .expect("ignore invalid link actions");
+    let extracted = TextExtractor::new()
+        .with_link_annotation_extraction(true)
+        .extract_from_page(&document, 0)
+        .expect("ignore invalid link actions");
 
     assert!(extracted.text.is_empty());
     assert!(!extracted.truncated);

@@ -67,14 +67,6 @@ pub struct ExtractionOptions {
     pub column_threshold: f64,
     /// Merge hyphenated words at line ends
     pub merge_hyphenated: bool,
-    /// Append URI targets from interactive `/Link` annotations to the extracted
-    /// page text. This reads only `/Annots /Subtype /Link /A /S /URI /URI`;
-    /// it never follows, opens, or otherwise executes a PDF action.
-    ///
-    /// Default `false` preserves the historical text-only output. When enabled,
-    /// URI targets are appended in `/Annots` array order, each on a new line
-    /// after the page's visible text (issue #584).
-    pub include_link_annotations: bool,
     /// Track space insertion decisions in each TextFragment (default: false).
     /// When false: zero overhead. When true: populates `TextFragment::space_decisions`.
     pub track_space_decisions: bool,
@@ -154,7 +146,6 @@ impl Default for ExtractionOptions {
             detect_columns: false,
             column_threshold: 50.0,
             merge_hyphenated: true,
-            include_link_annotations: false,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
             include_artifacts: false,
@@ -677,6 +668,11 @@ fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_thres
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
+    /// Append URI targets from interactive `/Link` annotations to extracted
+    /// page text. Kept here rather than on `ExtractionOptions` so enabling it
+    /// is a non-breaking method addition for downstream users of that public
+    /// struct (issue #584).
+    include_link_annotations: bool,
     /// Reorder the flat `.text` line groups into reading order (issue #448).
     /// Off by default; set via [`TextExtractor::with_reading_order`]. Held here,
     /// not on the public [`ExtractionOptions`], so enabling it is a
@@ -702,6 +698,7 @@ impl TextExtractor {
     pub fn new() -> Self {
         Self {
             options: ExtractionOptions::default(),
+            include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
@@ -714,6 +711,7 @@ impl TextExtractor {
     pub fn with_options(options: ExtractionOptions) -> Self {
         Self {
             options,
+            include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
@@ -739,6 +737,18 @@ impl TextExtractor {
     /// one group. `/Rotate ≠ 0` pages are ordered in unrotated page space.
     pub fn with_reading_order(mut self, enable: bool) -> Self {
         self.reading_order = enable;
+        self
+    }
+
+    /// Enable (or disable) appending URI targets from interactive `/Link`
+    /// annotations after a page's visible text.
+    ///
+    /// The extractor reads only `/Annots /Subtype /Link /A /S /URI /URI`; it
+    /// never follows, opens, or otherwise executes a PDF action. Disabled by
+    /// default. URI targets retain `/Annots` array order and each is appended
+    /// on a new line.
+    pub fn with_link_annotation_extraction(mut self, enable: bool) -> Self {
+        self.include_link_annotations = enable;
         self
     }
 
@@ -1370,7 +1380,7 @@ impl TextExtractor {
                 &mut truncated,
             );
 
-            if self.options.include_link_annotations {
+            if self.include_link_annotations {
                 append_link_annotation_uris(
                     &mut extracted_text,
                     document,
@@ -4814,7 +4824,6 @@ mod tests {
         assert!(!options.detect_columns);
         assert_eq!(options.column_threshold, 50.0);
         assert!(options.merge_hyphenated);
-        assert!(!options.include_link_annotations);
         assert_eq!(
             CarriageReturnHandling::default(),
             CarriageReturnHandling::Remove
@@ -4832,7 +4841,6 @@ mod tests {
             detect_columns: true,
             column_threshold: 75.0,
             merge_hyphenated: false,
-            include_link_annotations: true,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
             include_artifacts: false,
@@ -4847,7 +4855,6 @@ mod tests {
         assert!(options.detect_columns);
         assert_eq!(options.column_threshold, 75.0);
         assert!(!options.merge_hyphenated);
-        assert!(options.include_link_annotations);
     }
 
     #[test]
@@ -5040,7 +5047,6 @@ mod tests {
             detect_columns: true,
             column_threshold: 60.0,
             merge_hyphenated: false,
-            include_link_annotations: true,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
             include_artifacts: false,
@@ -5058,10 +5064,6 @@ mod tests {
         assert_eq!(extractor.options.detect_columns, options.detect_columns);
         assert_eq!(extractor.options.column_threshold, options.column_threshold);
         assert_eq!(extractor.options.merge_hyphenated, options.merge_hyphenated);
-        assert_eq!(
-            extractor.options.include_link_annotations,
-            options.include_link_annotations
-        );
     }
 
     // =========================================================================
