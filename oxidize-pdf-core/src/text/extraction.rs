@@ -1096,9 +1096,17 @@ impl TextExtractor {
             // Same paragraph — join
             let joined_text = if self.options.merge_hyphenated {
                 if let Some(prefix_len) = hyphen_wrap_prefix_len(&current.text) {
-                    let mut s = current.text[..prefix_len].to_owned();
-                    s.push_str(&line.text);
-                    s
+                    match hyphen_fusion_action(&current.text, &line.text) {
+                        HyphenFusionAction::DropHyphen => {
+                            format!("{}{}", &current.text[..prefix_len], line.text)
+                        }
+                        HyphenFusionAction::KeepHyphen => {
+                            format!("{}{}", &current.text[..prefix_len + 1], line.text)
+                        }
+                        HyphenFusionAction::NoFusion => {
+                            format!("{}\n{}", current.text, line.text)
+                        }
+                    }
                 } else {
                     format!("{}\n{}", current.text, line.text)
                 }
@@ -2590,8 +2598,20 @@ impl TextExtractor {
             if let Some(prefix_len) = fusion_prefix_len {
                 // Safe: just checked `result.last()` is `Some` above.
                 let (_, prev) = result.last_mut().expect("checked non-empty above");
-                prev.text.truncate(prefix_len); // drop the hyphen and horizontal whitespace
-                prev.text.push_str(&fragment.text);
+                match hyphen_fusion_action(&prev.text, &fragment.text) {
+                    HyphenFusionAction::DropHyphen => {
+                        prev.text.truncate(prefix_len);
+                        prev.text.push_str(&fragment.text);
+                    }
+                    HyphenFusionAction::KeepHyphen => {
+                        prev.text.truncate(prefix_len + 1);
+                        prev.text.push_str(&fragment.text);
+                    }
+                    HyphenFusionAction::NoFusion => {
+                        result.push((region_id, fragment));
+                        continue;
+                    }
+                }
                 // Extend the fused fragment's box to cover both lines so
                 // downstream geometry (space/newline decisions keyed on
                 // `x + width`, `y`) still reasons about real coverage
@@ -2973,9 +2993,12 @@ impl TextExtractor {
             if !result.is_empty() && y_diff > self.options.newline_threshold {
                 // Handle hyphenation
                 if self.options.merge_hyphenated && last_line_ended_with_hyphen {
-                    // Remove the hyphen and don't add newline
                     if let Some(prefix_len) = hyphen_wrap_prefix_len(&result) {
-                        result.truncate(prefix_len);
+                        match hyphen_fusion_action(&result, &fragment.text) {
+                            HyphenFusionAction::DropHyphen => result.truncate(prefix_len),
+                            HyphenFusionAction::KeepHyphen => result.truncate(prefix_len + 1),
+                            HyphenFusionAction::NoFusion => result.push('\n'),
+                        }
                     }
                 } else {
                     result.push('\n');
@@ -3497,6 +3520,32 @@ struct AppendOutcome {
 /// keeps calling it after the budget is reached simply accumulates nothing
 /// further.
 ///
+/// Action to take when a trailing hyphen meets the next text run across a line wrap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum HyphenFusionAction {
+    DropHyphen,
+    KeepHyphen,
+    NoFusion,
+}
+
+/// Classify a hyphenated line wrap while ignoring trailing layout whitespace.
+pub(crate) fn hyphen_fusion_action(before: &str, next: &str) -> HyphenFusionAction {
+    let before_char = before
+        .trim_end_matches([' ', '\t'])
+        .strip_suffix('-')
+        .and_then(|text| text.chars().next_back());
+    let next_char = next.chars().next();
+    match (before_char, next_char) {
+        (Some(before), Some(next)) if before.is_alphabetic() && next.is_alphabetic() => {
+            HyphenFusionAction::DropHyphen
+        }
+        (Some(before), Some(next)) if !before.is_whitespace() && !next.is_whitespace() => {
+            HyphenFusionAction::KeepHyphen
+        }
+        _ => HyphenFusionAction::NoFusion,
+    }
+}
+
 /// When `merge_hyphenated` is set and the caller requests a `'\n'` separator
 /// (a genuine line wrap) while `acc` ends with `-` optionally followed by
 /// horizontal whitespace, the hyphen is
@@ -3529,15 +3578,25 @@ fn append_bounded(
     let hyphen_fusion_prefix_len = (merge_hyphenated && separator == Some('\n'))
         .then(|| hyphen_wrap_prefix_len(acc))
         .flatten();
-    let hyphen_fusion = hyphen_fusion_prefix_len.is_some();
-    let separator = if hyphen_fusion { None } else { separator };
+    let action = hyphen_fusion_prefix_len
+        .map(|_| hyphen_fusion_action(acc, decoded))
+        .unwrap_or(HyphenFusionAction::NoFusion);
+    let separator = if action == HyphenFusionAction::NoFusion {
+        separator
+    } else {
+        None
+    };
 
     if let Some(max) = limit {
         // Popping the hyphen frees one byte before the new run is added, so
         // account against the post-pop length — otherwise a run that fits
         // once the hyphen is dropped could be wrongly rejected as
         // over-budget by one byte.
-        let base_len = hyphen_fusion_prefix_len.unwrap_or(acc.len());
+        let base_len = match (hyphen_fusion_prefix_len, action) {
+            (Some(prefix_len), HyphenFusionAction::DropHyphen) => prefix_len,
+            (Some(prefix_len), HyphenFusionAction::KeepHyphen) => prefix_len + 1,
+            _ => acc.len(),
+        };
         let add = separator.map_or(0, char::len_utf8) + decoded.len();
         if base_len + add > max {
             *truncated = true;
@@ -3549,7 +3608,11 @@ fn append_bounded(
     }
 
     if let Some(prefix_len) = hyphen_fusion_prefix_len {
-        acc.truncate(prefix_len);
+        match action {
+            HyphenFusionAction::DropHyphen => acc.truncate(prefix_len),
+            HyphenFusionAction::KeepHyphen => acc.truncate(prefix_len + 1),
+            HyphenFusionAction::NoFusion => {}
+        }
     }
     if let Some(sep) = separator {
         acc.push(sep);
@@ -4667,7 +4730,7 @@ mod tests {
             outcome.applied_separator, None,
             "hyphen fusion applies no separator, not the requested '\\n'"
         );
-        assert_eq!(s, "+55 11 30160900", "hyphen popped, halves fused");
+        assert_eq!(s, "+55 11 3016-0900", "hyphen preserved for numeric tokens");
     }
 
     #[test]
@@ -4677,7 +4740,10 @@ mod tests {
         let outcome = append_bounded(&mut s, Some('\n'), "0900", None, &mut trunc, true);
         assert!(outcome.appended);
         assert_eq!(outcome.applied_separator, None);
-        assert_eq!(s, "+55 11 30160900", "hyphen and layout whitespace removed");
+        assert_eq!(
+            s, "+55 11 3016-0900",
+            "hyphen preserved and layout whitespace removed"
+        );
     }
 
     #[test]

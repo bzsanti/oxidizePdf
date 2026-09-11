@@ -677,8 +677,17 @@ impl PlainTextExtractor {
             if trimmed.ends_with('-') && i < lines.len() - 1 {
                 let next_line = lines[i + 1].trim_start();
                 if !next_line.is_empty() {
-                    result.push_str(&trimmed[..trimmed.len() - 1]);
-                    continue;
+                    match crate::text::extraction::hyphen_fusion_action(trimmed, next_line) {
+                        crate::text::extraction::HyphenFusionAction::DropHyphen => {
+                            result.push_str(&trimmed[..trimmed.len() - 1]);
+                            continue;
+                        }
+                        crate::text::extraction::HyphenFusionAction::KeepHyphen => {
+                            result.push_str(trimmed);
+                            continue;
+                        }
+                        crate::text::extraction::HyphenFusionAction::NoFusion => {}
+                    }
                 }
             }
 

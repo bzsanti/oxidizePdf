@@ -56,7 +56,14 @@ Most PDF libraries give you a wall of text. oxidize-pdf gives you **structured, 
 
 **Performance**: Pure Rust, 3,000-4,000 pages/sec generation, 85ms full-text extraction for a 930KB PDF.
 
-## Quick Start: RAG Pipeline
+## Quick Start
+
+```toml
+[dependencies]
+oxidize-pdf = "5.1.0"
+```
+
+### RAG Pipeline
 
 ```rust
 use oxidize_pdf::parser::PdfDocument;
