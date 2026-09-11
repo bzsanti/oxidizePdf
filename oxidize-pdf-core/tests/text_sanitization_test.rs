@@ -57,6 +57,32 @@ fn test_default_removes_standalone_carriage_returns() {
 }
 
 #[test]
+fn test_unicode_line_and_paragraph_separators_normalize_to_line_feed() {
+    let input = "First Line\u{2028}Second Line\u{2029}Third Line";
+    let expected = "First Line\nSecond Line\nThird Line";
+
+    for policy in [
+        CarriageReturnHandling::Remove,
+        CarriageReturnHandling::ReplaceWithSpace,
+        CarriageReturnHandling::NormalizeLineEnding,
+    ] {
+        assert_eq!(
+            sanitize_extracted_text_with_policy(input, policy),
+            expected,
+            "Unicode separators must normalize independently of {policy:?}",
+        );
+    }
+}
+
+#[test]
+fn test_unicode_separators_reset_space_collapsing() {
+    assert_eq!(
+        sanitize_extracted_text("before \u{2028}  after\u{2029}  end"),
+        "before \n after\n end",
+    );
+}
+
+#[test]
 fn test_normalize_line_ending_preserves_standalone_carriage_returns() {
     let input = "unix\nwindows\r\nclassic-mac\rend";
     let expected = "unix\nwindows\nclassic-mac\rend";

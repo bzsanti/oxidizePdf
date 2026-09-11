@@ -192,6 +192,78 @@ fn a_gap_above_the_threshold_splits_the_runs() {
     );
 }
 
+// The boundary gap between separate TJ operators is measured from page-space
+// pen origins.  Its threshold must therefore include scale supplied through
+// Tm, the graphics CTM, and Tz; otherwise a sub-em positioning residue gets
+// mistaken for a word boundary when Tf is deliberately kept at 1.
+fn scaled_tj_boundary_runs(prefix: &str, tm: &str, first_x: f64, second_x: f64) -> String {
+    // Helvetica at Tf 1: "3030-" advances (4 * 556 + 333) / 1000 em.
+    // With a 9x effective horizontal scale its page-space advance is 23.013.
+    // The second run is only 0.75pt beyond that natural pen position: below
+    // the intended 0.7em threshold (6.3pt before any Tz expansion), but above
+    // the old, unscaled 0.7pt comparison.
+    format!(
+        "{prefix}BT\n/F1 1 Tf\n{tm} {first_x} 700 Tm\n[(3030-)] TJ\n\
+         {tm} {second_x} 700 Tm\n[(7160)] TJ\nET\n"
+    )
+}
+
+#[test]
+fn tm_scaling_does_not_turn_a_small_tj_boundary_residue_into_a_space() {
+    let text = extract(&scaled_tj_boundary_runs("", "9 0 0 9", 50.0, 73.763));
+    assert_eq!(
+        text, "3030-7160",
+        "a 0.75pt residue under 9x Tm scaling is not a word boundary: {text:?}"
+    );
+}
+
+#[test]
+fn tm_scaling_preserves_a_real_tj_boundary_space() {
+    // "3030-" naturally ends at x=73.013 in page space.  The next run starts
+    // 8.1pt later, i.e. 0.9em at the effective 9pt size, which is above the
+    // 0.7em boundary threshold and must remain a word boundary.
+    let text = extract(&scaled_tj_boundary_runs("", "9 0 0 9", 50.0, 81.113));
+    assert_eq!(
+        text, "3030- 7160",
+        "a genuine 0.9em TJ boundary under Tm scaling must remain a space: {text:?}"
+    );
+}
+
+#[test]
+fn ctm_scaling_does_not_turn_a_small_tj_boundary_residue_into_a_space() {
+    // Here the effective 9x scale is supplied by `cm`, while Tm remains the
+    // identity. The boundary calculation must treat it identically to Tm.
+    let text = extract(&scaled_tj_boundary_runs(
+        "q\n9 0 0 9 0 0 cm\n",
+        "1 0 0 1",
+        50.0 / 9.0,
+        73.763 / 9.0,
+    ));
+    assert_eq!(
+        text, "3030-7160",
+        "a 0.75pt residue under 9x CTM scaling is not a word boundary: {text:?}"
+    );
+}
+
+#[test]
+fn horizontal_text_scaling_is_included_in_the_tj_boundary_threshold() {
+    // Tz doubles the horizontal page-space advance. The threshold must scale
+    // with it as well, matching the pen origin used to obtain dx.
+    let text = extract(&scaled_tj_boundary_runs("", "9 0 0 9", 50.0, 73.763));
+    let text_with_tz = extract(
+        &scaled_tj_boundary_runs("", "9 0 0 9", 50.0, 96.776).replacen(
+            "/F1 1 Tf",
+            "/F1 1 Tf\n200 Tz",
+            1,
+        ),
+    );
+    assert_eq!(text, "3030-7160");
+    assert_eq!(
+        text_with_tz, "3030-7160",
+        "Tz must not shrink the TJ boundary threshold relative to dx: {text_with_tz:?}"
+    );
+}
+
 /// The mirror case: an array that ENDS with a kern, followed by another `TJ`
 /// that does not reposition. The kern already produced the space and the pen
 /// jump the boundary rule sees is that same kern.

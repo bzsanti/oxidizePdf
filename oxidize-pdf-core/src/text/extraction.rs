@@ -668,6 +668,11 @@ fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_thres
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
+    /// Append URI targets from interactive `/Link` annotations to extracted
+    /// page text. Kept here rather than on `ExtractionOptions` so enabling it
+    /// is a non-breaking method addition for downstream users of that public
+    /// struct (issue #584).
+    include_link_annotations: bool,
     /// Reorder the flat `.text` line groups into reading order (issue #448).
     /// Off by default; set via [`TextExtractor::with_reading_order`]. Held here,
     /// not on the public [`ExtractionOptions`], so enabling it is a
@@ -693,6 +698,7 @@ impl TextExtractor {
     pub fn new() -> Self {
         Self {
             options: ExtractionOptions::default(),
+            include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
@@ -705,6 +711,7 @@ impl TextExtractor {
     pub fn with_options(options: ExtractionOptions) -> Self {
         Self {
             options,
+            include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
@@ -730,6 +737,18 @@ impl TextExtractor {
     /// one group. `/Rotate ≠ 0` pages are ordered in unrotated page space.
     pub fn with_reading_order(mut self, enable: bool) -> Self {
         self.reading_order = enable;
+        self
+    }
+
+    /// Enable (or disable) appending URI targets from interactive `/Link`
+    /// annotations after a page's visible text.
+    ///
+    /// The extractor reads only `/Annots /Subtype /Link /A /S /URI /URI`; it
+    /// never follows, opens, or otherwise executes a PDF action. Disabled by
+    /// default. URI targets retain `/Annots` array order and each is appended
+    /// on a new line.
+    pub fn with_link_annotation_extraction(mut self, enable: bool) -> Self {
+        self.include_link_annotations = enable;
         self
     }
 
@@ -958,6 +977,25 @@ impl TextExtractor {
         threshold * x_scale * horizontal_scale
     }
 
+    /// Boundary gaps between separate `TJ` operators are measured from page-space
+    /// pen origins, just like flat `Tj` gaps.  Scale the em-based threshold by
+    /// the active text matrix, CTM, and horizontal text scale so both sides of
+    /// the comparison use page-space units (issue #586).
+    fn tj_boundary_space_gap_threshold(&self, state: &TextState) -> f64 {
+        let (x_scale, _) = combined_text_scale(state);
+        let x_scale = if x_scale.is_finite() && x_scale > f64::EPSILON {
+            x_scale
+        } else {
+            1.0
+        };
+        let horizontal_scale = if state.horizontal_scale.is_finite() {
+            state.horizontal_scale.abs() / 100.0
+        } else {
+            1.0
+        };
+        TJ_BOUNDARY_SPACE_EM * state.font_size.abs() * x_scale * horizontal_scale
+    }
+
     /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
     /// Anchored to the font's real space-glyph advance when known — word gaps
     /// scale with the font's space metric, not with a fixed fraction of font
@@ -1056,11 +1094,14 @@ impl TextExtractor {
             }
 
             // Same paragraph — join
-            let joined_text = if self.options.merge_hyphenated && current.text.ends_with('-') {
-                let mut s = current.text.clone();
-                s.pop(); // drop trailing hyphen
-                s.push_str(&line.text);
-                s
+            let joined_text = if self.options.merge_hyphenated {
+                if let Some(prefix_len) = hyphen_wrap_prefix_len(&current.text) {
+                    let mut s = current.text[..prefix_len].to_owned();
+                    s.push_str(&line.text);
+                    s
+                } else {
+                    format!("{}\n{}", current.text, line.text)
+                }
             } else {
                 format!("{}\n{}", current.text, line.text)
             };
@@ -1338,6 +1379,16 @@ impl TextExtractor {
                 self.options.max_extracted_bytes,
                 &mut truncated,
             );
+
+            if self.include_link_annotations {
+                append_link_annotation_uris(
+                    &mut extracted_text,
+                    document,
+                    page_index,
+                    self.options.max_extracted_bytes,
+                    &mut truncated,
+                );
+            }
         }
 
         Ok(ExtractedText {
@@ -1690,7 +1741,7 @@ impl TextExtractor {
                                         // producer that draws one word as several
                                         // positioned runs must not be split.
                                         let boundary_space = at_array_start
-                                            && dx > TJ_BOUNDARY_SPACE_EM * state.font_size
+                                            && dx > self.tj_boundary_space_gap_threshold(&state)
                                             && !extracted_text.ends_with(' ');
                                         let separator = if extracted_text.is_empty() {
                                             None
@@ -2528,20 +2579,18 @@ impl TextExtractor {
         let region_ids = assign_layout_region_ids(&fragments);
         let mut result: Vec<(u32, TextFragment)> = Vec::with_capacity(fragments.len());
         for (region_id, fragment) in region_ids.into_iter().zip(fragments) {
-            let should_merge = result
-                .last()
-                .map(|(prev_region, prev)| {
-                    *prev_region == region_id
-                        && prev.text.ends_with('-')
-                        && prev.render_mode == fragment.render_mode
-                        && is_line_wrap_geometry(prev, &fragment, self.options.newline_threshold)
-                })
-                .unwrap_or(false);
+            let fusion_prefix_len = result.last().and_then(|(prev_region, prev)| {
+                (*prev_region == region_id
+                    && prev.render_mode == fragment.render_mode
+                    && is_line_wrap_geometry(prev, &fragment, self.options.newline_threshold))
+                .then(|| hyphen_wrap_prefix_len(&prev.text))
+                .flatten()
+            });
 
-            if should_merge {
+            if let Some(prefix_len) = fusion_prefix_len {
                 // Safe: just checked `result.last()` is `Some` above.
                 let (_, prev) = result.last_mut().expect("checked non-empty above");
-                prev.text.pop(); // drop the trailing hyphen
+                prev.text.truncate(prefix_len); // drop the hyphen and horizontal whitespace
                 prev.text.push_str(&fragment.text);
                 // Extend the fused fragment's box to cover both lines so
                 // downstream geometry (space/newline decisions keyed on
@@ -2925,8 +2974,8 @@ impl TextExtractor {
                 // Handle hyphenation
                 if self.options.merge_hyphenated && last_line_ended_with_hyphen {
                     // Remove the hyphen and don't add newline
-                    if result.ends_with('-') {
-                        result.pop();
+                    if let Some(prefix_len) = hyphen_wrap_prefix_len(&result) {
+                        result.truncate(prefix_len);
                     }
                 } else {
                     result.push('\n');
@@ -2940,7 +2989,7 @@ impl TextExtractor {
             }
 
             result.push_str(&fragment.text);
-            last_line_ended_with_hyphen = fragment.text.ends_with('-');
+            last_line_ended_with_hyphen = hyphen_wrap_prefix_len(&fragment.text).is_some();
             last_y = fragment.y;
             last_x = fragment.x + fragment.width;
         }
@@ -3239,6 +3288,82 @@ impl TextExtractor {
     }
 }
 
+/// Append URI action targets from a page's `/Link` annotations without
+/// executing any action. Malformed annotations and unresolved references are
+/// ignored so link discovery cannot turn an otherwise readable page into an
+/// extraction failure.
+fn append_link_annotation_uris<R: Read + Seek>(
+    extracted_text: &mut String,
+    document: &PdfDocument<R>,
+    page_index: u32,
+    max_extracted_bytes: Option<usize>,
+    truncated: &mut bool,
+) {
+    let Ok(annotations) = document.get_page_annotations(page_index) else {
+        return;
+    };
+
+    for annotation in annotations {
+        if annotation
+            .get("Subtype")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|subtype| subtype.0 != "Link")
+        {
+            continue;
+        }
+
+        let Some(action) = annotation
+            .get("A")
+            .and_then(|action| resolve_annotation_dictionary(document, action))
+        else {
+            continue;
+        };
+
+        if action
+            .get("S")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|action_type| action_type.0 != "URI")
+        {
+            continue;
+        }
+
+        let Some(uri) = action.get("URI").and_then(PdfObject::as_string) else {
+            continue;
+        };
+        let uri = uri.to_text();
+        if uri.is_empty() {
+            continue;
+        }
+
+        let separator = if extracted_text.is_empty() { "" } else { "\n" };
+        let addition_len = separator.len() + uri.len();
+        if max_extracted_bytes.is_some_and(|limit| extracted_text.len() + addition_len > limit) {
+            *truncated = true;
+            break;
+        }
+        extracted_text.push_str(separator);
+        extracted_text.push_str(&uri);
+    }
+}
+
+/// Resolve a direct or indirect action dictionary. The caller intentionally
+/// treats errors as absent data because annotation actions are optional.
+fn resolve_annotation_dictionary<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    object: &PdfObject,
+) -> Option<PdfDictionary> {
+    if let Some(dictionary) = object.as_dict() {
+        return Some(dictionary.clone());
+    }
+
+    let (number, generation) = object.as_reference()?;
+    document
+        .get_object(number, generation)
+        .ok()?
+        .as_dict()
+        .cloned()
+}
+
 impl Default for TextExtractor {
     fn default() -> Self {
         Self::new()
@@ -3373,13 +3498,14 @@ struct AppendOutcome {
 /// further.
 ///
 /// When `merge_hyphenated` is set and the caller requests a `'\n'` separator
-/// (a genuine line wrap) while `acc` already ends with `-`, the hyphen is
+/// (a genuine line wrap) while `acc` ends with `-` optionally followed by
+/// horizontal whitespace, the hyphen is
 /// producer noise from a hyphenated word/number wrapping across two lines,
 /// not a real word boundary (issue #486: `merge_hyphenated` had no effect on
 /// this flat/default extraction path, unlike `preserve_layout`'s
 /// `reconstruct_text_from_fragments` and `reconstruct_paragraphs`'s
 /// `merge_into_paragraphs`, both of which already apply this same rule). The
-/// trailing hyphen is popped and `decoded` is appended directly with no
+/// trailing hyphen and whitespace are removed and `decoded` is appended directly with no
 /// separator, fusing the wrapped token into one word instead of splitting it
 /// on a newline — e.g. `"...3016-"` + `"0900"` becomes `"...30160900"`
 /// instead of `"...3016-\n0900"`. `separator` is only ever `'\n'` here when
@@ -3400,7 +3526,10 @@ fn append_bounded(
         };
     }
 
-    let hyphen_fusion = merge_hyphenated && separator == Some('\n') && acc.ends_with('-');
+    let hyphen_fusion_prefix_len = (merge_hyphenated && separator == Some('\n'))
+        .then(|| hyphen_wrap_prefix_len(acc))
+        .flatten();
+    let hyphen_fusion = hyphen_fusion_prefix_len.is_some();
     let separator = if hyphen_fusion { None } else { separator };
 
     if let Some(max) = limit {
@@ -3408,11 +3537,7 @@ fn append_bounded(
         // account against the post-pop length — otherwise a run that fits
         // once the hyphen is dropped could be wrongly rejected as
         // over-budget by one byte.
-        let base_len = if hyphen_fusion {
-            acc.len() - 1
-        } else {
-            acc.len()
-        };
+        let base_len = hyphen_fusion_prefix_len.unwrap_or(acc.len());
         let add = separator.map_or(0, char::len_utf8) + decoded.len();
         if base_len + add > max {
             *truncated = true;
@@ -3423,8 +3548,8 @@ fn append_bounded(
         }
     }
 
-    if hyphen_fusion {
-        acc.pop();
+    if let Some(prefix_len) = hyphen_fusion_prefix_len {
+        acc.truncate(prefix_len);
     }
     if let Some(sep) = separator {
         acc.push(sep);
@@ -3434,6 +3559,14 @@ fn append_bounded(
         appended: true,
         applied_separator: separator,
     }
+}
+
+/// Return the byte length before a trailing hyphen and any following ASCII
+/// horizontal whitespace. The prefix is always on a UTF-8 boundary because
+/// the removable suffix contains only ASCII bytes.
+fn hyphen_wrap_prefix_len(text: &str) -> Option<usize> {
+    let trimmed = text.trim_end_matches([' ', '\t']);
+    trimmed.strip_suffix('-').map(str::len)
 }
 
 /// Defensive final clamp of a page's text to the byte budget (issue #382).
@@ -4151,6 +4284,7 @@ fn calculate_text_width_from_codes(
 ///   - `\t` (0x09) - Tab
 ///   - `\n` (0x0A) - Line feed
 /// - Normalizes `\r` and `\r\n` to `\n`
+/// - Normalizes Unicode line and paragraph separators (`U+2028`, `U+2029`) to `\n`
 /// - Collapses multiple consecutive spaces into a single space
 ///
 /// # Examples
@@ -4245,6 +4379,14 @@ pub fn sanitize_extracted_text_with_policy(
                         }
                     }
                 }
+            }
+
+            // PDF ToUnicode CMaps may use Unicode line or paragraph separators
+            // instead of an ASCII line feed. Normalize both so downstream text
+            // consumers see one portable line-ending representation (#575).
+            '\u{2028}' | '\u{2029}' => {
+                result.push('\n');
+                last_was_space = false;
             }
 
             // Preserve allowed whitespace
@@ -4526,6 +4668,38 @@ mod tests {
             "hyphen fusion applies no separator, not the requested '\\n'"
         );
         assert_eq!(s, "+55 11 30160900", "hyphen popped, halves fused");
+    }
+
+    #[test]
+    fn test_append_bounded_fuses_hyphen_wrap_with_trailing_horizontal_whitespace() {
+        let mut s = String::from("+55 11 3016- \t");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "0900", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(outcome.applied_separator, None);
+        assert_eq!(s, "+55 11 30160900", "hyphen and layout whitespace removed");
+    }
+
+    #[test]
+    fn test_append_bounded_preserves_trailing_horizontal_whitespace_without_hyphen() {
+        let mut s = String::from("plain text \t");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "next line", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(outcome.applied_separator, Some('\n'));
+        assert_eq!(s, "plain text \t\nnext line");
+    }
+
+    #[test]
+    fn test_append_bounded_fusion_with_trailing_whitespace_respects_budget() {
+        // The removable suffix is "- \t" (3 bytes), so the fused result fits
+        // exactly in 12 bytes. Counting the layout whitespace would reject it.
+        let mut s = String::from("rating- \t");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "aa-exp", Some(12), &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(s, "ratingaa-exp");
+        assert!(!trunc);
     }
 
     #[test]
@@ -6100,6 +6274,35 @@ mod tests {
         assert_eq!(merged[1].text, "ble");
     }
 
+    #[test]
+    fn hyphen_wrap_fusion_drops_trailing_horizontal_whitespace() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            merge_hyphenated: true,
+            ..Default::default()
+        });
+        let merged = extractor.merge_hyphenated_line_wraps_in_emission_order(vec![
+            tf("visi- \t", 50.0, 400.0, 25.0, 10.0),
+            tf("ble", 50.0, 385.0, 15.0, 10.0),
+        ]);
+
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].text, "visible");
+    }
+
+    #[test]
+    fn reconstruct_text_from_fragments_drops_hyphen_trailing_horizontal_whitespace() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            merge_hyphenated: true,
+            ..Default::default()
+        });
+        let text = extractor.reconstruct_text_from_fragments(&[
+            tf("visi- \t", 50.0, 400.0, 25.0, 10.0),
+            tf("ble", 50.0, 385.0, 15.0, 10.0),
+        ]);
+
+        assert_eq!(text, "visible");
+    }
+
     /// Sub-point rounding (11.96pt vs 12pt from a scaled text matrix) is not a
     /// style change: the paragraph must stay whole.
     #[test]
@@ -6138,6 +6341,23 @@ mod tests {
             paragraphs[0].text, "Kryptographie",
             "hyphen elided, no newline inserted"
         );
+    }
+
+    #[test]
+    fn merge_into_paragraphs_drops_hyphen_trailing_horizontal_whitespace() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            merge_hyphenated: true,
+            ..Default::default()
+        });
+        let lines = vec![
+            tf("Kryp- \t", 50.0, 400.0, 30.0, 12.0),
+            tf("tographie", 50.0, 386.0, 60.0, 12.0),
+        ];
+        let paragraphs = extractor.merge_into_paragraphs(&lines);
+
+        assert_eq!(paragraphs.len(), 1);
+        assert_eq!(paragraphs[0].text, "Kryptographie");
     }
 
     #[test]
