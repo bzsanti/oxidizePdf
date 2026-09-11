@@ -8,14 +8,40 @@
 [![Tests](https://img.shields.io/badge/tests-7%2C993-brightgreen)](https://github.com/bzsanti/oxidizePdf)
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.88-orange.svg)](https://www.rust-lang.org)
 
-**The Rust PDF library built for AI.** Parse any PDF into structure-aware, embedding-ready chunks with one line of code. Pure Rust, zero C dependencies, 99.3% success rate on 9,000+ real-world PDFs.
+**A comprehensive PDF toolkit written in pure Rust.** Generate, parse, modify,
+extract and validate PDFs without C bindings. Use one crate for ordinary PDF
+workflows or continue into structure-aware chunks for AI/RAG applications.
+
+| I need to… | Start here |
+|---|---|
+| Generate PDFs with text, graphics, images and tables | [`Document`](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/struct.Document.html) |
+| Parse PDFs and extract text | [`PdfDocument`](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/parser/struct.PdfDocument.html) |
+| Split, merge, rotate or reorder pages | [`operations`](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/operations/) |
+| Validate PDF/A or inspect signatures | [PDF/A validation](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/pdfa/) and [signatures](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/signatures/) |
+| Build an AI/RAG ingestion pipeline | [`rag_chunks`](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/parser/struct.PdfDocument.html#method.rag_chunks) |
+
+```toml
+[dependencies]
+oxidize-pdf = "5.0.0"
+```
+
+Structure-aware RAG remains a first-class workflow:
 
 ```rust
 let chunks = PdfDocument::open("paper.pdf")?.rag_chunks()?;
 // Each chunk: text, pages, bounding boxes, element types, heading context, token estimate
 ```
 
-## Why oxidize-pdf for RAG?
+## Why oxidize-pdf?
+
+- **One toolkit:** generation, parsing, manipulation, extraction and validation.
+- **Pure Rust deployment:** no C library, Java runtime or Python process.
+- **AI-ready when needed:** page references, bounding boxes, element types,
+  heading context and token estimates are available from the same parser.
+- **Explicit scope:** page rasterization is not provided; use a renderer such as
+  Pdfium when bitmap output is required.
+
+### Structure-aware RAG
 
 Most PDF libraries give you a wall of text. oxidize-pdf gives you **structured, metadata-rich chunks** ready for your vector store:
 
@@ -34,10 +60,10 @@ Most PDF libraries give you a wall of text. oxidize-pdf gives you **structured, 
 
 ```toml
 [dependencies]
-oxidize-pdf = "5.0.1"
+oxidize-pdf = "5.1.0"
 ```
 
-### RAG Pipeline -- One Liner
+### RAG Pipeline
 
 ```rust
 use oxidize_pdf::parser::PdfDocument;

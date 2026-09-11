@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.1.0] - 2026-09-11
+
+### Added
+
+- **Optional URI extraction from interactive link annotations** (#584, #591).
+  `TextExtractor::with_link_annotation_extraction(true)` appends safe `/URI`
+  action targets in page annotation order without following or executing them.
+
+### Fixed
+
+- **Text extraction resolves indirect font encodings and Adobe Glyph List
+  differences** (#572), applies Type 3 `/FontMatrix` scaling to glyph widths
+  (#573), and preserves hyphens in numeric and punctuation-bearing identifiers
+  across line wraps (#574, #589).
+- **Standalone CR, CRLF, and Unicode line separators are normalized
+  consistently** (#575), while `TJ` kerning-space detection scales with the
+  active font size (#588).
+- **Signature preparation tolerates unreferenced in-use xref entries at byte
+  offset zero** while still rejecting policy references to such entries (#585).
+- **Page annotation arrays accept direct annotation dictionaries** (#590).
+
 ## [5.0.1] - 2026-09-04
 
 ### Fixed

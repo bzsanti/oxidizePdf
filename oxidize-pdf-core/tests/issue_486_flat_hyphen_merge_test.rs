@@ -121,6 +121,27 @@ fn tj_array_hyphenated_line_wrap_merges_on_the_flat_path() {
 }
 
 #[test]
+fn trailing_horizontal_whitespace_after_a_hyphen_does_not_block_flat_fusion() {
+    // Some producers leave horizontal whitespace after the discretionary
+    // hyphen before moving to the next line. It is layout noise: the number
+    // must still be reconstructed as one token.
+    let content = concat!(
+        "BT\n/F1 12 Tf\n12 TL\n",
+        "1 0 0 1 72 700 Tm\n((011) 99974- ) Tj\n",
+        "T*\n(6069) Tj\nET"
+    );
+    let text = extract_flat(content);
+    assert!(
+        text.contains("(011) 99974-6069"),
+        "a numeric hyphen followed by horizontal whitespace before a line break must stay in its token, got: {text:?}"
+    );
+    assert!(
+        !text.contains("99974- \\n6069"),
+        "the hyphen, whitespace, and newline must not survive a fused wrap: {text:?}"
+    );
+}
+
+#[test]
 fn quote_operator_hyphenated_line_wrap_merges() {
     // The `'` operator (T* then Tj) always starts a new line by definition;
     // a hyphen at the end of one `'`-drawn line must still merge with the
