@@ -668,6 +668,11 @@ fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_thres
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
+    /// Append URI targets from interactive `/Link` annotations to extracted
+    /// page text. Kept here rather than on `ExtractionOptions` so enabling it
+    /// is a non-breaking method addition for downstream users of that public
+    /// struct (issue #584).
+    include_link_annotations: bool,
     /// Reorder the flat `.text` line groups into reading order (issue #448).
     /// Off by default; set via [`TextExtractor::with_reading_order`]. Held here,
     /// not on the public [`ExtractionOptions`], so enabling it is a
@@ -693,6 +698,7 @@ impl TextExtractor {
     pub fn new() -> Self {
         Self {
             options: ExtractionOptions::default(),
+            include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
@@ -705,6 +711,7 @@ impl TextExtractor {
     pub fn with_options(options: ExtractionOptions) -> Self {
         Self {
             options,
+            include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
@@ -730,6 +737,18 @@ impl TextExtractor {
     /// one group. `/Rotate ≠ 0` pages are ordered in unrotated page space.
     pub fn with_reading_order(mut self, enable: bool) -> Self {
         self.reading_order = enable;
+        self
+    }
+
+    /// Enable (or disable) appending URI targets from interactive `/Link`
+    /// annotations after a page's visible text.
+    ///
+    /// The extractor reads only `/Annots /Subtype /Link /A /S /URI /URI`; it
+    /// never follows, opens, or otherwise executes a PDF action. Disabled by
+    /// default. URI targets retain `/Annots` array order and each is appended
+    /// on a new line.
+    pub fn with_link_annotation_extraction(mut self, enable: bool) -> Self {
+        self.include_link_annotations = enable;
         self
     }
 
@@ -1360,6 +1379,16 @@ impl TextExtractor {
                 self.options.max_extracted_bytes,
                 &mut truncated,
             );
+
+            if self.include_link_annotations {
+                append_link_annotation_uris(
+                    &mut extracted_text,
+                    document,
+                    page_index,
+                    self.options.max_extracted_bytes,
+                    &mut truncated,
+                );
+            }
         }
 
         Ok(ExtractedText {
@@ -3257,6 +3286,82 @@ impl TextExtractor {
         );
         Ok(sanitized)
     }
+}
+
+/// Append URI action targets from a page's `/Link` annotations without
+/// executing any action. Malformed annotations and unresolved references are
+/// ignored so link discovery cannot turn an otherwise readable page into an
+/// extraction failure.
+fn append_link_annotation_uris<R: Read + Seek>(
+    extracted_text: &mut String,
+    document: &PdfDocument<R>,
+    page_index: u32,
+    max_extracted_bytes: Option<usize>,
+    truncated: &mut bool,
+) {
+    let Ok(annotations) = document.get_page_annotations(page_index) else {
+        return;
+    };
+
+    for annotation in annotations {
+        if annotation
+            .get("Subtype")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|subtype| subtype.0 != "Link")
+        {
+            continue;
+        }
+
+        let Some(action) = annotation
+            .get("A")
+            .and_then(|action| resolve_annotation_dictionary(document, action))
+        else {
+            continue;
+        };
+
+        if action
+            .get("S")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|action_type| action_type.0 != "URI")
+        {
+            continue;
+        }
+
+        let Some(uri) = action.get("URI").and_then(PdfObject::as_string) else {
+            continue;
+        };
+        let uri = uri.to_text();
+        if uri.is_empty() {
+            continue;
+        }
+
+        let separator = if extracted_text.is_empty() { "" } else { "\n" };
+        let addition_len = separator.len() + uri.len();
+        if max_extracted_bytes.is_some_and(|limit| extracted_text.len() + addition_len > limit) {
+            *truncated = true;
+            break;
+        }
+        extracted_text.push_str(separator);
+        extracted_text.push_str(&uri);
+    }
+}
+
+/// Resolve a direct or indirect action dictionary. The caller intentionally
+/// treats errors as absent data because annotation actions are optional.
+fn resolve_annotation_dictionary<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    object: &PdfObject,
+) -> Option<PdfDictionary> {
+    if let Some(dictionary) = object.as_dict() {
+        return Some(dictionary.clone());
+    }
+
+    let (number, generation) = object.as_reference()?;
+    document
+        .get_object(number, generation)
+        .ok()?
+        .as_dict()
+        .cloned()
 }
 
 impl Default for TextExtractor {
