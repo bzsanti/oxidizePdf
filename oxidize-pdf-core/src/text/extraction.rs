@@ -668,6 +668,11 @@ fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_thres
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
+    /// Emit figure text decoded only through a custom `/Differences` table.
+    /// Disabled by default because such text lacks an authoritative Unicode
+    /// mapping and can be misleading; callers performing forensic extraction
+    /// can opt in with [`Self::with_unreliable_figure_text`].
+    include_unreliable_figure_text: bool,
     /// Append URI targets from interactive `/Link` annotations to extracted
     /// page text. Kept here rather than on `ExtractionOptions` so enabling it
     /// is a non-breaking method addition for downstream users of that public
@@ -698,6 +703,7 @@ impl TextExtractor {
     pub fn new() -> Self {
         Self {
             options: ExtractionOptions::default(),
+            include_unreliable_figure_text: false,
             include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
@@ -711,6 +717,7 @@ impl TextExtractor {
     pub fn with_options(options: ExtractionOptions) -> Self {
         Self {
             options,
+            include_unreliable_figure_text: false,
             include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
@@ -749,6 +756,17 @@ impl TextExtractor {
     /// on a new line.
     pub fn with_link_annotation_extraction(mut self, enable: bool) -> Self {
         self.include_link_annotations = enable;
+        self
+    }
+
+    /// Include text from `/Figure` scopes whose font has no `/ToUnicode` map
+    /// and relies on `/Differences` glyph names.
+    ///
+    /// This fallback can be useful for forensic workflows, but it is disabled
+    /// by default because those glyph names are not an authoritative Unicode
+    /// mapping and may produce plausible but incorrect text.
+    pub fn with_unreliable_figure_text(mut self, enable: bool) -> Self {
+        self.include_unreliable_figure_text = enable;
         self
     }
 
@@ -1514,7 +1532,7 @@ impl TextExtractor {
                         // `.text` and `.fragments` stay consistent for pages
                         // wrapped in an `/Artifact` marked-content scope —
                         // issue #330.
-                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let skip_text = self.should_skip_text(&state);
 
                         // Add spacing based on position change
                         // Separator of the run that was actually appended, for the
@@ -1625,6 +1643,7 @@ impl TextExtractor {
                                 y,
                                 &mut state,
                                 self.options.include_artifacts,
+                                skip_text,
                             );
                         }
 
@@ -1676,8 +1695,7 @@ impl TextExtractor {
                                     // Mirror the gate inside `emit_text_fragment`
                                     // so `.text` and `.fragments` stay consistent
                                     // for Artifact scopes (issue #330).
-                                    let skip_text =
-                                        skip_artifact_text(&state, self.options.include_artifacts);
+                                    let skip_text = self.should_skip_text(&state);
 
                                     // Pen origin in user space = (CTM × text_matrix)(0, 0).
                                     let (x, y) = text_origin(&state);
@@ -1812,6 +1830,7 @@ impl TextExtractor {
                                             y,
                                             &mut state,
                                             self.options.include_artifacts,
+                                            skip_text,
                                         );
                                     }
 
@@ -1921,6 +1940,7 @@ impl TextExtractor {
                                             // explicit content rather than as a sub-threshold
                                             // x-jump. Width = the kern advance so the next
                                             // text fragment begins flush against it.
+                                            let skip_text = self.should_skip_text(&state);
                                             let (sx, sy) = text_origin(&state);
                                             emit_text_fragment(
                                                 &mut fragments,
@@ -1930,6 +1950,7 @@ impl TextExtractor {
                                                 sy,
                                                 &mut state,
                                                 self.options.include_artifacts,
+                                                skip_text,
                                             );
                                         }
                                     }
@@ -1958,7 +1979,7 @@ impl TextExtractor {
                         let (x, y) = text_origin(&state);
 
                         // Mirror the artifact gate (issue #330).
-                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let skip_text = self.should_skip_text(&state);
                         let mut emitted_sep: Option<Option<char>> = None;
                         if !skip_text {
                             let separator = if extracted_text.is_empty() {
@@ -2019,6 +2040,7 @@ impl TextExtractor {
                                 y,
                                 &mut state,
                                 self.options.include_artifacts,
+                                skip_text,
                             );
                         }
 
@@ -2067,7 +2089,7 @@ impl TextExtractor {
                         let (x, y) = text_origin(&state);
 
                         // Mirror the artifact gate (issue #330).
-                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let skip_text = self.should_skip_text(&state);
                         let mut emitted_sep: Option<Option<char>> = None;
                         if !skip_text {
                             let separator = if extracted_text.is_empty() {
@@ -2126,6 +2148,7 @@ impl TextExtractor {
                                 y,
                                 &mut state,
                                 self.options.include_artifacts,
+                                skip_text,
                             );
                         }
 
@@ -3238,6 +3261,32 @@ impl TextExtractor {
         self.font_cache.insert(font_name.to_string(), font_info);
     }
 
+    /// Suppress content that cannot be decoded reliably in a semantic figure.
+    ///
+    /// A `/Figure` is non-flow content. When its font lacks `/ToUnicode` and
+    /// relies on a custom `/Encoding /Differences` table, glyph names are only
+    /// a best-effort fallback; they are not an authoritative Unicode mapping.
+    /// Emitting such runs pollutes native text with chart labels that can look
+    /// plausible while being wrong. Keep normal prose and figures with a
+    /// `/ToUnicode` map untouched.
+    fn should_skip_text(&self, state: &TextState) -> bool {
+        if skip_artifact_text(state, self.options.include_artifacts) {
+            return true;
+        }
+
+        let in_figure = state.mc_stack.iter().any(|entry| entry.tag == "Figure");
+        let font_is_unreliable = state
+            .font_name
+            .as_deref()
+            .and_then(|name| self.font_cache.get(name))
+            .is_some_and(|font| font.to_unicode.is_none() && font.differences.is_some());
+
+        !self.include_unreliable_figure_text
+            && in_figure
+            && font_is_unreliable
+            && state.pending_actualtext.is_none()
+    }
+
     /// Decode text using the current font encoding and ToUnicode mapping
     fn decode_text(&self, text: &[u8], state: &TextState) -> ParseResult<String> {
         use crate::text::encoding::TextEncoding;
@@ -3663,8 +3712,9 @@ fn emit_text_fragment(
     y: f64,
     state: &mut TextState,
     include_artifacts: bool,
+    skip_text: bool,
 ) {
-    if decoded.is_empty() {
+    if decoded.is_empty() || skip_text {
         return;
     }
 
