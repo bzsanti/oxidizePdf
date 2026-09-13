@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.1.1] - 2026-09-12
+
+### Fixed
+
+- **Figure text with custom font differences is no longer emitted as reliable
+  text when the PDF provides no `/ToUnicode` mapping** (#593, #594).
+  Consumers can explicitly retain that fallback text for forensic extraction.
+
 ## [5.1.0] - 2026-09-11
 
 ### Added
