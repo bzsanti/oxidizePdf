@@ -246,25 +246,36 @@ pub fn prepare_incremental_signature(
                 return Err(invalid("selected signature field is already signed"));
             }
             dictionary.insert("V".to_string(), reference(signature_id));
-            update.replace(field, PdfObject::Dictionary(dictionary))?;
             if rect.is_some() {
                 let widget = select_widget(&mut reader, field, *widget_index)?;
-                let mut widget_dictionary = reader
-                    .get_object(widget.0, widget.1)
-                    .map_err(|error| invalid(format!("resolve signature widget: {error}")))?
-                    .as_dict()
-                    .cloned()
-                    .ok_or_else(|| invalid("signature widget is not a dictionary"))?;
                 let appearance_id = update.allocate_id()?;
                 let rect = (*rect).ok_or_else(|| invalid("visible widget requires a rectangle"))?;
-                widget_dictionary.insert("Rect".to_string(), rect.object());
                 let mut appearance = PdfDictionary::new();
                 appearance.insert("N".to_string(), reference(appearance_id));
-                widget_dictionary.insert("AP".to_string(), PdfObject::Dictionary(appearance));
-                update.replace(widget, PdfObject::Dictionary(widget_dictionary))?;
+                if widget == field {
+                    // A combined field/widget is one indirect object.  Its value and
+                    // appearance must be emitted as one incremental replacement.
+                    dictionary.insert("Rect".to_string(), rect.object());
+                    dictionary.insert("AP".to_string(), PdfObject::Dictionary(appearance));
+                    update.replace(field, PdfObject::Dictionary(dictionary))?;
+                } else {
+                    update.replace(field, PdfObject::Dictionary(dictionary))?;
+                    let mut widget_dictionary = reader
+                        .get_object(widget.0, widget.1)
+                        .map_err(|error| invalid(format!("resolve signature widget: {error}")))?
+                        .as_dict()
+                        .cloned()
+                        .ok_or_else(|| invalid("signature widget is not a dictionary"))?;
+                    widget_dictionary.insert("Rect".to_string(), rect.object());
+                    widget_dictionary.insert("AP".to_string(), PdfObject::Dictionary(appearance));
+                    update.replace(widget, PdfObject::Dictionary(widget_dictionary))?;
+                }
                 update.replace(appearance_id, visible_appearance(rect))?;
             } else if widget_index.is_some() {
                 select_widget(&mut reader, field, *widget_index)?;
+                update.replace(field, PdfObject::Dictionary(dictionary))?;
+            } else {
+                update.replace(field, PdfObject::Dictionary(dictionary))?;
             }
         }
         SignatureTarget::New {
