@@ -11,6 +11,7 @@ use crate::text::cmap::CMap;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
+use std::sync::OnceLock;
 
 /// A CIDFont's `/W` + `/DW` glyph-space widths (ISO 32000-1 §9.7.4.3),
 /// indexed by **CID** — an arbitrary font-internal identifier unrelated to
@@ -184,7 +185,9 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
 
         // Extract encoding
         if let Some(encoding_obj) = font_dict.get("Encoding") {
-            match encoding_obj {
+            let resolved_encoding = document.resolve(encoding_obj).ok();
+            let target_obj = resolved_encoding.as_ref().unwrap_or(encoding_obj);
+            match target_obj {
                 PdfObject::Name(enc_name) => {
                     font_info.encoding = Some(enc_name.0.clone());
                     if enc_name.0 != "Identity-H" && enc_name.0 != "Identity-V" {
@@ -194,23 +197,28 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                 }
                 PdfObject::Dictionary(enc_dict) => {
                     // Handle encoding with differences
-                    if let Some(base_enc) = enc_dict.get("BaseEncoding").and_then(|o| o.as_name()) {
-                        font_info.encoding = Some(base_enc.0.clone());
+                    if let Some(base_enc_obj) = enc_dict.get("BaseEncoding") {
+                        let base_enc_resolved = document.resolve(base_enc_obj).ok();
+                        let target_base = base_enc_resolved.as_ref().unwrap_or(base_enc_obj);
+                        if let Some(base_enc) = target_base.as_name() {
+                            font_info.encoding = Some(base_enc.0.clone());
+                        }
                     }
 
-                    if let Some(PdfObject::Array(differences)) = enc_dict.get("Differences") {
-                        font_info.differences =
-                            Some(self.parse_encoding_differences(&differences.0)?);
+                    if let Some(diff_obj) = enc_dict.get("Differences") {
+                        let diff_resolved = document.resolve(diff_obj).ok();
+                        let diff_target = diff_resolved.as_ref().unwrap_or(diff_obj);
+                        if let Some(differences) = diff_target.as_array() {
+                            font_info.differences =
+                                Some(self.parse_encoding_differences(&differences.0, document)?);
+                        }
                     }
                 }
-                PdfObject::Reference(num, gen) => {
-                    if let Ok(PdfObject::Stream(stream)) = document.get_object(*num, *gen) {
-                        if let Ok(data) = stream.decode(&ParseOptions::default()) {
-                            if let Ok(enc) = crate::text::encoding_cmap::EncodingCMap::parse(&data)
-                            {
-                                font_info.cid_encoding =
-                                    Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc));
-                            }
+                PdfObject::Stream(stream) => {
+                    if let Ok(data) = stream.decode(&ParseOptions::default()) {
+                        if let Ok(enc) = crate::text::encoding_cmap::EncodingCMap::parse(&data) {
+                            font_info.cid_encoding =
+                                Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc));
                         }
                     }
                 }
@@ -282,12 +290,15 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     fn parse_encoding_differences(
         &self,
         differences: &[PdfObject],
+        document: &PdfDocument<R>,
     ) -> ParseResult<HashMap<u8, String>> {
         let mut diff_map = HashMap::new();
         let mut current_code = 0u8;
 
         for item in differences {
-            match item {
+            let resolved = document.resolve(item).ok();
+            let target = resolved.as_ref().unwrap_or(item);
+            match target {
                 PdfObject::Integer(code) => {
                     current_code = *code as u8;
                 }
@@ -321,77 +332,102 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         let mut metrics = FontMetrics::default();
 
         // Extract FirstChar and LastChar
-        if let Some(PdfObject::Integer(first)) = font_dict.get("FirstChar") {
-            metrics.first_char = Some(*first as u32);
-        }
+        metrics.first_char = font_dict
+            .get("FirstChar")
+            .and_then(|obj| document.resolve(obj).ok())
+            .and_then(|obj| obj.as_integer())
+            .map(|first| first as u32);
 
-        if let Some(PdfObject::Integer(last)) = font_dict.get("LastChar") {
-            metrics.last_char = Some(*last as u32);
-        }
+        metrics.last_char = font_dict
+            .get("LastChar")
+            .and_then(|obj| document.resolve(obj).ok())
+            .and_then(|obj| obj.as_integer())
+            .map(|last| last as u32);
 
-        // Extract Widths array
-        if let Some(widths_obj) = font_dict.get("Widths") {
-            match widths_obj {
-                PdfObject::Array(widths_array) => {
-                    let mut widths = Vec::new();
-                    for width_obj in &widths_array.0 {
-                        match width_obj {
-                            PdfObject::Integer(w) => widths.push(*w as f64),
-                            PdfObject::Real(w) => widths.push(*w),
-                            _ => widths.push(0.0),
-                        }
-                    }
-                    metrics.widths = Some(widths);
-                }
-                PdfObject::Reference(obj_num, gen_num) => {
-                    // Widths might be a reference to an array
-                    if let Ok(PdfObject::Array(widths_array)) =
-                        document.get_object(*obj_num, *gen_num)
-                    {
-                        let mut widths = Vec::new();
-                        for width_obj in &widths_array.0 {
-                            match width_obj {
-                                PdfObject::Integer(w) => widths.push(*w as f64),
-                                PdfObject::Real(w) => widths.push(*w),
-                                _ => widths.push(0.0),
+        // Extract FontMatrix scaling factor (relevant for Type 3 fonts).
+        // Standard simple fonts have an implicit FontMatrix [0.001 0 0 0.001 0 0].
+        // When FontMatrix is present, glyph-space widths are transformed to text space
+        // by FontMatrix[0]. We scale by FontMatrix[0] * 1000.0 to normalize to standard
+        // milli-em units (1/1000 of text space).
+        let font_matrix = font_dict
+            .get("FontMatrix")
+            .and_then(|obj| document.resolve(obj).ok())
+            .and_then(|obj| {
+                if let PdfObject::Array(arr) = obj {
+                    let mut matrix = Vec::new();
+                    for elem in &arr.0 {
+                        if let Ok(elem_resolved) = document.resolve(elem) {
+                            if let Some(val) = elem_resolved.as_real() {
+                                matrix.push(val);
                             }
                         }
-                        metrics.widths = Some(widths);
                     }
+                    if matrix.len() == 6 {
+                        Some(matrix)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
                 }
-                _ => {}
-            }
-        }
+            });
+
+        let width_scale = font_matrix.as_ref().map_or(1.0, |m| m[0] * 1000.0);
+
+        // Extract Widths array
+        metrics.widths = font_dict
+            .get("Widths")
+            .and_then(|obj| document.resolve(obj).ok())
+            .and_then(|obj| match obj {
+                PdfObject::Array(widths_array) => {
+                    let widths = widths_array
+                        .0
+                        .iter()
+                        .map(|width_obj| {
+                            let width_val = match document.resolve(width_obj) {
+                                Ok(PdfObject::Integer(w)) => w as f64,
+                                Ok(PdfObject::Real(w)) => w,
+                                _ => 0.0,
+                            };
+                            width_val * width_scale
+                        })
+                        .collect();
+                    Some(widths)
+                }
+                _ => None,
+            });
 
         // Extract MissingWidth from font descriptor
-        if let Some(desc_ref) = font_dict
+        metrics.missing_width = font_dict
             .get("FontDescriptor")
-            .and_then(|o| o.as_reference())
-        {
-            if let Ok(PdfObject::Dictionary(desc_dict)) =
-                document.get_object(desc_ref.0, desc_ref.1)
-            {
-                if let Some(missing_width_obj) = desc_dict.get("MissingWidth") {
-                    match missing_width_obj {
-                        PdfObject::Integer(w) => metrics.missing_width = Some(*w as f64),
-                        PdfObject::Real(w) => metrics.missing_width = Some(*w),
-                        _ => {}
-                    }
-                }
-            }
-        }
+            .and_then(|o| document.resolve(o).ok())
+            .and_then(|o| match o {
+                PdfObject::Dictionary(d) => d.get("MissingWidth").cloned(),
+                _ => None,
+            })
+            .and_then(|o| document.resolve(&o).ok())
+            .and_then(|o| match o {
+                PdfObject::Integer(w) => Some(w as f64),
+                PdfObject::Real(w) => Some(w),
+                _ => None,
+            });
 
         // Extract CIDFont `/W` + `/DW` (ISO 32000-1 §9.7.4.3). Only present
         // on a CIDFontType0/CIDFontType2 descendant font dictionary; a
         // simple font's dict has no `/W` key, so this is a no-op there.
         let is_cid_font = font_dict
             .get("Subtype")
-            .and_then(PdfObject::as_name)
-            .is_some_and(|subtype| matches!(subtype.0.as_str(), "CIDFontType0" | "CIDFontType2"));
-        let dw = font_dict.get("DW").and_then(|o| o.as_real());
+            .and_then(|o| document.resolve(o).ok())
+            .is_some_and(|o| match o {
+                PdfObject::Name(n) => matches!(n.0.as_str(), "CIDFontType0" | "CIDFontType2"),
+                _ => false,
+            });
+        let dw = font_dict
+            .get("DW")
+            .and_then(|o| document.resolve(o).ok())
+            .and_then(|o| o.as_real());
         let w_array: Option<Cow<[PdfObject]>> = match font_dict.get("W") {
-            Some(PdfObject::Array(array)) => Some(Cow::Borrowed(&array.0)),
-            Some(PdfObject::Reference(num, gen)) => match document.get_object(*num, *gen) {
+            Some(obj) => match document.resolve(obj) {
                 Ok(PdfObject::Array(array)) => Some(Cow::Owned(array.0)),
                 _ => None,
             },
@@ -402,46 +438,49 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             let mut ranges = Vec::new();
             let mut i = 0;
             while i < entries.len() {
-                let Some(first_cid) = entries[i].as_integer() else {
+                let first_cid = document
+                    .resolve(&entries[i])
+                    .ok()
+                    .and_then(|o| o.as_integer());
+                let Some(first_cid) = first_cid else {
                     break;
                 };
                 match entries.get(i + 1) {
                     // `c [w1 w2 ...]`: consecutive widths starting at c.
-                    Some(PdfObject::Array(w_list)) => {
-                        if let Ok(first_cid) = u32::try_from(first_cid) {
-                            for (offset, w_obj) in w_list.0.iter().enumerate() {
-                                if let (Ok(offset), Some(w)) =
-                                    (u32::try_from(offset), w_obj.as_real())
-                                {
-                                    if let Some(cid) = first_cid
-                                        .checked_add(offset)
-                                        .filter(|cid| *cid <= u16::MAX as u32)
-                                    {
-                                        widths.insert(cid, w);
+                    Some(w_list_obj) => {
+                        let resolved_w_list = document.resolve(w_list_obj).ok();
+                        if let Some(PdfObject::Array(w_list)) = resolved_w_list {
+                            if let Ok(first_cid) = u32::try_from(first_cid) {
+                                for (offset, w_obj) in w_list.0.iter().enumerate() {
+                                    let w = document.resolve(w_obj).ok().and_then(|o| o.as_real());
+                                    if let (Ok(offset), Some(w)) = (u32::try_from(offset), w) {
+                                        if let Some(cid) = first_cid
+                                            .checked_add(offset)
+                                            .filter(|cid| *cid <= u16::MAX as u32)
+                                        {
+                                            widths.insert(cid, w);
+                                        }
                                     }
                                 }
                             }
+                            i += 2;
+                        } else {
+                            // `cFirst cLast w`: uniform width across an inclusive CID range.
+                            let last_cid = resolved_w_list.as_ref().and_then(|o| o.as_integer());
+                            let w = entries
+                                .get(i + 2)
+                                .and_then(|o| document.resolve(o).ok())
+                                .and_then(|o| o.as_real());
+                            let (Some(last_cid), Some(w)) = (last_cid, w) else {
+                                break;
+                            };
+                            let first_cid = first_cid.max(0).min(u16::MAX as i64) as u32;
+                            let last_cid = last_cid.max(0).min(u16::MAX as i64) as u32;
+                            if last_cid >= first_cid {
+                                ranges.push((first_cid, last_cid, w));
+                            }
+                            i += 3;
                         }
-                        i += 2;
-                    }
-                    // `cFirst cLast w`: uniform width across an inclusive CID range.
-                    Some(last_obj) => {
-                        let (Some(last_cid), Some(w)) = (
-                            last_obj.as_integer(),
-                            entries.get(i + 2).and_then(|o| o.as_real()),
-                        ) else {
-                            break;
-                        };
-                        // CIDs from Identity-H/Identity-V decode as a u16
-                        // (§9.7.4.2), so any range past 0xFFFF is malformed;
-                        // clamp rather than materializing a huge/looping
-                        // range from a corrupt or adversarial `/W` array.
-                        let first_cid = first_cid.max(0).min(u16::MAX as i64) as u32;
-                        let last_cid = last_cid.max(0).min(u16::MAX as i64) as u32;
-                        if last_cid >= first_cid {
-                            ranges.push((first_cid, last_cid, w));
-                        }
-                        i += 3;
                     }
                     None => break,
                 }
@@ -461,20 +500,11 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         }
 
         // Extract kerning from TrueType fonts (if embedded)
-        if let Some(desc_ref) = font_dict
-            .get("FontDescriptor")
-            .and_then(|o| o.as_reference())
-        {
-            if let Ok(PdfObject::Dictionary(desc_dict)) =
-                document.get_object(desc_ref.0, desc_ref.1)
-            {
+        if let Some(desc_obj) = font_dict.get("FontDescriptor") {
+            if let Ok(PdfObject::Dictionary(desc_dict)) = document.resolve(desc_obj) {
                 // Look for embedded TrueType font (FontFile2)
-                if let Some(font_file_ref) =
-                    desc_dict.get("FontFile2").and_then(|o| o.as_reference())
-                {
-                    if let Ok(PdfObject::Stream(font_stream)) =
-                        document.get_object(font_file_ref.0, font_file_ref.1)
-                    {
+                if let Some(font_file_obj) = desc_dict.get("FontFile2") {
+                    if let Ok(PdfObject::Stream(font_stream)) = document.resolve(font_file_obj) {
                         // Try to extract kerning from TrueType font
                         if let Ok(kerning_pairs) = extract_truetype_kerning(&font_stream) {
                             if !kerning_pairs.is_empty() {
@@ -925,8 +955,8 @@ fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<
     for &byte in text_bytes {
         if let Some(ref differences) = font_info.differences {
             if let Some(char_name) = differences.get(&byte) {
-                if let Some(unicode_char) = glyph_name_to_unicode(char_name) {
-                    result.push(unicode_char);
+                if let Some(unicode) = glyph_name_to_unicode_sequence(char_name) {
+                    result.push_str(&unicode);
                     continue;
                 }
             }
@@ -945,10 +975,124 @@ fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<
     Ok(result)
 }
 
-/// Convert glyph name to Unicode character
-fn glyph_name_to_unicode(name: &str) -> Option<char> {
-    // Adobe Glyph List mapping (simplified subset)
-    match name {
+/// Convert a glyph name to one Unicode character.
+///
+/// For glyph names that resolve to more than one Unicode scalar, use
+/// [`glyph_name_to_unicode_sequence`].
+pub fn glyph_name_to_unicode(name: &str) -> Option<char> {
+    let value = glyph_name_to_unicode_sequence(name)?;
+    let mut chars = value.chars();
+    match (chars.next(), chars.next()) {
+        (Some(character), None) => Some(character),
+        _ => None,
+    }
+}
+
+/// Convert a glyph name to its complete Unicode sequence.
+///
+/// The mapping uses Adobe's complete Glyph List. It also implements the
+/// `uniXXXX...` and `uXXXX` glyph-name conventions, including `uni` names
+/// containing multiple four-digit scalar values.
+pub fn glyph_name_to_unicode_sequence(name: &str) -> Option<String> {
+    if name.chars().count() == 1 {
+        return Some(name.to_owned());
+    }
+
+    let lookup_name = name.split_once('.').map_or(name, |(base, _)| base);
+    if lookup_name.is_empty() {
+        return None;
+    }
+
+    if let Some(hex) = lookup_name.strip_prefix("uni") {
+        if !hex.is_empty() && hex.len() % 4 == 0 && hex.bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return decode_unicode_scalars(
+                hex.as_bytes()
+                    .chunks_exact(4)
+                    .map(|chunk| std::str::from_utf8(chunk).expect("ASCII hexadecimal glyph name")),
+            );
+        }
+    }
+
+    if let Some(hex) = lookup_name.strip_prefix('u') {
+        if (4..=6).contains(&hex.len()) && hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return decode_unicode_scalars(std::iter::once(hex));
+        }
+    }
+
+    adobe_glyph_list()
+        .get(lookup_name)
+        .and_then(|scalars| decode_unicode_scalars(scalars.split_whitespace()))
+        .or_else(|| {
+            legacy_glyph_name_to_unicode(lookup_name).map(|character| character.to_string())
+        })
+}
+
+fn decode_unicode_scalars<'a>(scalars: impl IntoIterator<Item = &'a str>) -> Option<String> {
+    let mut result = String::new();
+    for scalar in scalars {
+        let value = u32::from_str_radix(scalar, 16).ok()?;
+        result.push(char::from_u32(value)?);
+    }
+    (!result.is_empty()).then_some(result)
+}
+
+fn adobe_glyph_list() -> &'static HashMap<&'static str, &'static str> {
+    static GLYPHS: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
+    GLYPHS.get_or_init(|| {
+        include_str!("adobe_glyph_list.txt")
+            .lines()
+            .filter_map(|line| line.split_once(';'))
+            .collect()
+    })
+}
+
+fn legacy_glyph_name_to_unicode(name: &str) -> Option<char> {
+    // 1. Single character glyph name (e.g., 'A', 'a', '1', '+')
+    let mut chars = name.chars();
+    if let (Some(c), None) = (chars.next(), chars.next()) {
+        return Some(c);
+    }
+
+    // 2. uniXXXX (4 hex digits)
+    if name.len() == 7
+        && name.starts_with("uni")
+        && name[3..].chars().all(|c| c.is_ascii_hexdigit())
+    {
+        if let Ok(val) = u32::from_str_radix(&name[3..], 16) {
+            if let Some(c) = char::from_u32(val) {
+                return Some(c);
+            }
+        }
+    }
+
+    // 3. uXXXX / uXXXXX / uXXXXXX (4..6 hex digits)
+    if (5..=7).contains(&name.len())
+        && name.starts_with('u')
+        && name[1..].chars().all(|c| c.is_ascii_hexdigit())
+    {
+        if let Ok(val) = u32::from_str_radix(&name[1..], 16) {
+            if let Some(c) = char::from_u32(val) {
+                return Some(c);
+            }
+        }
+    }
+
+    // Strip variant suffix after period (e.g., "A.swash" -> "A", "aacute.alt" -> "aacute")
+    let lookup_name = if let Some((base, _)) = name.split_once('.') {
+        if !base.is_empty() {
+            if let Some(c) = glyph_name_to_unicode(base) {
+                return Some(c);
+            }
+        }
+        base
+    } else {
+        name
+    };
+
+    // 4. Adobe Glyph List (AGL) mapping
+    match lookup_name {
+        // ASCII / Basic Latin glyph names
         "space" => Some(' '),
         "exclam" => Some('!'),
         "quotedbl" => Some('"'),
@@ -982,10 +1126,358 @@ fn glyph_name_to_unicode(name: &str) -> Option<char> {
         "greater" => Some('>'),
         "question" => Some('?'),
         "at" => Some('@'),
-        "A" => Some('A'),
-        "B" => Some('B'),
-        "C" => Some('C'),
-        // ... add more mappings as needed
+        "bracketleft" => Some('['),
+        "backslash" => Some('\\'),
+        "bracketright" => Some(']'),
+        "asciicircum" => Some('^'),
+        "underscore" => Some('_'),
+        "grave" => Some('`'),
+        "braceleft" => Some('{'),
+        "bar" => Some('|'),
+        "braceright" => Some('}'),
+        "asciitilde" => Some('~'),
+
+        // Latin-1 Supplement & Common PostScript
+        "exclamdown" => Some('¡'),
+        "cent" => Some('¢'),
+        "sterling" => Some('£'),
+        "currency" => Some('¤'),
+        "yen" => Some('¥'),
+        "brokenbar" => Some('¦'),
+        "section" => Some('§'),
+        "dieresis" => Some('¨'),
+        "copyright" => Some('©'),
+        "ordfeminine" => Some('ª'),
+        "guillemotleft" | "guillemetleft" => Some('«'),
+        "logicalnot" => Some('¬'),
+        "softhyphen" | "hyphensoft" => Some('\u{00AD}'),
+        "registered" => Some('®'),
+        "macron" => Some('¯'),
+        "degree" => Some('°'),
+        "plusminus" => Some('±'),
+        "twosuperior" => Some('²'),
+        "threesuperior" => Some('³'),
+        "acute" => Some('´'),
+        "mu" | "micro" => Some('µ'),
+        "paragraph" => Some('¶'),
+        "periodcentered" | "bulletcentered" => Some('·'),
+        "cedilla" => Some('¸'),
+        "onesuperior" => Some('¹'),
+        "ordmasculine" => Some('º'),
+        "guillemotright" | "guillemetright" => Some('»'),
+        "onequarter" => Some('¼'),
+        "onehalf" => Some('½'),
+        "threequarters" => Some('¾'),
+        "questiondown" => Some('¿'),
+
+        // Accented uppercase Latin-1
+        "Agrave" => Some('À'),
+        "Aacute" => Some('Á'),
+        "Acircumflex" => Some('Â'),
+        "Atilde" => Some('Ã'),
+        "Adieresis" => Some('Ä'),
+        "Aring" => Some('Å'),
+        "AE" => Some('Æ'),
+        "Ccedilla" => Some('Ç'),
+        "Egrave" => Some('È'),
+        "Eacute" => Some('É'),
+        "Ecircumflex" => Some('Ê'),
+        "Edieresis" => Some('Ë'),
+        "Igrave" => Some('Ì'),
+        "Iacute" => Some('Í'),
+        "Icircumflex" => Some('Î'),
+        "Idieresis" => Some('Ï'),
+        "Eth" => Some('Ð'),
+        "Ntilde" => Some('Ñ'),
+        "Ograve" => Some('Ò'),
+        "Oacute" => Some('Ó'),
+        "Ocircumflex" => Some('Ô'),
+        "Otilde" => Some('Õ'),
+        "Odieresis" => Some('Ö'),
+        "multiply" => Some('×'),
+        "Oslash" => Some('Ø'),
+        "Ugrave" => Some('Ù'),
+        "Uacute" => Some('Ú'),
+        "Ucircumflex" => Some('Û'),
+        "Udieresis" => Some('Ü'),
+        "Yacute" => Some('Ý'),
+        "Thorn" => Some('Þ'),
+        "germandbls" => Some('ß'),
+
+        // Accented lowercase Latin-1
+        "agrave" => Some('à'),
+        "aacute" => Some('á'),
+        "acircumflex" => Some('â'),
+        "atilde" => Some('ã'),
+        "adieresis" => Some('ä'),
+        "aring" => Some('å'),
+        "ae" => Some('æ'),
+        "ccedilla" => Some('ç'),
+        "egrave" => Some('è'),
+        "eacute" => Some('é'),
+        "ecircumflex" => Some('ê'),
+        "edieresis" => Some('ë'),
+        "igrave" => Some('ì'),
+        "iacute" => Some('í'),
+        "icircumflex" => Some('î'),
+        "idieresis" => Some('ï'),
+        "eth" => Some('ð'),
+        "ntilde" => Some('ñ'),
+        "ograve" => Some('ò'),
+        "oacute" => Some('ó'),
+        "ocircumflex" => Some('ô'),
+        "otilde" => Some('õ'),
+        "odieresis" => Some('ö'),
+        "divide" => Some('÷'),
+        "oslash" => Some('ø'),
+        "ugrave" => Some('ù'),
+        "uacute" => Some('ú'),
+        "ucircumflex" => Some('û'),
+        "udieresis" => Some('ü'),
+        "yacute" => Some('ý'),
+        "thorn" => Some('þ'),
+        "ydieresis" => Some('ÿ'),
+
+        // Latin Extended-A & B
+        "Amacron" => Some('Ā'),
+        "amacron" => Some('ā'),
+        "Abreve" => Some('Ă'),
+        "abreve" => Some('ă'),
+        "Aogonek" => Some('Ą'),
+        "aogonek" => Some('ą'),
+        "Cacute" => Some('Ć'),
+        "cacute" => Some('ć'),
+        "Ccircumflex" => Some('Ĉ'),
+        "ccircumflex" => Some('ĉ'),
+        "Cdotaccent" => Some('Ċ'),
+        "cdotaccent" => Some('ċ'),
+        "Ccaron" => Some('Č'),
+        "ccaron" => Some('č'),
+        "Dcaron" => Some('Ď'),
+        "dcaron" => Some('ď'),
+        "Dcroat" => Some('Đ'),
+        "dcroat" => Some('đ'),
+        "Emacron" => Some('Ē'),
+        "emacron" => Some('ē'),
+        "Ebreve" => Some('Ĕ'),
+        "ebreve" => Some('ĕ'),
+        "Edotaccent" => Some('Ė'),
+        "edotaccent" => Some('ė'),
+        "Eogonek" => Some('Ę'),
+        "eogonek" => Some('ę'),
+        "Ecaron" => Some('Ě'),
+        "ecaron" => Some('ě'),
+        "Gcircumflex" => Some('Ĝ'),
+        "gcircumflex" => Some('ĝ'),
+        "Gbreve" => Some('Ğ'),
+        "gbreve" => Some('ğ'),
+        "Gdotaccent" => Some('Ġ'),
+        "gdotaccent" => Some('ġ'),
+        "Gcommaaccent" => Some('Ģ'),
+        "gcommaaccent" => Some('ģ'),
+        "Hcircumflex" => Some('Ĥ'),
+        "hcircumflex" => Some('ĥ'),
+        "Hbar" => Some('Ħ'),
+        "hbar" => Some('ħ'),
+        "Itilde" => Some('Ĩ'),
+        "itilde" => Some('ĩ'),
+        "Imacron" => Some('Ī'),
+        "imacron" => Some('ī'),
+        "Ibreve" => Some('Ĭ'),
+        "ibreve" => Some('ĭ'),
+        "Iogonek" => Some('Į'),
+        "iogonek" => Some('į'),
+        "Idotaccent" | "Idot" => Some('İ'),
+        "dotlessi" => Some('ı'),
+        "IJ" => Some('Ĳ'),
+        "ij" => Some('ĳ'),
+        "Jcircumflex" => Some('Ĵ'),
+        "jcircumflex" => Some('ĵ'),
+        "Kcommaaccent" => Some('Ķ'),
+        "kcommaaccent" => Some('ķ'),
+        "kgreenlandic" => Some('ĸ'),
+        "Lacute" => Some('Ĺ'),
+        "lacute" => Some('ĺ'),
+        "Lcommaaccent" => Some('Ļ'),
+        "lcommaaccent" => Some('ļ'),
+        "Lcaron" => Some('Ľ'),
+        "lcaron" => Some('ľ'),
+        "Ldot" => Some('Ŀ'),
+        "ldot" => Some('ŀ'),
+        "Lslash" => Some('Ł'),
+        "lslash" => Some('ł'),
+        "Nacute" => Some('Ń'),
+        "nacute" => Some('ń'),
+        "Ncommaaccent" => Some('Ņ'),
+        "ncommaaccent" => Some('ņ'),
+        "Ncaron" => Some('Ň'),
+        "ncaron" => Some('ň'),
+        "napostrophe" => Some('ŉ'),
+        "Eng" => Some('Ŋ'),
+        "eng" => Some('ŋ'),
+        "Omacron" => Some('Ō'),
+        "omacron" => Some('ō'),
+        "Obreve" => Some('Ŏ'),
+        "obreve" => Some('ŏ'),
+        "Ohungarumlaut" => Some('Ő'),
+        "ohungarumlaut" => Some('ő'),
+        "OE" => Some('Œ'),
+        "oe" => Some('œ'),
+        "Racute" => Some('Ŕ'),
+        "racute" => Some('ŕ'),
+        "Rcommaaccent" => Some('Ŗ'),
+        "rcommaaccent" => Some('ŗ'),
+        "Rcaron" => Some('Ř'),
+        "rcaron" => Some('ř'),
+        "Sacute" => Some('Ś'),
+        "sacute" => Some('ś'),
+        "Scircumflex" => Some('Ŝ'),
+        "scircumflex" => Some('ŝ'),
+        "Scedilla" => Some('Ş'),
+        "scedilla" => Some('ş'),
+        "Scaron" => Some('Š'),
+        "scaron" => Some('š'),
+        "Scommaaccent" => Some('Ș'),
+        "scommaaccent" => Some('ș'),
+        "Tcommaaccent" => Some('Ț'),
+        "tcommaaccent" => Some('ț'),
+        "Tcedilla" => Some('Ţ'),
+        "tcedilla" => Some('ţ'),
+        "Tcaron" => Some('Ť'),
+        "tcaron" => Some('ť'),
+        "Tbar" => Some('Ŧ'),
+        "tbar" => Some('ŧ'),
+        "Utilde" => Some('Ũ'),
+        "utilde" => Some('ũ'),
+        "Umacron" => Some('Ū'),
+        "umacron" => Some('ū'),
+        "Ubreve" => Some('Ŭ'),
+        "ubreve" => Some('ŭ'),
+        "Uring" => Some('Ů'),
+        "uring" => Some('ů'),
+        "Uhungarumlaut" => Some('Ű'),
+        "uhungarumlaut" => Some('ű'),
+        "Uogonek" => Some('Ų'),
+        "uogonek" => Some('ų'),
+        "Wcircumflex" => Some('Ŵ'),
+        "wcircumflex" => Some('ŵ'),
+        "Ycircumflex" => Some('Ŷ'),
+        "ycircumflex" => Some('ŷ'),
+        "Ydieresis" => Some('Ÿ'),
+        "Zacute" => Some('Ź'),
+        "zacute" => Some('ź'),
+        "Zdotaccent" => Some('Ż'),
+        "zdotaccent" => Some('ż'),
+        "Zcaron" => Some('Ž'),
+        "zcaron" => Some('ž'),
+        "longs" => Some('ſ'),
+        "florin" => Some('ƒ'),
+        "dotlessj" => Some('ȷ'),
+
+        // Spacing Modifiers
+        "circumflex" => Some('ˆ'),
+        "caron" => Some('ˇ'),
+        "breve" => Some('˘'),
+        "dotaccent" => Some('˙'),
+        "ring" => Some('˚'),
+        "ogonek" => Some('˛'),
+        "tilde" => Some('˜'),
+        "hungarumlaut" => Some('˝'),
+
+        // Punctuation & Typographic symbols
+        "quoteleft" | "leftsinglequote" => Some('‘'),
+        "quoteright" | "rightsinglequote" => Some('’'),
+        "quotesinglbase" | "singlelow9quote" => Some('‚'),
+        "quotedblleft" | "leftdoublequote" => Some('“'),
+        "quotedblright" | "rightdoublequote" => Some('”'),
+        "quotedblbase" | "doublelow9quote" => Some('„'),
+        "dagger" => Some('†'),
+        "daggerdbl" => Some('‡'),
+        "bullet" => Some('•'),
+        "ellipsis" => Some('…'),
+        "perthousand" => Some('‰'),
+        "guilsinglleft" | "singleleftguillemet" => Some('‹'),
+        "guilsinglright" | "singlerightguillemet" => Some('›'),
+        "fraction" => Some('⁄'),
+        "endash" | "figuredash" => Some('–'),
+        "emdash" => Some('—'),
+        "Euro" | "euro" => Some('€'),
+        "trademark" => Some('™'),
+
+        // Math & Other symbols
+        "minus" => Some('−'),
+        "checkmark" => Some('✓'),
+        "partialdiff" => Some('∂'),
+        "summation" => Some('∑'),
+        "radical" => Some('√'),
+        "infinity" => Some('∞'),
+        "integral" => Some('∫'),
+        "approxequal" => Some('≈'),
+        "notequal" => Some('≠'),
+        "lessequal" => Some('≤'),
+        "greaterequal" => Some('≥'),
+        "lozenge" => Some('◊'),
+        "apple" => Some('\u{F8FF}'),
+
+        // Ligatures
+        "ff" => Some('ﬀ'),
+        "fi" => Some('ﬁ'),
+        "fl" => Some('ﬂ'),
+        "ffi" => Some('ﬃ'),
+        "ffl" => Some('ﬄ'),
+        "ft" => Some('ﬅ'),
+        "st" => Some('ﬆ'),
+
+        // Greek letters (Symbol font / AGL)
+        "Alpha" => Some('Α'),
+        "Beta" => Some('Β'),
+        "Gamma" => Some('Γ'),
+        "Delta" => Some('Δ'),
+        "Epsilon" => Some('Ε'),
+        "Zeta" => Some('Ζ'),
+        "Eta" => Some('Η'),
+        "Theta" => Some('Θ'),
+        "Iota" => Some('Ι'),
+        "Kappa" => Some('Κ'),
+        "Lambda" => Some('Λ'),
+        "Mu" => Some('Μ'),
+        "Nu" => Some('Ν'),
+        "Xi" => Some('Ξ'),
+        "Omicron" => Some('Ο'),
+        "Pi" => Some('Π'),
+        "Rho" => Some('Ρ'),
+        "Sigma" => Some('Σ'),
+        "Tau" => Some('Τ'),
+        "Upsilon" => Some('Υ'),
+        "Phi" => Some('Φ'),
+        "Chi" => Some('Χ'),
+        "Psi" => Some('Ψ'),
+        "Omega" => Some('Ω'),
+        "alpha" => Some('α'),
+        "beta" => Some('β'),
+        "gamma" => Some('γ'),
+        "delta" => Some('δ'),
+        "epsilon" => Some('ε'),
+        "zeta" => Some('ζ'),
+        "eta" => Some('η'),
+        "theta" => Some('θ'),
+        "iota" => Some('ι'),
+        "kappa" => Some('κ'),
+        "lambda" => Some('λ'),
+        "nu" => Some('ν'),
+        "xi" => Some('ξ'),
+        "omicron" => Some('ο'),
+        "pi" => Some('π'),
+        "rho" => Some('ρ'),
+        "sigma" => Some('σ'),
+        "sigma1" => Some('ς'),
+        "tau" => Some('τ'),
+        "upsilon" => Some('υ'),
+        "phi" => Some('φ'),
+        "chi" => Some('χ'),
+        "psi" => Some('ψ'),
+        "omega" => Some('ω'),
+
         _ => None,
     }
 }
@@ -1079,10 +1571,117 @@ mod tests {
 
     #[test]
     fn test_glyph_name_to_unicode() {
-        assert_eq!(glyph_name_to_unicode("space"), Some(' '));
+        // Single characters
         assert_eq!(glyph_name_to_unicode("A"), Some('A'));
+        assert_eq!(glyph_name_to_unicode("a"), Some('a'));
+        assert_eq!(glyph_name_to_unicode("0"), Some('0'));
+        assert_eq!(glyph_name_to_unicode("+"), Some('+'));
+        assert_eq!(glyph_name_to_unicode("?"), Some('?'));
+
+        // uniXXXX escapes (4 hex digits)
+        assert_eq!(glyph_name_to_unicode("uni0041"), Some('A'));
+        assert_eq!(glyph_name_to_unicode("uni00E9"), Some('é'));
+        assert_eq!(glyph_name_to_unicode("uni20AC"), Some('€'));
+        assert_eq!(glyph_name_to_unicode("uni00DF"), Some('ß'));
+
+        // uXXXX / uXXXXXX escapes (4..6 hex digits)
+        assert_eq!(glyph_name_to_unicode("u0041"), Some('A'));
+        assert_eq!(glyph_name_to_unicode("u00E9"), Some('é'));
+        assert_eq!(glyph_name_to_unicode("u1F600"), Some('😀'));
+        assert_eq!(glyph_name_to_unicode("u000041"), Some('A'));
+
+        // Basic Latin / AGL names
+        assert_eq!(glyph_name_to_unicode("space"), Some(' '));
         assert_eq!(glyph_name_to_unicode("zero"), Some('0'));
-        assert_eq!(glyph_name_to_unicode("unknown"), None);
+        assert_eq!(glyph_name_to_unicode("nine"), Some('9'));
+        assert_eq!(glyph_name_to_unicode("exclam"), Some('!'));
+
+        // Accented letters
+        assert_eq!(glyph_name_to_unicode("aacute"), Some('á'));
+        assert_eq!(glyph_name_to_unicode("eacute"), Some('é'));
+        assert_eq!(glyph_name_to_unicode("atilde"), Some('ã'));
+        assert_eq!(glyph_name_to_unicode("ccedilla"), Some('ç'));
+        assert_eq!(glyph_name_to_unicode("Adieresis"), Some('Ä'));
+        assert_eq!(glyph_name_to_unicode("Eacute"), Some('É'));
+        assert_eq!(glyph_name_to_unicode("ntilde"), Some('ñ'));
+        assert_eq!(glyph_name_to_unicode("Oslash"), Some('Ø'));
+        assert_eq!(glyph_name_to_unicode("oslash"), Some('ø'));
+        assert_eq!(glyph_name_to_unicode("Scaron"), Some('Š'));
+        assert_eq!(glyph_name_to_unicode("scaron"), Some('š'));
+        assert_eq!(glyph_name_to_unicode("Zcaron"), Some('Ž'));
+        assert_eq!(glyph_name_to_unicode("zcaron"), Some('ž'));
+
+        // German sharp s
+        assert_eq!(glyph_name_to_unicode("germandbls"), Some('ß'));
+
+        // Typographical & Punctuation
+        assert_eq!(glyph_name_to_unicode("periodcentered"), Some('·'));
+        assert_eq!(glyph_name_to_unicode("bullet"), Some('•'));
+        assert_eq!(glyph_name_to_unicode("hyphen"), Some('-'));
+        assert_eq!(glyph_name_to_unicode("endash"), Some('–'));
+        assert_eq!(glyph_name_to_unicode("emdash"), Some('—'));
+        assert_eq!(glyph_name_to_unicode("quoteleft"), Some('‘'));
+        assert_eq!(glyph_name_to_unicode("quoteright"), Some('’'));
+        assert_eq!(glyph_name_to_unicode("quotedblleft"), Some('“'));
+        assert_eq!(glyph_name_to_unicode("quotedblright"), Some('”'));
+        assert_eq!(glyph_name_to_unicode("ellipsis"), Some('…'));
+
+        // Ligatures
+        assert_eq!(glyph_name_to_unicode("fi"), Some('ﬁ'));
+        assert_eq!(glyph_name_to_unicode("fl"), Some('ﬂ'));
+        assert_eq!(glyph_name_to_unicode("ffi"), Some('ﬃ'));
+        assert_eq!(glyph_name_to_unicode("ffl"), Some('ﬄ'));
+        assert_eq!(glyph_name_to_unicode("ff"), Some('ﬀ'));
+        assert_eq!(glyph_name_to_unicode("oe"), Some('œ'));
+        assert_eq!(glyph_name_to_unicode("OE"), Some('Œ'));
+        assert_eq!(glyph_name_to_unicode("ae"), Some('æ'));
+        assert_eq!(glyph_name_to_unicode("AE"), Some('Æ'));
+
+        // Symbols
+        assert_eq!(glyph_name_to_unicode("plus"), Some('+'));
+        assert_eq!(glyph_name_to_unicode("minus"), Some('−'));
+        assert_eq!(glyph_name_to_unicode("slash"), Some('/'));
+        assert_eq!(glyph_name_to_unicode("backslash"), Some('\\'));
+        assert_eq!(glyph_name_to_unicode("Euro"), Some('€'));
+        assert_eq!(glyph_name_to_unicode("trademark"), Some('™'));
+        assert_eq!(glyph_name_to_unicode("copyright"), Some('©'));
+        assert_eq!(glyph_name_to_unicode("registered"), Some('®'));
+        assert_eq!(glyph_name_to_unicode("checkmark"), Some('✓'));
+
+        // Variant suffixes
+        assert_eq!(glyph_name_to_unicode("A.swash"), Some('A'));
+        assert_eq!(glyph_name_to_unicode("aacute.alt"), Some('á'));
+
+        // Unknown names
+        assert_eq!(glyph_name_to_unicode("nonexistent_glyph_xyz"), None);
+    }
+
+    #[test]
+    fn test_decode_with_encoding_differences() {
+        let mut diffs = HashMap::new();
+        diffs.insert(1, "aacute".to_string());
+        diffs.insert(2, "germandbls".to_string());
+        diffs.insert(3, "bullet".to_string());
+        diffs.insert(4, "fi".to_string());
+        diffs.insert(5, "uni0041".to_string());
+        diffs.insert(6, "u00E9".to_string());
+        diffs.insert(7, "endash".to_string());
+        diffs.insert(8, "minus".to_string());
+
+        let font_info = FontInfo {
+            name: "CustomFont".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: Some("WinAnsiEncoding".to_string()),
+            to_unicode: None,
+            differences: Some(diffs),
+            descendant_font: None,
+            cid_ordering: None,
+            metrics: FontMetrics::default(),
+            cid_encoding: None,
+        };
+
+        let decoded = decode_text_with_font(&[1, 2, 3, 4, 5, 6, 7, 8], &font_info).unwrap();
+        assert_eq!(decoded, "áß•ﬁAé–−");
     }
 
     #[test]
@@ -1256,5 +1855,95 @@ endcmap
             got, fallback,
             "explicit mapping must override the CID-table fallback"
         );
+    }
+
+    #[test]
+    fn extract_font_metrics_type3_font_matrix_scaling() {
+        use crate::parser::objects::PdfArray;
+        use crate::parser::PdfReader;
+        use std::io::Cursor;
+
+        // Dummy PDF document for resolving direct objects
+        let pdf = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n115\n%%EOF\n";
+        let document = PdfDocument::new(PdfReader::new(Cursor::new(&pdf[..])).unwrap());
+        let extractor = CMapTextExtractor::new();
+
+        // 1. Type 3 font with FontMatrix [1.0 0 0 1.0 0 0] and Widths [0.5, 0.75]
+        let mut font_dict = PdfDictionary::new();
+        font_dict.insert("Subtype".into(), PdfObject::Name(PdfName("Type3".into())));
+        font_dict.insert("FirstChar".into(), PdfObject::Integer(65));
+        font_dict.insert("LastChar".into(), PdfObject::Integer(66));
+        font_dict.insert(
+            "FontMatrix".into(),
+            PdfObject::Array(PdfArray(vec![
+                PdfObject::Real(1.0),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.0),
+                PdfObject::Real(1.0),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.0),
+            ])),
+        );
+        font_dict.insert(
+            "Widths".into(),
+            PdfObject::Array(PdfArray(vec![PdfObject::Real(0.5), PdfObject::Real(0.75)])),
+        );
+
+        let metrics = extractor
+            .extract_font_metrics(&font_dict, &document)
+            .unwrap();
+        assert_eq!(metrics.first_char, Some(65));
+        assert_eq!(metrics.last_char, Some(66));
+        assert_eq!(metrics.widths, Some(vec![500.0, 750.0]));
+
+        // 2. Type 3 font with FontMatrix [0.001 0 0 0.001 0 0] and Widths [500, 750]
+        let mut font_dict2 = PdfDictionary::new();
+        font_dict2.insert("Subtype".into(), PdfObject::Name(PdfName("Type3".into())));
+        font_dict2.insert("FirstChar".into(), PdfObject::Integer(65));
+        font_dict2.insert("LastChar".into(), PdfObject::Integer(66));
+        font_dict2.insert(
+            "FontMatrix".into(),
+            PdfObject::Array(PdfArray(vec![
+                PdfObject::Real(0.001),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.001),
+                PdfObject::Real(0.0),
+                PdfObject::Real(0.0),
+            ])),
+        );
+        font_dict2.insert(
+            "Widths".into(),
+            PdfObject::Array(PdfArray(vec![
+                PdfObject::Integer(500),
+                PdfObject::Integer(750),
+            ])),
+        );
+
+        let metrics2 = extractor
+            .extract_font_metrics(&font_dict2, &document)
+            .unwrap();
+        assert_eq!(metrics2.widths, Some(vec![500.0, 750.0]));
+
+        // 3. Simple font with no FontMatrix (implicit [0.001 0 0 0.001 0 0])
+        let mut font_dict3 = PdfDictionary::new();
+        font_dict3.insert(
+            "Subtype".into(),
+            PdfObject::Name(PdfName("TrueType".into())),
+        );
+        font_dict3.insert("FirstChar".into(), PdfObject::Integer(32));
+        font_dict3.insert("LastChar".into(), PdfObject::Integer(33));
+        font_dict3.insert(
+            "Widths".into(),
+            PdfObject::Array(PdfArray(vec![
+                PdfObject::Integer(250),
+                PdfObject::Integer(333),
+            ])),
+        );
+
+        let metrics3 = extractor
+            .extract_font_metrics(&font_dict3, &document)
+            .unwrap();
+        assert_eq!(metrics3.widths, Some(vec![250.0, 333.0]));
     }
 }

@@ -8,6 +8,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.1.1] - 2026-09-12
+
+### Fixed
+
+- **Figure text with custom font differences is no longer emitted as reliable
+  text when the PDF provides no `/ToUnicode` mapping** (#593, #594).
+  Consumers can explicitly retain that fallback text for forensic extraction.
+
+## [5.1.0] - 2026-09-11
+
+### Added
+
+- **Optional URI extraction from interactive link annotations** (#584, #591).
+  `TextExtractor::with_link_annotation_extraction(true)` appends safe `/URI`
+  action targets in page annotation order without following or executing them.
+
+### Fixed
+
+- **Text extraction resolves indirect font encodings and Adobe Glyph List
+  differences** (#572), applies Type 3 `/FontMatrix` scaling to glyph widths
+  (#573), and preserves hyphens in numeric and punctuation-bearing identifiers
+  across line wraps (#574, #589).
+- **Standalone CR, CRLF, and Unicode line separators are normalized
+  consistently** (#575), while `TJ` kerning-space detection scales with the
+  active font size (#588).
+- **Signature preparation tolerates unreferenced in-use xref entries at byte
+  offset zero** while still rejecting policy references to such entries (#585).
+- **Page annotation arrays accept direct annotation dictionaries** (#590).
+
+## [5.0.1] - 2026-09-04
+
+### Fixed
+
+- **Layout-preserving plaintext extraction restores document reading quality**
+  (#564, #570). `PlainTextExtractor::preserve_layout()` now uses the complete
+  text engine and its scale-relative XY-Cut reading order, retaining
+  `/ActualText`, artifact filtering, font metrics, and error propagation. On
+  the pinned OmniDocBench protocol, global text similarity improves from
+  48.26% in v5.0.0 to 60.01%, above the 55% acceptance threshold, while native
+  reading-order edit distance remains within its 0.25 limit at 0.22639.
+
+### Changed
+
+- **OmniDocBench quality measurements are reproducible** (#565, #568). The
+  versioned gate pins dataset, evaluator, source, extraction configuration, and
+  scored-page population provenance, validates materialized Git LFS objects,
+  supports split-page PDFs, and seals prediction and summary hashes.
+
 ## [5.0.0] - 2026-09-01
 
 ### Added
