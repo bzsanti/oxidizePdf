@@ -80,6 +80,12 @@ jobs:
           qpdf_accepts_classic_and_xref_stream_ocr_revisions
           -- --ignored --exact
 
+      - name: Validate incremental signature appearances
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_540_incremental_signing_test
+          -- --ignored
+
       - name: Validate AES-256 R5 interoperability
         run: >
           cargo test -p oxidize-pdf
