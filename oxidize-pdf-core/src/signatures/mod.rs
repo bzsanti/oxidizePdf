@@ -50,8 +50,9 @@ pub use detection::detect_signature_fields;
 pub use error::{SignatureError, SignatureResult};
 pub(crate) use permissions::{ensure_modification_allowed, IncrementalModification};
 pub use signing::{
-    prepare_incremental_signature, CertificationPermission, FieldLock, PreparedSignature,
-    SignaturePreparationOptions, SignatureRect, SignatureTarget,
+    prepare_incremental_signature, prepare_incremental_signature_with_appearance,
+    CertificationPermission, FieldLock, PreparedSignature, SignatureAppearance,
+    SignaturePreparationOptions, SignatureRect, SignatureTarget, SignatureWatermark,
 };
 pub use types::{ByteRange, SignatureField};
 // FullSignatureValidationResult is defined below in this file
