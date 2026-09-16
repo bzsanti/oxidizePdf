@@ -1572,6 +1572,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "md5",
+ "memchr",
  "num_cpus",
  "p256",
  "p384",

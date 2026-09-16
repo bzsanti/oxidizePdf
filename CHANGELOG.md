@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Changed
+
+- **Lenient PDF loading now uses optimized binary pattern search for xref
+  recovery.** This substantially reduces startup time for documents that need
+  supplementary object-header scanning.
+
 ### Added
 
 - **Custom visible incremental-signature appearances** (#596). Callers can
