@@ -71,6 +71,7 @@ unicode-normalization = "0.1"
 
 # Text processing and validation
 regex = "1.10"
+memchr = "2.7"
 
 # XML parsing for XMP metadata
 quick-xml = { workspace = true }
