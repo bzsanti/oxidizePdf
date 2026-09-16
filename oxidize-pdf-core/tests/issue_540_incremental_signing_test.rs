@@ -1,7 +1,8 @@
 use oxidize_pdf::parser::objects::{PdfDictionary, PdfObject, PdfString};
 use oxidize_pdf::signatures::{
-    prepare_incremental_signature, CertificationPermission, FieldLock, SignaturePreparationOptions,
-    SignatureRect, SignatureTarget,
+    prepare_incremental_signature, prepare_incremental_signature_with_appearance,
+    CertificationPermission, FieldLock, SignatureAppearance, SignaturePreparationOptions,
+    SignatureRect, SignatureTarget, SignatureWatermark,
 };
 use oxidize_pdf::{Document, Page};
 use std::process::Command;
@@ -17,6 +18,102 @@ fn deterministic_cms() -> &'static [u8] {
     // DER ContentInfo wrapping SignedData with deterministic empty sets. It is
     // structurally valid CMS but intentionally carries no trust assertion.
     b"\x30\x23\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x07\x02\xA0\x16\x30\x14\x02\x01\x01\x31\x00\x30\x0B\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x07\x01\x31\x00"
+}
+
+fn custom_appearance() -> SignatureAppearance {
+    SignatureAppearance {
+        signer_name: Some("Santiago Fernández".to_string()),
+        signing_date: Some("2026-09-16".to_string()),
+        text: vec!["Approved by Studio".to_string()],
+        watermark: Some(SignatureWatermark {
+            width: 2,
+            height: 1,
+            rgb: vec![255, 0, 0, 0, 128, 255],
+            opacity: 1.0,
+        }),
+    }
+}
+
+fn openssl_cms_for_digest(directory: &tempfile::TempDir, digest: &[u8]) -> Vec<u8> {
+    let key = directory.path().join("signer-key.pem");
+    let certificate = directory.path().join("signer-cert.pem");
+    let digest_path = directory.path().join("digest.bin");
+    let cms = directory.path().join("signature.der");
+    std::fs::write(&digest_path, digest).unwrap();
+    let output = Command::new("openssl")
+        .args([
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:2048",
+            "-keyout",
+            key.to_str().unwrap(),
+            "-out",
+            certificate.to_str().unwrap(),
+            "-nodes",
+            "-subj",
+            "/CN=oxidize-pdf test signer",
+            "-days",
+            "1",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "generate test certificate: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let output = Command::new("openssl")
+        .args([
+            "cms",
+            "-sign",
+            "-binary",
+            "-in",
+            digest_path.to_str().unwrap(),
+            "-signer",
+            certificate.to_str().unwrap(),
+            "-inkey",
+            key.to_str().unwrap(),
+            "-outform",
+            "DER",
+            "-out",
+            cms.to_str().unwrap(),
+            "-nosmimecap",
+            "-md",
+            "sha256",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "sign prepared byte range: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let verified = directory.path().join("verified-digest.bin");
+    let output = Command::new("openssl")
+        .args([
+            "cms",
+            "-verify",
+            "-binary",
+            "-inform",
+            "DER",
+            "-in",
+            cms.to_str().unwrap(),
+            "-content",
+            digest_path.to_str().unwrap(),
+            "-noverify",
+            "-out",
+            verified.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "verify prepared byte range CMS: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(std::fs::read(verified).unwrap(), digest);
+    std::fs::read(cms).unwrap()
 }
 
 fn classic_with_fields(fields: &[(u32, u16, &str)]) -> Vec<u8> {
@@ -87,6 +184,26 @@ fn hierarchical_field() -> Vec<u8> {
             0,
             "<< /Type /Annot /Subtype /Widget /Parent 7 0 R /Rect [0 0 0 0] /P 3 0 R >>"
                 .to_string(),
+        ),
+    ])
+}
+
+fn rotated_cropped_pdf() -> Vec<u8> {
+    build_classic_objects(vec![
+        (
+            1,
+            0,
+            "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+        ),
+        (
+            2,
+            0,
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+        ),
+        (
+            3,
+            0,
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /CropBox [20 10 280 180] /Rotate 90 >>".to_string(),
         ),
     ])
 }
@@ -315,10 +432,17 @@ fn selects_indirect_existing_fields_with_nonzero_generations_and_rejects_ambigui
             top: 40.0,
         }),
     };
-    let prepared = prepare_incremental_signature(&hierarchical, &options).unwrap();
+    let appearance = SignatureAppearance {
+        text: vec!["Child widget".to_string()],
+        ..SignatureAppearance::default()
+    };
+    let prepared =
+        prepare_incremental_signature_with_appearance(&hierarchical, &options, &appearance)
+            .unwrap();
     let text = String::from_utf8_lossy(prepared.prepared_pdf());
     assert!(text.contains("/AP"));
     assert!(text.contains("/Rect [10 10 100 40]"));
+    assert!(text.contains("(Child widget) Tj"));
 }
 
 #[test]
@@ -354,6 +478,100 @@ fn visible_combined_field_is_replaced_once_with_value_and_appearance() {
 }
 
 #[test]
+fn custom_visible_appearance_embeds_text_and_watermark_before_signing() {
+    let source = classic_with_fields(&[(4, 7, "Existing")]);
+    let mut options = SignaturePreparationOptions::existing("Existing");
+    options.target = SignatureTarget::Existing {
+        field_name: "Existing".to_string(),
+        widget_index: None,
+        rect: Some(SignatureRect {
+            left: 10.0,
+            bottom: 20.0,
+            right: 210.0,
+            top: 90.0,
+        }),
+    };
+    let appearance = custom_appearance();
+    let prepared =
+        prepare_incremental_signature_with_appearance(&source, &options, &appearance).unwrap();
+    let rendered = String::from_utf8_lossy(prepared.prepared_pdf());
+    assert!(rendered.contains("/BaseFont /Helvetica"));
+    assert!(rendered.contains("/Subtype /Image"));
+    assert!(rendered.contains("/Im0 Do"));
+    assert!(rendered.contains("(Santiago Fern\\341ndez) Tj"));
+    assert!(rendered.contains("(2026-09-16) Tj"));
+    assert!(rendered.contains("(Approved by Studio) Tj"));
+    assert!(prepared
+        .bytes_to_digest()
+        .windows(b"Santiago Fern\\341ndez".len())
+        .any(|window| window == b"Santiago Fern\\341ndez"));
+    assert!(prepared.finalize(deterministic_cms()).is_ok());
+}
+
+#[test]
+fn custom_appearance_rejects_missing_geometry_and_malformed_watermarks() {
+    let source = base_pdf(false);
+    let mut options = SignaturePreparationOptions::invisible("Approval");
+    let appearance = SignatureAppearance::default();
+    assert!(prepare_incremental_signature_with_appearance(&source, &options, &appearance).is_err());
+
+    options.target = SignatureTarget::New {
+        field_name: "Approval".to_string(),
+        page_index: 0,
+        rect: Some(SignatureRect {
+            left: 10.0,
+            bottom: 10.0,
+            right: 100.0,
+            top: 40.0,
+        }),
+    };
+    let malformed_watermark = SignatureAppearance {
+        watermark: Some(SignatureWatermark {
+            width: 2,
+            height: 2,
+            rgb: vec![0; 3],
+            opacity: 1.0,
+        }),
+        ..SignatureAppearance::default()
+    };
+    assert!(
+        prepare_incremental_signature_with_appearance(&source, &options, &malformed_watermark)
+            .is_err()
+    );
+
+    let invalid_text = SignatureAppearance {
+        signer_name: Some("東".to_string()),
+        ..SignatureAppearance::default()
+    };
+    assert!(
+        prepare_incremental_signature_with_appearance(&source, &options, &invalid_text).is_err()
+    );
+}
+
+#[test]
+fn custom_appearance_preserves_widget_local_coordinates_on_rotated_cropped_pages() {
+    let source = rotated_cropped_pdf();
+    let mut options = SignaturePreparationOptions::invisible("Rotated");
+    options.target = SignatureTarget::New {
+        field_name: "Rotated".to_string(),
+        page_index: 0,
+        rect: Some(SignatureRect {
+            left: 30.0,
+            bottom: 20.0,
+            right: 150.0,
+            top: 70.0,
+        }),
+    };
+    let appearance = custom_appearance();
+    let prepared =
+        prepare_incremental_signature_with_appearance(&source, &options, &appearance).unwrap();
+    let rendered = String::from_utf8_lossy(prepared.prepared_pdf());
+    assert!(prepared.prepared_pdf().starts_with(&source));
+    assert!(rendered.contains("/Rect [30 20 150 70]"));
+    assert!(rendered.contains("(Santiago Fern\\341ndez) Tj"));
+}
+
+#[test]
 #[ignore = "requires qpdf; exercised by the Ubuntu CI interoperability step"]
 fn qpdf_accepts_finalized_visible_combined_field() {
     let source = classic_with_fields(&[(4, 7, "Existing")]);
@@ -378,13 +596,72 @@ fn qpdf_accepts_finalized_visible_combined_field() {
     std::fs::write(&path, signed).unwrap();
     let output = Command::new("qpdf")
         .arg("--check")
-        .arg(path)
+        .arg(&path)
         .output()
         .unwrap();
     assert!(
         output.status.success(),
         "combined visible signature: {}",
         String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+#[ignore = "requires qpdf, openssl, and pdftoppm; exercised by the Ubuntu CI interoperability step"]
+fn external_tools_render_and_verify_custom_visible_signature_appearance() {
+    let source = rotated_cropped_pdf();
+    let mut options = SignaturePreparationOptions::invisible("Rotated");
+    options.target = SignatureTarget::New {
+        field_name: "Rotated".to_string(),
+        page_index: 0,
+        rect: Some(SignatureRect {
+            left: 30.0,
+            bottom: 20.0,
+            right: 150.0,
+            top: 70.0,
+        }),
+    };
+    let appearance = custom_appearance();
+    let prepared =
+        prepare_incremental_signature_with_appearance(&source, &options, &appearance).unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let cms = openssl_cms_for_digest(&directory, &prepared.bytes_to_digest());
+    let signed = prepared.finalize(&cms).unwrap();
+    let path = directory.path().join("custom-visible-signature.pdf");
+    std::fs::write(&path, signed).unwrap();
+    let output = Command::new("qpdf")
+        .arg("--check")
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "custom visible signature: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let prefix = directory.path().join("rendered");
+    let output = Command::new("pdftoppm")
+        .args(["-f", "1", "-l", "1", "-r", "72", "-cropbox", "-singlefile"])
+        .arg(&path)
+        .arg(&prefix)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "render custom visible signature: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let ppm = std::fs::read(prefix.with_extension("ppm")).unwrap();
+    let pixels = ppm
+        .windows(b"\n255\n".len())
+        .position(|window| window == b"\n255\n")
+        .map(|offset| &ppm[offset + b"\n255\n".len()..])
+        .expect("pdftoppm must emit a PPM header with max value 255");
+    assert!(
+        pixels
+            .chunks_exact(3)
+            .any(|pixel| pixel[0] > 240 && pixel[1] < 15 && pixel[2] < 15),
+        "the rendered rotated/cropped page must contain the opaque red watermark"
     );
 }
 
