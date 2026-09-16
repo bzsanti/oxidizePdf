@@ -8,14 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
-### Added
-
-- **Custom visible incremental-signature appearances** (#596). Callers can
-  provide signer text, signing date, additional text, and a bounded RGB image
-  watermark through `SignatureAppearance`. The generated font, image, and
-  appearance stream are included in the signed incremental revision for both
-  new and existing signature widgets.
-
 ## [5.1.2] - 2026-09-16
 
 ### Fixed

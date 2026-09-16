@@ -5,7 +5,6 @@ use super::{
 };
 use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfStream, PdfString};
 use crate::parser::{PdfDocument, PdfReader};
-use crate::text::{escape_pdf_string_literal, TextEncoding};
 use crate::writer::IncrementalUpdate;
 use std::collections::HashSet;
 use std::io::Cursor;
@@ -15,7 +14,6 @@ const BYTE_RANGE_SENTINEL: i64 = i64::MAX;
 const BYTE_RANGE_WIDTH: usize = 19;
 const MIN_PLACEHOLDER_BYTES: usize = 256;
 const MAX_PLACEHOLDER_BYTES: usize = 16 * 1024 * 1024;
-const MAX_WATERMARK_PIXELS: usize = 16 * 1024 * 1024;
 
 /// Rectangle for a visible signature widget.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -24,34 +22,6 @@ pub struct SignatureRect {
     pub bottom: f64,
     pub right: f64,
     pub top: f64,
-}
-
-/// RGB raster image drawn as a watermark in a visible signature appearance.
-///
-/// `rgb` contains exactly `width * height * 3` bytes in row-major RGB order.
-/// The image is embedded in the signature appearance before the detached
-/// signature's byte range is computed.
-#[derive(Debug, Clone, PartialEq)]
-pub struct SignatureWatermark {
-    pub width: u32,
-    pub height: u32,
-    pub rgb: Vec<u8>,
-    /// Opacity in the inclusive range `0.0..=1.0`.
-    pub opacity: f32,
-}
-
-/// Content for a generated visible signature appearance.
-///
-/// The appearance is rendered in widget-local coordinates. Consequently the
-/// page's crop box and rotation are applied by the PDF viewer together with
-/// the widget annotation, rather than being baked into the artwork.
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct SignatureAppearance {
-    pub signer_name: Option<String>,
-    pub signing_date: Option<String>,
-    /// Additional lines shown below the signer and date.
-    pub text: Vec<String>,
-    pub watermark: Option<SignatureWatermark>,
 }
 
 impl SignatureRect {
@@ -222,28 +192,7 @@ pub fn prepare_incremental_signature(
     base: &[u8],
     options: &SignaturePreparationOptions,
 ) -> SignatureResult<PreparedSignature> {
-    prepare_incremental_signature_inner(base, options, None)
-}
-
-/// Prepare an incremental revision with generated visible signature artwork.
-///
-/// A visible target rectangle is required. The artwork, including its font and
-/// optional image resource, is part of the prepared revision and is therefore
-/// covered by the caller-produced CMS signature.
-pub fn prepare_incremental_signature_with_appearance(
-    base: &[u8],
-    options: &SignaturePreparationOptions,
-    appearance: &SignatureAppearance,
-) -> SignatureResult<PreparedSignature> {
-    prepare_incremental_signature_inner(base, options, Some(appearance))
-}
-
-fn prepare_incremental_signature_inner(
-    base: &[u8],
-    options: &SignaturePreparationOptions,
-    appearance: Option<&SignatureAppearance>,
-) -> SignatureResult<PreparedSignature> {
-    validate_options(options, appearance)?;
+    validate_options(options)?;
     let mut reader =
         PdfReader::new(Cursor::new(base)).map_err(|error| invalid(error.to_string()))?;
     if reader.is_encrypted() {
@@ -256,8 +205,7 @@ fn prepare_incremental_signature_inner(
         .map_err(|error| invalid(error.to_string()))?
         .clone();
     ensure_modification_allowed(&mut reader, &catalog, IncrementalModification::AddSignature)?;
-    let target = &options.target;
-    let target_field_name = match target {
+    let target_field_name = match &options.target {
         SignatureTarget::Existing { field_name, .. } | SignatureTarget::New { field_name, .. } => {
             field_name
         }
@@ -281,7 +229,7 @@ fn prepare_incremental_signature_inner(
     );
     update.replace(signature_id, PdfObject::Dictionary(signature))?;
 
-    match target {
+    match &options.target {
         SignatureTarget::Existing {
             field_name,
             widget_index,
@@ -302,17 +250,13 @@ fn prepare_incremental_signature_inner(
                 let widget = select_widget(&mut reader, field, *widget_index)?;
                 let appearance_id = update.allocate_id()?;
                 let rect = (*rect).ok_or_else(|| invalid("visible widget requires a rectangle"))?;
-                let watermark_id = appearance
-                    .and_then(|appearance| appearance.watermark.as_ref())
-                    .map(|_| update.allocate_id())
-                    .transpose()?;
-                let mut appearance_entry = PdfDictionary::new();
-                appearance_entry.insert("N".to_string(), reference(appearance_id));
+                let mut appearance = PdfDictionary::new();
+                appearance.insert("N".to_string(), reference(appearance_id));
                 if widget == field {
                     // A combined field/widget is one indirect object.  Its value and
                     // appearance must be emitted as one incremental replacement.
                     dictionary.insert("Rect".to_string(), rect.object());
-                    dictionary.insert("AP".to_string(), PdfObject::Dictionary(appearance_entry));
+                    dictionary.insert("AP".to_string(), PdfObject::Dictionary(appearance));
                     update.replace(field, PdfObject::Dictionary(dictionary))?;
                 } else {
                     update.replace(field, PdfObject::Dictionary(dictionary))?;
@@ -323,20 +267,10 @@ fn prepare_incremental_signature_inner(
                         .cloned()
                         .ok_or_else(|| invalid("signature widget is not a dictionary"))?;
                     widget_dictionary.insert("Rect".to_string(), rect.object());
-                    widget_dictionary
-                        .insert("AP".to_string(), PdfObject::Dictionary(appearance_entry));
+                    widget_dictionary.insert("AP".to_string(), PdfObject::Dictionary(appearance));
                     update.replace(widget, PdfObject::Dictionary(widget_dictionary))?;
                 }
-                if let (Some(watermark), Some(watermark_id)) = (
-                    appearance.and_then(|appearance| appearance.watermark.as_ref()),
-                    watermark_id,
-                ) {
-                    update.replace(watermark_id, watermark_object(watermark))?;
-                }
-                update.replace(
-                    appearance_id,
-                    visible_appearance(rect, appearance, watermark_id),
-                )?;
+                update.replace(appearance_id, visible_appearance(rect))?;
             } else if widget_index.is_some() {
                 select_widget(&mut reader, field, *widget_index)?;
                 update.replace(field, PdfObject::Dictionary(dictionary))?;
@@ -358,14 +292,6 @@ fn prepare_incremental_signature_inner(
                 .map_err(|error| invalid(format!("select signature page: {error}")))?;
             let field_id = update.allocate_id()?;
             let appearance_id = rect.map(|_| update.allocate_id()).transpose()?;
-            let watermark_id = if rect.is_some() {
-                appearance
-                    .and_then(|appearance| appearance.watermark.as_ref())
-                    .map(|_| update.allocate_id())
-                    .transpose()?
-            } else {
-                None
-            };
             let mut field = PdfDictionary::new();
             field.insert("Type".to_string(), name("Annot"));
             field.insert("Subtype".to_string(), name("Widget"));
@@ -385,16 +311,7 @@ fn prepare_incremental_signature_inner(
                     ap.insert("N".to_string(), reference(appearance_id));
                     PdfObject::Dictionary(ap)
                 });
-                if let (Some(watermark), Some(watermark_id)) = (
-                    appearance.and_then(|appearance| appearance.watermark.as_ref()),
-                    watermark_id,
-                ) {
-                    update.replace(watermark_id, watermark_object(watermark))?;
-                }
-                update.replace(
-                    appearance_id,
-                    visible_appearance(*rect, appearance, watermark_id),
-                )?;
+                update.replace(appearance_id, visible_appearance(*rect))?;
             }
             update.replace(field_id, PdfObject::Dictionary(field))?;
             append_page_annotation(&mut reader, &mut update, page.obj_ref, &page.dict, field_id)?;
@@ -421,10 +338,7 @@ fn prepare_incremental_signature_inner(
     locate_and_patch_placeholders(prepared, base.len(), options.placeholder_bytes)
 }
 
-fn validate_options(
-    options: &SignaturePreparationOptions,
-    appearance: Option<&SignatureAppearance>,
-) -> SignatureResult<()> {
+fn validate_options(options: &SignaturePreparationOptions) -> SignatureResult<()> {
     if !(MIN_PLACEHOLDER_BYTES..=MAX_PLACEHOLDER_BYTES).contains(&options.placeholder_bytes) {
         return Err(invalid(format!(
             "placeholder_bytes must be between {MIN_PLACEHOLDER_BYTES} and {MAX_PLACEHOLDER_BYTES}"
@@ -457,52 +371,11 @@ fn validate_options(
             "additional signature entry {key:?} is owned by the signing engine"
         )));
     }
-    let rect = match &options.target {
+    let rect = match options.target {
         SignatureTarget::Existing { rect, .. } | SignatureTarget::New { rect, .. } => rect,
     };
     if let Some(rect) = rect {
         rect.validate()?;
-    }
-    if let Some(appearance) = appearance {
-        if rect.is_none() {
-            return Err(invalid(
-                "a custom signature appearance requires a visible target rectangle",
-            ));
-        }
-        for value in appearance
-            .signer_name
-            .iter()
-            .chain(appearance.signing_date.iter())
-            .chain(appearance.text.iter())
-        {
-            if value.is_empty() || TextEncoding::WinAnsiEncoding.encode_strict(value).is_err() {
-                return Err(invalid(
-                    "signature appearance text must be non-empty and representable in WinAnsiEncoding",
-                ));
-            }
-        }
-        if let Some(watermark) = &appearance.watermark {
-            let pixels = (watermark.width as usize)
-                .checked_mul(watermark.height as usize)
-                .ok_or_else(|| invalid("signature watermark dimensions overflow"))?;
-            let bytes = pixels
-                .checked_mul(3)
-                .ok_or_else(|| invalid("signature watermark byte count overflows"))?;
-            if watermark.width == 0
-                || watermark.height == 0
-                || pixels > MAX_WATERMARK_PIXELS
-                || watermark.rgb.len() != bytes
-            {
-                return Err(invalid(
-                    "signature watermark must be a bounded non-empty RGB raster",
-                ));
-            }
-            if !watermark.opacity.is_finite() || !(0.0..=1.0).contains(&watermark.opacity) {
-                return Err(invalid(
-                    "signature watermark opacity must be finite and between zero and one",
-                ));
-            }
-        }
     }
     Ok(())
 }
@@ -968,61 +841,10 @@ fn resolve_object(
     }
 }
 
-fn visible_appearance(
-    rect: SignatureRect,
-    appearance: Option<&SignatureAppearance>,
-    watermark_id: Option<(u32, u16)>,
-) -> PdfObject {
+fn visible_appearance(rect: SignatureRect) -> PdfObject {
     let width = rect.right - rect.left;
     let height = rect.top - rect.bottom;
-    let mut data = format!("q 0 0 {width} {height} re S Q\n");
-    if let Some(appearance) = appearance {
-        if let (Some(watermark), Some(_)) = (&appearance.watermark, watermark_id) {
-            let image_width = width * 0.36;
-            let image_height = height * 0.76;
-            let scale =
-                (image_width / watermark.width as f64).min(image_height / watermark.height as f64);
-            let draw_width = watermark.width as f64 * scale;
-            let draw_height = watermark.height as f64 * scale;
-            let x = width - draw_width - width.min(height) * 0.08;
-            let y = (height - draw_height) / 2.0;
-            data.push_str(&format!(
-                "q /GS1 gs {draw_width} 0 0 {draw_height} {x} {y} cm /Im0 Do Q\n"
-            ));
-        }
-        let text_width = if appearance.watermark.is_some() {
-            width * 0.58
-        } else {
-            width
-        };
-        let margin = (width.min(height) * 0.08).clamp(3.0, 10.0);
-        // Text remains inside the widget even if a caller supplies more lines
-        // than its geometry can show.
-        data.push_str(&format!("q 0 0 {text_width} {height} re W n\n"));
-        let mut lines = Vec::new();
-        if let Some(signer) = &appearance.signer_name {
-            lines.push(signer.as_str());
-        }
-        if let Some(date) = &appearance.signing_date {
-            lines.push(date.as_str());
-        }
-        lines.extend(appearance.text.iter().map(String::as_str));
-        if !lines.is_empty() {
-            let font_size = ((height - 2.0 * margin) / (lines.len() as f64 + 0.5)).clamp(6.0, 12.0);
-            let mut y = height - margin - font_size;
-            for line in lines {
-                if y < margin {
-                    break;
-                }
-                data.push_str(&format!(
-                    "BT /F1 {font_size} Tf 0 g {margin} {y} Td ({}) Tj ET\n",
-                    appearance_text_literal(line)
-                ));
-                y -= font_size * 1.25;
-            }
-        }
-        data.push_str("Q\n");
-    }
+    let data = format!("q 0 0 {width} {height} re S Q\n").into_bytes();
     let mut dictionary = PdfDictionary::new();
     dictionary.insert("Type".to_string(), name("XObject"));
     dictionary.insert("Subtype".to_string(), name("Form"));
@@ -1035,64 +857,14 @@ fn visible_appearance(
             PdfObject::Real(height),
         ])),
     );
-    let mut resources = PdfDictionary::new();
-    if appearance.is_some() {
-        let mut font = PdfDictionary::new();
-        font.insert("Type".to_string(), name("Font"));
-        font.insert("Subtype".to_string(), name("Type1"));
-        font.insert("BaseFont".to_string(), name("Helvetica"));
-        font.insert("Encoding".to_string(), name("WinAnsiEncoding"));
-        let mut fonts = PdfDictionary::new();
-        fonts.insert("F1".to_string(), PdfObject::Dictionary(font));
-        resources.insert("Font".to_string(), PdfObject::Dictionary(fonts));
-    }
-    if let (Some(appearance), Some(watermark_id)) = (appearance, watermark_id) {
-        if appearance.watermark.is_some() {
-            let mut xobjects = PdfDictionary::new();
-            xobjects.insert("Im0".to_string(), reference(watermark_id));
-            resources.insert("XObject".to_string(), PdfObject::Dictionary(xobjects));
-            let mut state = PdfDictionary::new();
-            let opacity = appearance.watermark.as_ref().unwrap().opacity as f64;
-            state.insert("Type".to_string(), name("ExtGState"));
-            state.insert("ca".to_string(), PdfObject::Real(opacity));
-            state.insert("CA".to_string(), PdfObject::Real(opacity));
-            let mut states = PdfDictionary::new();
-            states.insert("GS1".to_string(), PdfObject::Dictionary(state));
-            resources.insert("ExtGState".to_string(), PdfObject::Dictionary(states));
-        }
-    }
-    dictionary.insert("Resources".to_string(), PdfObject::Dictionary(resources));
+    dictionary.insert(
+        "Resources".to_string(),
+        PdfObject::Dictionary(PdfDictionary::new()),
+    );
     PdfObject::Stream(PdfStream {
         dict: dictionary,
-        data: data.into_bytes(),
+        data,
     })
-}
-
-fn watermark_object(watermark: &SignatureWatermark) -> PdfObject {
-    let mut dictionary = PdfDictionary::new();
-    dictionary.insert("Type".to_string(), name("XObject"));
-    dictionary.insert("Subtype".to_string(), name("Image"));
-    dictionary.insert(
-        "Width".to_string(),
-        PdfObject::Integer(watermark.width as i64),
-    );
-    dictionary.insert(
-        "Height".to_string(),
-        PdfObject::Integer(watermark.height as i64),
-    );
-    dictionary.insert("ColorSpace".to_string(), name("DeviceRGB"));
-    dictionary.insert("BitsPerComponent".to_string(), PdfObject::Integer(8));
-    PdfObject::Stream(PdfStream {
-        dict: dictionary,
-        data: watermark.rgb.clone(),
-    })
-}
-
-fn appearance_text_literal(value: &str) -> String {
-    let encoded = TextEncoding::WinAnsiEncoding
-        .encode_strict(value)
-        .expect("appearance text was validated before rendering");
-    escape_pdf_string_literal(&encoded)
 }
 
 fn locate_and_patch_placeholders(
