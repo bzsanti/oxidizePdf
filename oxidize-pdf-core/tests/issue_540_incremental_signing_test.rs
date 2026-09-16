@@ -322,6 +322,73 @@ fn selects_indirect_existing_fields_with_nonzero_generations_and_rejects_ambigui
 }
 
 #[test]
+fn visible_combined_field_is_replaced_once_with_value_and_appearance() {
+    let source = classic_with_fields(&[(4, 7, "Existing")]);
+    let mut options = SignaturePreparationOptions::existing("Existing");
+    options.target = SignatureTarget::Existing {
+        field_name: "Existing".to_string(),
+        widget_index: None,
+        rect: Some(SignatureRect {
+            left: 10.0,
+            bottom: 20.0,
+            right: 110.0,
+            top: 70.0,
+        }),
+    };
+
+    let prepared = prepare_incremental_signature(&source, &options).unwrap();
+    let text = String::from_utf8_lossy(prepared.prepared_pdf());
+    // One occurrence belongs to the source PDF and one to its incremental
+    // revision. Emitting `/V` and `/AP` separately corrupts this update.
+    assert_eq!(
+        prepared
+            .prepared_pdf()
+            .windows(b"4 7 obj".len())
+            .filter(|window| *window == b"4 7 obj")
+            .count(),
+        2
+    );
+    assert!(text.contains("/V "));
+    assert!(text.contains("/AP << /N "));
+    assert!(text.contains("/Rect [10 20 110 70]"));
+}
+
+#[test]
+#[ignore = "requires qpdf; exercised by the Ubuntu CI interoperability step"]
+fn qpdf_accepts_finalized_visible_combined_field() {
+    let source = classic_with_fields(&[(4, 7, "Existing")]);
+    let mut options = SignaturePreparationOptions::existing("Existing");
+    options.target = SignatureTarget::Existing {
+        field_name: "Existing".to_string(),
+        widget_index: None,
+        rect: Some(SignatureRect {
+            left: 10.0,
+            bottom: 20.0,
+            right: 110.0,
+            top: 70.0,
+        }),
+    };
+    let signed = prepare_incremental_signature(&source, &options)
+        .unwrap()
+        .finalize(deterministic_cms())
+        .unwrap();
+
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("combined-visible-signature.pdf");
+    std::fs::write(&path, signed).unwrap();
+    let output = Command::new("qpdf")
+        .arg("--check")
+        .arg(path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "combined visible signature: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 #[ignore = "requires qpdf; exercised by the Ubuntu CI interoperability step"]
 fn qpdf_accepts_finalized_signatures_for_both_xref_formats() {
     for (name, xref_stream) in [("classic", false), ("xref-stream", true)] {

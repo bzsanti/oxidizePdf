@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.1.2] - 2026-09-16
+
+### Fixed
+
+- **Preparing a visible signature on a combined field/widget now emits one
+  atomic incremental replacement** (#596, #597). This preserves the field
+  value, appearance, and rectangle together instead of producing a malformed
+  incremental revision.
+
 ## [5.1.1] - 2026-09-12
 
 ### Fixed
