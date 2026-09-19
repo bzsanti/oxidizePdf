@@ -2,7 +2,7 @@
 
 ## Premortem de aceptación masiva
 
-- Estado: `[-]` en curso — preparada para integrar en release
+- Estado: `[-]` en curso — validada para integrar primero en `develop`
 - Prioridad: `P1`
 - Responsable: mantenimiento/producto del repositorio (`bzsanti`)
 - Issue: #603 — `docs(adoption): reconcile public claims and establish audited
@@ -15,14 +15,16 @@
   cada claim rastreado tiene fuente, fecha, versión/commit, evidencia y límite;
   el contrato exige eventos auditables, privacidad, reglas deterministas y
   experimentos completos, y `oxidize-stats` lo valida en su propio árbol.
-- Última validación: el 2026-09-19 `git diff --check`, formato y Clippy pasan;
-  `cargo test --locked -p oxidize-pdf --test public_claims_documentation_test`
-  pasó (1/1). La prueba fallaría al retirar una capacidad o límite compartido;
-  el contrato exige log append-only con hash encadenado, y el QR no encontró
-  hallazgos de seguridad.
-- Siguiente acción concreta: el mantenedor integra este cambio con `main`,
-  prepara `v5.1.3` y ejecuta el checklist de release; la release entrega el
-  contrato a `oxidize-stats` para su materialización.
+- Última validación: el 2026-09-19 `cargo test --workspace` pasó por completo
+  (incluidos corpus T1--T6 y 216 doctests), `cargo clippy --workspace
+  --all-targets -- -D warnings` pasó y `cargo package --locked -p
+  oxidize-pdf --allow-dirty --no-verify` generó el paquete `5.1.3`. La prueba
+  documental específica pasó (1/1); fallaría al retirar una capacidad o límite
+  compartido. El contrato exige log append-only con hash encadenado, y el QR no
+  encontró hallazgos de seguridad.
+- Siguiente acción concreta: integrar `release/v5.1.3` con `develop` mediante
+  PR y CI verde, y promover el mismo commit a `main` para etiquetar `v5.1.3`;
+  la release entrega el contrato a `oxidize-stats` para su materialización.
 - Restricciones de seguridad o arquitectura: no iniciar trabajo correctivo,
   recalibrar métricas ni usar salidas probabilísticas como evidencia de calidad
   hasta que existan indicadores observados y una calibración aprobada.
