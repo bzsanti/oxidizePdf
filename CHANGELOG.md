@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.1.3] - 2026-09-19
+
 ### Changed
 
 - **Lenient PDF loading now uses optimized binary pattern search for xref

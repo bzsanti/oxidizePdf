@@ -21,7 +21,7 @@ these fields:
   "event_id": "uuid",
   "source": "public-repository|crates.io|consented-survey",
   "segment": "rust-backend-rag",
-  "version": "5.1.1",
+  "version": "5.1.3",
   "occurred_at": "2026-09-19T00:00:00Z",
   "pseudonymous_id": "rotating-hmac-or-equivalent",
   "stage": "quickstart|prototype|production|upgrade",
