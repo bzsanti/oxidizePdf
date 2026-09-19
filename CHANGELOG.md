@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Lenient PDF loading now uses optimized binary pattern search for xref
   recovery.** This substantially reduces startup time for documents that need
   supplementary object-header scanning.
+- **Public capability claims are auditable and internally consistent** (#603).
+  The PDF/A and signature claims now link to versioned evidence and explicit
+  limits; the adoption-monitoring contract defines privacy, deterministic
+  decision and append-only audit requirements for `oxidize-stats`.
+
+### Fixed
+
+- **Text extraction preserves word boundaries across narrow font changes and
+  Form XObject boundaries** (#602). This prevents differential word fusions
+  without weakening the committed T3 baseline.
 
 ### Added
 
