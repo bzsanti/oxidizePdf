@@ -19,9 +19,9 @@
   (incluidos corpus T1--T6 y 216 doctests), `cargo clippy --workspace
   --all-targets -- -D warnings` pasó y `cargo package --locked -p
   oxidize-pdf --allow-dirty --no-verify` generó el paquete `5.1.3`. La prueba
-  documental específica pasó (1/1); fallaría al retirar una capacidad o límite
-  compartido. El contrato exige log append-only con hash encadenado, y el QR no
-  encontró hallazgos de seguridad.
+  documental específica pasó (1/1), también tras normalizar CRLF en Windows;
+  fallaría al retirar una capacidad o límite compartido. El contrato exige log
+  append-only con hash encadenado, y el QR no encontró hallazgos de seguridad.
 - Siguiente acción concreta: integrar `release/v5.1.3` con `develop` mediante
   PR y CI verde, y promover el mismo commit a `main` para etiquetar `v5.1.3`;
   la release entrega el contrato a `oxidize-stats` para su materialización.
