@@ -20,6 +20,47 @@ fn deterministic_cms() -> &'static [u8] {
     b"\x30\x23\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x07\x02\xA0\x16\x30\x14\x02\x01\x01\x31\x00\x30\x0B\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x07\x01\x31\x00"
 }
 
+#[test]
+fn prepared_slots_respect_certification_and_field_locks() {
+    use oxidize_pdf::signatures::{
+        complete_signature_slot, create_signature_slot, remove_signature_slot,
+    };
+    let rectangle = SignatureRect {
+        left: 20.0,
+        bottom: 20.0,
+        right: 220.0,
+        top: 120.0,
+    };
+    let source =
+        create_signature_slot(&base_pdf(false), "prepared", 0, rectangle, "metadata").unwrap();
+    let strokes = vec![vec![[0.1, 0.2], [0.9, 0.7]]];
+    for permission in [
+        CertificationPermission::NoChanges,
+        CertificationPermission::FormFillAndSign,
+    ] {
+        let mut options = SignaturePreparationOptions::invisible("certification");
+        options.certification = Some(permission);
+        let signed = prepare_incremental_signature(&source, &options)
+            .unwrap()
+            .finalize(deterministic_cms())
+            .unwrap();
+        assert!(create_signature_slot(&signed, "new", 0, rectangle, "metadata").is_err());
+        assert!(remove_signature_slot(&signed, "prepared").is_err());
+        assert_eq!(
+            complete_signature_slot(&signed, "prepared", &strokes, true).is_ok(),
+            permission == CertificationPermission::FormFillAndSign
+        );
+    }
+    let mut options = SignaturePreparationOptions::invisible("lock");
+    options.field_lock = Some(FieldLock::Include(vec!["prepared".into()]));
+    let signed = prepare_incremental_signature(&source, &options)
+        .unwrap()
+        .finalize(deterministic_cms())
+        .unwrap();
+    assert!(complete_signature_slot(&signed, "prepared", &strokes, true).is_err());
+    assert!(remove_signature_slot(&signed, "prepared").is_err());
+}
+
 fn custom_appearance() -> SignatureAppearance {
     SignatureAppearance {
         signer_name: Some("Santiago Fernández".to_string()),

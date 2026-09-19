@@ -421,9 +421,8 @@ mod tests {
         let custom = Color::rgb(0.5, 0.5, 0.5);
         let gray = Color::gray(0.75);
 
-        // These should not panic
-        assert!(format!("{:?}", red).contains("Color"));
-        assert!(format!("{:?}", custom).contains("Color"));
-        assert!(format!("{:?}", gray).contains("Color"));
+        assert_eq!(red, Color::Rgb(1.0, 0.0, 0.0));
+        assert_eq!(custom, Color::Rgb(0.5, 0.5, 0.5));
+        assert_eq!(gray, Color::Gray(0.75));
     }
 }

@@ -31,7 +31,12 @@ mod cms;
 mod detection;
 mod error;
 mod permissions;
+mod preparation;
 mod signing;
+pub use preparation::{
+    complete_signature_slot, create_signature_slot, draw_signature_slot, list_signature_slots,
+    read_signature_slot, remove_signature_slot, SignatureSlot,
+};
 mod types;
 mod verification;
 
