@@ -2,7 +2,7 @@
 
 ## Premortem de aceptación masiva
 
-- Estado: `[-]` en curso — validada para integrar primero en `develop`
+- Estado: `[-]` en curso — integrada en `develop`, pendiente de promoción a `main`
 - Prioridad: `P1`
 - Responsable: mantenimiento/producto del repositorio (`bzsanti`)
 - Issue: #603 — `docs(adoption): reconcile public claims and establish audited
@@ -22,9 +22,9 @@
   documental específica pasó (1/1), también tras normalizar CRLF en Windows;
   fallaría al retirar una capacidad o límite compartido. El contrato exige log
   append-only con hash encadenado, y el QR no encontró hallazgos de seguridad.
-- Siguiente acción concreta: integrar `release/v5.1.3` con `develop` mediante
-  PR y CI verde, y promover el mismo commit a `main` para etiquetar `v5.1.3`;
-  la release entrega el contrato a `oxidize-stats` para su materialización.
+- Siguiente acción concreta: completar CI verde del PR #605 hacia `main`,
+  etiquetar desde su merge `v5.1.3` y verificar la publicación; la release
+  entrega el contrato a `oxidize-stats` para su materialización.
 - Restricciones de seguridad o arquitectura: no iniciar trabajo correctivo,
   recalibrar métricas ni usar salidas probabilísticas como evidencia de calidad
   hasta que existan indicadores observados y una calibración aprobada.
