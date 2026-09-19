@@ -2,7 +2,11 @@
 
 ## 🎯 Where oxidize-pdf Excels
 
-This document provides honest guidance on when to choose oxidize-pdf over alternatives, with real benchmarks and examples.
+This document provides guidance on when to choose oxidize-pdf over alternatives.
+Capability claims are governed by [`docs/CLAIMS.md`](CLAIMS.md); that inventory
+records the source, checked date, version and limitation for each public claim.
+Historical benchmark figures below are not comparative evidence unless their
+protocol and artefacts are linked from that inventory.
 
 ## ✅ Perfect Use Cases
 
@@ -129,7 +133,8 @@ async fn download_report() -> impl IntoResponse {
 
 ### PDF Parsing/Modification
 
-**Current State**: 60% compliance means basic parsing works
+**Current State**: parsing and basic modification are supported; complex forms,
+JavaScript and lossless round trips remain outside the supported workflow.
 
 **Limitations**:
 - Complex forms may not parse correctly
@@ -140,11 +145,15 @@ async fn download_report() -> impl IntoResponse {
 
 ### Enterprise Document Management
 
-**Current State**: No enterprise features
+**Current State**: PDF/A conformance validation, signature detection, PKCS#7
+verification, certificate validation and an incremental-signature preparation
+API are available. This is not a claim of end-to-end archival, PDF/UA or
+managed enterprise support.
 
-**Missing**:
-- PDF/A compliance
-- Digital signatures (crypto)
+**Not provided as an enterprise service**:
+- PDF/A authoring or certification
+- Managed-key, certificate-issuing or signing-service workflows (the caller
+  supplies the external signer for the signature-preparation API)
 - Section 508 accessibility
 - Phone support
 
@@ -152,9 +161,10 @@ async fn download_report() -> impl IntoResponse {
 
 ## ❌ Not Recommended Use Cases
 
-### 1. PDF/A Archival Requirements
+### 1. PDF/A Authoring or Certification Requirements
 
-**Why not**: PDF/A compliance not implemented
+**Why not**: oxidize-pdf validates PDF/A conformance; it does not promise to
+author, remediate or certify archival PDFs.
 
 **Use instead**: PDFSharp 6.2 (has PDF/A), iText
 
@@ -215,7 +225,8 @@ async fn download_report() -> impl IntoResponse {
 | Serverless functions | ✅ YES | - |
 | Simple PDF generation | ✅ YES | - |
 | Basic PDF operations | ✅ YES | - |
-| PDF/A compliance | ❌ NO | PDFSharp, iText |
+| PDF/A validation | ✅ YES, validation only | — |
+| PDF/A authoring/certification | ❌ NO | PDFSharp, iText |
 | Complex forms | ❌ NO | iText, Aspose |
 | .NET application | ❌ NO (yet) | PDFSharp |
 | Enterprise support | ❌ NO | iText, Aspose |
@@ -327,7 +338,7 @@ Yearly time saved: 54 hours
 - Rust integration
 
 **Choose alternatives when you need**:
-- PDF/A compliance
+- PDF/A authoring, remediation or certification
 - Complex forms with JavaScript
 - Enterprise support
 - .NET native API (for now)

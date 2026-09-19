@@ -7,7 +7,7 @@
 //!
 //! - **Detection**: Find signature fields in PDF documents
 //! - **Parsing**: Extract signature dictionaries and byte ranges
-//! - **Validation** (future): Verify cryptographic signatures
+//! - **Validation**: Verify cryptographic signatures
 //!
 //! # Example
 //!

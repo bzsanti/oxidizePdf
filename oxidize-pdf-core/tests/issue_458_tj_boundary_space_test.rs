@@ -29,7 +29,12 @@ use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 mod synthetic_pdf;
 
 fn extract(content: &str) -> String {
-    let bytes = synthetic_pdf::build_pdf_with_content_stream(content.as_bytes());
+    extract_bytes(synthetic_pdf::build_pdf_with_content_stream(
+        content.as_bytes(),
+    ))
+}
+
+fn extract_bytes(bytes: Vec<u8>) -> String {
     let doc = PdfReader::new_with_options(std::io::Cursor::new(bytes), ParseOptions::lenient())
         .expect("synthetic PDF must parse")
         .into_document();
@@ -179,6 +184,51 @@ fn a_gap_below_the_threshold_leaves_the_runs_welded() {
         text.contains("alphabeta"),
         "half an em is inside the range where a producer just repositions \
          mid-word, so it must not split: {text:?}"
+    );
+}
+
+/// Inline code or emphasis is often emitted in a separate font immediately
+/// before prose. The QMF corpus sample uses a 0.333em gap for this boundary:
+/// it is too narrow for the conservative same-font TJ gate, but a font change
+/// makes it evidence of a word boundary rather than an intra-word reposition.
+#[test]
+fn a_narrow_font_change_boundary_becomes_a_space() {
+    let text = extract(&font_change_runs(0.35));
+    assert_eq!(
+        text, "alpha beta",
+        "a 0.35em gap after a font switch must separate inline styling from prose: {text:?}"
+    );
+}
+
+#[test]
+fn a_subthreshold_font_change_boundary_stays_welded() {
+    let text = extract(&font_change_runs(0.25));
+    assert_eq!(
+        text, "alphabeta",
+        "a 0.25em font-change residue is not a word boundary: {text:?}"
+    );
+}
+
+fn font_change_runs(gap_em: f64) -> String {
+    let first_advance = 24.45; // `alpha` in 10pt Helvetica.
+    let second_x = 100.0 + first_advance + gap_em * 10.0;
+    format!(
+        "BT\n/F1 10 Tf\n1 0 0 1 100 700 Tm\n(alpha) Tj\n\
+         /F2 10 Tf\n1 0 0 1 {second_x} 700 Tm\n[(beta)] TJ\nET"
+    )
+}
+
+/// The same decision must survive a Form XObject recursion. The form's F2
+/// run is the actual predecessor of the page-level F2 TJ; treating it as a
+/// font change would incorrectly split this 0.5em residue.
+#[test]
+fn form_xobject_preserves_the_last_shown_font_for_tj_boundaries() {
+    let page = b"/Fm Do\nBT\n/F2 10 Tf\n1 0 0 1 129.45 700 Tm\n[(beta)] TJ\nET";
+    let form = b"BT\n/F2 10 Tf\n1 0 0 1 100 700 Tm\n(alpha) Tj\nET";
+    let text = extract_bytes(synthetic_pdf::build_pdf_with_form_xobject(page, form));
+    assert_eq!(
+        text, "alphabeta",
+        "a Form XObject must carry its last font into the next TJ boundary: {text:?}"
     );
 }
 
