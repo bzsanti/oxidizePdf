@@ -2,7 +2,8 @@
 
 ## Premortem de aceptación masiva
 
-- Estado: `[-]` en curso — validada para integrar primero en `develop`
+- Estado: `[-]` en curso — promovida a `main`; release cancelada por el usuario
+  para incorporar #606 antes de publicar `v5.1.3`.
 - Prioridad: `P1`
 - Responsable: mantenimiento/producto del repositorio (`bzsanti`)
 - Issue: #603 — `docs(adoption): reconcile public claims and establish audited
@@ -22,12 +23,120 @@
   documental específica pasó (1/1), también tras normalizar CRLF en Windows;
   fallaría al retirar una capacidad o límite compartido. El contrato exige log
   append-only con hash encadenado, y el QR no encontró hallazgos de seguridad.
-- Siguiente acción concreta: integrar `release/v5.1.3` con `develop` mediante
-  PR y CI verde, y promover el mismo commit a `main` para etiquetar `v5.1.3`;
-  la release entrega el contrato a `oxidize-stats` para su materialización.
+- Handoff 2026-09-19: #604 se fusionó en `develop` como `0311883` tras CI
+  verde. El PR #605 hacia `main` está abierto con `6aa97a8`, que reconcilia los
+  cuatro conflictos de metadatos de versión conservando `5.1.3`; su CI
+  multiplataforma, interoperabilidad y T0/T1 seguía en curso al cerrar sesión.
+- Siguiente acción concreta: resolver y validar #606 antes de preparar
+  una nueva promoción y etiqueta `v5.1.3`; `oxidize-stats` debe después
+  materializar y validar el contrato.
+- Revisión 2026-09-20: GitHub confirma #603 abierta y PR #605 abierto,
+  fusionable y con CI verde en `6aa97a8` (Linux/Windows/macOS, MSRV,
+  SemVer, ejemplos, T0/T1 e interoperabilidad). Pasan 27 pruebas focalizadas,
+  las 3 pruebas externas de firmas, formato y Clippy con warnings denegados.
+  Kripteia: 90/100 en 211 tests de los archivos Rust cambiados, sin hallazgos
+  de seguridad. El análisis general dio 94/100 en 9.758 tests, también sin
+  hallazgos de seguridad. Informe: `docs/reports/2026-09-20-pr-605-review.md`.
+- Release 2026-09-20: #605 fusionado como `b3c55bc3ded51f0b0a06cddb86fd28f34a82ac07`;
+  su árbol coincide con el HEAD revisado. CI, corpus e interoperabilidad del
+  merge pasan. Etiqueta anotada `v5.1.3` publicada sobre ese merge;
+  Release `35508177202` superó condiciones y CI.
+- Cancelación 2026-09-20 solicitada por el usuario: workflow `35508177202`
+  confirmado `completed/cancelled` durante `Run tests`. Los pasos de GitHub
+  Release y crates.io quedaron `skipped`; `gh release view v5.1.3` devuelve
+  `release not found`. Se retiraron las etiquetas remota y local `v5.1.3`.
+  #605 permanece fusionado; no se revirtió código ni se alteraron los cambios
+  locales preexistentes. No reanudar la publicación antes de integrar #606.
 - Restricciones de seguridad o arquitectura: no iniciar trabajo correctivo,
   recalibrar métricas ni usar salidas probabilísticas como evidencia de calidad
   hasta que existan indicadores observados y una calibración aprobada.
+- Cierre de sesión: `cargo-sweep 0.8.0` previsualizó y limpió 2,95 GiB de
+  artefactos de `target/` con más de cinco días mediante `cargo sweep --time 5
+  /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf`. Los diez elementos no
+  rastreados del árbol se preservan: son cambios preexistentes o de propiedad
+  incierta.
+
+## Issue #606 — ajuste de apariencias de firma antes de 5.1.3
+
+- Estado: `[-]` implementación local validada — hallazgo del QR corregido;
+  integración en curso desde `fix/issue-606-signature-layout`.
+- Prioridad: `P1`
+- Responsable: Codex / mantenimiento (`bzsanti`).
+- Issue: #606 — fix(signatures): render logo behind text and fit visible
+  signature text in both dimensions — https://github.com/bzsanti/oxidizePdf/issues/606
+- Alcance: logo centrado detrás del texto con proporción y opacidad conservadas;
+  texto con todo el ancho disponible, saltos de línea y ajuste en ambas
+  dimensiones; cálculo compartido entre validación y generación.
+- Criterio de cierre verificable: regresiones con/sin logo, nombres largos,
+  varias líneas y rectángulos insuficientes; error explícito cuando no cabe
+  a tamaño mínimo, sin omisiones; apariencia cubierta por la firma.
+- Implementación 2026-09-20: `SignatureAppearance::layout(rect)` expone las
+  líneas, tamaño, margen, primera línea base e interlineado utilizados por el
+  generador. Ajusta Helvetica entre 12 y 6 puntos usando sus métricas, conserva
+  el contenido y saltos explícitos, y rechaza el texto que no cabe antes de
+  acceder al PDF o invocar al firmante. Logo centrado detrás del texto, sin
+  reservar columnas; mantiene proporción y opacidad. Changelog actualizado.
+- Última validación 2026-09-20: 7 regresiones nuevas y 10 pruebas existentes
+  de firmas pasan; 3 pruebas externas con qpdf/OpenSSL/pdftoppm pasan; la
+  finalización conserva los bytes firmados de la apariencia. Pasan 6.789
+  pruebas de biblioteca (3 ignoradas), el doctest de la API pública, formato,
+  `git diff --check` y Clippy `--all-targets -- -D warnings`.
+- QR 2026-09-20: Kripteia 92/100 en 34 tests de los cuatro archivos Rust
+  afectados; nuevas regresiones 100/100; Security sin hallazgos. Se repitieron
+  20 tests focalizados incluyendo interoperabilidad, formato y Clippy: pasan.
+  La inspección confirmó que `measure_char` clona la tabla completa por
+  carácter en el nuevo preflight. Informe:
+  `docs/reports/2026-09-20-issue-606-quality-review.md`.
+- Corrección del QR 2026-09-20: el preflight obtiene una referencia estática
+  a Helvetica una sola vez y usa `char_width_unicode`, sin clones por carácter.
+  Pasan las 20 pruebas focalizadas (incluida interoperabilidad y anchuras de
+  `W`, `i` y texto acentuado), formato, `git diff --check` y Clippy
+  `--all-targets -- -D warnings`. Kripteia repetido: 92/100, nuevas regresiones
+  100/100; Security sin hallazgos. Hallazgo 1 cerrado en el informe del QR.
+- Siguiente acción concreta: abrir PR hacia `develop`, validar su CI y fusionar;
+  después preparar el PR de promoción hacia `main`. Mantener la issue abierta
+  hasta la integración. Por petición del usuario, la release sigue pausada
+  hasta una instrucción posterior.
+- Restricciones: preservar los cambios locales; no volver a publicar el commit
+  `b3c55bc` como 5.1.3 sin integrar esta corrección.
+
+## Restaurar historial del changelog de 5.1.2
+
+- Estado: `[!]` bloqueada — falta issue abierta aplicable.
+- Prioridad: `P2`
+- Responsable: mantenimiento (`bzsanti`), responsable de crear la issue.
+- Issue: pendiente; ninguna de las issues abiertas consultadas el 2026-09-20
+  cubre la pérdida del historial de releases.
+- Hallazgo: `CHANGELOG.md:37` salta de 5.1.3 a 5.1.1 y elimina la entrada
+  de 5.1.2 publicada el 2026-09-16; el cambio no afecta al código distribuido.
+- Criterio de cierre verificable: restaurar la sección 5.1.2 y su corrección
+  de widgets combinados conservando íntegra la sección 5.1.3.
+- Última validación: diff de #605 y `gh release view v5.1.2` confirman
+  la omisión y la publicación, respectivamente.
+- Dependencia externa: mantenimiento debe crear o vincular una issue abierta.
+- Criterio de desbloqueo: issue específica confirmada abierta en GitHub.
+- Siguiente acción concreta: crear/vincular la issue y después restaurar
+  la entrada histórica desde `v5.1.2:CHANGELOG.md`.
+- Restricciones: no iniciar corrección bajo esta entrada sin la issue;
+  no recalibrar métricas. No bloquea la publicación del código 5.1.3.
+
+## Reforzar dos aserciones preexistentes de xref
+
+- Estado: `[!]` bloqueada — falta issue abierta aplicable.
+- Prioridad: `P2`
+- Responsable: mantenimiento (`bzsanti`), responsable de crear la issue.
+- Issue: pendiente; ninguna issue abierta consultada cubre estas aserciones.
+- Hallazgo: `oxidize-pdf-core/src/parser/xref.rs:3184` y `:3318` aceptan
+  tanto `Ok` como `Err`; no detectan cambios del resultado del parser.
+- Criterio de cierre verificable: comprobar el resultado contractual y sus
+  datos/error; una mutación que invierta el resultado debe hacer fallar el test.
+- Última validación: advertencias Kripteia contrastadas con el código;
+  las dos aserciones existían antes de #605.
+- Dependencia externa: mantenimiento debe crear o vincular una issue abierta.
+- Criterio de desbloqueo: issue específica confirmada abierta en GitHub.
+- Siguiente acción concreta: crear/vincular issue y sustituir las tautologías
+  por comprobaciones del resultado esperado de cada fixture.
+- Restricciones: no corregir ni recalibrar métricas sin issue vinculada.
 
 ## T3 differential-fusion diagnosis
 
