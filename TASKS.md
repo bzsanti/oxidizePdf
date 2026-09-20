@@ -59,7 +59,7 @@
 ## Issue #606 — ajuste de apariencias de firma antes de 5.1.3
 
 - Estado: `[-]` implementación local validada — hallazgo del QR corregido;
-  integración en curso desde `fix/issue-606-signature-layout`.
+  integrada en `develop` mediante #607; pendiente de promoción a `main`.
 - Prioridad: `P1`
 - Responsable: Codex / mantenimiento (`bzsanti`).
 - Issue: #606 — fix(signatures): render logo behind text and fit visible
@@ -93,12 +93,44 @@
   `W`, `i` y texto acentuado), formato, `git diff --check` y Clippy
   `--all-targets -- -D warnings`. Kripteia repetido: 92/100, nuevas regresiones
   100/100; Security sin hallazgos. Hallazgo 1 cerrado en el informe del QR.
-- Siguiente acción concreta: abrir PR hacia `develop`, validar su CI y fusionar;
-  después preparar el PR de promoción hacia `main`. Mantener la issue abierta
+- Integración: commit `34f3be8` publicado en `fix/issue-606-signature-layout`;
+  PR #607 — https://github.com/bzsanti/oxidizePdf/pull/607. Hooks de commit:
+  formato, Clippy, build y 6.789 tests de biblioteca pasan (3 ignorados).
+- CI de #607: primer intento macOS falló en el test preexistente
+  `test_forms_memory_integration` (indicador 205 → 2000), ajeno a #606.
+  Se solicitó repetir únicamente el job `106104724188` del run `35520915224`;
+  no se modificó el test ni se relajaron gates.
+- Resultado final de CI: Linux, Windows y macOS pasan; también MSRV, SemVer,
+  ejemplos, corpus T0/T1 e interoperabilidad. La repetición macOS terminó
+  correctamente en el job `106108205113` (7m14s).
+- #607 fusionado en `develop` como `7115feee6352e678ab7b33c1630a5727f439296f`.
+  Rama de promoción: `release/v5.1.3-606`, creada desde ese merge.
+- Siguiente acción concreta: abrir y validar el PR de promoción hacia `main`.
+  Mantener la issue abierta
   hasta la integración. Por petición del usuario, la release sigue pausada
   hasta una instrucción posterior.
 - Restricciones: preservar los cambios locales; no volver a publicar el commit
   `b3c55bc` como 5.1.3 sin integrar esta corrección.
+
+## Indicador temporal inestable en el test de memoria de formularios
+
+- Estado: `[!]` bloqueada — falta issue abierta aplicable.
+- Prioridad: `P2`
+- Responsable: mantenimiento (`bzsanti`), responsable de crear la issue.
+- Issue: pendiente; consulta de issues abiertas no encontró una aplicable.
+- Hallazgo: `forms_cross_module_integration_test.rs:915` cuenta asignaciones
+  durante 10 ms, no memoria; `:512` trata su variación como crecimiento de memoria.
+- Última validación: CI macOS de #607, run `35520915224`, job `106104724188`,
+  falló con 205 → 2000 (crecimiento 1795); código y log confirman la dependencia
+  del tiempo. Archivo sin cambios en #606.
+- Criterio de cierre verificable: prueba con medición/propiedad de memoria
+  real y determinista, estable ante variaciones de carga del runner.
+- Dependencia externa: mantenimiento debe crear o vincular una issue abierta.
+- Criterio de desbloqueo: issue específica confirmada abierta en GitHub.
+- Siguiente acción concreta: crear/vincular la issue y sustituir el indicador
+  temporal por una comprobación de memoria válida.
+- Restricciones: no corregir ni relajar el gate sin issue; repetir el job
+  conserva el test y su configuración originales.
 
 ## Restaurar historial del changelog de 5.1.2
 
