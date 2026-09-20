@@ -526,6 +526,10 @@ struct OpRunState {
     at_text_object_start: bool,
     last_x: f64,
     last_y: f64,
+    /// Font that drew the preceding glyph run. This travels through Form
+    /// XObject recursion because the next page-level run is compared with the
+    /// form's final pen position (issue #602).
+    last_shown_font_name: Option<String>,
     extracted_text: String,
     fragments: Vec<TextFragment>,
     /// Set once the per-page byte budget (`max_extracted_bytes`) has cut text
@@ -1000,6 +1004,19 @@ impl TextExtractor {
     /// the active text matrix, CTM, and horizontal text scale so both sides of
     /// the comparison use page-space units (issue #586).
     fn tj_boundary_space_gap_threshold(&self, state: &TextState) -> f64 {
+        self.tj_space_gap_threshold(state, TJ_BOUNDARY_SPACE_EM)
+    }
+
+    /// A font switch between adjacent show-text operators is evidence that a
+    /// short gap separates an inline styled token from prose, rather than
+    /// splitting one word. Keep this below the ordinary boundary threshold so
+    /// documents such as the QMF manual can retain its 0.333em code/prose
+    /// spaces, while unchanged-font runs keep the conservative 0.7em gate.
+    fn tj_font_change_space_gap_threshold(&self, state: &TextState) -> f64 {
+        self.tj_space_gap_threshold(state, TJ_FONT_CHANGE_BOUNDARY_SPACE_EM)
+    }
+
+    fn tj_space_gap_threshold(&self, state: &TextState, em: f64) -> f64 {
         let (x_scale, _) = combined_text_scale(state);
         let x_scale = if x_scale.is_finite() && x_scale > f64::EPSILON {
             x_scale
@@ -1011,7 +1028,7 @@ impl TextExtractor {
         } else {
             1.0
         };
-        TJ_BOUNDARY_SPACE_EM * state.font_size.abs() * x_scale * horizontal_scale
+        em * state.font_size.abs() * x_scale * horizontal_scale
     }
 
     /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
@@ -1224,6 +1241,7 @@ impl TextExtractor {
             at_text_object_start: false,
             last_x,
             last_y,
+            last_shown_font_name: None,
             extracted_text,
             fragments,
             truncated: false,
@@ -1443,13 +1461,13 @@ impl TextExtractor {
             mut at_text_object_start,
             mut last_x,
             mut last_y,
+            mut last_shown_font_name,
             mut extracted_text,
             mut fragments,
             mut truncated,
             mut line_groups,
             mut cur_group,
         } = run;
-
         let page_properties: Option<&crate::parser::objects::PdfDictionary> =
             resources.and_then(|res| match res.get("Properties") {
                 Some(crate::parser::objects::PdfObject::Dictionary(d)) => Some(d),
@@ -1673,6 +1691,7 @@ impl TextExtractor {
                         // pen point (folds in Tz and CTM scale, issue #386; a
                         // full point so rotated baselines advance y too, #443).
                         (last_x, last_y) = advance_pen(&mut state, text_width);
+                        last_shown_font_name = state.font_name.clone();
                         at_text_object_start = false;
                     }
                 }
@@ -1766,8 +1785,15 @@ impl TextExtractor {
                                         // accurate as the font widths, so a
                                         // producer that draws one word as several
                                         // positioned runs must not be split.
+                                        let font_changed = last_shown_font_name.as_deref()
+                                            != state.font_name.as_deref();
+                                        let boundary_threshold = if font_changed {
+                                            self.tj_font_change_space_gap_threshold(&state)
+                                        } else {
+                                            self.tj_boundary_space_gap_threshold(&state)
+                                        };
                                         let boundary_space = at_array_start
-                                            && dx > self.tj_boundary_space_gap_threshold(&state)
+                                            && dx > boundary_threshold
                                             && !extracted_text.ends_with(' ');
                                         let separator = if extracted_text.is_empty() {
                                             None
@@ -1861,6 +1887,7 @@ impl TextExtractor {
                                     // (issue #381: a stale `last_y` dropped newlines;
                                     // issue #386: the pen must fold in Tz/CTM scale).
                                     (last_x, last_y) = advance_pen(&mut state, text_width);
+                                    last_shown_font_name = state.font_name.clone();
                                     at_array_start = false;
                                     at_text_object_start = false;
                                 }
@@ -2457,6 +2484,7 @@ impl TextExtractor {
                                 at_text_object_start,
                                 last_x,
                                 last_y,
+                                last_shown_font_name,
                                 extracted_text,
                                 fragments,
                                 truncated,
@@ -2481,6 +2509,7 @@ impl TextExtractor {
                             at_text_object_start = out.at_text_object_start;
                             last_x = out.last_x;
                             last_y = out.last_y;
+                            last_shown_font_name = out.last_shown_font_name;
                             extracted_text = out.extracted_text;
                             fragments = out.fragments;
                             truncated = out.truncated;
@@ -2501,6 +2530,7 @@ impl TextExtractor {
             at_text_object_start,
             last_x,
             last_y,
+            last_shown_font_name,
             extracted_text,
             fragments,
             truncated,
@@ -3874,6 +3904,12 @@ const READING_ORDER_CFG: flat_reading_order::CutConfig = flat_reading_order::Cut
 /// .2486 (vs .2874 → .2714 before #456: an accurate advance lets the boundary
 /// fire more cleanly).
 const TJ_BOUNDARY_SPACE_EM: f64 = 0.7;
+
+/// A narrower boundary rule for an adjacent `Tj`/`TJ` font switch. The
+/// preceding run's font distinguishes inline styling from the same-font
+/// producer repositioning protected by [`TJ_BOUNDARY_SPACE_EM`] (issue #602).
+/// 0.3em is the documented lower edge of the corpus-calibrated plateau.
+const TJ_FONT_CHANGE_BOUNDARY_SPACE_EM: f64 = 0.3;
 
 /// Backward-jump magnitude, in multiples of the font size, above which a
 /// same-baseline (`dy == 0`) backward pen jump is a line wrap rather than a

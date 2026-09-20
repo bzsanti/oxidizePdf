@@ -22,16 +22,12 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 /// `pub(crate)` so sibling parser modules (e.g. `reader.rs`) reuse this single
 /// implementation instead of duplicating it (Issue #352).
 pub(crate) fn find_byte_pattern(buffer: &[u8], pattern: &[u8]) -> Option<usize> {
-    buffer
-        .windows(pattern.len())
-        .position(|window| window == pattern)
+    memchr::memmem::find(buffer, pattern)
 }
 
 /// Find last occurrence of byte pattern (replaces String::rfind)
 fn rfind_byte_pattern(buffer: &[u8], pattern: &[u8]) -> Option<usize> {
-    buffer
-        .windows(pattern.len())
-        .rposition(|window| window == pattern)
+    memchr::memmem::rfind(buffer, pattern)
 }
 
 /// Parse "N G obj" header from bytes
@@ -1845,6 +1841,16 @@ mod tests {
 
     use crate::parser::objects::{PdfDictionary, PdfObject};
     use std::io::Cursor;
+
+    #[test]
+    fn byte_pattern_searches_keep_first_and_last_match_semantics() {
+        let buffer = b"trailer one trailer two";
+
+        assert_eq!(find_byte_pattern(buffer, b"trailer"), Some(0));
+        assert_eq!(rfind_byte_pattern(buffer, b"trailer"), Some(12));
+        assert_eq!(find_byte_pattern(buffer, b"missing"), None);
+        assert_eq!(rfind_byte_pattern(buffer, b"missing"), None);
+    }
 
     // ---- Issue #339: bounded-memory object-header scanner ----
 

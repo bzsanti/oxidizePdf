@@ -8,14 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
-## [5.1.2] - 2026-09-16
+## [5.1.3] - 2026-09-19
+
+### Changed
+
+- **Lenient PDF loading now uses optimized binary pattern search for xref
+  recovery.** This substantially reduces startup time for documents that need
+  supplementary object-header scanning.
+- **Public capability claims are auditable and internally consistent** (#603).
+  The PDF/A and signature claims now link to versioned evidence and explicit
+  limits; the adoption-monitoring contract defines privacy, deterministic
+  decision and append-only audit requirements for `oxidize-stats`.
 
 ### Fixed
 
-- **Preparing a visible signature on a combined field/widget now emits one
-  atomic incremental replacement** (#596, #597). This preserves the field
-  value, appearance, and rectangle together instead of producing a malformed
-  incremental revision.
+- **Text extraction preserves word boundaries across narrow font changes and
+  Form XObject boundaries** (#602). This prevents differential word fusions
+  without weakening the committed T3 baseline.
+
+### Added
+
+- **Custom visible incremental-signature appearances** (#596). Callers can
+  provide signer text, signing date, additional text, and a bounded RGB image
+  watermark through `SignatureAppearance`. The generated font, image, and
+  appearance stream are included in the signed incremental revision for both
+  new and existing signature widgets.
 
 ## [5.1.1] - 2026-09-12
 
