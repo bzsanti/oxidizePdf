@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Visible signature text fits both dimensions without losing content** (#606).
+  Logos are centered behind the text without reserving a column. Shared
+  `SignatureAppearance::layout` preflight wraps text using Helvetica metrics,
+  adjusts the font size between 6 and 12 points, and returns an explicit error
+  if the complete text cannot fit instead of clipping or omitting lines.
 - **Text extraction preserves word boundaries across narrow font changes and
   Form XObject boundaries** (#602). This prevents differential word fusions
   without weakening the committed T3 baseline.
