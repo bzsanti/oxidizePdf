@@ -10,14 +10,11 @@ use std::path::{Path, PathBuf};
 
 /// Options for PDF merging
 #[derive(Debug, Clone)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub struct MergeOptions {
-    /// Page ranges to include from each input file
     pub page_ranges: Option<Vec<PageRange>>,
-    /// Whether to preserve bookmarks/outlines
     pub preserve_bookmarks: bool,
-    /// Whether to preserve form fields
     pub preserve_forms: bool,
-    /// Whether to optimize the output
     pub optimize: bool,
     /// How to handle metadata
     pub metadata_mode: MetadataMode,
@@ -27,7 +24,7 @@ impl Default for MergeOptions {
     fn default() -> Self {
         Self {
             page_ranges: None,
-            preserve_bookmarks: true,
+            preserve_bookmarks: false,
             preserve_forms: false,
             optimize: false,
             metadata_mode: MetadataMode::FromFirst,
@@ -96,6 +93,7 @@ impl PdfMerger {
     }
 
     /// Add an input file to merge
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn add_input(&mut self, input: MergeInput) {
         self.inputs.push(input);
     }
@@ -107,6 +105,11 @@ impl PdfMerger {
 
     /// Merge all input files into a single document
     pub fn merge(&mut self) -> OperationResult<Document> {
+        if self.options.preserve_bookmarks || self.options.preserve_forms {
+            return Err(OperationError::ProcessingError(
+                "reconstruction cannot preserve bookmarks or forms".to_string(),
+            ));
+        }
         if self.inputs.is_empty() {
             return Err(OperationError::NoPagesToProcess);
         }
@@ -249,10 +252,25 @@ mod tests {
     fn test_merge_options_default() {
         let options = MergeOptions::default();
         assert!(options.page_ranges.is_none());
-        assert!(options.preserve_bookmarks);
+        assert!(!options.preserve_bookmarks);
         assert!(!options.preserve_forms);
         assert!(!options.optimize);
         assert!(matches!(options.metadata_mode, MetadataMode::FromFirst));
+    }
+
+    #[test]
+    fn legacy_preservation_flags_fail_instead_of_being_ignored() {
+        let mut merger = PdfMerger::new(MergeOptions {
+            preserve_bookmarks: true,
+            ..MergeOptions::default()
+        });
+        let error = match merger.merge() {
+            Ok(_) => panic!("legacy preservation flag must be rejected"),
+            Err(error) => error,
+        };
+        assert!(error
+            .to_string()
+            .contains("cannot preserve bookmarks or forms"));
     }
 
     #[test]

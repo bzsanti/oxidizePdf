@@ -114,10 +114,9 @@ mod content_parser_tests {
         let ops = ContentParser::parse(content).unwrap();
 
         // Should contain Do operation
-        assert!(ops.iter().any(|op| match op {
-            ContentOperation::PaintXObject(_) => true,
-            _ => false,
-        }));
+        assert!(ops
+            .iter()
+            .any(|op| matches!(op, ContentOperation::PaintXObject(_))));
     }
 
     #[test]
@@ -228,7 +227,7 @@ mod objects_parser_tests {
     fn test_pdf_object_conversion() {
         // Test object type conversions
         let int_obj = PdfObject::Integer(42);
-        let real_obj = PdfObject::Real(3.14);
+        let real_obj = PdfObject::Real(3.125);
         let bool_obj = PdfObject::Boolean(true);
         let null_obj = PdfObject::Null;
 
@@ -239,7 +238,7 @@ mod objects_parser_tests {
         }
 
         match real_obj {
-            PdfObject::Real(val) => assert!((val - 3.14).abs() < 0.001),
+            PdfObject::Real(val) => assert!((val - 3.125).abs() < 0.001),
             _ => panic!("Wrong type"),
         }
 

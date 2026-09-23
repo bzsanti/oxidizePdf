@@ -8,8 +8,8 @@ license.workspace = true
 repository.workspace = true
 documentation = "https://docs.rs/oxidize-pdf"
 homepage = "https://github.com/bzsanti/oxidizePdf"
-description = "Pure Rust PDF library for AI/RAG: structure-aware chunking with bounding boxes, heading context, and token estimates. No Python, no ML, no C bindings."
-keywords = ["pdf", "rag", "chunking", "ai", "embeddings"]
+description = "Pure Rust toolkit for PDF generation, parsing, manipulation, text extraction, AI/RAG pipelines, signatures, and PDF/A validation."
+keywords = ["pdf", "pdf-generation", "pdf-parser", "text-extraction", "rag"]
 categories = ["parser-implementations", "text-processing", "graphics", "encoding"]
 readme = "../README.md"
 exclude = [
@@ -37,7 +37,7 @@ tracing = { workspace = true }
 
 # Hashing
 md5 = "0.8"
-sha2 = "0.10"
+sha2 = { version = "0.10", features = ["oid"] }
 
 # AES encryption (production-grade for R5/R6)
 aes = "0.8"
@@ -59,6 +59,8 @@ ecdsa = { version = "0.16", optional = true }        # ECDSA signature verificat
 p256 = { version = "0.13", optional = true }         # NIST P-256 curve
 p384 = { version = "0.13", optional = true }         # NIST P-384 curve
 webpki-roots = { version = "1.0", optional = true }  # Mozilla CA bundle for certificate validation
+rustls-webpki = { version = "0.103", features = ["ring", "std"], optional = true }
+rustls-pki-types = { version = "1.0", optional = true }
 time = { version = "0.3", optional = true }          # Date/time for certificate validity checks
 
 # Language detection (opt-in via `language-detection` feature; pure Rust, trigram + script based)
@@ -69,6 +71,7 @@ unicode-normalization = "0.1"
 
 # Text processing and validation
 regex = "1.10"
+memchr = "2.7"
 
 # XML parsing for XMP metadata
 quick-xml = { workspace = true }
@@ -101,14 +104,6 @@ libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["memoryapi", "handleapi", "winnt"] }
-
-# Image processing dependencies (optional)
-image = { workspace = true, optional = true }
-
-# OCR dependencies (optional)
-rusty-tesseract = { version = "1.1.10", optional = true }
-# tesseract = { version = "0.15.2", optional = true, features = ["tesseract_5_2"] }
-# leptonica-plumbing = { version = "1.0", optional = true }
 
 [dev-dependencies]
 # Trusted TIFF/PDF (early-change) LZW codec, used only to encode boundary-
@@ -470,6 +465,8 @@ signatures = [
     "dep:p256",
     "dep:p384",
     "dep:webpki-roots",
+    "dep:rustls-webpki",
+    "dep:rustls-pki-types",
     "dep:time",
 ]
 

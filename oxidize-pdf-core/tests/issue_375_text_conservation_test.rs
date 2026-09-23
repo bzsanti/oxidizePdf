@@ -65,21 +65,7 @@ use oxidize_pdf::pipeline::Partitioner;
 use oxidize_pdf::text::extraction::TextFragment;
 
 fn frag(text: &str, x: f64, y: f64) -> TextFragment {
-    TextFragment {
-        text: text.to_string(),
-        x,
-        y,
-        width: text.len() as f64 * 6.0,
-        height: 12.0,
-        font_size: 12.0,
-        font_name: None,
-        is_bold: false,
-        is_italic: false,
-        color: None,
-        space_decisions: Vec::new(),
-        mcid: None,
-        struct_tag: None,
-    }
+    TextFragment::new(text, x, y, text.len() as f64 * 6.0, 12.0, 12.0)
 }
 
 #[test]

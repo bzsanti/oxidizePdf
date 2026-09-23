@@ -11,7 +11,7 @@ mod tagged;
 pub use destination::{Destination, DestinationType, PageDestination};
 pub use marked_content::{MarkedContent, MarkedContentProperty};
 pub use name_tree::{NameTree, NameTreeNode, NamedDestinations};
-pub use outline::{outline_item_to_dict, OutlineBuilder, OutlineItem, OutlineTree};
+pub use outline::{outline_item_to_dict, OutlineBuilder, OutlineFlags, OutlineItem, OutlineTree};
 pub use page_tree::{PageTree, PageTreeBuilder, PageTreeNode};
 pub use tagged::{
     MarkedContentReference, RoleMap, StandardStructureType, StructTree, StructureAttributes,

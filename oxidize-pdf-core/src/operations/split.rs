@@ -2,6 +2,10 @@
 //!
 //! This module provides functionality to split PDF documents into multiple files
 //! based on page ranges or other criteria.
+//!
+//! This legacy API reconstructs a new [`crate::Document`]. Use
+//! the policy-driven [`super::existing_document::split_pdf`] when complete reachable source semantics must
+//! be retained or rejected explicitly through a dry-run report.
 
 use super::{OperationError, OperationResult, PageRange};
 use crate::parser::page_tree::ParsedPage;
@@ -12,6 +16,7 @@ use std::path::{Path, PathBuf};
 
 /// Options for PDF splitting
 #[derive(Debug, Clone)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub struct SplitOptions {
     /// How to split the document
     pub mode: SplitMode,
@@ -19,7 +24,6 @@ pub struct SplitOptions {
     pub output_pattern: String,
     /// Whether to preserve document metadata
     pub preserve_metadata: bool,
-    /// Whether to optimize output files
     pub optimize: bool,
 }
 

@@ -866,6 +866,7 @@ fn normalize_coordinates_if_needed(
             is_bold: frag.is_bold,
             is_italic: frag.is_italic,
             color: frag.color,
+            render_mode: frag.render_mode,
             space_decisions: Vec::new(),
             mcid: frag.mcid,
             struct_tag: frag.struct_tag.clone(),

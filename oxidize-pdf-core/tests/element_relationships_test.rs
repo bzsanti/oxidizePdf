@@ -2,21 +2,14 @@ use oxidize_pdf::pipeline::{Element, ElementData, ElementMetadata, PartitionConf
 use oxidize_pdf::text::extraction::TextFragment;
 
 fn frag(text: &str, x: f64, y: f64, font_size: f64) -> TextFragment {
-    TextFragment {
-        text: text.to_string(),
+    TextFragment::new(
+        text,
         x,
         y,
-        width: text.len() as f64 * font_size * 0.5,
-        height: font_size,
+        text.len() as f64 * font_size * 0.5,
         font_size,
-        font_name: None,
-        is_bold: false,
-        is_italic: false,
-        color: None,
-        space_decisions: Vec::new(),
-        mcid: None,
-        struct_tag: None,
-    }
+        font_size,
+    )
 }
 
 // Cycle 5.1

@@ -7,7 +7,7 @@
 //!
 //! Requires the `signatures` feature for cryptographic verification.
 
-use super::cms::{DigestAlgorithm, ParsedSignature, SignatureAlgorithm};
+use super::cms::{DetailedParsedSignature, DigestAlgorithm, ParsedSignature, SignatureAlgorithm};
 use super::error::{SignatureError, SignatureResult};
 use super::types::ByteRange;
 use sha2::{Digest, Sha256, Sha384, Sha512};
@@ -90,45 +90,26 @@ pub fn compute_pdf_hash(
     byte_range: &ByteRange,
     algorithm: DigestAlgorithm,
 ) -> SignatureResult<HashVerificationResult> {
-    let doc_size = pdf_bytes.len() as u64;
-
-    // Validate that all ranges are within bounds
-    for (offset, length) in byte_range.ranges() {
-        if *offset + *length > doc_size {
-            return Err(SignatureError::ByteRangeExceedsDocument {
-                offset: *offset,
-                length: *length,
-                document_size: doc_size,
-            });
-        }
-    }
-
     // Extract bytes from all ranges and compute hash
     let computed_hash = match algorithm {
         DigestAlgorithm::Sha256 => {
             let mut hasher = Sha256::new();
             for (offset, length) in byte_range.ranges() {
-                let start = *offset as usize;
-                let end = start + *length as usize;
-                hasher.update(&pdf_bytes[start..end]);
+                hasher.update(byte_range_slice(pdf_bytes, *offset, *length)?);
             }
             hasher.finalize().to_vec()
         }
         DigestAlgorithm::Sha384 => {
             let mut hasher = Sha384::new();
             for (offset, length) in byte_range.ranges() {
-                let start = *offset as usize;
-                let end = start + *length as usize;
-                hasher.update(&pdf_bytes[start..end]);
+                hasher.update(byte_range_slice(pdf_bytes, *offset, *length)?);
             }
             hasher.finalize().to_vec()
         }
         DigestAlgorithm::Sha512 => {
             let mut hasher = Sha512::new();
             for (offset, length) in byte_range.ranges() {
-                let start = *offset as usize;
-                let end = start + *length as usize;
-                hasher.update(&pdf_bytes[start..end]);
+                hasher.update(byte_range_slice(pdf_bytes, *offset, *length)?);
             }
             hasher.finalize().to_vec()
         }
@@ -139,6 +120,28 @@ pub fn compute_pdf_hash(
         algorithm,
         bytes_hashed: byte_range.total_bytes(),
     })
+}
+
+fn byte_range_slice(pdf_bytes: &[u8], offset: u64, length: u64) -> SignatureResult<&[u8]> {
+    let end = offset
+        .checked_add(length)
+        .ok_or_else(|| SignatureError::InvalidByteRange {
+            details: "ByteRange offset plus length overflows u64".to_string(),
+        })?;
+    if end > pdf_bytes.len() as u64 {
+        return Err(SignatureError::ByteRangeExceedsDocument {
+            offset,
+            length,
+            document_size: pdf_bytes.len() as u64,
+        });
+    }
+    let start = usize::try_from(offset).map_err(|_| SignatureError::InvalidByteRange {
+        details: "ByteRange offset does not fit in memory".to_string(),
+    })?;
+    let end = usize::try_from(end).map_err(|_| SignatureError::InvalidByteRange {
+        details: "ByteRange end does not fit in memory".to_string(),
+    })?;
+    Ok(&pdf_bytes[start..end])
 }
 
 /// Verifies a PDF signature against the document bytes
@@ -166,8 +169,43 @@ pub fn verify_signature(
     signature: &ParsedSignature,
     byte_range: &ByteRange,
 ) -> SignatureResult<SignatureVerificationResult> {
+    verify_signature_inputs(pdf_bytes, signature, byte_range, None, None)
+}
+
+/// Verify a signature using retained CMS signed attributes and `/Contents` bytes.
+#[cfg(feature = "signatures")]
+pub fn verify_signature_detailed(
+    pdf_bytes: &[u8],
+    signature: &DetailedParsedSignature,
+    byte_range: &ByteRange,
+) -> SignatureResult<SignatureVerificationResult> {
+    byte_range
+        .validate()
+        .map_err(|details| SignatureError::InvalidByteRange { details })?;
+    validate_contents_exclusion(pdf_bytes, byte_range, &signature.cms_contents)?;
+    verify_signature_inputs(
+        pdf_bytes,
+        &signature.signature,
+        byte_range,
+        signature.signed_attributes_der.as_deref(),
+        signature.message_digest.as_deref(),
+    )
+}
+
+#[cfg(feature = "signatures")]
+fn verify_signature_inputs(
+    pdf_bytes: &[u8],
+    signature: &ParsedSignature,
+    byte_range: &ByteRange,
+    signed_attributes_der: Option<&[u8]>,
+    message_digest: Option<&[u8]>,
+) -> SignatureResult<SignatureVerificationResult> {
     use der::{Decode, Encode};
     use x509_cert::Certificate;
+
+    byte_range
+        .validate()
+        .map_err(|details| SignatureError::InvalidByteRange { details })?;
 
     // Compute the document hash
     let hash_result = compute_pdf_hash(pdf_bytes, byte_range, signature.digest_algorithm)?;
@@ -188,33 +226,112 @@ pub fn verify_signature(
             details: format!("Failed to encode SPKI: {}", e),
         })?;
 
-    // Verify the signature based on algorithm
+    let (hash_valid, signed_bytes, input_is_prehashed) =
+        match (signed_attributes_der, message_digest) {
+            (Some(attributes), Some(expected_digest)) => (
+                hashes_match(&hash_result.computed_hash, expected_digest),
+                attributes,
+                false,
+            ),
+            (Some(_), None) => {
+                return Err(SignatureError::HashVerificationFailed {
+                    details: "CMS signed attributes are missing messageDigest".to_string(),
+                })
+            }
+            (None, Some(_)) => {
+                return Err(SignatureError::CmsParsingFailed {
+                    details: "messageDigest is present without signed attributes".to_string(),
+                })
+            }
+            (None, None) => (true, hash_result.computed_hash.as_slice(), true),
+        };
+
+    // Verify the signature over canonical signed attributes when CMS carries them.
     let signature_valid = match signature.signature_algorithm {
         SignatureAlgorithm::RsaSha256
         | SignatureAlgorithm::RsaSha384
         | SignatureAlgorithm::RsaSha512 => verify_rsa_signature(
             &spki_der,
             &signature.signature_value,
-            &hash_result,
+            signed_bytes,
+            input_is_prehashed,
             signature,
         )?,
         SignatureAlgorithm::EcdsaSha256 | SignatureAlgorithm::EcdsaSha384 => {
             verify_ecdsa_signature(
                 &spki_der,
                 &signature.signature_value,
-                &hash_result,
+                signed_bytes,
+                input_is_prehashed,
                 signature,
             )?
         }
     };
 
     Ok(SignatureVerificationResult {
-        hash_valid: true, // Hash was computed successfully
+        hash_valid,
         signature_valid,
         digest_algorithm: signature.digest_algorithm,
         signature_algorithm: signature.signature_algorithm,
         details: None,
     })
+}
+
+#[cfg(feature = "signatures")]
+fn validate_contents_exclusion(
+    pdf_bytes: &[u8],
+    byte_range: &ByteRange,
+    cms_contents: &[u8],
+) -> SignatureResult<()> {
+    let ranges = byte_range.ranges();
+    let gap_start =
+        ranges[0]
+            .0
+            .checked_add(ranges[0].1)
+            .ok_or_else(|| SignatureError::InvalidByteRange {
+                details: "First ByteRange end overflows u64".to_string(),
+            })?;
+    let gap_end = ranges[1].0;
+    if gap_start == gap_end {
+        return Ok(());
+    }
+    let gap = byte_range_slice(pdf_bytes, gap_start, gap_end - gap_start)?;
+    if gap.len() < 2 || gap.first() != Some(&b'<') || gap.last() != Some(&b'>') {
+        return Err(SignatureError::InvalidByteRange {
+            details: "ByteRange exclusion is not a PDF hexadecimal string".to_string(),
+        });
+    }
+    let mut decoded = Vec::with_capacity((gap.len() - 2) / 2);
+    let mut high_nibble = None;
+    for byte in &gap[1..gap.len() - 1] {
+        if byte.is_ascii_whitespace() {
+            continue;
+        }
+        let nibble = match byte {
+            b'0'..=b'9' => byte - b'0',
+            b'a'..=b'f' => byte - b'a' + 10,
+            b'A'..=b'F' => byte - b'A' + 10,
+            _ => {
+                return Err(SignatureError::InvalidByteRange {
+                    details: "ByteRange exclusion contains non-hexadecimal data".to_string(),
+                })
+            }
+        };
+        if let Some(high) = high_nibble.take() {
+            decoded.push((high << 4) | nibble);
+        } else {
+            high_nibble = Some(nibble);
+        }
+    }
+    if let Some(high) = high_nibble {
+        decoded.push(high << 4);
+    }
+    if !hashes_match(&decoded, cms_contents) {
+        return Err(SignatureError::InvalidByteRange {
+            details: "ByteRange exclusion does not match the CMS /Contents value".to_string(),
+        });
+    }
+    Ok(())
 }
 
 #[cfg(not(feature = "signatures"))]
@@ -228,15 +345,28 @@ pub fn verify_signature(
     })
 }
 
+#[cfg(not(feature = "signatures"))]
+pub fn verify_signature_detailed(
+    _pdf_bytes: &[u8],
+    _signature: &DetailedParsedSignature,
+    _byte_range: &ByteRange,
+) -> SignatureResult<SignatureVerificationResult> {
+    Err(SignatureError::SignatureVerificationFailed {
+        details: "signatures feature not enabled".to_string(),
+    })
+}
+
 /// Verifies an RSA signature
 #[cfg(feature = "signatures")]
 fn verify_rsa_signature(
     spki_der: &[u8],
     signature_bytes: &[u8],
-    hash_result: &HashVerificationResult,
+    signed_bytes: &[u8],
+    input_is_prehashed: bool,
     parsed_sig: &ParsedSignature,
 ) -> SignatureResult<bool> {
     use rsa::pkcs1v15::{Signature as RsaSignature, VerifyingKey};
+    use rsa::signature::hazmat::PrehashVerifier;
     use rsa::signature::Verifier;
     use rsa::RsaPublicKey;
     use spki::DecodePublicKey;
@@ -255,25 +385,37 @@ fn verify_rsa_signature(
         }
     })?;
 
-    // Verify based on digest algorithm using new_unprefixed (hash is already computed)
+    // CMS RSA signatures use the digest-specific PKCS#1 v1.5 DigestInfo prefix.
     let is_valid = match parsed_sig.digest_algorithm {
         DigestAlgorithm::Sha256 => {
-            let verifying_key = VerifyingKey::<Sha256>::new_unprefixed(public_key);
-            verifying_key
-                .verify(&hash_result.computed_hash, &signature)
-                .is_ok()
+            let verifying_key = VerifyingKey::<Sha256>::new(public_key);
+            if input_is_prehashed {
+                verifying_key
+                    .verify_prehash(signed_bytes, &signature)
+                    .is_ok()
+            } else {
+                verifying_key.verify(signed_bytes, &signature).is_ok()
+            }
         }
         DigestAlgorithm::Sha384 => {
-            let verifying_key = VerifyingKey::<Sha384>::new_unprefixed(public_key);
-            verifying_key
-                .verify(&hash_result.computed_hash, &signature)
-                .is_ok()
+            let verifying_key = VerifyingKey::<Sha384>::new(public_key);
+            if input_is_prehashed {
+                verifying_key
+                    .verify_prehash(signed_bytes, &signature)
+                    .is_ok()
+            } else {
+                verifying_key.verify(signed_bytes, &signature).is_ok()
+            }
         }
         DigestAlgorithm::Sha512 => {
-            let verifying_key = VerifyingKey::<Sha512>::new_unprefixed(public_key);
-            verifying_key
-                .verify(&hash_result.computed_hash, &signature)
-                .is_ok()
+            let verifying_key = VerifyingKey::<Sha512>::new(public_key);
+            if input_is_prehashed {
+                verifying_key
+                    .verify_prehash(signed_bytes, &signature)
+                    .is_ok()
+            } else {
+                verifying_key.verify(signed_bytes, &signature).is_ok()
+            }
         }
     };
 
@@ -285,9 +427,11 @@ fn verify_rsa_signature(
 fn verify_ecdsa_signature(
     spki_der: &[u8],
     signature_bytes: &[u8],
-    hash_result: &HashVerificationResult,
+    signed_bytes: &[u8],
+    input_is_prehashed: bool,
     parsed_sig: &ParsedSignature,
 ) -> SignatureResult<bool> {
+    use ecdsa::signature::hazmat::PrehashVerifier;
     use ecdsa::signature::Verifier;
     use spki::DecodePublicKey;
 
@@ -307,9 +451,11 @@ fn verify_ecdsa_signature(
                 }
             })?;
 
-            Ok(public_key
-                .verify(&hash_result.computed_hash, &signature)
-                .is_ok())
+            Ok(if input_is_prehashed {
+                public_key.verify_prehash(signed_bytes, &signature).is_ok()
+            } else {
+                public_key.verify(signed_bytes, &signature).is_ok()
+            })
         }
         SignatureAlgorithm::EcdsaSha384 => {
             // P-384 curve with SHA-384
@@ -326,9 +472,11 @@ fn verify_ecdsa_signature(
                 }
             })?;
 
-            Ok(public_key
-                .verify(&hash_result.computed_hash, &signature)
-                .is_ok())
+            Ok(if input_is_prehashed {
+                public_key.verify_prehash(signed_bytes, &signature).is_ok()
+            } else {
+                public_key.verify(signed_bytes, &signature).is_ok()
+            })
         }
         _ => Err(SignatureError::UnsupportedAlgorithm {
             algorithm: format!("{:?}", parsed_sig.signature_algorithm),
@@ -357,7 +505,12 @@ pub fn has_incremental_update(pdf_bytes: &[u8], byte_range: &ByteRange) -> bool 
     // Find the end of the signed region
     let ranges = byte_range.ranges();
     if let Some((last_offset, last_length)) = ranges.last() {
-        let signed_end = (*last_offset + *last_length) as usize;
+        let Some(signed_end) = last_offset
+            .checked_add(*last_length)
+            .and_then(|end| usize::try_from(end).ok())
+        else {
+            return true;
+        };
         // If there are bytes after the signed region, it's an incremental update
         pdf_bytes.len() > signed_end
     } else {

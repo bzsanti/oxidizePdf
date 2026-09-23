@@ -111,9 +111,7 @@ fn test_optimized_reader_memory_workflows() -> Result<()> {
         let reader_result =
             OptimizedPdfReader::new_with_options(cursor, parse_options, memory_options.clone());
 
-        if reader_result.is_ok() {
-            let reader = reader_result.unwrap();
-
+        if let Ok(reader) = reader_result {
             // Test memory statistics
             let stats = reader.memory_stats();
             assert_eq!(stats.cache_hits, 0); // Initial state
@@ -336,7 +334,8 @@ fn test_content_type_memory_optimization() -> Result<()> {
         Ok(())
     }
 
-    let content_types: Vec<(&str, fn(&mut Page) -> Result<()>)> = vec![
+    type ContentSetup = fn(&mut Page) -> Result<()>;
+    let content_types: Vec<(&str, ContentSetup)> = vec![
         ("text_heavy", setup_text_heavy),
         ("graphics_heavy", setup_graphics_heavy),
         ("mixed_content", setup_mixed_content),

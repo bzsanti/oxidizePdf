@@ -55,16 +55,18 @@ fn ber_to_der(input: &[u8]) -> SignatureResult<Vec<u8>> {
         return Ok(Vec::new());
     }
 
-    // Check if this is already DER (no indefinite length markers)
-    if !contains_indefinite_length(input) {
-        return Ok(input.to_vec());
-    }
-
     // Calculate size budget: min of 100x expansion or absolute max
     let size_budget = std::cmp::min(input.len().saturating_mul(100), MAX_BER_OUTPUT_SIZE);
 
-    // Parse and convert recursively with depth=0 and size budget
-    convert_element(input, 0, size_budget).map(|(output, _)| output)
+    // Parse exactly one top-level value. PDF /Contents placeholders are commonly
+    // larger than the CMS object and padded with NUL bytes.
+    let (output, consumed) = convert_element(input, 0, size_budget)?;
+    if input[consumed..].iter().any(|byte| *byte != 0) {
+        return Err(SignatureError::CmsParsingFailed {
+            details: "Non-zero trailing data after CMS value".to_string(),
+        });
+    }
+    Ok(output)
 }
 
 /// Check if the data starts with indefinite-length BER encoding
@@ -72,7 +74,7 @@ fn ber_to_der(input: &[u8]) -> SignatureResult<Vec<u8>> {
 /// Indefinite length (0x80) is only valid for constructed types (bit 6 set).
 /// This function verifies both conditions to avoid false positives when
 /// 0x80 appears as a regular length value in primitive types.
-#[cfg(feature = "signatures")]
+#[cfg(all(feature = "signatures", test))]
 fn contains_indefinite_length(data: &[u8]) -> bool {
     if data.len() < 2 {
         return false;
@@ -473,8 +475,30 @@ pub struct ParsedSignature {
     pub signature_value: Vec<u8>,
     /// The signer's certificate in DER format
     pub signer_certificate_der: Vec<u8>,
-    /// Optional signing time from signed attributes
+    /// Optional signer-claimed time from signed attributes (not a trusted timestamp).
     pub signing_time: Option<String>,
+}
+
+/// Parsed CMS signature plus the data required for strict validation.
+#[derive(Debug, Clone)]
+pub struct DetailedParsedSignature {
+    pub signature: ParsedSignature,
+    /// Original CMS bytes extracted from the PDF `/Contents` string.
+    pub cms_contents: Vec<u8>,
+    /// Every X.509 certificate embedded in the CMS container, in DER format.
+    pub certificates_der: Vec<Vec<u8>>,
+    /// Canonical DER `SET OF Attribute` bytes covered by the signature.
+    pub signed_attributes_der: Option<Vec<u8>>,
+    /// CMS `messageDigest` signed attribute.
+    pub message_digest: Option<Vec<u8>>,
+}
+
+impl std::ops::Deref for DetailedParsedSignature {
+    type Target = ParsedSignature;
+
+    fn deref(&self) -> &Self::Target {
+        &self.signature
+    }
 }
 
 impl ParsedSignature {
@@ -535,6 +559,12 @@ impl ParsedSignature {
 /// Returns an error if the DER structure is invalid or unsupported.
 #[cfg(feature = "signatures")]
 pub fn parse_pkcs7_signature(contents: &[u8]) -> SignatureResult<ParsedSignature> {
+    parse_pkcs7_signature_detailed(contents).map(|detailed| detailed.signature)
+}
+
+/// Parse a CMS signature while retaining all strict-validation inputs.
+#[cfg(feature = "signatures")]
+pub fn parse_pkcs7_signature_detailed(contents: &[u8]) -> SignatureResult<DetailedParsedSignature> {
     use const_oid::ObjectIdentifier;
 
     // Convert BER to DER if necessary (PDF signatures may use BER encoding)
@@ -573,15 +603,28 @@ pub fn parse_pkcs7_signature(contents: &[u8]) -> SignatureResult<ParsedSignature
 
     // Extract signer info (we expect exactly one)
     let signer_infos: Vec<_> = signed_data.signer_infos.0.iter().collect();
-    if signer_infos.is_empty() {
+    if signer_infos.len() != 1 {
         return Err(SignatureError::CmsParsingFailed {
-            details: "No signer info found in SignedData".to_string(),
+            details: format!(
+                "Expected exactly one signer info, found {}",
+                signer_infos.len()
+            ),
         });
     }
     let signer_info = &signer_infos[0];
 
     // Extract digest algorithm from signer info
     let digest_algorithm = parse_digest_algorithm(&signer_info.digest_alg.oid.to_string())?;
+    if !signed_data
+        .digest_algorithms
+        .iter()
+        .any(|algorithm| algorithm.oid == signer_info.digest_alg.oid)
+    {
+        return Err(SignatureError::CmsParsingFailed {
+            details: "Signer digest algorithm is absent from SignedData digestAlgorithms"
+                .to_string(),
+        });
+    }
 
     // Extract signature algorithm
     let signature_algorithm = parse_signature_algorithm(
@@ -609,35 +652,176 @@ pub fn parse_pkcs7_signature(contents: &[u8]) -> SignatureResult<ParsedSignature
         });
     }
 
-    // Get certificate DER
-    let signer_certificate_der = match &cert_choices[0] {
-        cms::cert::CertificateChoices::Certificate(cert) => {
-            cert.to_der()
-                .map_err(|e| SignatureError::CmsParsingFailed {
-                    details: format!("Failed to encode certificate: {}", e),
-                })?
-        }
-        _ => {
-            return Err(SignatureError::CmsParsingFailed {
-                details: "Unsupported certificate type".to_string(),
+    let certificates = cert_choices
+        .iter()
+        .filter_map(|choice| match choice {
+            cms::cert::CertificateChoices::Certificate(cert) => Some(cert.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    if certificates.is_empty() {
+        return Err(SignatureError::CmsParsingFailed {
+            details: "No X.509 certificates found".to_string(),
+        });
+    }
+    let signer_certificate = find_signer_certificate(&certificates, &signer_info.sid)?;
+    let signer_certificate_der =
+        signer_certificate
+            .to_der()
+            .map_err(|e| SignatureError::CmsParsingFailed {
+                details: format!("Failed to encode signer certificate: {e}"),
+            })?;
+    let certificates_der = certificates
+        .iter()
+        .map(|cert| {
+            cert.to_der().map_err(|e| SignatureError::CmsParsingFailed {
+                details: format!("Failed to encode certificate: {e}"),
             })
-        }
-    };
+        })
+        .collect::<SignatureResult<Vec<_>>>()?;
+
+    let signed_attributes_der = signer_info
+        .signed_attrs
+        .as_ref()
+        .map(Encode::to_der)
+        .transpose()
+        .map_err(|e| SignatureError::CmsParsingFailed {
+            details: format!("Failed to encode signed attributes: {e}"),
+        })?;
+    validate_content_type(signer_info, signed_data.encap_content_info.econtent_type)?;
+    let message_digest = extract_message_digest(signer_info)?;
 
     // Extract signing time from signed attributes if present
-    let signing_time = extract_signing_time(signer_info);
+    let signing_time = extract_signing_time(signer_info)?;
 
-    Ok(ParsedSignature {
-        digest_algorithm,
-        signature_algorithm,
-        signature_value,
-        signer_certificate_der,
-        signing_time,
+    Ok(DetailedParsedSignature {
+        signature: ParsedSignature {
+            digest_algorithm,
+            signature_algorithm,
+            signature_value,
+            signer_certificate_der,
+            signing_time,
+        },
+        cms_contents: contents.to_vec(),
+        certificates_der,
+        signed_attributes_der,
+        message_digest,
     })
+}
+
+#[cfg(feature = "signatures")]
+fn find_signer_certificate<'a>(
+    certificates: &'a [Certificate],
+    sid: &cms::signed_data::SignerIdentifier,
+) -> SignatureResult<&'a Certificate> {
+    use cms::signed_data::SignerIdentifier;
+    use x509_cert::ext::pkix::SubjectKeyIdentifier;
+
+    let found = certificates.iter().find(|cert| match sid {
+        SignerIdentifier::IssuerAndSerialNumber(id) => {
+            cert.tbs_certificate.issuer == id.issuer
+                && cert.tbs_certificate.serial_number == id.serial_number
+        }
+        SignerIdentifier::SubjectKeyIdentifier(expected) => cert
+            .tbs_certificate
+            .extensions
+            .as_ref()
+            .and_then(|extensions| {
+                extensions.iter().find_map(|extension| {
+                    if extension.extn_id.to_string() != "2.5.29.14" {
+                        return None;
+                    }
+                    SubjectKeyIdentifier::from_der(extension.extn_value.as_bytes()).ok()
+                })
+            })
+            .is_some_and(|actual| actual.0.as_bytes() == expected.0.as_bytes()),
+    });
+    found.ok_or_else(|| SignatureError::CertificateExtractionFailed {
+        details: "CMS SignerIdentifier does not match any embedded certificate".to_string(),
+    })
+}
+
+#[cfg(feature = "signatures")]
+fn extract_message_digest(
+    signer_info: &cms::signed_data::SignerInfo,
+) -> SignatureResult<Option<Vec<u8>>> {
+    use der::asn1::OctetString;
+    const MESSAGE_DIGEST_OID: &str = "1.2.840.113549.1.9.4";
+
+    let Some(attributes) = signer_info.signed_attrs.as_ref() else {
+        return Ok(None);
+    };
+    let matches = attributes
+        .iter()
+        .filter(|attribute| attribute.oid.to_string() == MESSAGE_DIGEST_OID)
+        .collect::<Vec<_>>();
+    if matches.len() != 1 || matches[0].values.len() != 1 {
+        return Err(SignatureError::CmsParsingFailed {
+            details: "signed attributes must contain exactly one messageDigest value".to_string(),
+        });
+    }
+    let digest = matches[0]
+        .values
+        .get(0)
+        .ok_or_else(|| SignatureError::CmsParsingFailed {
+            details: "messageDigest attribute has no value".to_string(),
+        })?;
+    let digest =
+        digest
+            .decode_as::<OctetString>()
+            .map_err(|e| SignatureError::CmsParsingFailed {
+                details: format!("Invalid messageDigest attribute: {e}"),
+            })?;
+    Ok(Some(digest.as_bytes().to_vec()))
+}
+
+#[cfg(feature = "signatures")]
+fn validate_content_type(
+    signer_info: &cms::signed_data::SignerInfo,
+    expected: const_oid::ObjectIdentifier,
+) -> SignatureResult<()> {
+    const CONTENT_TYPE_OID: &str = "1.2.840.113549.1.9.3";
+    let Some(attributes) = signer_info.signed_attrs.as_ref() else {
+        return Ok(());
+    };
+    let matches = attributes
+        .iter()
+        .filter(|attribute| attribute.oid.to_string() == CONTENT_TYPE_OID)
+        .collect::<Vec<_>>();
+    if matches.len() != 1 || matches[0].values.len() != 1 {
+        return Err(SignatureError::CmsParsingFailed {
+            details: "signed attributes must contain exactly one contentType value".to_string(),
+        });
+    }
+    let value = matches[0]
+        .values
+        .get(0)
+        .ok_or_else(|| SignatureError::CmsParsingFailed {
+            details: "contentType attribute has no value".to_string(),
+        })?
+        .decode_as::<const_oid::ObjectIdentifier>()
+        .map_err(|e| SignatureError::CmsParsingFailed {
+            details: format!("Invalid contentType attribute: {e}"),
+        })?;
+    if value != expected {
+        return Err(SignatureError::CmsParsingFailed {
+            details: "signed contentType does not match encapsulated content type".to_string(),
+        });
+    }
+    Ok(())
 }
 
 #[cfg(not(feature = "signatures"))]
 pub fn parse_pkcs7_signature(_contents: &[u8]) -> SignatureResult<ParsedSignature> {
+    Err(SignatureError::CmsParsingFailed {
+        details: "signatures feature not enabled".to_string(),
+    })
+}
+
+#[cfg(not(feature = "signatures"))]
+pub fn parse_pkcs7_signature_detailed(
+    _contents: &[u8],
+) -> SignatureResult<DetailedParsedSignature> {
     Err(SignatureError::CmsParsingFailed {
         details: "signatures feature not enabled".to_string(),
     })
@@ -670,15 +854,25 @@ fn parse_signature_algorithm(
             DigestAlgorithm::Sha512 => Ok(SignatureAlgorithm::RsaSha512),
         },
         // RSA with SHA-256
-        "1.2.840.113549.1.1.11" => Ok(SignatureAlgorithm::RsaSha256),
+        "1.2.840.113549.1.1.11" if digest == DigestAlgorithm::Sha256 => {
+            Ok(SignatureAlgorithm::RsaSha256)
+        }
         // RSA with SHA-384
-        "1.2.840.113549.1.1.12" => Ok(SignatureAlgorithm::RsaSha384),
+        "1.2.840.113549.1.1.12" if digest == DigestAlgorithm::Sha384 => {
+            Ok(SignatureAlgorithm::RsaSha384)
+        }
         // RSA with SHA-512
-        "1.2.840.113549.1.1.13" => Ok(SignatureAlgorithm::RsaSha512),
+        "1.2.840.113549.1.1.13" if digest == DigestAlgorithm::Sha512 => {
+            Ok(SignatureAlgorithm::RsaSha512)
+        }
         // ECDSA with SHA-256
-        "1.2.840.10045.4.3.2" => Ok(SignatureAlgorithm::EcdsaSha256),
+        "1.2.840.10045.4.3.2" if digest == DigestAlgorithm::Sha256 => {
+            Ok(SignatureAlgorithm::EcdsaSha256)
+        }
         // ECDSA with SHA-384
-        "1.2.840.10045.4.3.3" => Ok(SignatureAlgorithm::EcdsaSha384),
+        "1.2.840.10045.4.3.3" if digest == DigestAlgorithm::Sha384 => {
+            Ok(SignatureAlgorithm::EcdsaSha384)
+        }
         _ => Err(SignatureError::UnsupportedAlgorithm {
             algorithm: format!("signature OID: {}", oid),
         }),
@@ -687,19 +881,41 @@ fn parse_signature_algorithm(
 
 /// Extracts signing time from signer info signed attributes
 #[cfg(feature = "signatures")]
-fn extract_signing_time(signer_info: &cms::signed_data::SignerInfo) -> Option<String> {
-    // OID for signingTime: 1.2.840.113549.1.9.5
+fn extract_signing_time(
+    signer_info: &cms::signed_data::SignerInfo,
+) -> SignatureResult<Option<String>> {
+    use der::asn1::{GeneralizedTime, UtcTime};
     const SIGNING_TIME_OID: &str = "1.2.840.113549.1.9.5";
 
-    signer_info.signed_attrs.as_ref().and_then(|attrs| {
-        for attr in attrs.iter() {
-            if attr.oid.to_string() == SIGNING_TIME_OID {
-                // The attribute value contains the time
-                // For now, return a placeholder - full parsing would decode ASN.1 time
-                return Some("(signing time present)".to_string());
-            }
-        }
-        None
+    let Some(attributes) = signer_info.signed_attrs.as_ref() else {
+        return Ok(None);
+    };
+    let matches = attributes
+        .iter()
+        .filter(|attribute| attribute.oid.to_string() == SIGNING_TIME_OID)
+        .collect::<Vec<_>>();
+    if matches.is_empty() {
+        return Ok(None);
+    }
+    if matches.len() != 1 || matches[0].values.len() != 1 {
+        return Err(SignatureError::CmsParsingFailed {
+            details: "signed attributes contain an ambiguous signingTime".to_string(),
+        });
+    }
+    let value = matches[0]
+        .values
+        .get(0)
+        .ok_or_else(|| SignatureError::CmsParsingFailed {
+            details: "signingTime attribute has no value".to_string(),
+        })?;
+    if let Ok(time) = value.decode_as::<UtcTime>() {
+        return Ok(Some(time.to_date_time().to_string()));
+    }
+    if let Ok(time) = value.decode_as::<GeneralizedTime>() {
+        return Ok(Some(time.to_date_time().to_string()));
+    }
+    Err(SignatureError::CmsParsingFailed {
+        details: "signingTime is neither UTCTime nor GeneralizedTime".to_string(),
     })
 }
 
@@ -824,6 +1040,17 @@ mod tests {
         let result = parse_signature_algorithm("1.2.840.10045.4.3.2", DigestAlgorithm::Sha256);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), SignatureAlgorithm::EcdsaSha256);
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_parse_signature_algorithm_rejects_digest_mismatch() {
+        for (oid, digest) in [
+            ("1.2.840.113549.1.1.11", DigestAlgorithm::Sha384),
+            ("1.2.840.10045.4.3.2", DigestAlgorithm::Sha512),
+        ] {
+            assert!(parse_signature_algorithm(oid, digest).is_err());
+        }
     }
 
     #[cfg(feature = "signatures")]

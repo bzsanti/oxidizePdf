@@ -226,7 +226,7 @@ fn test_invalid_choice_field_configurations() {
     let mut form_manager = FormManager::new();
 
     // Test RadioButton with invalid selections
-    let invalid_radio_tests = vec![
+    let invalid_radio_tests = [
         // Selection index out of bounds
         (vec![("A", "Option A"), ("B", "Option B")], Some(5)), // Index 5 invalid
         (vec![("A", "Option A")], Some(10)),                   // Index 10 invalid for single option
@@ -278,7 +278,7 @@ fn test_invalid_choice_field_configurations() {
     }
 
     // Test ListBox with invalid selections
-    let invalid_list_tests = vec![
+    let invalid_list_tests = [
         // Multiple selections with some invalid indices
         (
             vec![("A", "Option A"), ("B", "Option B")],
@@ -461,7 +461,7 @@ fn test_circular_reference_detection() {
 fn test_invalid_appearance_configurations() {
     // Test widget appearances with invalid or extreme values
 
-    let invalid_appearances = vec![
+    let invalid_appearances = [
         // Extreme border widths
         WidgetAppearance {
             border_color: Some(Color::black()),
@@ -594,7 +594,7 @@ fn test_invalid_field_flags_combinations() {
     let mut form_manager = FormManager::new();
 
     // Test with contradictory or problematic flag combinations
-    let problematic_options = vec![
+    let problematic_options = [
         // Read-only but required (user can't fill required field)
         FieldOptions {
             flags: FieldFlags {
@@ -979,7 +979,7 @@ fn test_invalid_widget_operations() {
     let base_rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(200.0, 120.0));
 
     // Test 1: Widget with extreme appearance values
-    let extreme_appearances = vec![
+    let extreme_appearances = [
         WidgetAppearance {
             border_color: None,
             background_color: None,

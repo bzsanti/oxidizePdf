@@ -175,11 +175,7 @@ fn test_content_stream_has_correct_length() {
             let stream_data_len = rel_end_pos;
 
             // Find the corresponding /Length in the dictionary before "stream"
-            let dict_search_start = if abs_stream_pos > 200 {
-                abs_stream_pos - 200
-            } else {
-                0
-            };
+            let dict_search_start = abs_stream_pos.saturating_sub(200);
             let dict_section = &pdf_str[dict_search_start..abs_stream_pos];
 
             if let Some(length_pos) = dict_section.rfind("/Length ") {

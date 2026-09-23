@@ -4,6 +4,7 @@ pub mod cff;
 pub mod cff_subsetter;
 pub mod embedding;
 pub mod standard;
+mod standard_glyph_widths;
 pub mod truetype;
 pub mod truetype_subsetter;
 

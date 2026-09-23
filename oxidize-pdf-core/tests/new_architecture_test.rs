@@ -1,7 +1,9 @@
 //! Integration test for the new PdfDocument architecture
 
-use oxidize_pdf::operations::{merge_pdf_files, rotate_pdf_pages, split_pdf};
-use oxidize_pdf::operations::{RotateOptions, RotationAngle, SplitMode, SplitOptions};
+use oxidize_pdf::operations::existing_document::{
+    merge_pdfs, split_pdf, ExistingDocumentMergeInput, ExistingDocumentPolicy,
+};
+use oxidize_pdf::operations::{rotate_pdf_pages, PageRange, RotateOptions, RotationAngle};
 use oxidize_pdf::parser::PdfReader;
 use oxidize_pdf::{Document, Page};
 use tempfile::TempDir;
@@ -76,13 +78,17 @@ fn test_split_operation_with_new_architecture() {
         .to_str()
         .unwrap()
         .to_string();
-    let options = SplitOptions {
-        mode: SplitMode::SinglePages,
-        output_pattern,
-        ..Default::default()
-    };
-
-    let output_files = split_pdf(&test_pdf, options).unwrap();
+    let ranges: Vec<_> = (0..5).map(PageRange::Single).collect();
+    let output_files: Vec<_> = (1..=5)
+        .map(|page| std::path::PathBuf::from(output_pattern.replace("{}", &page.to_string())))
+        .collect();
+    split_pdf(
+        &test_pdf,
+        &ranges,
+        &output_files,
+        ExistingDocumentPolicy::preserve_base(),
+    )
+    .unwrap();
     assert_eq!(output_files.len(), 5);
 
     // Verify each output file exists
@@ -124,7 +130,17 @@ fn test_merge_operation_with_new_architecture() {
 
     // Merge them
     let output_pdf = temp_dir.path().join("merged.pdf");
-    merge_pdf_files(&input_files, &output_pdf).unwrap();
+    let merge_inputs: Vec<_> = input_files
+        .iter()
+        .map(ExistingDocumentMergeInput::new)
+        .collect();
+    let report = merge_pdfs(
+        &merge_inputs,
+        &output_pdf,
+        ExistingDocumentPolicy::preserve_base(),
+    )
+    .unwrap();
+    assert_eq!(report.plan.page_count(), 6);
 
     // Verify the merged PDF
     let document = PdfReader::open_document(&output_pdf).unwrap();

@@ -283,6 +283,7 @@ impl InvoiceExtractor {
             is_bold: false,
             is_italic: false,
             color: None,
+            render_mode: crate::text::TextRenderingMode::Fill,
             space_decisions: Vec::new(),
             mcid: None,
             struct_tag: None,

@@ -96,12 +96,12 @@ fn tj_hyphenated_line_wrap_merges_on_the_flat_path() {
     );
     let text = extract_flat(content);
     assert!(
-        text.contains("+55 11 30160900"),
-        "hyphen-wrapped number must fuse into one token on the flat path, got: {text:?}"
+        text.contains("+55 11 3016-0900"),
+        "hyphen-wrapped number must fuse into one token with hyphen preserved, got: {text:?}"
     );
     assert!(
-        !text.contains("3016-\n0900") && !text.contains("3016-0900"),
-        "the hyphen must be dropped, not kept alongside a newline or as-is: {text:?}"
+        !text.contains("3016-\n0900"),
+        "the newline must be dropped: {text:?}"
     );
 }
 
@@ -115,8 +115,29 @@ fn tj_array_hyphenated_line_wrap_merges_on_the_flat_path() {
     );
     let text = extract_flat(content);
     assert!(
-        text.contains("+55 11 30160900"),
+        text.contains("+55 11 3016-0900"),
         "TJ path must also fuse the hyphen-wrapped number, got: {text:?}"
+    );
+}
+
+#[test]
+fn trailing_horizontal_whitespace_after_a_hyphen_does_not_block_flat_fusion() {
+    // Some producers leave horizontal whitespace after the discretionary
+    // hyphen before moving to the next line. It is layout noise: the number
+    // must still be reconstructed as one token.
+    let content = concat!(
+        "BT\n/F1 12 Tf\n12 TL\n",
+        "1 0 0 1 72 700 Tm\n((011) 99974- ) Tj\n",
+        "T*\n(6069) Tj\nET"
+    );
+    let text = extract_flat(content);
+    assert!(
+        text.contains("(011) 99974-6069"),
+        "a numeric hyphen followed by horizontal whitespace before a line break must stay in its token, got: {text:?}"
+    );
+    assert!(
+        !text.contains("99974- \\n6069"),
+        "the hyphen, whitespace, and newline must not survive a fused wrap: {text:?}"
     );
 }
 

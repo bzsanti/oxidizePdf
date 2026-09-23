@@ -302,10 +302,18 @@ pub use parser::{
 
 // Re-export operations
 pub use operations::{
-    extract_images_from_pages, extract_images_from_pdf, merge_pdfs, move_pdf_page, overlay_pdf,
-    reorder_pdf_pages, reverse_pdf_pages, rotate_pdf_pages, split_pdf, swap_pdf_pages,
-    ExtractImagesOptions, ExtractedImage, ImageExtractor, OverlayOptions, OverlayPosition,
-    ReorderOptions,
+    extract_images_from_pages, extract_images_from_pdf, extract_pdf_pages_lossless, merge_pdfs,
+    merge_pdfs_lossless, move_pdf_page, mutate_pdf_pages_lossless, overlay_pdf,
+    plan_extract_pdf_pages_lossless, plan_merge_pdfs_lossless, plan_pdf_page_mutations,
+    plan_split_pdf_lossless, reorder_pdf_pages, reorder_pdf_pages_lossless, reverse_pdf_pages,
+    rotate_pdf_pages, split_pdf, split_pdf_lossless, swap_pdf_pages, DocumentStructure,
+    DocumentStructurePolicy, ExistingDocumentEngine, ExistingDocumentExecutionPlan,
+    ExistingDocumentMergeInput, ExistingDocumentPolicy, ExtractImagesOptions, ExtractedImage,
+    ExtractedImageData, ImageExtractionError, ImageExtractionLimits, ImageExtractionResult,
+    ImageExtractor, InputSemanticReport, InputSemanticRole, LosslessMergeInput, OverlayOptions,
+    OverlayPosition, PageMutation, PageMutationBatch, PageMutationReport, PreserveBasePolicy,
+    ReconstructMetadataPolicy, ReconstructPolicy, ReorderOptions, SecondaryStructurePolicy,
+    SemanticPreservationReport, StructureDisposition, StructureSemanticReport,
 };
 
 // Re-export dashboard types
@@ -341,7 +349,8 @@ pub use recovery::{
 // Re-export structure types
 pub use structure::{
     Destination, DestinationType, NameTree, NameTreeNode, NamedDestinations, OutlineBuilder,
-    OutlineItem, OutlineTree, PageDestination, PageTree, PageTreeBuilder, PageTreeNode,
+    OutlineFlags, OutlineItem, OutlineTree, PageDestination, PageTree, PageTreeBuilder,
+    PageTreeNode,
 };
 
 // Re-export action types
@@ -372,6 +381,11 @@ pub use verification::compliance_report::{
     format_report_markdown, generate_compliance_report, ComplianceReport,
 };
 pub use verification::iso_matrix::{load_default_matrix, load_matrix, ComplianceStats, IsoMatrix};
+pub use verification::semantic_comparison::{
+    compare_pdfs_semantically, PdfRevisionSummary, RevisionObjectChange, RevisionObjectChangeKind,
+    SemanticComparisonLimits, SemanticComparisonOptions, SemanticComparisonResult,
+    SemanticDifferenceClass, SemanticPdfDifference,
+};
 pub use verification::validators::{
     check_available_validators, validate_external, validate_with_qpdf,
 };

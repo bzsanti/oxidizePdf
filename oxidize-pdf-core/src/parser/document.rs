@@ -51,12 +51,12 @@
 
 #[cfg(test)]
 use super::objects::{PdfArray, PdfName};
-use super::objects::{PdfDictionary, PdfObject};
+use super::objects::{PdfDictionary, PdfObject, PdfStream};
 use super::page_tree::{PageTree, ParsedPage};
 use super::reader::PdfReader;
 use super::{ParseError, ParseOptions, ParseResult};
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::path::Path;
@@ -227,6 +227,37 @@ pub struct PdfDocument<R: Read + Seek> {
 }
 
 impl<R: Read + Seek> PdfDocument<R> {
+    /// Read the complete document outline with default resource limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the page tree, outline hierarchy, sibling links,
+    /// or a referenced destination is malformed or exceeds a configured limit.
+    pub fn outline(&self) -> ParseResult<Option<crate::structure::OutlineTree>> {
+        self.outline_with_options(&super::outline::OutlineReadOptions::default())
+    }
+
+    /// Read the complete document outline with explicit resource limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the page tree, outline hierarchy, sibling links,
+    /// or a referenced destination is malformed or exceeds `options`.
+    pub fn outline_with_options(
+        &self,
+        options: &super::outline::OutlineReadOptions,
+    ) -> ParseResult<Option<crate::structure::OutlineTree>> {
+        if !self.catalog_dictionary()?.contains_key("Outlines") {
+            return Ok(None);
+        }
+        let count = self.page_count()?;
+        let mut pages = HashMap::with_capacity(count as usize);
+        for index in 0..count {
+            pages.insert(self.get_page(index)?.obj_ref, index);
+        }
+        super::outline::read_outline(&mut self.reader.borrow_mut(), &pages, options)
+    }
+
     /// Create a new PDF document from a reader
     pub fn new(reader: PdfReader<R>) -> Self {
         Self {
@@ -969,6 +1000,98 @@ impl<R: Read + Seek> PdfDocument<R> {
         }
     }
 
+    /// Decode a stream after resolving document-owned `/DecodeParms` references.
+    ///
+    /// This is the document-aware counterpart to [`PdfStream::decode`]. Use it
+    /// when a stream dictionary may contain indirect filter parameter objects.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a parameter reference is missing, circular, has an
+    /// invalid type, or when the underlying filter decoder fails.
+    pub fn decode_stream(&self, stream: &PdfStream) -> ParseResult<Vec<u8>> {
+        let dict = self.stream_dict_with_resolved_decode_parms(&stream.dict)?;
+        super::filters::decode_stream(&stream.data, &dict, &self.options())
+    }
+
+    /// Decode a stream with resolved `/DecodeParms` and a maximum output size.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::decode_stream`], plus an error when a
+    /// filter would exceed `max_bytes` or has no bounded decoder.
+    pub fn decode_stream_with_limit(
+        &self,
+        stream: &PdfStream,
+        max_bytes: usize,
+    ) -> ParseResult<Vec<u8>> {
+        let dict = self.stream_dict_with_resolved_decode_parms(&stream.dict)?;
+        super::filters::decode_stream_with_limit(&stream.data, &dict, &self.options(), max_bytes)
+    }
+
+    fn stream_dict_with_resolved_decode_parms(
+        &self,
+        dict: &PdfDictionary,
+    ) -> ParseResult<PdfDictionary> {
+        let Some(decode_parms) = dict.get("DecodeParms") else {
+            return Ok(dict.clone());
+        };
+        let mut resolved_dict = dict.clone();
+        let resolved = match decode_parms {
+            PdfObject::Array(array) => PdfObject::Array(super::objects::PdfArray(
+                array
+                    .0
+                    .iter()
+                    .map(|entry| self.resolve_decode_parms_entry(entry, true))
+                    .collect::<ParseResult<Vec<_>>>()?,
+            )),
+            other => self.resolve_decode_parms_entry(other, false)?,
+        };
+        resolved_dict.insert("DecodeParms".into(), resolved);
+        Ok(resolved_dict)
+    }
+
+    fn resolve_decode_parms_entry(
+        &self,
+        object: &PdfObject,
+        array_entry: bool,
+    ) -> ParseResult<PdfObject> {
+        let mut current = object.clone();
+        let mut visited = HashSet::new();
+        let mut resolved_reference = false;
+        while let PdfObject::Reference(object_number, generation) = current {
+            resolved_reference = true;
+            if !visited.insert((object_number, generation)) {
+                return Err(ParseError::CircularReference);
+            }
+            if visited.len() > super::stack_safe::MAX_RECURSION_DEPTH {
+                return Err(ParseError::SyntaxError {
+                    position: 0,
+                    message: "DecodeParms reference chain exceeds maximum depth".into(),
+                });
+            }
+            current = self.get_object(object_number, generation)?;
+        }
+        match current {
+            PdfObject::Dictionary(_) => Ok(current),
+            PdfObject::Null if !resolved_reference => Ok(current),
+            PdfObject::Array(array) if !array_entry => {
+                Ok(PdfObject::Array(super::objects::PdfArray(
+                    array
+                        .0
+                        .iter()
+                        .map(|entry| self.resolve_decode_parms_entry(entry, true))
+                        .collect::<ParseResult<Vec<_>>>()?,
+                )))
+            }
+            _ => Err(ParseError::SyntaxError {
+                position: 0,
+                message: "DecodeParms must resolve to a dictionary, null, or an array of those"
+                    .into(),
+            }),
+        }
+    }
+
     /// Get content streams for a specific page.
     ///
     /// This method handles both single streams and arrays of streams,
@@ -1042,20 +1165,19 @@ impl<R: Read + Seek> PdfDocument<R> {
 
     pub fn get_page_content_streams(&self, page: &ParsedPage) -> ParseResult<Vec<Vec<u8>>> {
         let mut streams = Vec::new();
-        let options = self.options();
 
         if let Some(contents) = page.dict.get("Contents") {
             let resolved_contents = self.resolve(contents)?;
 
             match &resolved_contents {
                 PdfObject::Stream(stream) => {
-                    streams.push(stream.decode(&options)?);
+                    streams.push(self.decode_stream(stream)?);
                 }
                 PdfObject::Array(array) => {
                     for item in &array.0 {
                         let resolved = self.resolve(item)?;
                         if let PdfObject::Stream(stream) = resolved {
-                            streams.push(stream.decode(&options)?);
+                            streams.push(self.decode_stream(&stream)?);
                         }
                     }
                 }
@@ -1276,8 +1398,13 @@ impl<R: Read + Seek> PdfDocument<R> {
             let mut annotations = Vec::new();
             let mut reader = self.reader.borrow_mut();
 
-            for annot_ref in &annots_array.0 {
-                if let Some(ref_nums) = annot_ref.as_reference() {
+            for annotation in &annots_array.0 {
+                // Annotation arrays may contain either indirect references or
+                // direct annotation dictionaries (PDF 1.7, 12.5.2). Preserve
+                // the existing best-effort behavior for malformed references.
+                if let Some(dict) = annotation.as_dict() {
+                    annotations.push(dict.clone());
+                } else if let Some(ref_nums) = annotation.as_reference() {
                     match reader.get_object(ref_nums.0, ref_nums.1) {
                         Ok(obj) => {
                             if let Some(dict) = obj.as_dict() {

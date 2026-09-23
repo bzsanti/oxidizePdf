@@ -29,7 +29,12 @@ use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 mod synthetic_pdf;
 
 fn extract(content: &str) -> String {
-    let bytes = synthetic_pdf::build_pdf_with_content_stream(content.as_bytes());
+    extract_bytes(synthetic_pdf::build_pdf_with_content_stream(
+        content.as_bytes(),
+    ))
+}
+
+fn extract_bytes(bytes: Vec<u8>) -> String {
     let doc = PdfReader::new_with_options(std::io::Cursor::new(bytes), ParseOptions::lenient())
         .expect("synthetic PDF must parse")
         .into_document();
@@ -182,6 +187,51 @@ fn a_gap_below_the_threshold_leaves_the_runs_welded() {
     );
 }
 
+/// Inline code or emphasis is often emitted in a separate font immediately
+/// before prose. The QMF corpus sample uses a 0.333em gap for this boundary:
+/// it is too narrow for the conservative same-font TJ gate, but a font change
+/// makes it evidence of a word boundary rather than an intra-word reposition.
+#[test]
+fn a_narrow_font_change_boundary_becomes_a_space() {
+    let text = extract(&font_change_runs(0.35));
+    assert_eq!(
+        text, "alpha beta",
+        "a 0.35em gap after a font switch must separate inline styling from prose: {text:?}"
+    );
+}
+
+#[test]
+fn a_subthreshold_font_change_boundary_stays_welded() {
+    let text = extract(&font_change_runs(0.25));
+    assert_eq!(
+        text, "alphabeta",
+        "a 0.25em font-change residue is not a word boundary: {text:?}"
+    );
+}
+
+fn font_change_runs(gap_em: f64) -> String {
+    let first_advance = 24.45; // `alpha` in 10pt Helvetica.
+    let second_x = 100.0 + first_advance + gap_em * 10.0;
+    format!(
+        "BT\n/F1 10 Tf\n1 0 0 1 100 700 Tm\n(alpha) Tj\n\
+         /F2 10 Tf\n1 0 0 1 {second_x} 700 Tm\n[(beta)] TJ\nET"
+    )
+}
+
+/// The same decision must survive a Form XObject recursion. The form's F2
+/// run is the actual predecessor of the page-level F2 TJ; treating it as a
+/// font change would incorrectly split this 0.5em residue.
+#[test]
+fn form_xobject_preserves_the_last_shown_font_for_tj_boundaries() {
+    let page = b"/Fm Do\nBT\n/F2 10 Tf\n1 0 0 1 129.45 700 Tm\n[(beta)] TJ\nET";
+    let form = b"BT\n/F2 10 Tf\n1 0 0 1 100 700 Tm\n(alpha) Tj\nET";
+    let text = extract_bytes(synthetic_pdf::build_pdf_with_form_xobject(page, form));
+    assert_eq!(
+        text, "alphabeta",
+        "a Form XObject must carry its last font into the next TJ boundary: {text:?}"
+    );
+}
+
 #[test]
 fn a_gap_above_the_threshold_splits_the_runs() {
     let text = extract(&two_runs_with_gap(0.9));
@@ -189,6 +239,78 @@ fn a_gap_above_the_threshold_splits_the_runs() {
         text.contains("alpha beta"),
         "nine tenths of an em between two separately positioned runs is a word \
          break: {text:?}"
+    );
+}
+
+// The boundary gap between separate TJ operators is measured from page-space
+// pen origins.  Its threshold must therefore include scale supplied through
+// Tm, the graphics CTM, and Tz; otherwise a sub-em positioning residue gets
+// mistaken for a word boundary when Tf is deliberately kept at 1.
+fn scaled_tj_boundary_runs(prefix: &str, tm: &str, first_x: f64, second_x: f64) -> String {
+    // Helvetica at Tf 1: "3030-" advances (4 * 556 + 333) / 1000 em.
+    // With a 9x effective horizontal scale its page-space advance is 23.013.
+    // The second run is only 0.75pt beyond that natural pen position: below
+    // the intended 0.7em threshold (6.3pt before any Tz expansion), but above
+    // the old, unscaled 0.7pt comparison.
+    format!(
+        "{prefix}BT\n/F1 1 Tf\n{tm} {first_x} 700 Tm\n[(3030-)] TJ\n\
+         {tm} {second_x} 700 Tm\n[(7160)] TJ\nET\n"
+    )
+}
+
+#[test]
+fn tm_scaling_does_not_turn_a_small_tj_boundary_residue_into_a_space() {
+    let text = extract(&scaled_tj_boundary_runs("", "9 0 0 9", 50.0, 73.763));
+    assert_eq!(
+        text, "3030-7160",
+        "a 0.75pt residue under 9x Tm scaling is not a word boundary: {text:?}"
+    );
+}
+
+#[test]
+fn tm_scaling_preserves_a_real_tj_boundary_space() {
+    // "3030-" naturally ends at x=73.013 in page space.  The next run starts
+    // 8.1pt later, i.e. 0.9em at the effective 9pt size, which is above the
+    // 0.7em boundary threshold and must remain a word boundary.
+    let text = extract(&scaled_tj_boundary_runs("", "9 0 0 9", 50.0, 81.113));
+    assert_eq!(
+        text, "3030- 7160",
+        "a genuine 0.9em TJ boundary under Tm scaling must remain a space: {text:?}"
+    );
+}
+
+#[test]
+fn ctm_scaling_does_not_turn_a_small_tj_boundary_residue_into_a_space() {
+    // Here the effective 9x scale is supplied by `cm`, while Tm remains the
+    // identity. The boundary calculation must treat it identically to Tm.
+    let text = extract(&scaled_tj_boundary_runs(
+        "q\n9 0 0 9 0 0 cm\n",
+        "1 0 0 1",
+        50.0 / 9.0,
+        73.763 / 9.0,
+    ));
+    assert_eq!(
+        text, "3030-7160",
+        "a 0.75pt residue under 9x CTM scaling is not a word boundary: {text:?}"
+    );
+}
+
+#[test]
+fn horizontal_text_scaling_is_included_in_the_tj_boundary_threshold() {
+    // Tz doubles the horizontal page-space advance. The threshold must scale
+    // with it as well, matching the pen origin used to obtain dx.
+    let text = extract(&scaled_tj_boundary_runs("", "9 0 0 9", 50.0, 73.763));
+    let text_with_tz = extract(
+        &scaled_tj_boundary_runs("", "9 0 0 9", 50.0, 96.776).replacen(
+            "/F1 1 Tf",
+            "/F1 1 Tf\n200 Tz",
+            1,
+        ),
+    );
+    assert_eq!(text, "3030-7160");
+    assert_eq!(
+        text_with_tz, "3030-7160",
+        "Tz must not shrink the TJ boundary threshold relative to dx: {text_with_tz:?}"
     );
 }
 

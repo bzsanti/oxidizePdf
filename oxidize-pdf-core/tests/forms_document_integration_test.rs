@@ -1357,7 +1357,7 @@ fn test_international_form_support() {
     let mut form_manager = FormManager::new();
 
     // Test with various international characters
-    let international_texts = vec![
+    let international_texts = [
         ("chinese", "你好世界"),
         ("arabic", "مرحبا بالعالم"),
         ("spanish", "Hola Mundo ñáéíóú"),

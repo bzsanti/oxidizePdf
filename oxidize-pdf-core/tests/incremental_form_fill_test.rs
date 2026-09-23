@@ -159,7 +159,7 @@ fn base_startxref(bytes: &[u8]) -> u64 {
 /// Base trailer `/Size` (= the first object id a fresh appearance stream takes).
 fn base_size(bytes: &[u8]) -> u32 {
     let reader = PdfReader::new(Cursor::new(bytes)).expect("parse");
-    reader.trailer().size().expect("base /Size") as u32
+    reader.trailer().size().expect("base /Size")
 }
 
 /// Object ids of the first page's widget annotations (the bearers of /AP after

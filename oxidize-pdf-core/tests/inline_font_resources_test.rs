@@ -18,7 +18,7 @@
 mod common;
 
 use common::pdf_assembler::{assemble_pdf, stream_obj};
-use oxidize_pdf::operations::{merge_pdfs, MergeInput, MergeOptions};
+use oxidize_pdf::operations::reconstruct::{merge_pdfs, MergeInput, MetadataMode};
 use oxidize_pdf::parser::{ParseOptions, PdfDocument, PdfReader};
 use oxidize_pdf::text::{ExtractionOptions, PlainTextExtractor, TextExtractor};
 use std::io::Cursor;
@@ -168,7 +168,7 @@ fn a_document_written_by_this_library_stays_readable_to_this_library() {
     merge_pdfs(
         vec![MergeInput::new(input)],
         &output,
-        MergeOptions::default(),
+        MetadataMode::FromFirst,
     )
     .expect("merge writes the document");
 

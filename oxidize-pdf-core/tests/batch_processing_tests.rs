@@ -94,8 +94,13 @@ fn test_batch_split_pdfs() {
     assert_eq!(summary.successful, 3);
     assert_eq!(summary.failed, 0);
 
-    // The batch_split_pdfs function creates split files in the current directory
-    // We can verify the operation succeeded by checking the summary
+    let outputs = summary.output_files();
+    assert_eq!(outputs.len(), 12);
+    for output in outputs {
+        assert!(output.exists(), "missing split output {}", output.display());
+        let document = oxidize_pdf::parser::PdfReader::open_document(output).unwrap();
+        assert_eq!(document.page_count().unwrap(), 1);
+    }
     assert_eq!(summary.success_rate(), 100.0);
 }
 

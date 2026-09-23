@@ -12,6 +12,7 @@ use crate::parser::ParseResult;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
 use crate::text::flat_reading_order;
 use crate::text::graphics_state_stack::GraphicsStateStack;
+use crate::text::TextRenderingMode;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -207,6 +208,7 @@ pub struct SpaceDecision {
 
 /// A fragment of text with position information
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct TextFragment {
     /// Text content
     pub text: String,
@@ -228,6 +230,9 @@ pub struct TextFragment {
     pub is_italic: bool,
     /// Fill color of the text (from graphics state)
     pub color: Option<Color>,
+    /// PDF text rendering mode (`Tr`) active when this fragment was emitted.
+    /// Invisible text is retained so OCR layers remain available to callers.
+    pub render_mode: TextRenderingMode,
     /// Space insertion decisions (empty unless `track_space_decisions` is true).
     pub space_decisions: Vec<SpaceDecision>,
     /// Marked-content identifier from the innermost ancestor BDC with `/MCID`
@@ -238,6 +243,35 @@ pub struct TextFragment {
     /// `"Artifact"`). Set on the same ancestor that supplied `mcid`. Phase 3
     /// will consume this for partitioner classification; Phase 1 only carries it.
     pub struct_tag: Option<String>,
+}
+
+impl TextFragment {
+    /// Create a text fragment with default style and metadata.
+    pub fn new(
+        text: impl Into<String>,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        font_size: f64,
+    ) -> Self {
+        Self {
+            text: text.into(),
+            x,
+            y,
+            width,
+            height,
+            font_size,
+            font_name: None,
+            is_bold: false,
+            is_italic: false,
+            color: None,
+            render_mode: TextRenderingMode::Fill,
+            space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
+        }
+    }
 }
 
 /// One entry on the marked-content stack maintained by `TextState`.
@@ -292,6 +326,8 @@ struct PendingActualText {
     is_italic: bool,
     /// Fill color at first suppression.
     color: Option<Color>,
+    /// Rendering mode active at the first suppressed text-show operation.
+    render_mode: TextRenderingMode,
     /// Depth in `mc_stack` at which this run was opened. When the entry at
     /// this depth is popped, the pending run is flushed.
     stack_depth: usize,
@@ -363,8 +399,8 @@ struct TextState {
     font_size: f64,
     /// Current font name
     font_name: Option<String>,
-    /// Render mode (0 = fill, 1 = stroke, etc.)
-    render_mode: u8,
+    /// Current PDF text rendering mode.
+    render_mode: TextRenderingMode,
     /// Fill color (for text rendering)
     fill_color: Option<Color>,
     /// Graphics state stack for `q`/`Q` operators. Each entry holds the CTM
@@ -435,7 +471,7 @@ struct SavedGraphicsState {
     text_rise: f64,
     font_size: f64,
     font_name: Option<String>,
-    render_mode: u8,
+    render_mode: TextRenderingMode,
 }
 
 impl SavedGraphicsState {
@@ -490,6 +526,10 @@ struct OpRunState {
     at_text_object_start: bool,
     last_x: f64,
     last_y: f64,
+    /// Font that drew the preceding glyph run. This travels through Form
+    /// XObject recursion because the next page-level run is compared with the
+    /// form's final pen position (issue #602).
+    last_shown_font_name: Option<String>,
     extracted_text: String,
     fragments: Vec<TextFragment>,
     /// Set once the per-page byte budget (`max_extracted_bytes`) has cut text
@@ -537,7 +577,7 @@ impl Default for TextState {
             text_rise: 0.0,
             font_size: 0.0,
             font_name: None,
-            render_mode: 0,
+            render_mode: TextRenderingMode::Fill,
             fill_color: None,
             saved_states: GraphicsStateStack::default(),
             mc_stack: Vec::new(),
@@ -606,7 +646,7 @@ const PARAGRAPH_STYLE_SIZE_TOLERANCE: f64 = 0.05;
 /// so `partition` classifies the whole block as a `Title` and its text becomes
 /// the `heading_path` breadcrumb of everything that follows.
 fn same_paragraph_style(a: &TextFragment, b: &TextFragment) -> bool {
-    if a.is_bold != b.is_bold {
+    if a.is_bold != b.is_bold || a.render_mode != b.render_mode {
         return false;
     }
     let scale = a.font_size.abs().max(b.font_size.abs());
@@ -632,6 +672,16 @@ fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_thres
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
+    /// Emit figure text decoded only through a custom `/Differences` table.
+    /// Disabled by default because such text lacks an authoritative Unicode
+    /// mapping and can be misleading; callers performing forensic extraction
+    /// can opt in with [`Self::with_unreliable_figure_text`].
+    include_unreliable_figure_text: bool,
+    /// Append URI targets from interactive `/Link` annotations to extracted
+    /// page text. Kept here rather than on `ExtractionOptions` so enabling it
+    /// is a non-breaking method addition for downstream users of that public
+    /// struct (issue #584).
+    include_link_annotations: bool,
     /// Reorder the flat `.text` line groups into reading order (issue #448).
     /// Off by default; set via [`TextExtractor::with_reading_order`]. Held here,
     /// not on the public [`ExtractionOptions`], so enabling it is a
@@ -657,6 +707,8 @@ impl TextExtractor {
     pub fn new() -> Self {
         Self {
             options: ExtractionOptions::default(),
+            include_unreliable_figure_text: false,
+            include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
@@ -669,6 +721,8 @@ impl TextExtractor {
     pub fn with_options(options: ExtractionOptions) -> Self {
         Self {
             options,
+            include_unreliable_figure_text: false,
+            include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
@@ -694,6 +748,29 @@ impl TextExtractor {
     /// one group. `/Rotate ≠ 0` pages are ordered in unrotated page space.
     pub fn with_reading_order(mut self, enable: bool) -> Self {
         self.reading_order = enable;
+        self
+    }
+
+    /// Enable (or disable) appending URI targets from interactive `/Link`
+    /// annotations after a page's visible text.
+    ///
+    /// The extractor reads only `/Annots /Subtype /Link /A /S /URI /URI`; it
+    /// never follows, opens, or otherwise executes a PDF action. Disabled by
+    /// default. URI targets retain `/Annots` array order and each is appended
+    /// on a new line.
+    pub fn with_link_annotation_extraction(mut self, enable: bool) -> Self {
+        self.include_link_annotations = enable;
+        self
+    }
+
+    /// Include text from `/Figure` scopes whose font has no `/ToUnicode` map
+    /// and relies on `/Differences` glyph names.
+    ///
+    /// This fallback can be useful for forensic workflows, but it is disabled
+    /// by default because those glyph names are not an authoritative Unicode
+    /// mapping and may produce plausible but incorrect text.
+    pub fn with_unreliable_figure_text(mut self, enable: bool) -> Self {
+        self.include_unreliable_figure_text = enable;
         self
     }
 
@@ -800,7 +877,9 @@ impl TextExtractor {
                 && lines.last_mut().is_some_and(|line| {
                     let head = line[0].1;
                     let tol = (head.height.min(frag.height)) * 0.2;
-                    (head.y - frag.y).abs() < tol && head.mcid == frag.mcid
+                    (head.y - frag.y).abs() < tol
+                        && head.mcid == frag.mcid
+                        && head.render_mode == frag.render_mode
                 });
             if placed {
                 lines.last_mut().unwrap().push((idx, frag));
@@ -920,6 +999,38 @@ impl TextExtractor {
         threshold * x_scale * horizontal_scale
     }
 
+    /// Boundary gaps between separate `TJ` operators are measured from page-space
+    /// pen origins, just like flat `Tj` gaps.  Scale the em-based threshold by
+    /// the active text matrix, CTM, and horizontal text scale so both sides of
+    /// the comparison use page-space units (issue #586).
+    fn tj_boundary_space_gap_threshold(&self, state: &TextState) -> f64 {
+        self.tj_space_gap_threshold(state, TJ_BOUNDARY_SPACE_EM)
+    }
+
+    /// A font switch between adjacent show-text operators is evidence that a
+    /// short gap separates an inline styled token from prose, rather than
+    /// splitting one word. Keep this below the ordinary boundary threshold so
+    /// documents such as the QMF manual can retain its 0.333em code/prose
+    /// spaces, while unchanged-font runs keep the conservative 0.7em gate.
+    fn tj_font_change_space_gap_threshold(&self, state: &TextState) -> f64 {
+        self.tj_space_gap_threshold(state, TJ_FONT_CHANGE_BOUNDARY_SPACE_EM)
+    }
+
+    fn tj_space_gap_threshold(&self, state: &TextState, em: f64) -> f64 {
+        let (x_scale, _) = combined_text_scale(state);
+        let x_scale = if x_scale.is_finite() && x_scale > f64::EPSILON {
+            x_scale
+        } else {
+            1.0
+        };
+        let horizontal_scale = if state.horizontal_scale.is_finite() {
+            state.horizontal_scale.abs() / 100.0
+        } else {
+            1.0
+        };
+        em * state.font_size.abs() * x_scale * horizontal_scale
+    }
+
     /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
     /// Anchored to the font's real space-glyph advance when known — word gaps
     /// scale with the font's space metric, not with a fixed fraction of font
@@ -972,6 +1083,7 @@ impl TextExtractor {
             is_bold: head.is_bold,
             is_italic: head.is_italic,
             color: head.color,
+            render_mode: head.render_mode,
             space_decisions: Vec::new(),
             mcid: head.mcid,
             struct_tag: head.struct_tag.clone(),
@@ -1017,11 +1129,22 @@ impl TextExtractor {
             }
 
             // Same paragraph — join
-            let joined_text = if self.options.merge_hyphenated && current.text.ends_with('-') {
-                let mut s = current.text.clone();
-                s.pop(); // drop trailing hyphen
-                s.push_str(&line.text);
-                s
+            let joined_text = if self.options.merge_hyphenated {
+                if let Some(prefix_len) = hyphen_wrap_prefix_len(&current.text) {
+                    match hyphen_fusion_action(&current.text, &line.text) {
+                        HyphenFusionAction::DropHyphen => {
+                            format!("{}{}", &current.text[..prefix_len], line.text)
+                        }
+                        HyphenFusionAction::KeepHyphen => {
+                            format!("{}{}", &current.text[..prefix_len + 1], line.text)
+                        }
+                        HyphenFusionAction::NoFusion => {
+                            format!("{}\n{}", current.text, line.text)
+                        }
+                    }
+                } else {
+                    format!("{}\n{}", current.text, line.text)
+                }
             } else {
                 format!("{}\n{}", current.text, line.text)
             };
@@ -1042,6 +1165,7 @@ impl TextExtractor {
                 is_bold: current.is_bold,
                 is_italic: current.is_italic,
                 color: current.color,
+                render_mode: current.render_mode,
                 space_decisions: Vec::new(),
                 mcid: current.mcid,
                 struct_tag: current.struct_tag.clone(),
@@ -1117,6 +1241,7 @@ impl TextExtractor {
             at_text_object_start: false,
             last_x,
             last_y,
+            last_shown_font_name: None,
             extracted_text,
             fragments,
             truncated: false,
@@ -1282,6 +1407,16 @@ impl TextExtractor {
                 self.options.max_extracted_bytes,
                 &mut truncated,
             );
+
+            if self.include_link_annotations {
+                append_link_annotation_uris(
+                    &mut extracted_text,
+                    document,
+                    page_index,
+                    self.options.max_extracted_bytes,
+                    &mut truncated,
+                );
+            }
         }
 
         Ok(ExtractedText {
@@ -1310,13 +1445,13 @@ impl TextExtractor {
             mut at_text_object_start,
             mut last_x,
             mut last_y,
+            mut last_shown_font_name,
             mut extracted_text,
             mut fragments,
             mut truncated,
             mut line_groups,
             mut cur_group,
         } = run;
-
         let page_properties: Option<&crate::parser::objects::PdfDictionary> =
             resources.and_then(|res| match res.get("Properties") {
                 Some(crate::parser::objects::PdfObject::Dictionary(d)) => Some(d),
@@ -1399,7 +1534,7 @@ impl TextExtractor {
                         // `.text` and `.fragments` stay consistent for pages
                         // wrapped in an `/Artifact` marked-content scope —
                         // issue #330.
-                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let skip_text = self.should_skip_text(&state);
 
                         // Add spacing based on position change
                         // Separator of the run that was actually appended, for the
@@ -1510,6 +1645,7 @@ impl TextExtractor {
                                 y,
                                 &mut state,
                                 self.options.include_artifacts,
+                                skip_text,
                             );
                         }
 
@@ -1539,6 +1675,7 @@ impl TextExtractor {
                         // pen point (folds in Tz and CTM scale, issue #386; a
                         // full point so rotated baselines advance y too, #443).
                         (last_x, last_y) = advance_pen(&mut state, text_width);
+                        last_shown_font_name = state.font_name.clone();
                         at_text_object_start = false;
                     }
                 }
@@ -1561,8 +1698,7 @@ impl TextExtractor {
                                     // Mirror the gate inside `emit_text_fragment`
                                     // so `.text` and `.fragments` stay consistent
                                     // for Artifact scopes (issue #330).
-                                    let skip_text =
-                                        skip_artifact_text(&state, self.options.include_artifacts);
+                                    let skip_text = self.should_skip_text(&state);
 
                                     // Pen origin in user space = (CTM × text_matrix)(0, 0).
                                     let (x, y) = text_origin(&state);
@@ -1633,8 +1769,15 @@ impl TextExtractor {
                                         // accurate as the font widths, so a
                                         // producer that draws one word as several
                                         // positioned runs must not be split.
+                                        let font_changed = last_shown_font_name.as_deref()
+                                            != state.font_name.as_deref();
+                                        let boundary_threshold = if font_changed {
+                                            self.tj_font_change_space_gap_threshold(&state)
+                                        } else {
+                                            self.tj_boundary_space_gap_threshold(&state)
+                                        };
                                         let boundary_space = at_array_start
-                                            && dx > TJ_BOUNDARY_SPACE_EM * state.font_size
+                                            && dx > boundary_threshold
                                             && !extracted_text.ends_with(' ');
                                         let separator = if extracted_text.is_empty() {
                                             None
@@ -1697,6 +1840,7 @@ impl TextExtractor {
                                             y,
                                             &mut state,
                                             self.options.include_artifacts,
+                                            skip_text,
                                         );
                                     }
 
@@ -1727,6 +1871,7 @@ impl TextExtractor {
                                     // (issue #381: a stale `last_y` dropped newlines;
                                     // issue #386: the pen must fold in Tz/CTM scale).
                                     (last_x, last_y) = advance_pen(&mut state, text_width);
+                                    last_shown_font_name = state.font_name.clone();
                                     at_array_start = false;
                                     at_text_object_start = false;
                                 }
@@ -1806,6 +1951,7 @@ impl TextExtractor {
                                             // explicit content rather than as a sub-threshold
                                             // x-jump. Width = the kern advance so the next
                                             // text fragment begins flush against it.
+                                            let skip_text = self.should_skip_text(&state);
                                             let (sx, sy) = text_origin(&state);
                                             emit_text_fragment(
                                                 &mut fragments,
@@ -1815,6 +1961,7 @@ impl TextExtractor {
                                                 sy,
                                                 &mut state,
                                                 self.options.include_artifacts,
+                                                skip_text,
                                             );
                                         }
                                     }
@@ -1843,7 +1990,7 @@ impl TextExtractor {
                         let (x, y) = text_origin(&state);
 
                         // Mirror the artifact gate (issue #330).
-                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let skip_text = self.should_skip_text(&state);
                         let mut emitted_sep: Option<Option<char>> = None;
                         if !skip_text {
                             let separator = if extracted_text.is_empty() {
@@ -1904,6 +2051,7 @@ impl TextExtractor {
                                 y,
                                 &mut state,
                                 self.options.include_artifacts,
+                                skip_text,
                             );
                         }
 
@@ -1952,7 +2100,7 @@ impl TextExtractor {
                         let (x, y) = text_origin(&state);
 
                         // Mirror the artifact gate (issue #330).
-                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        let skip_text = self.should_skip_text(&state);
                         let mut emitted_sep: Option<Option<char>> = None;
                         if !skip_text {
                             let separator = if extracted_text.is_empty() {
@@ -2011,6 +2159,7 @@ impl TextExtractor {
                                 y,
                                 &mut state,
                                 self.options.include_artifacts,
+                                skip_text,
                             );
                         }
 
@@ -2066,7 +2215,7 @@ impl TextExtractor {
                 }
 
                 ContentOperation::SetTextRenderMode(mode) => {
-                    state.render_mode = mode as u8;
+                    state.render_mode = TextRenderingMode::try_from(mode).unwrap_or_default();
                 }
 
                 ContentOperation::SetTransformMatrix(a, b, c, d, e, f) => {
@@ -2165,6 +2314,7 @@ impl TextExtractor {
                             is_bold: false, // overwritten on first Tj
                             is_italic: false,
                             color: state.fill_color,
+                            render_mode: state.render_mode,
                             stack_depth: state.mc_stack.len(), // BEFORE the push below
                             populated: false,
                         });
@@ -2246,6 +2396,7 @@ impl TextExtractor {
                                             is_bold: run.is_bold,
                                             is_italic: run.is_italic,
                                             color: run.color,
+                                            render_mode: run.render_mode,
                                             space_decisions: Vec::new(),
                                             mcid,
                                             struct_tag,
@@ -2317,6 +2468,7 @@ impl TextExtractor {
                                 at_text_object_start,
                                 last_x,
                                 last_y,
+                                last_shown_font_name,
                                 extracted_text,
                                 fragments,
                                 truncated,
@@ -2341,6 +2493,7 @@ impl TextExtractor {
                             at_text_object_start = out.at_text_object_start;
                             last_x = out.last_x;
                             last_y = out.last_y;
+                            last_shown_font_name = out.last_shown_font_name;
                             extracted_text = out.extracted_text;
                             fragments = out.fragments;
                             truncated = out.truncated;
@@ -2361,6 +2514,7 @@ impl TextExtractor {
             at_text_object_start,
             last_x,
             last_y,
+            last_shown_font_name,
             extracted_text,
             fragments,
             truncated,
@@ -2470,20 +2624,31 @@ impl TextExtractor {
         let region_ids = assign_layout_region_ids(&fragments);
         let mut result: Vec<(u32, TextFragment)> = Vec::with_capacity(fragments.len());
         for (region_id, fragment) in region_ids.into_iter().zip(fragments) {
-            let should_merge = result
-                .last()
-                .map(|(prev_region, prev)| {
-                    *prev_region == region_id
-                        && prev.text.ends_with('-')
-                        && is_line_wrap_geometry(prev, &fragment, self.options.newline_threshold)
-                })
-                .unwrap_or(false);
+            let fusion_prefix_len = result.last().and_then(|(prev_region, prev)| {
+                (*prev_region == region_id
+                    && prev.render_mode == fragment.render_mode
+                    && is_line_wrap_geometry(prev, &fragment, self.options.newline_threshold))
+                .then(|| hyphen_wrap_prefix_len(&prev.text))
+                .flatten()
+            });
 
-            if should_merge {
+            if let Some(prefix_len) = fusion_prefix_len {
                 // Safe: just checked `result.last()` is `Some` above.
                 let (_, prev) = result.last_mut().expect("checked non-empty above");
-                prev.text.pop(); // drop the trailing hyphen
-                prev.text.push_str(&fragment.text);
+                match hyphen_fusion_action(&prev.text, &fragment.text) {
+                    HyphenFusionAction::DropHyphen => {
+                        prev.text.truncate(prefix_len);
+                        prev.text.push_str(&fragment.text);
+                    }
+                    HyphenFusionAction::KeepHyphen => {
+                        prev.text.truncate(prefix_len + 1);
+                        prev.text.push_str(&fragment.text);
+                    }
+                    HyphenFusionAction::NoFusion => {
+                        result.push((region_id, fragment));
+                        continue;
+                    }
+                }
                 // Extend the fused fragment's box to cover both lines so
                 // downstream geometry (space/newline decisions keyed on
                 // `x + width`, `y`) still reasons about real coverage
@@ -2865,9 +3030,12 @@ impl TextExtractor {
             if !result.is_empty() && y_diff > self.options.newline_threshold {
                 // Handle hyphenation
                 if self.options.merge_hyphenated && last_line_ended_with_hyphen {
-                    // Remove the hyphen and don't add newline
-                    if result.ends_with('-') {
-                        result.pop();
+                    if let Some(prefix_len) = hyphen_wrap_prefix_len(&result) {
+                        match hyphen_fusion_action(&result, &fragment.text) {
+                            HyphenFusionAction::DropHyphen => result.truncate(prefix_len),
+                            HyphenFusionAction::KeepHyphen => result.truncate(prefix_len + 1),
+                            HyphenFusionAction::NoFusion => result.push('\n'),
+                        }
                     }
                 } else {
                     result.push('\n');
@@ -2881,7 +3049,7 @@ impl TextExtractor {
             }
 
             result.push_str(&fragment.text);
-            last_line_ended_with_hyphen = fragment.text.ends_with('-');
+            last_line_ended_with_hyphen = hyphen_wrap_prefix_len(&fragment.text).is_some();
             last_y = fragment.y;
             last_x = fragment.x + fragment.width;
         }
@@ -2934,10 +3102,22 @@ impl TextExtractor {
                 1.0
             };
 
+            // `x_gap >= 0.0` treats a "touching" pair (the next run starting
+            // exactly where the previous one's pen advance ended, e.g. two
+            // runs of the same word/sentence with no positioning operator
+            // between them) as mergeable. But `current.width` and
+            // `fragment.x` are usually derived from independent floating-point
+            // paths (accumulated per-glyph AFM/Widths sums vs. the text
+            // matrix's absolute origin) that are mathematically identical but
+            // not bit-identical, so a genuinely zero gap can land a few ULPs
+            // on either side of 0.0 (issue #521 follow-up). Tolerate that
+            // rounding noise (see `SAME_LINE_EPS`) without loosening the check
+            // enough to treat a real, visible overlap as adjacent.
             let should_merge = y_diff < y_tol
-                && x_gap >= 0.0  // Fragment is to the right
+                && x_gap >= -SAME_LINE_EPS  // Fragment is to the right (within FP rounding noise)
                 && x_gap < fragment.font_size * 0.5 // Gap less than 50% of font size
-                && current.mcid == fragment.mcid;
+                && current.mcid == fragment.mcid
+                && current.render_mode == fragment.render_mode;
 
             if should_merge {
                 // Merge this fragment into current, preserving word boundaries
@@ -3095,6 +3275,32 @@ impl TextExtractor {
         self.font_cache.insert(font_name.to_string(), font_info);
     }
 
+    /// Suppress content that cannot be decoded reliably in a semantic figure.
+    ///
+    /// A `/Figure` is non-flow content. When its font lacks `/ToUnicode` and
+    /// relies on a custom `/Encoding /Differences` table, glyph names are only
+    /// a best-effort fallback; they are not an authoritative Unicode mapping.
+    /// Emitting such runs pollutes native text with chart labels that can look
+    /// plausible while being wrong. Keep normal prose and figures with a
+    /// `/ToUnicode` map untouched.
+    fn should_skip_text(&self, state: &TextState) -> bool {
+        if skip_artifact_text(state, self.options.include_artifacts) {
+            return true;
+        }
+
+        let in_figure = state.mc_stack.iter().any(|entry| entry.tag == "Figure");
+        let font_is_unreliable = state
+            .font_name
+            .as_deref()
+            .and_then(|name| self.font_cache.get(name))
+            .is_some_and(|font| font.to_unicode.is_none() && font.differences.is_some());
+
+        !self.include_unreliable_figure_text
+            && in_figure
+            && font_is_unreliable
+            && state.pending_actualtext.is_none()
+    }
+
     /// Decode text using the current font encoding and ToUnicode mapping
     fn decode_text(&self, text: &[u8], state: &TextState) -> ParseResult<String> {
         use crate::text::encoding::TextEncoding;
@@ -3166,6 +3372,82 @@ impl TextExtractor {
         );
         Ok(sanitized)
     }
+}
+
+/// Append URI action targets from a page's `/Link` annotations without
+/// executing any action. Malformed annotations and unresolved references are
+/// ignored so link discovery cannot turn an otherwise readable page into an
+/// extraction failure.
+fn append_link_annotation_uris<R: Read + Seek>(
+    extracted_text: &mut String,
+    document: &PdfDocument<R>,
+    page_index: u32,
+    max_extracted_bytes: Option<usize>,
+    truncated: &mut bool,
+) {
+    let Ok(annotations) = document.get_page_annotations(page_index) else {
+        return;
+    };
+
+    for annotation in annotations {
+        if annotation
+            .get("Subtype")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|subtype| subtype.0 != "Link")
+        {
+            continue;
+        }
+
+        let Some(action) = annotation
+            .get("A")
+            .and_then(|action| resolve_annotation_dictionary(document, action))
+        else {
+            continue;
+        };
+
+        if action
+            .get("S")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|action_type| action_type.0 != "URI")
+        {
+            continue;
+        }
+
+        let Some(uri) = action.get("URI").and_then(PdfObject::as_string) else {
+            continue;
+        };
+        let uri = uri.to_text();
+        if uri.is_empty() {
+            continue;
+        }
+
+        let separator = if extracted_text.is_empty() { "" } else { "\n" };
+        let addition_len = separator.len() + uri.len();
+        if max_extracted_bytes.is_some_and(|limit| extracted_text.len() + addition_len > limit) {
+            *truncated = true;
+            break;
+        }
+        extracted_text.push_str(separator);
+        extracted_text.push_str(&uri);
+    }
+}
+
+/// Resolve a direct or indirect action dictionary. The caller intentionally
+/// treats errors as absent data because annotation actions are optional.
+fn resolve_annotation_dictionary<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    object: &PdfObject,
+) -> Option<PdfDictionary> {
+    if let Some(dictionary) = object.as_dict() {
+        return Some(dictionary.clone());
+    }
+
+    let (number, generation) = object.as_reference()?;
+    document
+        .get_object(number, generation)
+        .ok()?
+        .as_dict()
+        .cloned()
 }
 
 impl Default for TextExtractor {
@@ -3301,14 +3583,41 @@ struct AppendOutcome {
 /// keeps calling it after the budget is reached simply accumulates nothing
 /// further.
 ///
+/// Action to take when a trailing hyphen meets the next text run across a line wrap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum HyphenFusionAction {
+    DropHyphen,
+    KeepHyphen,
+    NoFusion,
+}
+
+/// Classify a hyphenated line wrap while ignoring trailing layout whitespace.
+pub(crate) fn hyphen_fusion_action(before: &str, next: &str) -> HyphenFusionAction {
+    let before_char = before
+        .trim_end_matches([' ', '\t'])
+        .strip_suffix('-')
+        .and_then(|text| text.chars().next_back());
+    let next_char = next.chars().next();
+    match (before_char, next_char) {
+        (Some(before), Some(next)) if before.is_alphabetic() && next.is_alphabetic() => {
+            HyphenFusionAction::DropHyphen
+        }
+        (Some(before), Some(next)) if !before.is_whitespace() && !next.is_whitespace() => {
+            HyphenFusionAction::KeepHyphen
+        }
+        _ => HyphenFusionAction::NoFusion,
+    }
+}
+
 /// When `merge_hyphenated` is set and the caller requests a `'\n'` separator
-/// (a genuine line wrap) while `acc` already ends with `-`, the hyphen is
+/// (a genuine line wrap) while `acc` ends with `-` optionally followed by
+/// horizontal whitespace, the hyphen is
 /// producer noise from a hyphenated word/number wrapping across two lines,
 /// not a real word boundary (issue #486: `merge_hyphenated` had no effect on
 /// this flat/default extraction path, unlike `preserve_layout`'s
 /// `reconstruct_text_from_fragments` and `reconstruct_paragraphs`'s
 /// `merge_into_paragraphs`, both of which already apply this same rule). The
-/// trailing hyphen is popped and `decoded` is appended directly with no
+/// trailing hyphen and whitespace are removed and `decoded` is appended directly with no
 /// separator, fusing the wrapped token into one word instead of splitting it
 /// on a newline — e.g. `"...3016-"` + `"0900"` becomes `"...30160900"`
 /// instead of `"...3016-\n0900"`. `separator` is only ever `'\n'` here when
@@ -3329,18 +3638,27 @@ fn append_bounded(
         };
     }
 
-    let hyphen_fusion = merge_hyphenated && separator == Some('\n') && acc.ends_with('-');
-    let separator = if hyphen_fusion { None } else { separator };
+    let hyphen_fusion_prefix_len = (merge_hyphenated && separator == Some('\n'))
+        .then(|| hyphen_wrap_prefix_len(acc))
+        .flatten();
+    let action = hyphen_fusion_prefix_len
+        .map(|_| hyphen_fusion_action(acc, decoded))
+        .unwrap_or(HyphenFusionAction::NoFusion);
+    let separator = if action == HyphenFusionAction::NoFusion {
+        separator
+    } else {
+        None
+    };
 
     if let Some(max) = limit {
         // Popping the hyphen frees one byte before the new run is added, so
         // account against the post-pop length — otherwise a run that fits
         // once the hyphen is dropped could be wrongly rejected as
         // over-budget by one byte.
-        let base_len = if hyphen_fusion {
-            acc.len() - 1
-        } else {
-            acc.len()
+        let base_len = match (hyphen_fusion_prefix_len, action) {
+            (Some(prefix_len), HyphenFusionAction::DropHyphen) => prefix_len,
+            (Some(prefix_len), HyphenFusionAction::KeepHyphen) => prefix_len + 1,
+            _ => acc.len(),
         };
         let add = separator.map_or(0, char::len_utf8) + decoded.len();
         if base_len + add > max {
@@ -3352,8 +3670,12 @@ fn append_bounded(
         }
     }
 
-    if hyphen_fusion {
-        acc.pop();
+    if let Some(prefix_len) = hyphen_fusion_prefix_len {
+        match action {
+            HyphenFusionAction::DropHyphen => acc.truncate(prefix_len),
+            HyphenFusionAction::KeepHyphen => acc.truncate(prefix_len + 1),
+            HyphenFusionAction::NoFusion => {}
+        }
     }
     if let Some(sep) = separator {
         acc.push(sep);
@@ -3363,6 +3685,14 @@ fn append_bounded(
         appended: true,
         applied_separator: separator,
     }
+}
+
+/// Return the byte length before a trailing hyphen and any following ASCII
+/// horizontal whitespace. The prefix is always on a UTF-8 boundary because
+/// the removable suffix contains only ASCII bytes.
+fn hyphen_wrap_prefix_len(text: &str) -> Option<usize> {
+    let trimmed = text.trim_end_matches([' ', '\t']);
+    trimmed.strip_suffix('-').map(str::len)
 }
 
 /// Defensive final clamp of a page's text to the byte budget (issue #382).
@@ -3396,8 +3726,9 @@ fn emit_text_fragment(
     y: f64,
     state: &mut TextState,
     include_artifacts: bool,
+    skip_text: bool,
 ) {
-    if decoded.is_empty() {
+    if decoded.is_empty() || skip_text {
         return;
     }
 
@@ -3430,6 +3761,7 @@ fn emit_text_fragment(
     // to avoid borrow-checker conflicts with the disjoint fields.
     let local_font_name = state.font_name.clone();
     let local_fill_color = state.fill_color;
+    let local_render_mode = state.render_mode;
     if let Some(pending) = state.pending_actualtext.as_mut() {
         if !pending.populated {
             pending.first_x = x;
@@ -3439,6 +3771,7 @@ fn emit_text_fragment(
             pending.is_bold = is_bold;
             pending.is_italic = is_italic;
             pending.color = local_fill_color;
+            pending.render_mode = local_render_mode;
             pending.populated = true;
         }
         pending.width += effective_width;
@@ -3458,6 +3791,7 @@ fn emit_text_fragment(
         is_bold,
         is_italic,
         color: state.fill_color,
+        render_mode: local_render_mode,
         space_decisions: Vec::new(),
         mcid,
         struct_tag,
@@ -3554,6 +3888,12 @@ const READING_ORDER_CFG: flat_reading_order::CutConfig = flat_reading_order::Cut
 /// .2486 (vs .2874 → .2714 before #456: an accurate advance lets the boundary
 /// fire more cleanly).
 const TJ_BOUNDARY_SPACE_EM: f64 = 0.7;
+
+/// A narrower boundary rule for an adjacent `Tj`/`TJ` font switch. The
+/// preceding run's font distinguishes inline styling from the same-font
+/// producer repositioning protected by [`TJ_BOUNDARY_SPACE_EM`] (issue #602).
+/// 0.3em is the documented lower edge of the corpus-calibrated plateau.
+const TJ_FONT_CHANGE_BOUNDARY_SPACE_EM: f64 = 0.3;
 
 /// Backward-jump magnitude, in multiples of the font size, above which a
 /// same-baseline (`dy == 0`) backward pen jump is a line wrap rather than a
@@ -4033,6 +4373,31 @@ fn calculate_text_width_from_codes(
 
             return total_width + spacing(codes);
         }
+
+        // Standard-14 simple fonts may legally omit `/Widths`. Resolve each
+        // original character code through the effective base encoding and
+        // `/Differences`, then look up the resulting PostScript glyph name in
+        // the font's AFM metrics (#523). An unresolved code retains the legacy
+        // 0.5em estimate instead of borrowing a width from the wrong encoding.
+        if let Some(metrics) =
+            crate::text::fonts::standard::get_standard_font_metrics_by_name(&font.name)
+        {
+            let total_width = codes
+                .iter()
+                .map(|&code| {
+                    metrics
+                        .encoded_char_width(
+                            font.encoding.as_deref(),
+                            font.differences.as_ref(),
+                            code,
+                        )
+                        .unwrap_or(500) as f64
+                        / 1000.0
+                        * font_size
+                })
+                .sum::<f64>();
+            return total_width + spacing(codes);
+        }
     }
 
     // No metrics: one fallback width per code (byte), the simple-font glyph count.
@@ -4052,6 +4417,7 @@ fn calculate_text_width_from_codes(
 ///   - `\t` (0x09) - Tab
 ///   - `\n` (0x0A) - Line feed
 /// - Normalizes `\r` and `\r\n` to `\n`
+/// - Normalizes Unicode line and paragraph separators (`U+2028`, `U+2029`) to `\n`
 /// - Collapses multiple consecutive spaces into a single space
 ///
 /// # Examples
@@ -4146,6 +4512,14 @@ pub fn sanitize_extracted_text_with_policy(
                         }
                     }
                 }
+            }
+
+            // PDF ToUnicode CMaps may use Unicode line or paragraph separators
+            // instead of an ASCII line feed. Normalize both so downstream text
+            // consumers see one portable line-ending representation (#575).
+            '\u{2028}' | '\u{2029}' => {
+                result.push('\n');
+                last_was_space = false;
             }
 
             // Preserve allowed whitespace
@@ -4293,21 +4667,8 @@ fn line_prefers_emission_order(line: &[(usize, &TextFragment)]) -> bool {
 /// leaves the caller on its fixed-fraction fallback. These fonts legitimately
 /// ship no `/Widths` array, so their space metric is only available here.
 fn standard_14_space_width(base_font: &str) -> Option<f64> {
-    let name = base_font.rsplit('+').next().unwrap_or(base_font);
-    let lower = name.to_ascii_lowercase();
-    if lower.contains("courier") {
-        Some(600.0)
-    } else if lower.contains("helvetica") || lower.contains("arial") {
-        Some(278.0)
-    } else if lower.contains("times") {
-        Some(250.0)
-    } else if lower == "symbol" {
-        Some(250.0)
-    } else if lower.contains("zapfdingbats") || lower.contains("dingbats") {
-        Some(278.0)
-    } else {
-        None
-    }
+    crate::text::fonts::standard::get_standard_font_metrics_by_name(base_font)
+        .map(|metrics| f64::from(metrics.get_char_width(b' ')))
 }
 
 #[cfg(test)]
@@ -4439,7 +4800,42 @@ mod tests {
             outcome.applied_separator, None,
             "hyphen fusion applies no separator, not the requested '\\n'"
         );
-        assert_eq!(s, "+55 11 30160900", "hyphen popped, halves fused");
+        assert_eq!(s, "+55 11 3016-0900", "hyphen preserved for numeric tokens");
+    }
+
+    #[test]
+    fn test_append_bounded_fuses_hyphen_wrap_with_trailing_horizontal_whitespace() {
+        let mut s = String::from("+55 11 3016- \t");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "0900", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(outcome.applied_separator, None);
+        assert_eq!(
+            s, "+55 11 3016-0900",
+            "hyphen preserved and layout whitespace removed"
+        );
+    }
+
+    #[test]
+    fn test_append_bounded_preserves_trailing_horizontal_whitespace_without_hyphen() {
+        let mut s = String::from("plain text \t");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "next line", None, &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(outcome.applied_separator, Some('\n'));
+        assert_eq!(s, "plain text \t\nnext line");
+    }
+
+    #[test]
+    fn test_append_bounded_fusion_with_trailing_whitespace_respects_budget() {
+        // The removable suffix is "- \t" (3 bytes), so the fused result fits
+        // exactly in 12 bytes. Counting the layout whitespace would reject it.
+        let mut s = String::from("rating- \t");
+        let mut trunc = false;
+        let outcome = append_bounded(&mut s, Some('\n'), "aa-exp", Some(12), &mut trunc, true);
+        assert!(outcome.appended);
+        assert_eq!(s, "ratingaa-exp");
+        assert!(!trunc);
     }
 
     #[test]
@@ -4664,6 +5060,7 @@ mod tests {
             is_bold: false,
             is_italic: false,
             color: None,
+            render_mode: Default::default(),
             space_decisions: Vec::new(),
             mcid: None,
             struct_tag: None,
@@ -4690,6 +5087,7 @@ mod tests {
                 is_bold: false,
                 is_italic: false,
                 color: None,
+                render_mode: Default::default(),
                 space_decisions: Vec::new(),
                 mcid: None,
                 struct_tag: None,
@@ -4705,6 +5103,7 @@ mod tests {
                 is_bold: false,
                 is_italic: false,
                 color: None,
+                render_mode: Default::default(),
                 space_decisions: Vec::new(),
                 mcid: None,
                 struct_tag: None,
@@ -4736,7 +5135,7 @@ mod tests {
         assert_eq!(state.text_rise, 0.0);
         assert_eq!(state.font_size, 0.0);
         assert!(state.font_name.is_none());
-        assert_eq!(state.render_mode, 0);
+        assert_eq!(state.render_mode, TextRenderingMode::Fill);
     }
 
     #[test]
@@ -4849,6 +5248,64 @@ mod tests {
         assert_eq!(
             width, 30.0,
             "Without widths array, should fall back to simplified calculation"
+        );
+    }
+
+    #[test]
+    fn standard_14_no_widths_uses_effective_encoding_for_pen_advance() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+        use std::collections::HashMap;
+
+        let font = |name: &str, encoding: Option<&str>, differences| FontInfo {
+            name: name.to_string(),
+            font_type: "Type1".to_string(),
+            encoding: encoding.map(str::to_string),
+            to_unicode: None,
+            differences,
+            descendant_font: None,
+            cid_ordering: None,
+            metrics: FontMetrics::default(),
+            cid_encoding: None,
+        };
+        let width = |code: u8, info: &FontInfo| {
+            calculate_text_width_from_codes(&[code], "", 10.0, Some(info), 0.0, 0.0)
+        };
+        let assert_width = |actual: f64, expected: f64| {
+            assert!((actual - expected).abs() < 1e-12, "{actual} != {expected}");
+        };
+
+        assert_width(
+            width(39, &font("Helvetica", Some("StandardEncoding"), None)),
+            2.22,
+        );
+        assert_width(
+            width(39, &font("Helvetica", Some("WinAnsiEncoding"), None)),
+            1.91,
+        );
+        assert_width(
+            width(0xDB, &font("Helvetica", Some("MacRomanEncoding"), None)),
+            5.56,
+        );
+
+        let differences = HashMap::from([(b'A', "fi".to_string())]);
+        assert_width(
+            width(
+                b'A',
+                &font("Helvetica", Some("WinAnsiEncoding"), Some(differences)),
+            ),
+            5.0,
+        );
+        assert_width(width(b'a', &font("Symbol", None, None)), 6.31);
+        assert_width(width(b'!', &font("ZapfDingbats", None, None)), 9.74);
+
+        let unknown = HashMap::from([(b'A', "not-a-glyph".to_string())]);
+        let unresolved = width(
+            b'A',
+            &font("Helvetica", Some("WinAnsiEncoding"), Some(unknown)),
+        );
+        assert!(
+            (unresolved - 5.0).abs() < 1e-12,
+            "unresolved glyphs retain the legacy 0.5em fallback"
         );
     }
 
@@ -5430,6 +5887,7 @@ mod tests {
             is_bold: false,
             is_italic: false,
             color: None,
+            render_mode: Default::default(),
             space_decisions: Vec::new(),
             mcid: None,
             struct_tag: None,
@@ -5801,6 +6259,40 @@ mod tests {
     }
 
     #[test]
+    fn merge_close_fragments_preserves_render_mode_boundaries() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let visible = tf("visible", 50.0, 400.0, 25.0, 10.0);
+        let mut hidden = tf("hidden", 75.0, 400.0, 20.0, 10.0);
+        hidden.render_mode = TextRenderingMode::Invisible;
+
+        let merged = extractor.merge_close_fragments(&[visible, hidden]);
+
+        assert_eq!(merged.len(), 2, "close runs with different Tr must split");
+    }
+
+    #[test]
+    fn merge_into_lines_preserves_render_mode_boundaries() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let visible = tf("visible", 50.0, 400.0, 25.0, 10.0);
+        let mut hidden = tf("hidden", 80.0, 400.0, 20.0, 10.0);
+        hidden.render_mode = TextRenderingMode::Invisible;
+
+        let lines = extractor.merge_into_lines(&[visible, hidden]);
+
+        assert_eq!(
+            lines.len(),
+            2,
+            "same-baseline runs with different Tr must split"
+        );
+    }
+
+    #[test]
     fn merge_into_paragraphs_groups_consecutive_lines() {
         let extractor = TextExtractor::with_options(ExtractionOptions {
             reconstruct_paragraphs: true,
@@ -5882,6 +6374,71 @@ mod tests {
         assert_eq!(paragraphs[1].text, "Body line.");
     }
 
+    #[test]
+    fn merge_into_paragraphs_preserves_render_mode_boundaries() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let visible = tf("Visible line.", 50.0, 400.0, 70.0, 12.0);
+        let mut hidden = tf("Hidden line.", 50.0, 386.0, 70.0, 12.0);
+        hidden.render_mode = TextRenderingMode::Invisible;
+
+        let paragraphs = extractor.merge_into_paragraphs(&[visible, hidden]);
+
+        assert_eq!(
+            paragraphs.len(),
+            2,
+            "consecutive lines with different Tr must split"
+        );
+    }
+
+    #[test]
+    fn hyphen_wrap_fusion_preserves_render_mode_boundaries() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            merge_hyphenated: true,
+            ..Default::default()
+        });
+        let visible = tf("visi-", 50.0, 400.0, 25.0, 10.0);
+        let mut hidden = tf("ble", 50.0, 385.0, 15.0, 10.0);
+        hidden.render_mode = TextRenderingMode::Invisible;
+
+        let merged = extractor.merge_hyphenated_line_wraps_in_emission_order(vec![visible, hidden]);
+
+        assert_eq!(merged.len(), 2, "hyphen wraps with different Tr must split");
+        assert_eq!(merged[0].text, "visi-");
+        assert_eq!(merged[1].text, "ble");
+    }
+
+    #[test]
+    fn hyphen_wrap_fusion_drops_trailing_horizontal_whitespace() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            merge_hyphenated: true,
+            ..Default::default()
+        });
+        let merged = extractor.merge_hyphenated_line_wraps_in_emission_order(vec![
+            tf("visi- \t", 50.0, 400.0, 25.0, 10.0),
+            tf("ble", 50.0, 385.0, 15.0, 10.0),
+        ]);
+
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].text, "visible");
+    }
+
+    #[test]
+    fn reconstruct_text_from_fragments_drops_hyphen_trailing_horizontal_whitespace() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            merge_hyphenated: true,
+            ..Default::default()
+        });
+        let text = extractor.reconstruct_text_from_fragments(&[
+            tf("visi- \t", 50.0, 400.0, 25.0, 10.0),
+            tf("ble", 50.0, 385.0, 15.0, 10.0),
+        ]);
+
+        assert_eq!(text, "visible");
+    }
+
     /// Sub-point rounding (11.96pt vs 12pt from a scaled text matrix) is not a
     /// style change: the paragraph must stay whole.
     #[test]
@@ -5920,6 +6477,23 @@ mod tests {
             paragraphs[0].text, "Kryptographie",
             "hyphen elided, no newline inserted"
         );
+    }
+
+    #[test]
+    fn merge_into_paragraphs_drops_hyphen_trailing_horizontal_whitespace() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            merge_hyphenated: true,
+            ..Default::default()
+        });
+        let lines = vec![
+            tf("Kryp- \t", 50.0, 400.0, 30.0, 12.0),
+            tf("tographie", 50.0, 386.0, 60.0, 12.0),
+        ];
+        let paragraphs = extractor.merge_into_paragraphs(&lines);
+
+        assert_eq!(paragraphs.len(), 1);
+        assert_eq!(paragraphs[0].text, "Kryptographie");
     }
 
     #[test]

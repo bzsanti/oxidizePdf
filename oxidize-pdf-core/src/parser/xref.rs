@@ -22,16 +22,12 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 /// `pub(crate)` so sibling parser modules (e.g. `reader.rs`) reuse this single
 /// implementation instead of duplicating it (Issue #352).
 pub(crate) fn find_byte_pattern(buffer: &[u8], pattern: &[u8]) -> Option<usize> {
-    buffer
-        .windows(pattern.len())
-        .position(|window| window == pattern)
+    memchr::memmem::find(buffer, pattern)
 }
 
 /// Find last occurrence of byte pattern (replaces String::rfind)
 fn rfind_byte_pattern(buffer: &[u8], pattern: &[u8]) -> Option<usize> {
-    buffer
-        .windows(pattern.len())
-        .rposition(|window| window == pattern)
+    memchr::memmem::rfind(buffer, pattern)
 }
 
 /// Parse "N G obj" header from bytes
@@ -425,6 +421,21 @@ pub struct XRefEntryExt {
     pub compressed_info: Option<(u32, u32)>, // (stream_obj_num, index_in_stream)
 }
 
+/// One object's state in a physical cross-reference revision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct RevisionXRefEntry {
+    pub(crate) object_number: u32,
+    pub(crate) generation: u16,
+    pub(crate) in_use: bool,
+}
+
+/// Physical xref section discovered through the `/Prev` chain.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct XRefRevision {
+    pub(crate) xref_offset: u64,
+    pub(crate) entries: Vec<RevisionXRefEntry>,
+}
+
 /// Cross-reference table
 #[derive(Debug, Clone)]
 pub struct XRefTable {
@@ -436,6 +447,8 @@ pub struct XRefTable {
     trailer: Option<super::objects::PdfDictionary>,
     /// Offset of the xref table in the file
     xref_offset: u64,
+    /// Physical revisions, newest first while parsing and exposed oldest first.
+    revisions: Vec<XRefRevision>,
 }
 
 impl Default for XRefTable {
@@ -452,12 +465,49 @@ impl XRefTable {
             extended_entries: HashMap::new(),
             trailer: None,
             xref_offset: 0,
+            revisions: Vec::new(),
         }
     }
 
     /// Get all entries in the xref table
     pub fn entries(&self) -> &HashMap<u32, XRefEntry> {
         &self.entries
+    }
+
+    /// Return every latest in-use object reference, including objects whose
+    /// current location is inside an object stream.
+    pub(crate) fn in_use_references(&self) -> Vec<(u32, u16)> {
+        let mut references: Vec<_> = self
+            .entries
+            .iter()
+            .filter(|(_, entry)| entry.in_use)
+            .map(|(number, entry)| (*number, entry.generation))
+            .chain(
+                self.extended_entries
+                    .iter()
+                    .filter(|(_, entry)| entry.basic.in_use)
+                    .map(|(number, entry)| (*number, entry.basic.generation)),
+            )
+            .collect();
+        references.sort_unstable();
+        references.dedup();
+        references
+    }
+
+    /// Return the file offset containing the latest definition of an object.
+    /// Compressed objects use the offset of their containing object stream.
+    pub(crate) fn object_storage_offset(&self, object_number: u32) -> Option<u64> {
+        if let Some((stream_number, _)) = self
+            .extended_entries
+            .get(&object_number)
+            .and_then(|entry| entry.compressed_info)
+        {
+            return self.entries.get(&stream_number).map(|entry| entry.offset);
+        }
+        self.entries
+            .get(&object_number)
+            .filter(|entry| entry.in_use)
+            .map(|entry| entry.offset)
     }
 
     /// Parse xref table from a reader with fallback recovery
@@ -532,6 +582,28 @@ impl XRefTable {
             reader.seek(SeekFrom::Start(offset))?;
             let table = Self::parse_primary_with_options(reader, options)?;
 
+            let mut revision_entries: Vec<_> = table
+                .entries
+                .iter()
+                .map(|(object_number, entry)| RevisionXRefEntry {
+                    object_number: *object_number,
+                    generation: entry.generation,
+                    in_use: entry.in_use,
+                })
+                .chain(table.extended_entries.iter().map(|(object_number, entry)| {
+                    RevisionXRefEntry {
+                        object_number: *object_number,
+                        generation: entry.basic.generation,
+                        in_use: entry.basic.in_use,
+                    }
+                }))
+                .collect();
+            revision_entries.sort_by_key(|entry| (entry.object_number, entry.generation));
+            merged_table.revisions.push(XRefRevision {
+                xref_offset: table.xref_offset,
+                entries: revision_entries,
+            });
+
             // Get the previous offset from trailer
             let prev_offset = table
                 .trailer
@@ -547,15 +619,29 @@ impl XRefTable {
             // Merge entries (newer entries override older ones)
             let _regular_count = table.entries.len();
             let _extended_count = table.extended_entries.len();
+            let current_compressed: std::collections::HashSet<u32> =
+                table.extended_entries.keys().copied().collect();
 
             for (obj_num, entry) in table.entries {
-                merged_table.entries.entry(obj_num).or_insert(entry);
+                // A newer uncompressed entry supersedes an older compressed
+                // entry for the same object number. Keep the two maps mutually
+                // exclusive so object resolution cannot accidentally prefer
+                // the stale object-stream location (issue #531).
+                if !current_compressed.contains(&obj_num)
+                    && !merged_table.extended_entries.contains_key(&obj_num)
+                {
+                    merged_table.entries.entry(obj_num).or_insert(entry);
+                }
             }
             for (obj_num, ext_entry) in table.extended_entries {
-                merged_table
-                    .extended_entries
-                    .entry(obj_num)
-                    .or_insert(ext_entry);
+                // Conversely, a newer compressed entry supersedes an older
+                // uncompressed one encountered later in the /Prev chain.
+                if !merged_table.entries.contains_key(&obj_num) {
+                    merged_table
+                        .extended_entries
+                        .entry(obj_num)
+                        .or_insert(ext_entry);
+                }
             }
 
             // Use the most recent trailer
@@ -1465,6 +1551,10 @@ impl XRefTable {
         self.xref_offset
     }
 
+    pub(crate) fn revisions_oldest_first(&self) -> Vec<XRefRevision> {
+        self.revisions.iter().rev().cloned().collect()
+    }
+
     /// Get the number of entries
     pub fn len(&self) -> usize {
         self.entries.len()
@@ -1751,6 +1841,16 @@ mod tests {
 
     use crate::parser::objects::{PdfDictionary, PdfObject};
     use std::io::Cursor;
+
+    #[test]
+    fn byte_pattern_searches_keep_first_and_last_match_semantics() {
+        let buffer = b"trailer one trailer two";
+
+        assert_eq!(find_byte_pattern(buffer, b"trailer"), Some(0));
+        assert_eq!(rfind_byte_pattern(buffer, b"trailer"), Some(12));
+        assert_eq!(find_byte_pattern(buffer, b"missing"), None);
+        assert_eq!(rfind_byte_pattern(buffer, b"missing"), None);
+    }
 
     // ---- Issue #339: bounded-memory object-header scanner ----
 

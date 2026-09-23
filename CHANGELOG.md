@@ -8,6 +8,227 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.1.3] - 2026-09-19
+
+### Changed
+
+- **Lenient PDF loading now uses optimized binary pattern search for xref
+  recovery.** This substantially reduces startup time for documents that need
+  supplementary object-header scanning.
+- **Public capability claims are auditable and internally consistent** (#603).
+  The PDF/A and signature claims now link to versioned evidence and explicit
+  limits; the adoption-monitoring contract defines privacy, deterministic
+  decision and append-only audit requirements for `oxidize-stats`.
+
+### Fixed
+
+- **Visible signature text fits both dimensions without losing content** (#606).
+  Logos are centered behind the text without reserving a column. Shared
+  `SignatureAppearance::layout` preflight wraps text using Helvetica metrics,
+  adjusts the font size between 6 and 12 points, and returns an explicit error
+  if the complete text cannot fit instead of clipping or omitting lines.
+- **Text extraction preserves word boundaries across narrow font changes and
+  Form XObject boundaries** (#602). This prevents differential word fusions
+  without weakening the committed T3 baseline.
+
+### Added
+
+- **Custom visible incremental-signature appearances** (#596). Callers can
+  provide signer text, signing date, additional text, and a bounded RGB image
+  watermark through `SignatureAppearance`. The generated font, image, and
+  appearance stream are included in the signed incremental revision for both
+  new and existing signature widgets.
+
+## [5.1.1] - 2026-09-12
+
+### Fixed
+
+- **Figure text with custom font differences is no longer emitted as reliable
+  text when the PDF provides no `/ToUnicode` mapping** (#593, #594).
+  Consumers can explicitly retain that fallback text for forensic extraction.
+
+## [5.1.0] - 2026-09-11
+
+### Added
+
+- **Optional URI extraction from interactive link annotations** (#584, #591).
+  `TextExtractor::with_link_annotation_extraction(true)` appends safe `/URI`
+  action targets in page annotation order without following or executing them.
+
+### Fixed
+
+- **Text extraction resolves indirect font encodings and Adobe Glyph List
+  differences** (#572), applies Type 3 `/FontMatrix` scaling to glyph widths
+  (#573), and preserves hyphens in numeric and punctuation-bearing identifiers
+  across line wraps (#574, #589).
+- **Standalone CR, CRLF, and Unicode line separators are normalized
+  consistently** (#575), while `TJ` kerning-space detection scales with the
+  active font size (#588).
+- **Signature preparation tolerates unreferenced in-use xref entries at byte
+  offset zero** while still rejecting policy references to such entries (#585).
+- **Page annotation arrays accept direct annotation dictionaries** (#590).
+
+## [5.0.1] - 2026-09-04
+
+### Fixed
+
+- **Layout-preserving plaintext extraction restores document reading quality**
+  (#564, #570). `PlainTextExtractor::preserve_layout()` now uses the complete
+  text engine and its scale-relative XY-Cut reading order, retaining
+  `/ActualText`, artifact filtering, font metrics, and error propagation. On
+  the pinned OmniDocBench protocol, global text similarity improves from
+  48.26% in v5.0.0 to 60.01%, above the 55% acceptance threshold, while native
+  reading-order edit distance remains within its 0.25 limit at 0.22639.
+
+### Changed
+
+- **OmniDocBench quality measurements are reproducible** (#565, #568). The
+  versioned gate pins dataset, evaluator, source, extraction configuration, and
+  scored-page population provenance, validates materialized Git LFS objects,
+  supports split-page PDFs, and seals prediction and summary hashes.
+
+## [5.0.0] - 2026-09-01
+
+### Added
+
+- **Text extraction now exposes the active PDF rendering mode** (#477, #562).
+  Every `TextFragment` reports its `Tr` mode, including invisible OCR text and
+  `/ActualText` replacements. Graphics-state restoration preserves the mode,
+  malformed operands are handled without integer truncation, and layout
+  reconstruction never fuses fragments across rendering-mode boundaries.
+
+### Changed
+
+- **Existing-PDF operations now use one policy-driven API** (#560, #561).
+  Merge, split, extraction, reordering, batch processing, signing, and related
+  workflows share explicit preservation, validation, and permission policies.
+  This major release retires ambiguous legacy entry points; see
+  `docs/migration/v5-existing-pdf-operations.md` for migration guidance.
+- **`TextFragment` is now non-exhaustive** (#477, #562). External callers must
+  construct synthetic fragments with `TextFragment::new` and then set any
+  non-default public fields, allowing future extraction metadata to be added
+  without another source-breaking struct-field change.
+
+## [4.9.0] - 2026-08-30
+
+### Added
+
+- **Provider-neutral incremental PDF signing** (#540, #558). New two-phase
+  preparation and finalization APIs support caller-produced CMS signatures,
+  visible and invisible fields, existing-field selection, successive
+  signatures, xref tables and streams, and DocMDP and FieldMDP enforcement
+  while preserving the source PDF as an exact byte prefix.
+- **Lossless incremental FreeText annotation editing** (#534, #553). A typed
+  editor can enumerate, add, update, and remove FreeText annotations without
+  rebuilding unrelated document content.
+- **Lossless incremental Ink annotation editing** (#536, #554). Typed APIs can
+  enumerate and atomically mutate ink strokes, appearance properties, and
+  annotation metadata while preserving prior PDF bytes.
+- **Lossless incremental geometric annotation editing** (#537, #555). Typed
+  editors support line, square, circle, polygon, and polyline annotations,
+  including geometry, color, opacity, width, dash patterns, and line endings.
+- **Atomic page-tree mutation batches** (#538, #556). New planning and mutation
+  APIs can reorder, insert, duplicate, and remove pages in one validated,
+  lossless incremental revision.
+- **Document-semantic preservation for structural operations** (#539, #557).
+  Merge, split, extraction, and page mutation APIs preserve or safely reconcile
+  outlines, named destinations, page labels, AcroForm state, metadata, and
+  associated document structures.
+
+### Changed
+
+- **Obsolete CLI and API release artifacts were retired** (#552). The
+  `oxidize-pdf` library is now the sole maintained and published artifact.
+
+## [4.8.0] - 2026-08-27
+
+### Fixed
+
+- **Semantic redaction no longer presents visual masking as irreversible
+  removal** (#541). Reports explicitly identify recoverable masking risks, and
+  the security-grade API now removes exact direct-page ASCII `Tj` operands and
+  complete literal `TJ` arrays backed by verified non-symbolic Standard-14
+  fonts. Both `Tj` and `TJ` replacements preserve the original text advance,
+  including AFM glyph widths, numeric adjustments, character spacing, and word
+  spacing. The API rebuilds the file without prior revisions or document-level
+  auxiliary data and verifies output page streams before reporting
+  irreversible success.
+  It correlates each match with its declared bounding box, audits retained page
+  resources and metadata during forensic reparse, and enforces input, page,
+  entity, decoded-content, and operation budgets. It fails closed for
+  annotations, XObjects, shadings, inline images, marked content, custom or
+  ambiguous font encodings, partial or ambiguous matches, and malformed
+  streams.
+
+### Added
+
+- **Revision-aware semantic PDF comparison** (#543). A bounded comparison API
+  reports visual, textual, structural, metadata, security, and serialization
+  differences, attributes changes to incremental revisions, and normalizes
+  irrelevant serialization and timestamp noise.
+- **Lossless tagged-PDF validation and incremental editing** (#544). Public APIs
+  inspect structure trees and PDF/UA findings, then apply bounded edits for
+  attributes, MCID associations, ParentTree repair, element creation, and
+  reparenting while preserving unrelated bytes and enforcing DocMDP policy.
+- **Public outline and bookmark reading** (#548). `PdfDocument` can now parse
+  bounded bookmark hierarchies, styles, open state, direct and named
+  destinations, GoTo actions, and all standard destination view modes into
+  stable zero-based page indexes.
+- **Lossless incremental OCR text layers** (#542). Positioned, invisible
+  Unicode text can now be appended to existing pages without rebuilding the
+  document graph or changing the source-byte prefix. The editor exposes a
+  policy-aware dry run, isolated streams and font resources, language,
+  confidence, source-region and reading-order metadata, duplicate-layer
+  detection, deterministic output, xref-table and xref-stream support, and
+  validated atomic publication through `PdfOcrConverter`. Encrypted inputs and
+  every DocMDP certification level fail closed because OCR changes page
+  content.
+- **Lossless incremental page reordering** (#531). The new
+  `reorder_pdf_pages_lossless` API preserves the source bytes, indirect page
+  identities, inherited page attributes, and unrelated document objects while
+  atomically applying an exact page permutation. Encrypted inputs fail closed.
+- **DocMDP enforcement for incremental structural edits** (#532). Lossless
+  page reordering now permits ordinary approval signatures while parsing and
+  enforcing certification transforms, rejecting every certified, malformed,
+  ambiguous, or unsupported policy that cannot authorize the structural edit.
+
+## [4.7.0] - 2026-08-25
+
+### Added
+
+- **Incremental editing for highlight annotations** (#525, #527). The new
+  `IncrementalHighlightEditor` API can enumerate, add, update, and remove
+  `/Highlight` annotations while preserving the original PDF bytes and
+  applying validated changes as incremental revisions.
+
+### Fixed
+
+- **Standard-14 fonts without explicit `/Widths` used inaccurate fallback
+  advances during text extraction** (#523, #524). Encoding-aware AFM metrics
+  now provide per-glyph widths for simple Standard-14 fonts, preventing
+  spurious spaces when text is split across consecutive showing operators.
+- **CMS signature verification could accept certificates without establishing
+  trust in the configured anchors** (#526, #528). Trust validation now fails
+  closed while preserving the existing public verification API.
+- **Floating-point residue could keep mathematically contiguous text fragments
+  separate** (#521, #522). Same-line merging now tolerates rounding noise
+  without treating visible overlaps as adjacent or inserting a spurious space.
+
+## [4.6.0] - 2026-08-20
+
+### Added
+
+- **Type 3 font glyph resolution for downstream renderers** (#509). Parser
+  consumers can resolve bounded CharProc content streams together with the
+  glyph resources and metrics needed to render Type 3 fonts safely.
+- **Resolved parser font resources** (#513). The parser now exposes resolved
+  Type0, CID, simple, and Symbol font data through public, renderer-oriented
+  font resource types while retaining safe fallbacks for malformed PDFs.
+- **Bounded in-memory image extraction** (#516). New visitor and collection
+  APIs expose encoded image data without temporary files, with configurable
+  limits for image count, per-image and total encoded bytes, and decoded
+  pixels. Existing file-based extraction APIs remain compatible.
+
 ### Fixed
 
 - **Flat-path word-gap threshold compared a `Tm`-scaled pen delta against an
@@ -22,6 +243,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   insert a spurious mid-token space. The threshold is now scaled by the same
   `Tm`/CTM x-factor already applied to page-space widths elsewhere in
   extraction, together with the horizontal text scaling selected by `Tz`.
+- **Indirect `/DecodeParms` references bypassed stream predictors** (#514).
+  Filter decoding now resolves indirect parameter dictionaries before
+  applying PNG and TIFF predictors, including parameters nested in filter
+  arrays, while rejecting cycles and invalid references safely.
 
 ## [4.5.1] - 2026-08-19
 

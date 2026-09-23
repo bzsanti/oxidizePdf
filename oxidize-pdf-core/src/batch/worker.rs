@@ -2,8 +2,12 @@
 
 use crate::batch::{BatchJob, BatchProgress, JobResult};
 use crate::error::PdfError;
-use crate::operations::page_extraction::extract_pages_to_file;
-use crate::operations::{merge_pdfs, split_pdf};
+use crate::operations::existing_document::{
+    extract_pdf_pages, merge_pdfs, split_pdf, ExistingDocumentMergeInput, ExistingDocumentPolicy,
+};
+use crate::operations::OperationError;
+use crate::operations::PageRange;
+use crate::parser::PdfReader;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
@@ -293,28 +297,52 @@ fn execute_job(job: BatchJob) -> std::result::Result<Vec<PathBuf>, PdfError> {
             output_pattern,
             pages_per_file,
         } => {
-            // Create split options
-            let options = crate::operations::SplitOptions {
-                mode: crate::operations::SplitMode::ChunkSize(pages_per_file),
-                output_pattern,
-                preserve_metadata: true,
-                optimize: false,
-            };
-
-            split_pdf(&input, options).map_err(|e| PdfError::InvalidStructure(e.to_string()))?;
-
-            // Return generated files (simplified - would need to track actual outputs)
-            Ok(vec![])
+            if pages_per_file == 0 {
+                return Err(PdfError::InvalidStructure(
+                    "pages_per_file must be greater than zero".to_string(),
+                ));
+            }
+            let page_count = PdfReader::open(&input)?.page_count()? as usize;
+            if page_count == 0 {
+                return Err(PdfError::InvalidStructure(
+                    "cannot split a PDF with no pages".to_string(),
+                ));
+            }
+            let mut ranges = Vec::new();
+            let mut outputs = Vec::new();
+            for (index, start) in (0..page_count).step_by(pages_per_file).enumerate() {
+                let end = (start + pages_per_file - 1).min(page_count - 1);
+                ranges.push(PageRange::Range(start, end));
+                outputs.push(PathBuf::from(
+                    output_pattern
+                        .replace("%d", &(index + 1).to_string())
+                        .replace("{}", &format!("{}-{}", start + 1, end + 1))
+                        .replace("{n}", &(index + 1).to_string())
+                        .replace("{start}", &(start + 1).to_string())
+                        .replace("{end}", &(end + 1).to_string()),
+                ));
+            }
+            split_pdf(
+                &input,
+                &ranges,
+                &outputs,
+                ExistingDocumentPolicy::preserve_base(),
+            )
+            .map_err(operation_error_to_pdf_error)?;
+            Ok(outputs)
         }
 
         BatchJob::Merge { inputs, output } => {
             let merge_inputs: Vec<_> = inputs
                 .into_iter()
-                .map(crate::operations::MergeInput::new)
+                .map(ExistingDocumentMergeInput::new)
                 .collect();
-            let options = crate::operations::MergeOptions::default();
-            merge_pdfs(merge_inputs, &output, options)
-                .map_err(|e| PdfError::InvalidStructure(e.to_string()))?;
+            merge_pdfs(
+                &merge_inputs,
+                &output,
+                ExistingDocumentPolicy::preserve_base(),
+            )
+            .map_err(operation_error_to_pdf_error)?;
             Ok(vec![output])
         }
 
@@ -334,8 +362,13 @@ fn execute_job(job: BatchJob) -> std::result::Result<Vec<PathBuf>, PdfError> {
             output,
             pages,
         } => {
-            extract_pages_to_file(&input, &pages, &output)
-                .map_err(|e| PdfError::InvalidStructure(e.to_string()))?;
+            extract_pdf_pages(
+                &input,
+                &output,
+                &pages,
+                ExistingDocumentPolicy::preserve_base(),
+            )
+            .map_err(operation_error_to_pdf_error)?;
             Ok(vec![output])
         }
 
@@ -355,9 +388,87 @@ fn execute_job(job: BatchJob) -> std::result::Result<Vec<PathBuf>, PdfError> {
     }
 }
 
+fn operation_error_to_pdf_error(error: OperationError) -> PdfError {
+    match error {
+        OperationError::Io(error) => PdfError::Io(error),
+        OperationError::PdfError(error) => error,
+        OperationError::ParseError(message) => PdfError::ParseError(message),
+        OperationError::InvalidPath { reason }
+        | OperationError::InvalidPageRange(reason)
+        | OperationError::ResourceConflict(reason)
+        | OperationError::ProcessingError(reason) => PdfError::InvalidOperation(reason),
+        OperationError::PageIndexOutOfBounds(page, _) => u32::try_from(page)
+            .map(PdfError::InvalidPageNumber)
+            .unwrap_or_else(|_| {
+                PdfError::InvalidOperation(format!("page index {page} is too large"))
+            }),
+        OperationError::NoPagesToProcess => {
+            PdfError::InvalidOperation("no pages to process".to_string())
+        }
+        OperationError::InvalidRotation(rotation) => {
+            PdfError::InvalidOperation(format!("invalid rotation angle {rotation}"))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{Document, Page};
+
+    #[test]
+    fn batch_extraction_uses_the_fail_closed_preserving_engine() {
+        let directory = tempfile::tempdir().unwrap();
+        let input = directory.path().join("source.pdf");
+        let output = directory.path().join("extracted.pdf");
+        let mut document = Document::new();
+        document.add_page(Page::a4());
+        document.add_page(Page::a4());
+        document.save(&input).unwrap();
+        let source = std::fs::read(&input).unwrap();
+
+        execute_job(BatchJob::Extract {
+            input,
+            output: output.clone(),
+            pages: vec![0],
+        })
+        .unwrap();
+
+        assert!(std::fs::read(output).unwrap().starts_with(&source));
+    }
+
+    #[test]
+    fn operation_errors_keep_their_public_category() {
+        let io = operation_error_to_pdf_error(OperationError::Io(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "denied",
+        )));
+        let parse = operation_error_to_pdf_error(OperationError::ParseError("broken".into()));
+        let permission = operation_error_to_pdf_error(OperationError::PdfError(
+            PdfError::PermissionDenied("locked".into()),
+        ));
+
+        assert!(matches!(io, PdfError::Io(_)));
+        assert!(matches!(parse, PdfError::ParseError(_)));
+        assert!(matches!(permission, PdfError::PermissionDenied(_)));
+    }
+
+    #[test]
+    fn split_rejects_a_zero_page_pdf() {
+        let directory = tempfile::tempdir().unwrap();
+        let input = directory.path().join("empty.pdf");
+        let bytes = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n110\n%%EOF\n";
+        std::fs::write(&input, bytes).unwrap();
+
+        let error = execute_job(BatchJob::Split {
+            input,
+            output_pattern: directory.path().join("page_%d.pdf").display().to_string(),
+            pages_per_file: 1,
+        })
+        .unwrap_err();
+
+        assert!(error.to_string().contains("no pages"));
+    }
 
     #[test]
     fn test_worker_pool_creation() {

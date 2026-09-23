@@ -3,7 +3,7 @@ pub mod cmap;
 pub(crate) mod encoding;
 pub(crate) mod encoding_cmap;
 pub mod extraction;
-mod extraction_cmap;
+pub(crate) mod extraction_cmap;
 pub(crate) mod flat_reading_order;
 mod flow;
 mod font;
@@ -37,6 +37,7 @@ pub use extraction::{
     sanitize_extracted_text, sanitize_extracted_text_with_policy, CarriageReturnHandling,
     ExtractedText, ExtractionOptions, TextExtractor, TextFragment,
 };
+pub use extraction_cmap::{glyph_name_to_unicode, glyph_name_to_unicode_sequence};
 pub use flow::{TextAlign, TextFlowContext};
 pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};
 pub use font_manager::{CustomFont, FontDescriptor, FontFlags, FontManager, FontMetrics, FontType};
@@ -73,9 +74,10 @@ use std::collections::{HashMap, HashSet};
 /// Text rendering mode for PDF text operations.
 ///
 /// Re-exported via `oxidize_pdf::text::TextRenderingMode`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum TextRenderingMode {
     /// Fill text (default)
+    #[default]
     Fill = 0,
     /// Stroke text
     Stroke = 1,
@@ -91,6 +93,42 @@ pub enum TextRenderingMode {
     FillStrokeClip = 6,
     /// Add text to path for clipping (invisible)
     Clip = 7,
+}
+
+impl TryFrom<u8> for TextRenderingMode {
+    type Error = u8;
+
+    fn try_from(value: u8) -> std::result::Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Fill),
+            1 => Ok(Self::Stroke),
+            2 => Ok(Self::FillStroke),
+            3 => Ok(Self::Invisible),
+            4 => Ok(Self::FillClip),
+            5 => Ok(Self::StrokeClip),
+            6 => Ok(Self::FillStrokeClip),
+            7 => Ok(Self::Clip),
+            value => Err(value),
+        }
+    }
+}
+
+impl TryFrom<i32> for TextRenderingMode {
+    type Error = i32;
+
+    fn try_from(value: i32) -> std::result::Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Fill),
+            1 => Ok(Self::Stroke),
+            2 => Ok(Self::FillStroke),
+            3 => Ok(Self::Invisible),
+            4 => Ok(Self::FillClip),
+            5 => Ok(Self::StrokeClip),
+            6 => Ok(Self::FillStrokeClip),
+            7 => Ok(Self::Clip),
+            value => Err(value),
+        }
+    }
 }
 
 /// Build the show-text IR op for `text` rendered with `font`. Single

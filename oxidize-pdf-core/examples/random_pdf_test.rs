@@ -144,11 +144,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     );
 
-    if successful_extractions > 0 {
-        println!(
-            "📏 Average chars per extraction: {}",
-            total_chars_extracted / successful_extractions
-        );
+    if let Some(average) = total_chars_extracted.checked_div(successful_extractions) {
+        println!("📏 Average chars per extraction: {average}");
     }
 
     Ok(())

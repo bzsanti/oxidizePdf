@@ -163,6 +163,21 @@ impl<R: Read + Seek> PdfReader<R> {
         &self.trailer
     }
 
+    /// Return the latest in-use indirect-object references known to the xref.
+    pub(crate) fn object_references(&self) -> Vec<(u32, u16)> {
+        self.xref.in_use_references()
+    }
+
+    /// Return the storage offset of the latest definition of an object.
+    pub(crate) fn object_storage_offset(&self, object_number: u32) -> Option<u64> {
+        self.xref.object_storage_offset(object_number)
+    }
+
+    /// Return physical xref revisions from the base revision to the latest.
+    pub(crate) fn xref_revisions(&self) -> Vec<super::xref::XRefRevision> {
+        self.xref.revisions_oldest_first()
+    }
+
     /// Check if the PDF is unlocked (can read encrypted content)
     pub fn is_unlocked(&self) -> bool {
         match &self.encryption_handler {
@@ -3093,7 +3108,7 @@ impl<R: Read + Seek> PdfReader<R> {
         trust_store: crate::signatures::TrustStore,
     ) -> ParseResult<Vec<crate::signatures::FullSignatureValidationResult>> {
         use crate::signatures::{
-            has_incremental_update, parse_pkcs7_signature, validate_certificate, verify_signature,
+            has_incremental_update, parse_pkcs7_signature_detailed, verify_signature_detailed,
             FullSignatureValidationResult,
         };
 
@@ -3130,7 +3145,7 @@ impl<R: Read + Seek> PdfReader<R> {
                 has_incremental_update(&pdf_bytes, &field.byte_range);
 
             // Parse the PKCS#7/CMS signature
-            let parsed_sig = match parse_pkcs7_signature(&field.contents) {
+            let parsed_sig = match parse_pkcs7_signature_detailed(&field.contents) {
                 Ok(sig) => sig,
                 Err(e) => {
                     result
@@ -3146,7 +3161,7 @@ impl<R: Read + Seek> PdfReader<R> {
             result.signer_name = parsed_sig.signer_common_name().ok();
 
             // Verify the cryptographic signature
-            match verify_signature(&pdf_bytes, &parsed_sig, &field.byte_range) {
+            match verify_signature_detailed(&pdf_bytes, &parsed_sig, &field.byte_range) {
                 Ok(verification) => {
                     result.hash_valid = verification.hash_valid;
                     result.signature_valid = verification.signature_valid;
@@ -3162,13 +3177,19 @@ impl<R: Read + Seek> PdfReader<R> {
             }
 
             // Validate the certificate
-            match validate_certificate(&parsed_sig.signer_certificate_der, &trust_store) {
+            match crate::signatures::validate_certificate_chain(
+                &parsed_sig.signer_certificate_der,
+                &parsed_sig.certificates_der,
+                &trust_store,
+                None,
+            ) {
                 Ok(cert_result) => {
-                    result.certificate_result = Some(cert_result);
+                    result.certificate_result =
+                        Some(cert_result.into_certificate_result_fail_closed());
                 }
                 Err(e) => {
                     result
-                        .warnings
+                        .errors
                         .push(format!("Certificate validation failed: {}", e));
                 }
             }

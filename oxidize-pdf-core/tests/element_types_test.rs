@@ -188,7 +188,7 @@ fn test_element_sort_by_reading_order() {
         })
     };
 
-    let mut elements = vec![make(2, 500.0), make(1, 300.0), make(1, 700.0)];
+    let mut elements = [make(2, 500.0), make(1, 300.0), make(1, 700.0)];
 
     elements.sort_by(element_reading_order);
 

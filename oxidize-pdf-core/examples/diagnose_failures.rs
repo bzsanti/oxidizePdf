@@ -22,7 +22,7 @@ fn main() {
     let mut pdf_files: Vec<_> = fs::read_dir(failures_dir)
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "pdf"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "pdf"))
         .collect();
 
     pdf_files.sort_by_key(|e| e.path());
@@ -109,7 +109,7 @@ fn main() {
     println!("\n=== ERROR CATEGORIES ===\n");
 
     let mut categories: Vec<_> = error_categories.iter().collect();
-    categories.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+    categories.sort_by_key(|category| std::cmp::Reverse(category.1.len()));
 
     for (category, files) in categories {
         println!("[{}] ({} files)", category, files.len());

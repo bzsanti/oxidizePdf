@@ -160,7 +160,7 @@ fn main() -> Result<()> {
 
     for (i, (color, _name)) in colors.iter().enumerate() {
         page.graphics()
-            .set_fill_color(color.clone())
+            .set_fill_color(*color)
             .rect(50.0 + i as f64 * 45.0, 380.0, 40.0, 30.0)
             .fill();
     }

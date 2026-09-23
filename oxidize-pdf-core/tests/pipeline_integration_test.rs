@@ -32,7 +32,7 @@ fn test_full_pipeline_page_order() {
     }
 
     // All page numbers should be valid (within document range)
-    let page_count = doc.page_count().unwrap() as u32;
+    let page_count = doc.page_count().unwrap();
     for elem in &elements {
         assert!(
             elem.page() < page_count,

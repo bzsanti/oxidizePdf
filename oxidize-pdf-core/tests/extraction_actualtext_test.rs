@@ -35,12 +35,12 @@ fn literal_actualtext_overrides_decoded_glyphs() {
     let frags = extract(content);
     let texts: Vec<&str> = frags.iter().map(|f| f.text.as_str()).collect();
     assert!(
-        texts.iter().any(|t| *t == "fi"),
+        texts.contains(&"fi"),
         "fragment must be ActualText 'fi', not glyph 'xy'; got {:?}",
         texts
     );
     assert!(
-        !texts.iter().any(|t| *t == "xy"),
+        !texts.contains(&"xy"),
         "raw glyph 'xy' must not be emitted under ActualText scope"
     );
 }
@@ -56,11 +56,11 @@ fn utf16be_actualtext_overrides_decoded_glyphs() {
     let frags = extract(content);
     let texts: Vec<&str> = frags.iter().map(|f| f.text.as_str()).collect();
     assert!(
-        texts.iter().any(|t| *t == "fi"),
+        texts.contains(&"fi"),
         "UTF-16BE ActualText must decode to 'fi'; got {:?}",
         texts
     );
-    assert!(!texts.iter().any(|t| *t == "junk"));
+    assert!(!texts.contains(&"junk"));
 }
 
 #[test]
@@ -80,6 +80,6 @@ fn actualtext_collapses_multi_tj_run_to_single_fragment() {
         "expected exactly one 'ff' fragment, got {:?}",
         texts
     );
-    assert!(!texts.iter().any(|t| *t == "f"));
-    assert!(!texts.iter().any(|t| *t == "i"));
+    assert!(!texts.contains(&"f"));
+    assert!(!texts.contains(&"i"));
 }

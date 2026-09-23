@@ -5,14 +5,22 @@ use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfString};
 use crate::parser::PdfReader;
 use std::io::{Cursor, Read, Seek};
 
-pub(super) struct IncrementalUpdate<'a> {
+pub(crate) struct IncrementalUpdate<'a> {
     base: &'a [u8],
     previous_xref: u64,
     root: (u32, u16),
+    info: Option<(u32, u16)>,
     original_size: u32,
     next_id: u32,
     first_id: Option<Vec<u8>>,
     replacements: Vec<(u32, u16, PdfObject)>,
+    xref_kind: XrefKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum XrefKind {
+    Table,
+    Stream,
 }
 
 impl<'a> IncrementalUpdate<'a> {
@@ -39,14 +47,16 @@ impl<'a> IncrementalUpdate<'a> {
             base,
             previous_xref: trailer.xref_offset,
             root,
+            info: trailer.info(),
             original_size: size,
             next_id: size,
             first_id,
             replacements: Vec::new(),
+            xref_kind: detect_xref_kind(base, trailer.xref_offset)?,
         })
     }
 
-    pub(super) fn from_base(base: &'a [u8]) -> Result<Self> {
+    pub(crate) fn from_base(base: &'a [u8]) -> Result<Self> {
         let reader = PdfReader::new(Cursor::new(base))
             .map_err(|e| PdfError::InvalidStructure(format!("parse base PDF: {e}")))?;
         if reader.is_encrypted() {
@@ -57,7 +67,7 @@ impl<'a> IncrementalUpdate<'a> {
         Self::from_reader(base, &reader)
     }
 
-    pub(super) fn allocate_id(&mut self) -> Result<(u32, u16)> {
+    pub(crate) fn allocate_id(&mut self) -> Result<(u32, u16)> {
         let id = (self.next_id, 0);
         self.next_id = self.next_id.checked_add(1).ok_or_else(|| {
             PdfError::InvalidStructure("PDF object number space is exhausted".to_string())
@@ -65,7 +75,7 @@ impl<'a> IncrementalUpdate<'a> {
         Ok(id)
     }
 
-    pub(super) fn replace(&mut self, id: (u32, u16), object: PdfObject) -> Result<()> {
+    pub(crate) fn replace(&mut self, id: (u32, u16), object: PdfObject) -> Result<()> {
         if self
             .replacements
             .iter()
@@ -80,7 +90,11 @@ impl<'a> IncrementalUpdate<'a> {
         Ok(())
     }
 
-    pub(super) fn finish(mut self) -> Result<Vec<u8>> {
+    pub(crate) fn pending_xref_stream_id(&self) -> Option<(u32, u16)> {
+        (self.xref_kind == XrefKind::Stream).then_some((self.next_id, 0))
+    }
+
+    pub(crate) fn finish(mut self) -> Result<Vec<u8>> {
         self.replacements
             .sort_by_key(|(number, generation, _)| (*number, *generation));
         let mut out = Vec::with_capacity(self.base.len() + self.replacements.len() * 256 + 512);
@@ -97,7 +111,16 @@ impl<'a> IncrementalUpdate<'a> {
         }
 
         let xref_position = out.len() as u64;
-        out.extend_from_slice(&partial_xref(&changed));
+        let xref_stream_id = if self.xref_kind == XrefKind::Stream {
+            let id = self.next_id;
+            self.next_id = self.next_id.checked_add(1).ok_or_else(|| {
+                PdfError::InvalidStructure("PDF object number space is exhausted".to_string())
+            })?;
+            changed.push((id, 0, xref_position));
+            Some(id)
+        } else {
+            None
+        };
         let size = self.next_id.max(self.original_size);
         let id_pair = self.first_id.map(|first| {
             let mut material = first.clone();
@@ -105,16 +128,51 @@ impl<'a> IncrementalUpdate<'a> {
             material.extend_from_slice(&xref_position.to_le_bytes());
             (first, md5::compute(material).0.to_vec())
         });
-        write_trailer(
-            &mut out,
-            self.previous_xref,
-            self.root,
-            size,
-            xref_position,
-            id_pair,
-        );
+        match xref_stream_id {
+            Some(id) => write_xref_stream(
+                &mut out,
+                id,
+                &changed,
+                self.previous_xref,
+                self.root,
+                self.info,
+                size,
+                id_pair,
+            )?,
+            None => {
+                out.extend_from_slice(&partial_xref(&changed));
+                write_trailer(
+                    &mut out,
+                    self.previous_xref,
+                    self.root,
+                    self.info,
+                    size,
+                    xref_position,
+                    id_pair,
+                );
+            }
+        }
         Ok(out)
     }
+}
+
+fn detect_xref_kind(base: &[u8], offset: u64) -> Result<XrefKind> {
+    let start = usize::try_from(offset).map_err(|_| {
+        PdfError::InvalidStructure("cross-reference offset does not fit in memory".to_string())
+    })?;
+    let tail = base.get(start..).ok_or_else(|| {
+        PdfError::InvalidStructure("cross-reference offset is outside the PDF".to_string())
+    })?;
+    let tail = tail
+        .iter()
+        .position(|byte| !byte.is_ascii_whitespace())
+        .and_then(|index| tail.get(index..))
+        .ok_or_else(|| PdfError::InvalidStructure("empty cross-reference section".to_string()))?;
+    Ok(if tail.starts_with(b"xref") {
+        XrefKind::Table
+    } else {
+        XrefKind::Stream
+    })
 }
 
 fn write_indirect_object(
@@ -151,10 +209,16 @@ pub(super) fn write_object(out: &mut Vec<u8>, object: &PdfObject) -> Result<()> 
             out.push(b']');
         }
         PdfObject::Dictionary(dictionary) => write_dictionary(out, dictionary)?,
-        PdfObject::Stream(_) => {
-            return Err(PdfError::InvalidStructure(
-                "generic incremental object writer does not accept streams".to_string(),
-            ))
+        PdfObject::Stream(stream) => {
+            let mut dictionary = stream.dict.clone();
+            dictionary.insert(
+                "Length".to_string(),
+                PdfObject::Integer(stream.data.len() as i64),
+            );
+            write_dictionary(out, &dictionary)?;
+            out.extend_from_slice(b"\nstream\n");
+            out.extend_from_slice(&stream.data);
+            out.extend_from_slice(b"\nendstream");
         }
     }
     Ok(())
@@ -262,10 +326,115 @@ fn partial_xref(changed: &[(u32, u16, u64)]) -> Vec<u8> {
     out
 }
 
+fn write_xref_stream(
+    out: &mut Vec<u8>,
+    object_number: u32,
+    changed: &[(u32, u16, u64)],
+    previous_xref: u64,
+    root: (u32, u16),
+    info: Option<(u32, u16)>,
+    size: u32,
+    id_pair: Option<(Vec<u8>, Vec<u8>)>,
+) -> Result<()> {
+    let mut sorted = changed.to_vec();
+    sorted.sort_by_key(|entry| entry.0);
+    let ranges = xref_ranges(&sorted);
+    let mut data = Vec::with_capacity(sorted.len() * 11);
+    for (_, generation, offset) in &sorted {
+        data.push(1);
+        data.extend_from_slice(&offset.to_be_bytes());
+        data.extend_from_slice(&generation.to_be_bytes());
+    }
+
+    let mut dictionary = PdfDictionary::new();
+    dictionary.insert(
+        "Type".to_string(),
+        PdfObject::Name(PdfName("XRef".to_string())),
+    );
+    dictionary.insert("Size".to_string(), PdfObject::Integer(i64::from(size)));
+    dictionary.insert("Root".to_string(), PdfObject::Reference(root.0, root.1));
+    if let Some((number, generation)) = info {
+        dictionary.insert("Info".to_string(), PdfObject::Reference(number, generation));
+    }
+    dictionary.insert(
+        "Prev".to_string(),
+        PdfObject::Integer(i64::try_from(previous_xref).map_err(|_| {
+            PdfError::InvalidStructure("previous xref offset exceeds PDF integer range".to_string())
+        })?),
+    );
+    dictionary.insert(
+        "W".to_string(),
+        PdfObject::Array(crate::parser::objects::PdfArray(vec![
+            PdfObject::Integer(1),
+            PdfObject::Integer(8),
+            PdfObject::Integer(2),
+        ])),
+    );
+    dictionary.insert(
+        "Index".to_string(),
+        PdfObject::Array(crate::parser::objects::PdfArray(
+            ranges
+                .iter()
+                .flat_map(|(first, count)| {
+                    [
+                        PdfObject::Integer(i64::from(*first)),
+                        PdfObject::Integer(i64::from(*count)),
+                    ]
+                })
+                .collect(),
+        )),
+    );
+    dictionary.insert(
+        "Length".to_string(),
+        PdfObject::Integer(
+            i64::try_from(data.len())
+                .map_err(|_| PdfError::InvalidStructure("xref stream is too large".to_string()))?,
+        ),
+    );
+    if let Some((first, second)) = id_pair {
+        dictionary.insert(
+            "ID".to_string(),
+            PdfObject::Array(crate::parser::objects::PdfArray(vec![
+                PdfObject::String(PdfString(first)),
+                PdfObject::String(PdfString(second)),
+            ])),
+        );
+    }
+
+    out.extend_from_slice(format!("{object_number} 0 obj\n").as_bytes());
+    write_dictionary(out, &dictionary)?;
+    out.extend_from_slice(b"\nstream\n");
+    out.extend_from_slice(&data);
+    out.extend_from_slice(b"\nendstream\nendobj\n");
+    let xref_position = sorted
+        .iter()
+        .find(|entry| entry.0 == object_number)
+        .map(|entry| entry.2)
+        .ok_or_else(|| PdfError::InvalidStructure("xref stream has no self entry".to_string()))?;
+    out.extend_from_slice(format!("startxref\n{xref_position}\n%%EOF\n").as_bytes());
+    Ok(())
+}
+
+fn xref_ranges(changed: &[(u32, u16, u64)]) -> Vec<(u32, u32)> {
+    let mut ranges = Vec::new();
+    let mut index = 0;
+    while index < changed.len() {
+        let first = changed[index].0;
+        let mut end = index;
+        while end + 1 < changed.len() && changed[end + 1].0 == changed[end].0 + 1 {
+            end += 1;
+        }
+        ranges.push((first, (end - index + 1) as u32));
+        index = end + 1;
+    }
+    ranges
+}
+
 fn write_trailer(
     out: &mut Vec<u8>,
     previous_xref: u64,
     root: (u32, u16),
+    info: Option<(u32, u16)>,
     size: u32,
     xref_position: u64,
     id_pair: Option<(Vec<u8>, Vec<u8>)>,
@@ -277,6 +446,9 @@ fn write_trailer(
         )
         .as_bytes(),
     );
+    if let Some((number, generation)) = info {
+        out.extend_from_slice(format!("/Info {number} {generation} R ").as_bytes());
+    }
     if let Some((first, second)) = id_pair {
         let hex = |bytes: &[u8]| {
             bytes

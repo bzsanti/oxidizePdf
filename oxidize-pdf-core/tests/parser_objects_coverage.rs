@@ -47,7 +47,7 @@ fn test_as_integer_with_integer() {
 
 #[test]
 fn test_as_integer_with_non_integer() {
-    let obj = PdfObject::Real(3.14);
+    let obj = PdfObject::Real(3.125);
     assert_eq!(obj.as_integer(), None);
 
     let obj = PdfObject::Boolean(true);
@@ -56,8 +56,8 @@ fn test_as_integer_with_non_integer() {
 
 #[test]
 fn test_as_real_with_real() {
-    let obj = PdfObject::Real(3.14159);
-    assert_eq!(obj.as_real(), Some(3.14159));
+    let obj = PdfObject::Real(3.125);
+    assert_eq!(obj.as_real(), Some(3.125));
 }
 
 #[test]
@@ -454,13 +454,13 @@ fn test_parse_null() {
 
 #[test]
 fn test_parse_real_number() {
-    let data = b"3.14159";
+    let data = b"3.125";
     let cursor = Cursor::new(data);
     let mut lexer = Lexer::new(cursor);
 
     let result = PdfObject::parse(&mut lexer);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().as_real(), Some(3.14159));
+    assert_eq!(result.unwrap().as_real(), Some(3.125));
 }
 
 #[test]

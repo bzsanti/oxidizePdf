@@ -261,7 +261,7 @@ fn t6_error_quality() {
             total_errors += 1;
             if r.error_message
                 .as_ref()
-                .map_or(true, |m: &String| m.is_empty())
+                .is_none_or(|m: &String| m.is_empty())
             {
                 empty_errors += 1;
             }

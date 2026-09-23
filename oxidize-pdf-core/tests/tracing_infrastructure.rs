@@ -22,7 +22,6 @@ fn test_tracing_subscriber_init() {
     tracing::info!("Test info log");
 
     // If we get here without panicking, tracing infrastructure works
-    assert!(true);
 }
 
 #[test]
@@ -40,8 +39,6 @@ fn test_tracing_with_env_filter() {
 
     tracing::debug!(target: "oxidize_pdf::parser", "Parser debug log");
     tracing::info!(target: "oxidize_pdf::text", "Text info log");
-
-    assert!(true);
 }
 
 #[test]
@@ -58,5 +55,4 @@ fn test_verbose_debug_feature_enabled() {
 fn test_verbose_debug_feature_disabled() {
     // This test runs when verbose-debug is NOT enabled (default)
     // Debug logs should still work via runtime filtering, but can be compiled out
-    assert!(true, "verbose-debug feature is disabled (default)");
 }

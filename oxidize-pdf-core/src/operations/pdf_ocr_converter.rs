@@ -38,12 +38,12 @@
 //! ```
 
 use crate::error::{PdfError, Result};
-use crate::graphics::Color;
 use crate::operations::page_analysis::{AnalysisOptions, PageContentAnalyzer};
 use crate::parser::{ParseOptions, PdfDocument, PdfReader};
 use crate::text::{FragmentType, OcrOptions, OcrProvider};
-use crate::{Document, Font, Page};
+use crate::writer::{IncrementalOcrLayerEditor, OcrLayerFragment, OcrLayerPage, OcrLayerPlan};
 use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 use std::time::Instant;
 
@@ -55,11 +55,11 @@ pub struct ConversionOptions {
     pub min_confidence: f64,
     /// Whether to skip pages that already contain text
     pub skip_text_pages: bool,
-    /// Font size for invisible text layer (should match expected text size)
+    /// Legacy preferred font size; positioned incremental layers use each OCR region's height.
     pub text_layer_font_size: f64,
     /// DPI for image processing
     pub dpi: u32,
-    /// Whether to preserve original page structure
+    /// Legacy compatibility flag; incremental conversion always preserves page structure.
     pub preserve_structure: bool,
     /// Progress callback function
     pub progress_callback: Option<Box<dyn Fn(usize, usize) + Send + Sync>>,
@@ -149,8 +149,8 @@ impl PdfOcrConverter {
     ) -> Result<ConversionResult> {
         let start_time = Instant::now();
 
-        // Open input PDF
-        let file = File::open(input_path.as_ref()).map_err(|e| PdfError::Io(e))?;
+        let base_bytes = std::fs::read(input_path.as_ref()).map_err(PdfError::Io)?;
+        let file = File::open(input_path.as_ref()).map_err(PdfError::Io)?;
 
         let reader = PdfReader::new_with_options(file, ParseOptions::tolerant())?;
         let document = PdfDocument::new(reader);
@@ -159,10 +159,9 @@ impl PdfOcrConverter {
         // Initialize analyzer
         let analyzer = PageContentAnalyzer::with_options(document, self.analysis_options.clone());
 
-        // Create new output document
-        let mut output_doc = Document::new();
-
         let mut stats = ConversionStats::new();
+        let mut layers = Vec::new();
+        let mut accepted_results = Vec::new();
 
         // Process each page
         for page_num in 0..page_count {
@@ -170,20 +169,61 @@ impl PdfOcrConverter {
                 callback(page_num as usize, page_count as usize);
             }
 
-            let processed_page = self.process_page(
-                &analyzer,
-                page_num as usize,
-                ocr_provider,
-                options,
-                &mut stats,
-            )?;
-
-            output_doc.add_page(processed_page);
+            stats.pages_processed += 1;
+            let analysis = analyzer
+                .analyze_page(page_num as usize)
+                .map_err(|error| PdfError::ParseError(error.to_string()))?;
+            if analysis.is_scanned() && (!options.skip_text_pages || analysis.character_count < 50)
+            {
+                let image_data = analyzer
+                    .extract_page_image_data(page_num as usize)
+                    .map_err(|error| {
+                        PdfError::ParseError(format!(
+                            "Failed to extract image from page {page_num}: {error}"
+                        ))
+                    })?;
+                let result = ocr_provider
+                    .process_image(&image_data, &options.ocr_options)
+                    .map_err(|error| {
+                        PdfError::InvalidStructure(format!(
+                            "OCR failed for page {page_num}: {error}"
+                        ))
+                    })?;
+                if result.confidence >= options.min_confidence {
+                    let fragments = result
+                        .fragments
+                        .iter()
+                        .filter(|fragment| fragment.fragment_type == FragmentType::Word)
+                        .enumerate()
+                        .map(|(reading_order, fragment)| OcrLayerFragment {
+                            text: fragment.text.clone(),
+                            region: [fragment.x, fragment.y, fragment.width, fragment.height],
+                            confidence: fragment.confidence,
+                            reading_order: reading_order as u32,
+                        })
+                        .collect();
+                    layers.push(OcrLayerPage {
+                        page_index: page_num,
+                        language: result.language.clone(),
+                        fragments,
+                    });
+                    accepted_results.push((page_num, result.confidence, result.text.len()));
+                }
+            } else if options.skip_text_pages {
+                stats.pages_skipped += 1;
+            }
         }
-
-        // Save output document
-        let pdf_bytes = output_doc.to_bytes()?;
-        std::fs::write(output_path.as_ref(), pdf_bytes).map_err(|e| PdfError::Io(e))?;
+        let update = IncrementalOcrLayerEditor::new(&base_bytes).apply(&layers)?;
+        stats.pages_ocr_processed = update.plan.pages.len();
+        for (_, confidence, characters) in accepted_results
+            .iter()
+            .filter(|(page, _, _)| update.plan.pages.binary_search(page).is_ok())
+        {
+            stats.total_confidence += confidence;
+            stats.total_characters += characters;
+        }
+        stats.pages_skipped += update.plan.pages_skipped_existing_ocr.len();
+        atomic_write(output_path.as_ref(), &update.pdf_bytes)?;
 
         let processing_time = start_time.elapsed();
 
@@ -197,144 +237,18 @@ impl PdfOcrConverter {
         })
     }
 
-    /// Process a single page, applying OCR if needed
-    fn process_page<P: OcrProvider>(
+    /// Validate positioned OCR results without modifying or publishing a PDF.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for malformed, encrypted, or DocMDP-certified input,
+    /// invalid page requests, or unsupported page content/resource layouts.
+    pub fn plan_incremental_layers(
         &self,
-        analyzer: &PageContentAnalyzer,
-        page_num: usize,
-        ocr_provider: &P,
-        options: &ConversionOptions,
-        stats: &mut ConversionStats,
-    ) -> Result<Page> {
-        stats.pages_processed += 1;
-
-        // Analyze page content
-        let analysis = analyzer
-            .analyze_page(page_num)
-            .map_err(|e| PdfError::ParseError(e.to_string()))?;
-
-        // Create base page
-        // Enhancement: Get actual page dimensions from source PDF
-        // Priority: MEDIUM - Currently defaults to A4 for all pages
-        // Would require passing page info from analyzer
-        let mut page = Page::a4();
-
-        if analysis.is_scanned() && (!options.skip_text_pages || analysis.character_count < 50) {
-            // Page needs OCR processing
-            self.process_scanned_page(analyzer, page_num, ocr_provider, options, stats, &mut page)?;
-        } else {
-            // Copy existing page content (vector text, graphics, etc.)
-            self.copy_page_content(analyzer, page_num, &mut page)?;
-            if options.skip_text_pages {
-                stats.pages_skipped += 1;
-            }
-        }
-
-        Ok(page)
-    }
-
-    /// Process a scanned page with OCR
-    fn process_scanned_page<P: OcrProvider>(
-        &self,
-        analyzer: &PageContentAnalyzer,
-        page_num: usize,
-        ocr_provider: &P,
-        options: &ConversionOptions,
-        stats: &mut ConversionStats,
-        page: &mut Page,
-    ) -> Result<()> {
-        // Extract image data from the page
-        let image_data = analyzer.extract_page_image_data(page_num).map_err(|e| {
-            PdfError::ParseError(format!(
-                "Failed to extract image from page {}: {}",
-                page_num, e
-            ))
-        })?;
-
-        // Apply OCR to extract text
-        let ocr_result = ocr_provider
-            .process_image(&image_data, &options.ocr_options)
-            .map_err(|e| {
-                PdfError::InvalidStructure(format!("OCR failed for page {}: {}", page_num, e))
-            })?;
-
-        if ocr_result.confidence >= options.min_confidence {
-            // Add the original image to the page (visible layer)
-            self.add_image_to_page(page, &image_data)?;
-
-            // Add invisible text layer
-            self.add_invisible_text_layer(page, &ocr_result, options)?;
-
-            stats.pages_ocr_processed += 1;
-            stats.total_confidence += ocr_result.confidence;
-            stats.total_characters += ocr_result.text.len();
-        } else {
-            // Low confidence, just add the image without text layer
-            self.add_image_to_page(page, &image_data)?;
-            tracing::debug!(
-                "Warning: Low OCR confidence ({:.1}%) for page {}, skipping text layer",
-                ocr_result.confidence * 100.0,
-                page_num
-            );
-        }
-
-        Ok(())
-    }
-
-    /// Add an image to a page
-    fn add_image_to_page(&self, page: &mut Page, _image_data: &[u8]) -> Result<()> {
-        // TODO: Implement image embedding
-        // For now, we'll create a placeholder
-        page.graphics()
-            .save_state()
-            .set_fill_color(Color::rgb(240.0, 240.0, 240.0))
-            .rect(50.0, 50.0, 500.0, 700.0)
-            .fill()
-            .restore_state();
-
-        Ok(())
-    }
-
-    /// Add an invisible text layer over the image
-    fn add_invisible_text_layer(
-        &self,
-        page: &mut Page,
-        ocr_result: &crate::text::OcrProcessingResult,
-        options: &ConversionOptions,
-    ) -> Result<()> {
-        // Add invisible text at detected positions
-        let text_context = page.text();
-
-        for fragment in &ocr_result.fragments {
-            if fragment.fragment_type == FragmentType::Word {
-                // Position text at the detected coordinates
-                // Make text invisible by setting rendering mode to invisible
-                text_context
-                    .set_font(Font::Helvetica, options.text_layer_font_size)
-                    .at(fragment.x as f64, fragment.y as f64)
-                    .set_rendering_mode(crate::text::TextRenderingMode::Invisible)
-                    .write(&fragment.text)?;
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Copy existing page content (for pages that already have text)
-    fn copy_page_content(
-        &self,
-        _analyzer: &PageContentAnalyzer,
-        _page_num: usize,
-        page: &mut Page,
-    ) -> Result<()> {
-        // TODO: Implement page content copying
-        // For now, create a placeholder indicating this is a text page
-        page.text()
-            .set_font(Font::Helvetica, 12.0)
-            .at(50.0, 750.0)
-            .write("This page already contains text content")?;
-
-        Ok(())
+        pdf_bytes: &[u8],
+        pages: &[OcrLayerPage],
+    ) -> Result<OcrLayerPlan> {
+        IncrementalOcrLayerEditor::new(pdf_bytes).plan(pages)
     }
 
     /// Batch process multiple PDF files
@@ -375,6 +289,21 @@ impl PdfOcrConverter {
 
         Ok(results)
     }
+}
+
+fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let mut temporary = tempfile::NamedTempFile::new_in(parent).map_err(PdfError::Io)?;
+    temporary.write_all(bytes).map_err(PdfError::Io)?;
+    temporary.flush().map_err(PdfError::Io)?;
+    temporary.as_file().sync_all().map_err(PdfError::Io)?;
+    temporary
+        .persist(path)
+        .map_err(|error| PdfError::Io(error.error))?;
+    Ok(())
 }
 
 /// Internal statistics tracking
@@ -490,5 +419,14 @@ mod tests {
         stats.pages_ocr_processed = 2;
         stats.total_confidence = 1.6;
         assert_eq!(stats.calculate_average_confidence(), 0.8);
+    }
+
+    #[test]
+    fn atomic_write_replaces_existing_destination() {
+        let directory = tempfile::tempdir().unwrap();
+        let output = directory.path().join("output.pdf");
+        std::fs::write(&output, b"old").unwrap();
+        atomic_write(&output, b"new").unwrap();
+        assert_eq!(std::fs::read(output).unwrap(), b"new");
     }
 }

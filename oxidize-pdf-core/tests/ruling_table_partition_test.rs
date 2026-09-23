@@ -114,21 +114,7 @@ fn v_line(x: f64, y1: f64, y2: f64) -> VectorLine {
     VectorLine::new(x, y1, x, y2, 1.0, true, None)
 }
 fn frag(text: &str, x: f64, y: f64) -> TextFragment {
-    TextFragment {
-        text: text.to_string(),
-        x,
-        y,
-        width: 10.0,
-        height: 8.0,
-        font_size: 8.0,
-        font_name: None,
-        is_bold: false,
-        is_italic: false,
-        color: None,
-        space_decisions: vec![],
-        mcid: None,
-        struct_tag: None,
-    }
+    TextFragment::new(text, x, y, 10.0, 8.0, 8.0)
 }
 
 #[test]

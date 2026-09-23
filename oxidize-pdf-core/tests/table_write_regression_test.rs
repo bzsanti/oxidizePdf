@@ -137,8 +137,10 @@ fn test_row_order_cell_backgrounds_match_text_order() -> Result<()> {
     // Use GridStyle::None to avoid grid border rects mixing with background rects
     use oxidize_pdf::text::table::{GridStyle, TableOptions};
 
-    let mut options = TableOptions::default();
-    options.grid_style = GridStyle::None;
+    let options = TableOptions {
+        grid_style: GridStyle::None,
+        ..TableOptions::default()
+    };
 
     let mut table = Table::new(vec![200.0]);
     table.set_options(options);
@@ -261,9 +263,11 @@ fn test_per_row_height() -> Result<()> {
     // Issue #171: each row should be able to have its own height
     use oxidize_pdf::text::table::{GridStyle, TableOptions};
 
-    let mut options = TableOptions::default();
-    options.grid_style = GridStyle::None;
-    options.row_height = 0.0; // auto
+    let options = TableOptions {
+        grid_style: GridStyle::None,
+        row_height: 0.0, // auto
+        ..TableOptions::default()
+    };
 
     let mut table = Table::new(vec![200.0]);
     table.set_options(options);

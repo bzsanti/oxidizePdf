@@ -80,21 +80,21 @@ fn test_table_with_custom_options() -> Result<()> {
     table.set_position(50.0, 650.0);
 
     // Custom table options
-    let mut options = TableOptions::default();
-    options.border_width = 2.0;
-    options.border_color = Color::rgb(0.2, 0.3, 0.5);
-    options.cell_padding = 8.0;
-    options.font = Font::TimesRoman;
-    options.font_size = 11.0;
-    options.text_color = Color::rgb(0.1, 0.1, 0.1);
-
-    // Header style
-    options.header_style = Some(HeaderStyle {
-        background_color: Color::rgb(0.9, 0.9, 0.95),
-        text_color: Color::rgb(0.0, 0.0, 0.5),
-        font: Font::TimesBold,
-        bold: true,
-    });
+    let options = TableOptions {
+        border_width: 2.0,
+        border_color: Color::rgb(0.2, 0.3, 0.5),
+        cell_padding: 8.0,
+        font: Font::TimesRoman,
+        font_size: 11.0,
+        text_color: Color::rgb(0.1, 0.1, 0.1),
+        header_style: Some(HeaderStyle {
+            background_color: Color::rgb(0.9, 0.9, 0.95),
+            text_color: Color::rgb(0.0, 0.0, 0.5),
+            font: Font::TimesBold,
+            bold: true,
+        }),
+        ..TableOptions::default()
+    };
 
     table.set_options(options);
 
@@ -262,9 +262,11 @@ fn test_multiple_tables_on_page() -> Result<()> {
     let mut table2 = Table::new(vec![80.0, 120.0, 100.0, 80.0]);
     table2.set_position(50.0, 600.0);
 
-    let mut options = TableOptions::default();
-    options.border_color = Color::rgb(0.8, 0.2, 0.2);
-    options.font_size = 9.0;
+    let options = TableOptions {
+        border_color: Color::rgb(0.8, 0.2, 0.2),
+        font_size: 9.0,
+        ..TableOptions::default()
+    };
     table2.set_options(options);
 
     table2.add_header_row(vec![
@@ -326,8 +328,10 @@ fn test_table_dimensions() -> Result<()> {
     assert_eq!(table.get_height(), 40.0);
 
     // Test with custom row height
-    let mut options = TableOptions::default();
-    options.row_height = 30.0;
+    let options = TableOptions {
+        row_height: 30.0,
+        ..TableOptions::default()
+    };
     table.set_options(options);
 
     assert_eq!(table.get_height(), 60.0);
@@ -351,16 +355,17 @@ fn test_table_with_custom_fonts() -> Result<()> {
     table.set_position(50.0, 700.0);
 
     // Use different fonts for header and content
-    let mut options = TableOptions::default();
-    options.font = Font::Courier;
-    options.font_size = 10.0;
-
-    options.header_style = Some(HeaderStyle {
-        background_color: Color::gray(0.85),
-        text_color: Color::black(),
-        font: Font::CourierBold,
-        bold: true,
-    });
+    let options = TableOptions {
+        font: Font::Courier,
+        font_size: 10.0,
+        header_style: Some(HeaderStyle {
+            background_color: Color::gray(0.85),
+            text_color: Color::black(),
+            font: Font::CourierBold,
+            bold: true,
+        }),
+        ..TableOptions::default()
+    };
 
     table.set_options(options);
 
@@ -404,9 +409,11 @@ fn test_table_with_custom_font_uses_hex_encoding() -> Result<()> {
     let mut table = Table::new(vec![200.0, 200.0]);
     table.set_position(50.0, 700.0);
 
-    let mut options = TableOptions::default();
-    options.font = Font::Custom("NotoSansCJK".to_string());
-    options.font_size = 12.0;
+    let options = TableOptions {
+        font: Font::Custom("NotoSansCJK".to_string()),
+        font_size: 12.0,
+        ..TableOptions::default()
+    };
     table.set_options(options);
 
     // Add row with CJK text: 你好 (U+4F60 U+597D)

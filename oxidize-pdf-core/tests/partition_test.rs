@@ -2,21 +2,16 @@ use oxidize_pdf::pipeline::{Element, PartitionConfig};
 use oxidize_pdf::text::extraction::TextFragment;
 
 fn frag(text: &str, x: f64, y: f64, font_size: f64, bold: bool) -> TextFragment {
-    TextFragment {
-        text: text.to_string(),
+    let mut fragment = TextFragment::new(
+        text,
         x,
         y,
-        width: text.len() as f64 * font_size * 0.5,
-        height: font_size,
+        text.len() as f64 * font_size * 0.5,
         font_size,
-        font_name: None,
-        is_bold: bold,
-        is_italic: false,
-        color: None,
-        space_decisions: Vec::new(),
-        mcid: None,
-        struct_tag: None,
-    }
+        font_size,
+    );
+    fragment.is_bold = bold;
+    fragment
 }
 
 // --- Step 3.1: PartitionConfig ---

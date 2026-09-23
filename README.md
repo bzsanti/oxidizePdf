@@ -6,16 +6,45 @@
 [![Coverage](https://img.shields.io/badge/coverage-72%25-yellow)](https://github.com/bzsanti/oxidizePdf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-7%2C993-brightgreen)](https://github.com/bzsanti/oxidizePdf)
-[![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-%3E%3D1.88-orange.svg)](https://www.rust-lang.org)
 
-**The Rust PDF library built for AI.** Parse any PDF into structure-aware, embedding-ready chunks with one line of code. Pure Rust, zero C dependencies, 99.3% success rate on 9,000+ real-world PDFs.
+**A comprehensive PDF toolkit written in pure Rust.** Generate, parse, modify,
+extract and validate PDFs without C bindings. Use one crate for ordinary PDF
+workflows or continue into structure-aware chunks for AI/RAG applications.
+
+| I need to… | Start here |
+|---|---|
+| Generate PDFs with text, graphics, images and tables | [`Document`](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/struct.Document.html) |
+| Parse PDFs and extract text | [`PdfDocument`](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/parser/struct.PdfDocument.html) |
+| Split, merge, rotate or reorder pages | [`operations`](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/operations/) |
+| Validate PDF/A or inspect signatures | [PDF/A validation](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/pdfa/) and [signatures](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/signatures/) |
+| Build an AI/RAG ingestion pipeline | [`rag_chunks`](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/parser/struct.PdfDocument.html#method.rag_chunks) |
+
+```toml
+[dependencies]
+oxidize-pdf = "5.1.3"
+```
+
+Structure-aware RAG remains a first-class workflow:
 
 ```rust
 let chunks = PdfDocument::open("paper.pdf")?.rag_chunks()?;
 // Each chunk: text, pages, bounding boxes, element types, heading context, token estimate
 ```
 
-## Why oxidize-pdf for RAG?
+## Why oxidize-pdf?
+
+- **One toolkit:** generation, parsing, manipulation, extraction and validation.
+- **Pure Rust deployment:** no C library, Java runtime or Python process.
+- **AI-ready when needed:** page references, bounding boxes, element types,
+  heading context and token estimates are available from the same parser.
+- **Explicit scope:** page rasterization is not provided; use a renderer such as
+  Pdfium when bitmap output is required.
+- **Auditable capability claims:** [the claims inventory](docs/CLAIMS.md)
+  records the source, version, verification evidence and limits for the
+  supported PDF/A, signature and enterprise-scope statements.
+
+### Structure-aware RAG
 
 Most PDF libraries give you a wall of text. oxidize-pdf gives you **structured, metadata-rich chunks** ready for your vector store:
 
@@ -34,10 +63,10 @@ Most PDF libraries give you a wall of text. oxidize-pdf gives you **structured, 
 
 ```toml
 [dependencies]
-oxidize-pdf = "4.0"
+oxidize-pdf = "5.1.3"
 ```
 
-### RAG Pipeline -- One Liner
+### RAG Pipeline
 
 ```rust
 use oxidize_pdf::parser::PdfDocument;
@@ -142,7 +171,7 @@ for section in graph.top_level_sections() {
 
 ## Also in the box
 
-Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (3,000–4,000 pages/sec), encryption (RC4-40/128, AES-128, AES-256 R5/R6 — read and write), digital signatures (PKCS#7 verification), PDF/A validation (8 conformance levels), JBIG2 image decoding (pure-Rust ITU-T T.88), invoice extraction (ES/EN/DE/IT), and split/merge/rotate operations. One dependency for the full pipeline.
+Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (3,000–4,000 pages/sec), encryption (RC4-40/128, AES-128, AES-256 R5/R6 — read and write), digital signatures (detection, PKCS#7 verification, certificate validation and incremental-signature preparation), PDF/A validation (8 conformance levels), JBIG2 image decoding (pure-Rust ITU-T T.88), invoice extraction (ES/EN/DE/IT), and split/merge/rotate operations. One dependency for the full pipeline.
 
 See [`oxidize-pdf-core/examples/`](https://github.com/bzsanti/oxidizePdf/tree/main/oxidize-pdf-core/examples) for working samples (133 examples) and [docs.rs](https://docs.rs/oxidize-pdf) for the API surface.
 
@@ -161,7 +190,8 @@ See [`oxidize-pdf-core/examples/`](https://github.com/bzsanti/oxidizePdf/tree/ma
 - Parse PDF 1.0-1.7 with 99.3% success rate (9,000+ PDFs tested)
 - Generate multi-page documents with text, graphics, images
 - Encryption: RC4-40/128, AES-128, AES-256 (R5/R6) -- read and write
-- Digital signatures: detection, PKCS#7 verification, certificate validation
+- Digital signatures: detection, PKCS#7 verification, certificate validation,
+  incremental-signature preparation
 - PDF/A validation: 8 conformance levels (1a/b, 2a/b/u, 3a/b/u)
 - JBIG2 decoder: pure Rust (ITU-T T.88)
 - Split, merge, rotate operations

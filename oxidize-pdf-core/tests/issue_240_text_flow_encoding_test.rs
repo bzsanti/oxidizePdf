@@ -183,13 +183,11 @@ fn count_tj_operators(pdf: &[u8]) -> usize {
 fn write_wrapped_wraps_by_char_width_not_by_utf8_byte_length() {
     let n_words = 30;
     // "naïve" = 5 chars, 6 bytes UTF-8 (`ï` = 0xC3 0xAF in UTF-8).
-    let unicode_line: String = std::iter::repeat("naïve")
-        .take(n_words)
+    let unicode_line: String = std::iter::repeat_n("naïve", n_words)
         .collect::<Vec<_>>()
         .join(" ");
     // "naive" = 5 chars, 5 bytes UTF-8.
-    let ascii_line: String = std::iter::repeat("naive")
-        .take(n_words)
+    let ascii_line: String = std::iter::repeat_n("naive", n_words)
         .collect::<Vec<_>>()
         .join(" ");
 
@@ -235,7 +233,7 @@ fn text_at_and_text_flow_at_emit_identical_show_text_bytes() {
 
 /// Integración E2E #240: round-trip a través del parser. Emitir `€ — ±`
 /// vía `text_flow().write_wrapped(...)`, parsear el PDF con `PdfReader`
-/// + `TextExtractor` y verificar que cada character especial sobrevive
+/// mediante `TextExtractor` y verificar que cada character especial sobrevive
 /// la decodificación WinAnsi → UTF-8. Pre-fix, el extractor leía los
 /// bytes UTF-8 raw como tres chars Windows-1252 separados produciendo
 /// mojibake (`€` → `â‚¬`).

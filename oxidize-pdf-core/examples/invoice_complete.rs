@@ -120,7 +120,7 @@ impl Default for InvoiceStyle {
 /// Generate a complete PDF invoice
 pub fn generate_invoice(invoice: &Invoice, style: &InvoiceStyle) -> Result<Document> {
     let mut doc = Document::new();
-    doc.set_title(&format!("Invoice {}", invoice.invoice_number));
+    doc.set_title(format!("Invoice {}", invoice.invoice_number));
 
     let mut page = Page::a4();
     let mut y = 780.0;

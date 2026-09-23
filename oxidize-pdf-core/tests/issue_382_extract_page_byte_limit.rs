@@ -374,14 +374,16 @@ fn test_actualtext_scope_respects_budget() {
 
     for (label, base) in [
         ("preserve_layout", {
-            let mut o = ExtractionOptions::default();
-            o.preserve_layout = true;
-            o
+            ExtractionOptions {
+                preserve_layout: true,
+                ..ExtractionOptions::default()
+            }
         }),
         ("reorder_columns", {
-            let mut o = ExtractionOptions::default();
-            o.reorder_columns = true;
-            o
+            ExtractionOptions {
+                reorder_columns: true,
+                ..ExtractionOptions::default()
+            }
         }),
     ] {
         // Unbounded: the ActualText override does surface (sanity that the

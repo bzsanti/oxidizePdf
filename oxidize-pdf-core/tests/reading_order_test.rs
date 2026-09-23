@@ -2,21 +2,7 @@ use oxidize_pdf::pipeline::reading_order::{ReadingOrder, SimpleReadingOrder, XYC
 use oxidize_pdf::text::extraction::TextFragment;
 
 fn frag(text: &str, x: f64, y: f64) -> TextFragment {
-    TextFragment {
-        text: text.to_string(),
-        x,
-        y,
-        width: 50.0,
-        height: 12.0,
-        font_size: 12.0,
-        font_name: None,
-        is_bold: false,
-        is_italic: false,
-        color: None,
-        space_decisions: Vec::new(),
-        mcid: None,
-        struct_tag: None,
-    }
+    TextFragment::new(text, x, y, 50.0, 12.0, 12.0)
 }
 
 // --- Step 4.1: SimpleReadingOrder ---

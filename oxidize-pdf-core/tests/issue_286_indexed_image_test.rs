@@ -47,7 +47,7 @@ fn test_indexed_image_extraction_does_not_fail_with_size_error() {
         ..Default::default()
     };
 
-    let images = extract_images_from_pdf(&fixture(), options)
+    let images = extract_images_from_pdf(fixture(), options)
         .expect("extraction must not fail on Indexed colour space");
 
     // The five pages reference 28 image XObjects (6+6+6+7+3), all above the
@@ -75,7 +75,7 @@ fn test_indexed_image_is_expanded_to_rgb_png() {
         ..Default::default()
     };
 
-    let images = extract_images_from_pdf(&fixture(), options).expect("extraction must succeed");
+    let images = extract_images_from_pdf(fixture(), options).expect("extraction must succeed");
 
     // The Indexed image is 600x603.
     let indexed = images
@@ -211,7 +211,7 @@ fn decode_png_rgb(png: &[u8]) -> (u32, u32, Vec<u8>) {
 /// single-index-per-pixel data through the palette into RGB. Returns the
 /// expected pixel bytes the extractor must reproduce.
 fn reconstruct_indexed_image_rgb(doc: &PdfDocument<File>) -> (u32, u32, Vec<u8>) {
-    use oxidize_pdf::parser::objects::{PdfName, PdfStream};
+    use oxidize_pdf::parser::objects::PdfName;
 
     let stream = match doc.get_object(10, 0).unwrap() {
         PdfObject::Stream(s) => s,
@@ -244,18 +244,7 @@ fn reconstruct_indexed_image_rgb(doc: &PdfDocument<File>) -> (u32, u32, Vec<u8>)
         other => panic!("unexpected lookup table {other:?}"),
     };
 
-    // Resolve the indirect /DecodeParms so decode() applies the predictor.
-    let mut resolved_dict = stream.dict.clone();
-    let dp = doc
-        .resolve(dict.get(&PdfName("DecodeParms".into())).unwrap())
-        .unwrap();
-    resolved_dict.0.insert(PdfName("DecodeParms".into()), dp);
-    let indices = PdfStream {
-        dict: resolved_dict,
-        data: stream.data.clone(),
-    }
-    .decode(&doc.options())
-    .unwrap();
+    let indices = doc.decode_stream(&stream).unwrap();
 
     let pixel_count = (width * height) as usize;
     assert_eq!(
@@ -300,9 +289,8 @@ fn test_indexed_image_matches_independent_decode() {
             force_grayscale: false,
             ..Default::default()
         },
-        ..Default::default()
     };
-    let images = extract_images_from_pdf(&fixture(), options).expect("extraction must succeed");
+    let images = extract_images_from_pdf(fixture(), options).expect("extraction must succeed");
     let indexed = images
         .iter()
         .find(|img| img.width == 600 && img.height == 603)

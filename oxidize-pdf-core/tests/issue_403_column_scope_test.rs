@@ -11,14 +11,15 @@ use oxidize_pdf::parser::{ParseOptions, PdfReader};
 use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 
 /// Build a minimal, valid PDF whose single page has `content` as its content
-/// stream. `/F1` maps to Helvetica (Type1) so decoding is trivial.
+/// stream. `/F1` maps to Courier (Type1) so decoding is trivial and every
+/// glyph has the fixed 600-unit advance used by the synthetic positioning.
 fn build_pdf(content: &str) -> Vec<u8> {
     let clen = content.len();
     let o1 = "<< /Type /Catalog /Pages 3 0 R >>";
     let o2 = "<< /Type /Page /Parent 3 0 R /MediaBox [0 0 595 842] \
               /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>";
     let o3 = "<< /Type /Pages /Kids [2 0 R] /Count 1 >>";
-    let o4 = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+    let o4 = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>";
 
     let mut buf = Vec::<u8>::new();
     buf.extend_from_slice(b"%PDF-1.4\n");
@@ -81,7 +82,7 @@ fn build_mixed_table_and_prose() -> String {
     let advance = 6.0_f64;
     for (i, ch) in text.chars().enumerate() {
         let x = start_x + advance * i as f64;
-        // Escape the space glyph as a literal space inside ( ) — Helvetica.
+        // Escape the space glyph as a literal space inside ( ) — Courier.
         c.push_str(&format!(
             "BT\n/F1 10 Tf\n1 0 0 1 {x:.2} {y:.2} Tm\n({ch}) Tj\nET\n"
         ));

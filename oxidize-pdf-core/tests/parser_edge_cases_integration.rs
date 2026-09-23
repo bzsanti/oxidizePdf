@@ -91,7 +91,7 @@ fn test_invalid_pdf_header() {
 /// Test parsing file with truncated content after valid header
 #[test]
 fn test_truncated_after_header() {
-    let truncated_files = vec![
+    let truncated_files = [
         b"%PDF-1.4\n%".to_vec(),                      // Truncated comment
         b"%PDF-1.4\n%%EOF".to_vec(),                  // Missing xref
         b"%PDF-1.4\n1 0 obj\n".to_vec(),              // Truncated object
@@ -124,7 +124,7 @@ fn test_truncated_after_header() {
 /// Test parsing with malformed xref table
 #[test]
 fn test_malformed_xref_table() {
-    let malformed_xrefs = vec![
+    let malformed_xrefs = [
         // Missing xref keyword
         create_pdf_with_xref(""),
         // Invalid xref format
@@ -184,24 +184,8 @@ fn test_circular_references() {
             let start = std::time::Instant::now();
             let timeout = std::time::Duration::from_secs(5);
 
-            let mut object_accessed = false;
-            while start.elapsed() < timeout {
-                // Try to read some objects
-                match reader.get_object(1, 0) {
-                    Ok(_) => {
-                        object_accessed = true;
-                        break;
-                    }
-                    Err(_) => {
-                        // Try next object
-                        if reader.get_object(2, 0).is_ok() {
-                            object_accessed = true;
-                            break;
-                        }
-                        break; // Give up after trying a couple objects
-                    }
-                }
-            }
+            let object_accessed =
+                reader.get_object(1, 0).is_ok() || reader.get_object(2, 0).is_ok();
 
             if start.elapsed() >= timeout {
                 panic!("Timeout accessing objects - possible infinite loop");
@@ -219,7 +203,7 @@ fn test_circular_references() {
 #[test]
 fn test_memory_exhaustion_protection() {
     // Create PDF with extremely large objects
-    let large_object_pdfs = vec![
+    let large_object_pdfs = [
         create_pdf_with_large_string(1_000_000), // 1MB string
         create_pdf_with_large_array(100_000),    // 100K array elements
         create_pdf_with_large_stream(5_000_000), // 5MB stream
@@ -349,7 +333,7 @@ fn test_malformed_arrays() {
 /// Test with invalid character encodings
 #[test]
 fn test_invalid_encodings() {
-    let invalid_encodings = vec![
+    let invalid_encodings = [
         // Invalid UTF-8 sequences
         create_pdf_with_string(vec![0xFF, 0xFE, 0xFD]),
         create_pdf_with_string(vec![0x80, 0x81, 0x82]),
@@ -396,7 +380,7 @@ fn test_invalid_encodings() {
 /// Test parser limits and boundary conditions
 #[test]
 fn test_parser_limits() {
-    let limit_cases = vec![
+    let limit_cases = [
         // Maximum nesting depth
         create_deeply_nested_pdf(1000),
         // Very long names
@@ -446,7 +430,7 @@ fn test_parser_limits() {
 /// Test error recovery scenarios
 #[test]
 fn test_error_recovery() {
-    let recovery_cases = vec![
+    let recovery_cases = [
         // Partially valid PDF with some bad objects
         create_pdf_with_mixed_validity(),
         // PDF with recoverable xref issues
@@ -510,7 +494,7 @@ fn test_real_world_corrupted_samples() {
     // Read the valid PDF and create corrupted versions
     let valid_data = fs::read(&valid_path).unwrap();
 
-    let corrupted_versions = vec![
+    let corrupted_versions = [
         corrupt_pdf_header(&valid_data),
         corrupt_pdf_xref(&valid_data),
         corrupt_pdf_objects(&valid_data),

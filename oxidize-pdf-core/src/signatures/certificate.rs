@@ -15,6 +15,15 @@ pub struct CertificateValidationResult {
     pub warnings: Vec<String>,
 }
 
+/// Outcome of revocation checking for the signing certificate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RevocationStatus {
+    CheckedValid,
+    Revoked,
+    Indeterminate,
+    Unavailable,
+}
+
 impl CertificateValidationResult {
     pub fn is_valid(&self) -> bool {
         self.is_time_valid && self.is_trusted && self.is_signature_capable
@@ -24,10 +33,45 @@ impl CertificateValidationResult {
     }
 }
 
+/// Certificate result with an explicit revocation-check outcome.
+#[derive(Debug, Clone)]
+pub struct DetailedCertificateValidationResult {
+    pub certificate: CertificateValidationResult,
+    pub revocation_status: RevocationStatus,
+}
+
+impl DetailedCertificateValidationResult {
+    pub fn is_valid(&self) -> bool {
+        self.certificate.is_valid() && self.revocation_status == RevocationStatus::CheckedValid
+    }
+
+    pub fn into_certificate_result_fail_closed(mut self) -> CertificateValidationResult {
+        if self.revocation_status != RevocationStatus::CheckedValid {
+            self.certificate.is_trusted = false;
+        }
+        self.certificate
+    }
+}
+
+impl std::ops::Deref for DetailedCertificateValidationResult {
+    type Target = CertificateValidationResult;
+
+    fn deref(&self) -> &Self::Target {
+        &self.certificate
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TrustStore {
-    root_count: usize,
-    is_mozilla_bundle: bool,
+    roots: TrustRoots,
+    crls_der: Vec<Vec<u8>>,
+}
+
+#[derive(Debug, Clone)]
+enum TrustRoots {
+    Mozilla,
+    Custom(Vec<Vec<u8>>),
+    Empty,
 }
 
 impl Default for TrustStore {
@@ -38,26 +82,69 @@ impl Default for TrustStore {
 
 impl TrustStore {
     pub fn mozilla_roots() -> Self {
-        #[cfg(feature = "signatures")]
-        let root_count = webpki_roots::TLS_SERVER_ROOTS.len();
-        #[cfg(not(feature = "signatures"))]
-        let root_count = 0;
         Self {
-            root_count,
-            is_mozilla_bundle: true,
+            roots: TrustRoots::Mozilla,
+            crls_der: Vec::new(),
         }
     }
     pub fn empty() -> Self {
         Self {
-            root_count: 0,
-            is_mozilla_bundle: false,
+            roots: TrustRoots::Empty,
+            crls_der: Vec::new(),
         }
     }
+    /// Build a trust store from DER-encoded X.509 trust-anchor certificates.
+    pub fn from_der_certificates(roots: Vec<Vec<u8>>) -> SignatureResult<Self> {
+        if roots.is_empty() {
+            return Err(SignatureError::CertificateValidationFailed {
+                details: "trust store must contain at least one anchor".to_string(),
+            });
+        }
+        #[cfg(feature = "signatures")]
+        for root in &roots {
+            let certificate = rustls_pki_types::CertificateDer::from(root.as_slice());
+            webpki::anchor_from_trusted_cert(&certificate).map_err(|e| {
+                SignatureError::CertificateValidationFailed {
+                    details: format!("invalid trust anchor: {e}"),
+                }
+            })?;
+        }
+        Ok(Self {
+            roots: TrustRoots::Custom(roots),
+            crls_der: Vec::new(),
+        })
+    }
+    /// Attach DER-encoded X.509 certificate revocation lists.
+    pub fn with_crls(mut self, crls_der: Vec<Vec<u8>>) -> SignatureResult<Self> {
+        #[cfg(feature = "signatures")]
+        for crl in &crls_der {
+            webpki::OwnedCertRevocationList::from_der(crl).map_err(|error| {
+                SignatureError::CertificateValidationFailed {
+                    details: format!("invalid certificate revocation list: {error}"),
+                }
+            })?;
+        }
+        self.crls_der = crls_der;
+        Ok(self)
+    }
     pub fn root_count(&self) -> usize {
-        self.root_count
+        match &self.roots {
+            TrustRoots::Mozilla => {
+                #[cfg(feature = "signatures")]
+                {
+                    webpki_roots::TLS_SERVER_ROOTS.len()
+                }
+                #[cfg(not(feature = "signatures"))]
+                {
+                    0
+                }
+            }
+            TrustRoots::Custom(roots) => roots.len(),
+            TrustRoots::Empty => 0,
+        }
     }
     pub fn is_mozilla_bundle(&self) -> bool {
-        self.is_mozilla_bundle
+        matches!(self.roots, TrustRoots::Mozilla)
     }
 }
 
@@ -85,6 +172,17 @@ pub fn validate_certificate_at_time(
     trust_store: &TrustStore,
     validation_time: Option<time::OffsetDateTime>,
 ) -> SignatureResult<CertificateValidationResult> {
+    validate_certificate_detailed_at_time(cert_der, trust_store, validation_time)
+        .map(DetailedCertificateValidationResult::into_certificate_result_fail_closed)
+}
+
+/// Validate a certificate and expose its revocation status separately.
+#[cfg(feature = "signatures")]
+pub fn validate_certificate_detailed_at_time(
+    cert_der: &[u8],
+    trust_store: &TrustStore,
+    validation_time: Option<time::OffsetDateTime>,
+) -> SignatureResult<DetailedCertificateValidationResult> {
     use der::Decode;
     use x509_cert::Certificate;
     let cert = Certificate::from_der(cert_der).map_err(|e| {
@@ -101,20 +199,81 @@ pub fn validate_certificate_at_time(
     let valid_to = format_x509_time(&validity.not_after);
     let now = validation_time.unwrap_or_else(time::OffsetDateTime::now_utc);
     let is_time_valid = check_validity_period(&validity.not_before, &validity.not_after, now);
-    let (is_trusted, trust_warnings) = validate_trust_chain(cert_der, trust_store, now);
+    let (is_trusted, revocation_status, trust_warnings) =
+        validate_trust_chain(cert_der, &[], trust_store, now);
     let (is_signature_capable, usage_warnings) = check_key_usage(&cert);
     let mut warnings = Vec::new();
     warnings.extend(trust_warnings);
     warnings.extend(usage_warnings);
-    Ok(CertificateValidationResult {
-        subject,
-        issuer,
-        valid_from,
-        valid_to,
-        is_time_valid,
-        is_trusted,
-        is_signature_capable,
-        warnings,
+    Ok(DetailedCertificateValidationResult {
+        certificate: CertificateValidationResult {
+            subject,
+            issuer,
+            valid_from,
+            valid_to,
+            is_time_valid,
+            is_trusted,
+            is_signature_capable,
+            warnings,
+        },
+        revocation_status,
+    })
+}
+
+/// Validate an end-entity signing certificate and its embedded intermediates.
+#[cfg(feature = "signatures")]
+pub fn validate_certificate_chain(
+    cert_der: &[u8],
+    certificates_der: &[Vec<u8>],
+    trust_store: &TrustStore,
+    validation_time: Option<time::OffsetDateTime>,
+) -> SignatureResult<DetailedCertificateValidationResult> {
+    use der::Decode;
+    use x509_cert::Certificate;
+
+    let cert = Certificate::from_der(cert_der).map_err(|e| {
+        SignatureError::CertificateValidationFailed {
+            details: format!("Failed to parse certificate: {e}"),
+        }
+    })?;
+    let now = validation_time.unwrap_or_else(time::OffsetDateTime::now_utc);
+    let intermediates = certificates_der
+        .iter()
+        .filter(|candidate| candidate.as_slice() != cert_der)
+        .cloned()
+        .collect::<Vec<_>>();
+    let (is_trusted, revocation_status, trust_warnings) =
+        validate_trust_chain(cert_der, &intermediates, trust_store, now);
+    let (is_signature_capable, usage_warnings) = check_key_usage(&cert);
+    let validity = &cert.tbs_certificate.validity;
+    let mut warnings = trust_warnings;
+    warnings.extend(usage_warnings);
+    Ok(DetailedCertificateValidationResult {
+        certificate: CertificateValidationResult {
+            subject: extract_common_name(&cert.tbs_certificate.subject)
+                .unwrap_or_else(|| format_dn(&cert.tbs_certificate.subject)),
+            issuer: extract_common_name(&cert.tbs_certificate.issuer)
+                .unwrap_or_else(|| format_dn(&cert.tbs_certificate.issuer)),
+            valid_from: format_x509_time(&validity.not_before),
+            valid_to: format_x509_time(&validity.not_after),
+            is_time_valid: check_validity_period(&validity.not_before, &validity.not_after, now),
+            is_trusted,
+            is_signature_capable,
+            warnings,
+        },
+        revocation_status,
+    })
+}
+
+#[cfg(not(feature = "signatures"))]
+pub fn validate_certificate_chain(
+    _: &[u8],
+    _: &[Vec<u8>],
+    _: &TrustStore,
+    _: Option<()>,
+) -> SignatureResult<DetailedCertificateValidationResult> {
+    Err(SignatureError::CertificateValidationFailed {
+        details: "signatures feature not enabled".to_string(),
     })
 }
 
@@ -211,54 +370,177 @@ fn x509_time_to_offset_datetime(time: &x509_cert::time::Time) -> Option<time::Of
 #[cfg(feature = "signatures")]
 fn validate_trust_chain(
     cert_der: &[u8],
+    intermediate_der: &[Vec<u8>],
     trust_store: &TrustStore,
-    _: time::OffsetDateTime,
-) -> (bool, Vec<String>) {
-    use der::Decode;
-    use x509_cert::Certificate;
+    now: time::OffsetDateTime,
+) -> (bool, RevocationStatus, Vec<String>) {
+    use rustls_pki_types::{CertificateDer, UnixTime};
+    use std::time::Duration;
     let mut warnings = Vec::new();
-    if !trust_store.is_mozilla_bundle || trust_store.root_count == 0 {
-        warnings.push("Using empty or custom trust store".to_string());
-        return (false, warnings);
+    if trust_store.root_count() == 0 {
+        warnings.push("Trust store has no anchors".to_string());
+        return (false, RevocationStatus::Unavailable, warnings);
     }
-    let cert = match Certificate::from_der(cert_der) {
-        Ok(c) => c,
+    let certificate = CertificateDer::from(cert_der);
+    let end_entity = match webpki::EndEntityCert::try_from(&certificate) {
+        Ok(cert) => cert,
         Err(e) => {
-            warnings.push(format!("Failed to parse: {}", e));
-            return (false, warnings);
+            warnings.push(format!("Failed to parse end-entity certificate: {e}"));
+            return (false, RevocationStatus::Unavailable, warnings);
         }
     };
-    let subject = format_dn(&cert.tbs_certificate.subject);
-    let issuer = format_dn(&cert.tbs_certificate.issuer);
-    if subject == issuer {
-        warnings.push("Self-signed certificate".to_string());
-        return (true, warnings);
+    let custom_certificates;
+    let custom_anchors;
+    let anchors = match &trust_store.roots {
+        TrustRoots::Mozilla => webpki_roots::TLS_SERVER_ROOTS,
+        TrustRoots::Custom(roots) => {
+            custom_certificates = roots
+                .iter()
+                .map(|root| CertificateDer::from(root.as_slice()))
+                .collect::<Vec<_>>();
+            custom_anchors = match custom_certificates
+                .iter()
+                .map(webpki::anchor_from_trusted_cert)
+                .collect::<Result<Vec<_>, _>>()
+            {
+                Ok(anchors) => anchors,
+                Err(error) => {
+                    warnings.push(format!("Invalid trust anchor: {error}"));
+                    return (false, RevocationStatus::Unavailable, warnings);
+                }
+            };
+            custom_anchors.as_slice()
+        }
+        TrustRoots::Empty => &[],
+    };
+    let intermediates = intermediate_der
+        .iter()
+        .map(|cert| CertificateDer::from(cert.as_slice()))
+        .collect::<Vec<_>>();
+    let timestamp = match u64::try_from(now.unix_timestamp()) {
+        Ok(seconds) => UnixTime::since_unix_epoch(Duration::from_secs(seconds)),
+        Err(_) => {
+            warnings.push("Validation time predates the Unix epoch".to_string());
+            return (false, RevocationStatus::Unavailable, warnings);
+        }
+    };
+    let path_result = end_entity.verify_for_usage(
+        webpki::ALL_VERIFICATION_ALGS,
+        anchors,
+        &intermediates,
+        timestamp,
+        PdfSigningEku,
+        None,
+        None,
+    );
+    if let Err(error) = path_result {
+        warnings.push(format!("Certificate path validation failed: {error}"));
+        return (false, RevocationStatus::Unavailable, warnings);
     }
-    warnings.push("CA-issued certificate (chain validation pending)".to_string());
-    (true, warnings)
+    if trust_store.crls_der.is_empty() {
+        warnings.push("Certificate revocation was not checked: no CRLs provided".to_string());
+        return (true, RevocationStatus::Unavailable, warnings);
+    }
+    let owned_crls = match trust_store
+        .crls_der
+        .iter()
+        .map(|crl| {
+            webpki::OwnedCertRevocationList::from_der(crl).map(webpki::CertRevocationList::from)
+        })
+        .collect::<Result<Vec<_>, _>>()
+    {
+        Ok(crls) => crls,
+        Err(error) => {
+            warnings.push(format!("Certificate revocation data is invalid: {error}"));
+            return (true, RevocationStatus::Indeterminate, warnings);
+        }
+    };
+    let crls = owned_crls.iter().collect::<Vec<_>>();
+    let revocation = webpki::RevocationOptionsBuilder::new(&crls)
+        .expect("non-empty CRL collection")
+        .with_depth(webpki::RevocationCheckDepth::EndEntity)
+        .with_expiration_policy(webpki::ExpirationPolicy::Enforce)
+        .build();
+    match end_entity.verify_for_usage(
+        webpki::ALL_VERIFICATION_ALGS,
+        anchors,
+        &intermediates,
+        timestamp,
+        PdfSigningEku,
+        Some(revocation),
+        None,
+    ) {
+        Ok(_) => (true, RevocationStatus::CheckedValid, warnings),
+        Err(webpki::Error::CertRevoked) => {
+            warnings.push("Signing certificate is revoked".to_string());
+            (true, RevocationStatus::Revoked, warnings)
+        }
+        Err(error) => {
+            warnings.push(format!(
+                "Certificate revocation check was indeterminate: {error}"
+            ));
+            (true, RevocationStatus::Indeterminate, warnings)
+        }
+    }
+}
+
+#[cfg(feature = "signatures")]
+#[derive(Debug, Clone, Copy)]
+struct PdfSigningEku;
+
+#[cfg(feature = "signatures")]
+impl webpki::ExtendedKeyUsageValidator for PdfSigningEku {
+    fn validate(&self, purposes: webpki::KeyPurposeIdIter<'_, '_>) -> Result<(), webpki::Error> {
+        const ALLOWED: &[&[usize]] = &[
+            &[1, 3, 6, 1, 5, 5, 7, 3, 4],  // emailProtection
+            &[1, 3, 6, 1, 5, 5, 7, 3, 3],  // codeSigning
+            &[1, 3, 6, 1, 5, 5, 7, 3, 36], // documentSigning
+            &[1, 2, 840, 113583, 1, 1, 5], // Adobe authentic documents
+            &[2, 5, 29, 37, 0],            // anyExtendedKeyUsage
+        ];
+        let mut present = false;
+        for purpose in purposes {
+            present = true;
+            let purpose = purpose?;
+            let decoded = purpose.to_decoded_oid();
+            if ALLOWED.iter().any(|allowed| *allowed == decoded) {
+                return Ok(());
+            }
+        }
+        if !present {
+            return Ok(());
+        }
+        #[allow(deprecated)]
+        Err(webpki::Error::RequiredEkuNotFound)
+    }
 }
 
 #[cfg(feature = "signatures")]
 fn check_key_usage(cert: &x509_cert::Certificate) -> (bool, Vec<String>) {
+    use der::Decode;
+    use x509_cert::ext::pkix::KeyUsage;
     let mut warnings = Vec::new();
     if let Some(extensions) = &cert.tbs_certificate.extensions {
         for ext in extensions.iter() {
             if ext.extn_id.to_string() == "2.5.29.15" {
-                let value = ext.extn_value.as_bytes();
-                if value.len() >= 2 {
-                    let key_usage_byte = value[1];
-                    if key_usage_byte & 0x80 != 0 || key_usage_byte & 0x40 != 0 {
-                        return (true, warnings);
-                    } else {
+                match KeyUsage::from_der(ext.extn_value.as_bytes()) {
+                    Ok(usage) if usage.digital_signature() || usage.non_repudiation() => {
+                        return (true, warnings)
+                    }
+                    Ok(_) => {
                         warnings.push("No digital signature key usage".to_string());
+                        return (false, warnings);
+                    }
+                    Err(error) => {
+                        warnings.push(format!("Malformed key usage extension: {error}"));
                         return (false, warnings);
                     }
                 }
             }
         }
     }
-    warnings.push("No key usage extension".to_string());
-    (true, warnings)
+    warnings.push("No key usage extension; signature capability is indeterminate".to_string());
+    (false, warnings)
 }
 
 #[cfg(test)]

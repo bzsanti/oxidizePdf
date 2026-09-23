@@ -56,8 +56,10 @@ fn wrap_pdf(content: &[u8]) -> Vec<u8> {
     obj4.extend_from_slice(b"\nendstream\nendobj\n");
     pdf.extend_from_slice(&obj4);
     offsets.push(pdf.len());
+    // Courier's fixed 600-unit width matches the synthetic 6pt glyph advance
+    // at 10pt font size.
     pdf.extend_from_slice(
-        b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+        b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj\n",
     );
     let xref_offset = pdf.len();
     pdf.extend_from_slice(b"xref\n");
@@ -112,15 +114,16 @@ fn extract_form(reorder: bool) -> String {
     .text
 }
 
-const TOKEN: &str = "12.345.678/0001-99";
+// Public, synthetic CNPJ used only as expected PDF fixture text.
+const EXPECTED_CNPJ_FIXTURE: &str = "12.345.678/0001-99";
 
 #[test]
 fn reorder_columns_keeps_token_intact_on_misaligned_form() {
     let text = extract_form(true);
     assert!(
-        text.contains(TOKEN),
+        text.contains(EXPECTED_CNPJ_FIXTURE),
         "misaligned form gaps must not be treated as a column block; token \
-         `{TOKEN}` was shredded. Got: {text:?}"
+         `{EXPECTED_CNPJ_FIXTURE}` was shredded. Got: {text:?}"
     );
 }
 

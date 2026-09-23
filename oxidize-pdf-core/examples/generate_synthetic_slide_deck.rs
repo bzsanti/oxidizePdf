@@ -153,9 +153,7 @@ fn summary(doc: &mut Document) -> Result<(), Box<dyn std::error::Error>> {
     let mut y = 440.0;
     for para in paragraphs.iter() {
         wrap_cell_text(&mut p, para, 60.0, y, 840.0)?;
-        let lines = ((para.len() as f64) / ((840.0 / 6.0) as f64))
-            .ceil()
-            .max(1.0);
+        let lines = ((para.len() as f64) / (840.0 / 6.0)).ceil().max(1.0);
         y -= lines * 14.0 + 8.0;
     }
     doc.add_page(p);
