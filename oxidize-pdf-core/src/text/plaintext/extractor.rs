@@ -239,17 +239,19 @@ impl PlainTextExtractor {
         let mut last_x = 0.0;
         let mut last_y = 0.0;
 
-        // Process each content stream
-        for stream_data in streams {
-            let operations = match ContentParser::parse_content(&stream_data) {
-                Ok(ops) => ops,
-                Err(e) => {
-                    tracing::debug!("Warning: Failed to parse content stream, skipping: {}", e);
-                    continue;
-                }
-            };
+        // Process content streams. Per ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3,
+        // if `/Contents` is an array of streams, concatenate them with whitespace
+        // separators before parsing (issue #613).
+        let combined_stream = ContentParser::combine_streams_owned(streams);
+        let operations = match ContentParser::parse_content(&combined_stream) {
+            Ok(ops) => ops,
+            Err(e) => {
+                tracing::debug!("Warning: Failed to parse content stream, skipping: {}", e);
+                Vec::new()
+            }
+        };
 
-            for op in operations {
+        for op in operations {
                 match op {
                     ContentOperation::BeginText => {
                         in_text_object = true;
@@ -437,7 +439,6 @@ impl PlainTextExtractor {
                     }
                 }
             }
-        }
 
         // Apply line break mode processing
         let processed_text = self.apply_line_break_mode(&extracted_text);

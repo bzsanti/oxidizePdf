@@ -1071,6 +1071,16 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(streams)
     }
 
+    /// Get the combined content stream for a page.
+    ///
+    /// Per ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3, if `/Contents` is an array
+    /// of streams, the effect shall be as if all streams were concatenated in order
+    /// to form a single stream, with whitespace inserted between streams.
+    pub fn get_combined_page_content_stream(&self, page: &ParsedPage) -> ParseResult<Vec<u8>> {
+        let streams = self.get_page_content_streams(page)?;
+        Ok(crate::parser::content::ContentParser::combine_streams_owned(streams))
+    }
+
     /// Extract text from all pages in the document.
     ///
     /// Uses the default text extraction settings. For custom settings,

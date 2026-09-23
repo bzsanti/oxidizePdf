@@ -232,14 +232,13 @@ impl<R: Read + Seek> ImageExtractor<R> {
         if extracted.is_empty() {
             // Analyze content streams for image references
             if let Ok(content_streams) = self.document.get_page_content_streams(&page) {
-                for stream_data in &content_streams {
-                    let referenced_images = self.extract_referenced_images_from_content(
-                        stream_data,
-                        page_number,
-                        &mut image_index,
-                    )?;
-                    extracted.extend(referenced_images);
-                }
+                let combined = crate::parser::ContentParser::combine_streams_owned(content_streams);
+                let referenced_images = self.extract_referenced_images_from_content(
+                    &combined,
+                    page_number,
+                    &mut image_index,
+                )?;
+                extracted.extend(referenced_images);
             }
         }
 
@@ -247,14 +246,13 @@ impl<R: Read + Seek> ImageExtractor<R> {
         if self.options.extract_inline {
             if let Ok(parsed_page) = self.document.get_page(page_number as u32) {
                 if let Ok(content_streams) = self.document.get_page_content_streams(&parsed_page) {
-                    for stream_data in &content_streams {
-                        let inline_images = self.extract_inline_images_from_stream(
-                            stream_data,
-                            page_number,
-                            &mut image_index,
-                        )?;
-                        extracted.extend(inline_images);
-                    }
+                    let combined = crate::parser::ContentParser::combine_streams_owned(content_streams);
+                    let inline_images = self.extract_inline_images_from_stream(
+                        &combined,
+                        page_number,
+                        &mut image_index,
+                    )?;
+                    extracted.extend(inline_images);
                 }
             }
         }
