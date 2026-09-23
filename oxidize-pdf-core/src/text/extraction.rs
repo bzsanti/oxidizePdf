@@ -3,6 +3,9 @@
 //! This module provides functionality to extract text from PDF pages,
 //! handling text positioning, transformations, and basic encodings.
 
+use std::collections::HashMap;
+use std::io::{Read, Seek};
+
 use crate::graphics::Color;
 use crate::parser::content::{ContentOperation, ContentParser, TextElement};
 use crate::parser::document::PdfDocument;
@@ -10,11 +13,8 @@ use crate::parser::objects::{PdfDictionary, PdfObject};
 use crate::parser::page_tree::ParsedPage;
 use crate::parser::ParseResult;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
-use crate::text::flat_reading_order;
 use crate::text::graphics_state_stack::GraphicsStateStack;
-use crate::text::TextRenderingMode;
-use std::collections::HashMap;
-use std::io::{Read, Seek};
+use crate::text::{flat_reading_order, TextRenderingMode};
 
 /// Controls how carriage returns decoded from PDF text-showing strings are
 /// represented in extracted plain text.
@@ -1591,10 +1591,17 @@ impl TextExtractor {
                                 let positioned_run_boundary = large_backward_jump
                                     && dy <= SAME_LINE_EPS
                                     && at_text_object_start;
+                                let suppress_space = should_suppress_space_before_punctuation(
+                                    &extracted_text,
+                                    &decoded,
+                                    dx,
+                                    &state,
+                                );
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
-                                } else if positioned_run_boundary
-                                    || dx > self.flat_space_gap_threshold(&state)
+                                } else if (positioned_run_boundary
+                                    || dx > self.flat_space_gap_threshold(&state))
+                                    && !suppress_space
                                 {
                                     Some(' ')
                                 } else {
@@ -1792,9 +1799,17 @@ impl TextExtractor {
                                         } else {
                                             self.tj_boundary_space_gap_threshold(&state)
                                         };
+                                        let suppress_space =
+                                            should_suppress_space_before_punctuation(
+                                                &extracted_text,
+                                                &decoded,
+                                                dx,
+                                                &state,
+                                            );
                                         let boundary_space = at_array_start
                                             && dx > boundary_threshold
-                                            && !extracted_text.ends_with(' ');
+                                            && !extracted_text.ends_with(' ')
+                                            && !suppress_space;
                                         let separator = if extracted_text.is_empty() {
                                             None
                                         } else if dy > self.options.newline_threshold || line_wrap {
@@ -3515,6 +3530,33 @@ fn combined_text_scale(state: &TextState) -> (f64, f64) {
     let x_scale = (combined[0] * combined[0] + combined[1] * combined[1]).sqrt();
     let y_scale = (combined[2] * combined[2] + combined[3] * combined[3]).sqrt();
     (x_scale, y_scale)
+}
+
+/// Suppress synthesizing an artificial space before punctuation marks (issue #610).
+///
+/// When fragmented `Tj` or `TJ` operator runs split tokens (e.g. IP addresses like
+/// `179.191.127.102` or domain extensions like `.br`), micro-spacing gaps
+/// (dx < 0.7 em) before punctuation characters must not insert a synthetic space.
+/// Real column separations or leading spaces in text are preserved.
+fn should_suppress_space_before_punctuation(
+    extracted_text: &str,
+    decoded: &str,
+    dx: f64,
+    state: &TextState,
+) -> bool {
+    let (x_scale, _) = combined_text_scale(state);
+    let effective_font_size = state.font_size.abs()
+        * if x_scale.is_finite() && x_scale > f64::EPSILON {
+            x_scale
+        } else {
+            1.0
+        };
+    decoded.chars().next().is_some_and(|c| {
+        matches!(c, '.' | ',' | ';' | ':' | '!' | '?' | ')' | ']')
+            && !extracted_text.ends_with(' ')
+            && !extracted_text.ends_with('\n')
+            && dx < effective_font_size * TJ_BOUNDARY_SPACE_EM
+    })
 }
 
 /// Record a just-emitted glyph run into the flat-path line groups (issue #448).
@@ -5269,8 +5311,9 @@ mod tests {
 
     #[test]
     fn standard_14_no_widths_uses_effective_encoding_for_pen_advance() {
-        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
         use std::collections::HashMap;
+
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
 
         let font = |name: &str, encoding: Option<&str>, differences| FontInfo {
             name: name.to_string(),
@@ -5685,8 +5728,9 @@ mod tests {
 
     #[test]
     fn test_calculate_text_width_with_kerning() {
-        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
         use std::collections::HashMap;
+
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
 
         // Create a font with kerning pairs
         let mut widths = vec![500.0; 95]; // ASCII 32-126
@@ -6537,8 +6581,9 @@ mod tests {
 
     #[test]
     fn resolve_props_extracts_integer_mcid() {
-        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
         use std::collections::HashMap;
+
+        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
         let mut map = HashMap::new();
         map.insert("MCID".to_string(), MarkedContentValue::Integer(7));
         let props = MarkedContentProps::Inline(map);
@@ -6550,8 +6595,9 @@ mod tests {
 
     #[test]
     fn resolve_props_decodes_utf16be_actualtext() {
-        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
         use std::collections::HashMap;
+
+        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
         let mut map = HashMap::new();
         map.insert(
             "ActualText".to_string(),
@@ -6574,8 +6620,9 @@ mod tests {
 
     #[test]
     fn resolve_props_negative_mcid_rejected() {
-        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
         use std::collections::HashMap;
+
+        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
         // MCID is unsigned per ISO 32000-1; negative integer is malformed.
         let mut map = HashMap::new();
         map.insert("MCID".to_string(), MarkedContentValue::Integer(-1));
