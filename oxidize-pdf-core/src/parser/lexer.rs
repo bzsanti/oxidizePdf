@@ -2,8 +2,9 @@
 //!
 //! Tokenizes PDF syntax according to ISO 32000-1 Section 7.2
 
-use super::{ParseError, ParseOptions, ParseResult, ParseWarning};
 use std::io::{Read, Seek, SeekFrom};
+
+use super::{ParseError, ParseOptions, ParseResult, ParseWarning};
 
 /// PDF Token types
 #[derive(Debug, Clone, PartialEq)]
@@ -309,15 +310,25 @@ impl<R: Read> Lexer<R> {
             };
 
             if escape {
-                let escaped = match ch {
-                    b'n' => b'\n',
-                    b'r' => b'\r',
-                    b't' => b'\t',
-                    b'b' => b'\x08',
-                    b'f' => b'\x0C',
-                    b'(' => b'(',
-                    b')' => b')',
-                    b'\\' => b'\\',
+                match ch {
+                    b'n' => string.push(b'\n'),
+                    b'r' => string.push(b'\r'),
+                    b't' => string.push(b'\t'),
+                    b'b' => string.push(b'\x08'),
+                    b'f' => string.push(b'\x0C'),
+                    b'(' => string.push(b'('),
+                    b')' => string.push(b')'),
+                    b'\\' => string.push(b'\\'),
+                    b'\r' => {
+                        // Escaped line break per ISO 32000-1 §7.3.4.2: discard the EOL.
+                        // If followed by \n (CRLF), consume \n as part of the EOL marker.
+                        if let Some(b'\n') = self.peek_char()? {
+                            self.consume_char()?;
+                        }
+                    }
+                    b'\n' => {
+                        // Escaped line break per ISO 32000-1 §7.3.4.2: discard the EOL.
+                    }
                     b'0'..=b'7' => {
                         // Octal escape sequence.
                         // Use u16 to avoid overflow panic on malformed octal (e.g. \777).
@@ -333,11 +344,10 @@ impl<R: Read> Lexer<R> {
                                 }
                             }
                         }
-                        value as u8
+                        string.push(value as u8);
                     }
-                    _ => ch, // Unknown escape, use literal
-                };
-                string.push(escaped);
+                    _ => string.push(ch), // Unknown escape, use literal
+                }
                 escape = false;
             } else {
                 match ch {
@@ -951,8 +961,9 @@ impl<R: Read> Lexer<R> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::io::Cursor;
+
+    use super::*;
 
     #[test]
     fn test_lexer_basic_tokens() {
@@ -1054,8 +1065,9 @@ mod tests {
 
     // Comprehensive tests for Lexer
     mod comprehensive_tests {
-        use super::*;
         use std::io::Cursor;
+
+        use super::*;
 
         #[test]
         fn test_token_debug_trait() {
