@@ -295,8 +295,7 @@ impl<R: Read + Seek> PdfOverlay<R> {
             .get_page_content_streams(&parsed_overlay)
             .map_err(|e| OperationError::ParseError(e.to_string()))?;
 
-        let overlay_content =
-            crate::parser::ContentParser::combine_streams_owned(overlay_streams);
+        let overlay_content = crate::parser::ContentParser::combine_streams_owned(overlay_streams);
 
         // Build Form XObject from overlay content
         let ov_w = parsed_overlay.width();

@@ -282,193 +282,189 @@ impl PlainTextExtractor {
         };
 
         for op in operations {
-                match op {
-                    ContentOperation::BeginText => {
-                        in_text_object = true;
-                        state.text_matrix = IDENTITY;
-                        state.text_line_matrix = IDENTITY;
-                    }
+            match op {
+                ContentOperation::BeginText => {
+                    in_text_object = true;
+                    state.text_matrix = IDENTITY;
+                    state.text_line_matrix = IDENTITY;
+                }
 
-                    ContentOperation::EndText => {
-                        in_text_object = false;
-                    }
+                ContentOperation::EndText => {
+                    in_text_object = false;
+                }
 
-                    ContentOperation::SetTextMatrix(a, b, c, d, e, f) => {
-                        state.text_matrix =
-                            [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
-                        state.text_line_matrix =
-                            [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
-                    }
+                ContentOperation::SetTextMatrix(a, b, c, d, e, f) => {
+                    state.text_matrix =
+                        [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
+                    state.text_line_matrix =
+                        [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
+                }
 
-                    ContentOperation::MoveText(tx, ty) => {
-                        let new_matrix = multiply_matrix(
-                            &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
-                            &state.text_line_matrix,
-                        );
-                        state.text_matrix = new_matrix;
-                        state.text_line_matrix = new_matrix;
-                    }
+                ContentOperation::MoveText(tx, ty) => {
+                    let new_matrix = multiply_matrix(
+                        &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
+                        &state.text_line_matrix,
+                    );
+                    state.text_matrix = new_matrix;
+                    state.text_line_matrix = new_matrix;
+                }
 
-                    // `tx ty TD` (ISO 32000-1 §9.4.2) is `-ty TL` followed by
-                    // `tx ty Td`: it moves to the next line AND sets the
-                    // leading. Same defect as issue #451 in `TextExtractor`,
-                    // living independently in this second public path: the
-                    // operator fell through the catch-all below, so the line
-                    // break did not exist here either (`dx = dy = 0` at the
-                    // spacing decision) and every later `T*` advanced by a
-                    // stale leading.
-                    ContentOperation::MoveTextSetLeading(tx, ty) => {
-                        state.leading = -(ty as f64);
-                        let new_matrix = multiply_matrix(
-                            &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
-                            &state.text_line_matrix,
-                        );
-                        state.text_matrix = new_matrix;
-                        state.text_line_matrix = new_matrix;
-                    }
+                // `tx ty TD` (ISO 32000-1 §9.4.2) is `-ty TL` followed by
+                // `tx ty Td`: it moves to the next line AND sets the
+                // leading. Same defect as issue #451 in `TextExtractor`,
+                // living independently in this second public path: the
+                // operator fell through the catch-all below, so the line
+                // break did not exist here either (`dx = dy = 0` at the
+                // spacing decision) and every later `T*` advanced by a
+                // stale leading.
+                ContentOperation::MoveTextSetLeading(tx, ty) => {
+                    state.leading = -(ty as f64);
+                    let new_matrix = multiply_matrix(
+                        &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
+                        &state.text_line_matrix,
+                    );
+                    state.text_matrix = new_matrix;
+                    state.text_line_matrix = new_matrix;
+                }
 
-                    ContentOperation::NextLine => {
-                        Self::advance_to_next_line(&mut state);
-                    }
+                ContentOperation::NextLine => {
+                    Self::advance_to_next_line(&mut state);
+                }
 
-                    // `string '` is `T*` followed by `Tj` (ISO 32000-1 §9.4.3,
-                    // Table 109). The operator had no arm here, so the string
-                    // was never emitted: not a missing separator like the `TD`
-                    // gap above, but silent loss of the content itself.
-                    ContentOperation::NextLineShowText(text) => {
-                        if in_text_object {
-                            let decoded = self.decode_text::<R>(&text, &state)?;
-                            let (x, y) = Self::advance_to_next_line(&mut state);
-                            Self::push_on_new_line(&mut extracted_text, &decoded);
-                            last_x = x;
-                            last_y = y;
-                        }
-                    }
-
-                    // `aw ac string "` is `aw Tw`, `ac Tc`, then `string '`.
-                    // The spacing operands are consumed and deliberately not
-                    // stored: this extractor decides separators from pen
-                    // positions, never from accumulated glyph advances, so
-                    // there is nothing here for them to affect. `TextExtractor`
-                    // does track them.
-                    ContentOperation::SetSpacingNextLineShowText(
-                        _word_space,
-                        _char_space,
-                        text,
-                    ) => {
-                        if in_text_object {
-                            let decoded = self.decode_text::<R>(&text, &state)?;
-                            let (x, y) = Self::advance_to_next_line(&mut state);
-                            Self::push_on_new_line(&mut extracted_text, &decoded);
-                            last_x = x;
-                            last_y = y;
-                        }
-                    }
-
-                    ContentOperation::ShowText(text) => {
-                        if in_text_object {
-                            let decoded = self.decode_text::<R>(&text, &state)?;
-
-                            // Calculate position (only x, y - no width/height needed)
-                            let (x, y) = transform_point(0.0, 0.0, &state.text_matrix);
-
-                            // Add spacing based on position change
-                            if !extracted_text.is_empty() {
-                                let dx = x - last_x;
-                                let dy = (y - last_y).abs();
-
-                                if dy > self.config.newline_threshold {
-                                    extracted_text.push('\n');
-                                } else if dx > self.config.space_threshold * state.font_size {
-                                    extracted_text.push(' ');
-                                }
-                            }
-
-                            extracted_text.push_str(&decoded);
-                            last_x = x;
-                            last_y = y;
-                        }
-                    }
-
-                    ContentOperation::ShowTextArray(array) => {
-                        if in_text_object {
-                            // Inter-operator spacing once, at the start of the
-                            // array, mirroring the single-`Tj` path.
-                            let (x, y) = transform_point(0.0, 0.0, &state.text_matrix);
-                            if !extracted_text.is_empty() {
-                                let dx = x - last_x;
-                                let dy = (y - last_y).abs();
-                                if dy > self.config.newline_threshold {
-                                    extracted_text.push('\n');
-                                } else if dx > self.config.space_threshold * state.font_size {
-                                    extracted_text.push(' ');
-                                }
-                            }
-
-                            for item in array {
-                                match item {
-                                    TextElement::Text(bytes) => {
-                                        let decoded = self.decode_text::<R>(&bytes, &state)?;
-                                        extracted_text.push_str(&decoded);
-                                    }
-                                    TextElement::Spacing(adjustment) => {
-                                        // Negative adjustment shifts the pen
-                                        // forward. A wide forward advance is an
-                                        // implicit word break (issue #272): emit
-                                        // one space unless the previous char is
-                                        // already a space.
-                                        let tx = -(adjustment as f64) / 1000.0 * state.font_size;
-                                        if tx > self.config.tj_space_threshold * state.font_size
-                                            && !extracted_text.is_empty()
-                                            && !extracted_text.ends_with(' ')
-                                        {
-                                            extracted_text.push(' ');
-                                        }
-                                        state.text_matrix = multiply_matrix(
-                                            &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
-                                            &state.text_matrix,
-                                        );
-                                    }
-                                }
-                            }
-
-                            last_x = transform_point(0.0, 0.0, &state.text_matrix).0;
-                            last_y = y;
-                        }
-                    }
-
-                    ContentOperation::SetFont(name, size) => {
-                        state.font_name = Some(name);
-                        state.font_size = size as f64;
-                    }
-
-                    ContentOperation::SetLeading(leading) => {
-                        state.leading = leading as f64;
-                    }
-
-                    // Text state is graphics state (ISO 32000-1 §9.3, Table
-                    // 52), so a leading or font set inside a `q … Q` block must
-                    // not survive it (issue #452). The text matrices are not
-                    // saved: they are text object state, owned by `BT`/`ET`.
-                    ContentOperation::SaveGraphicsState => {
-                        state.save_graphics_state();
-                    }
-
-                    ContentOperation::RestoreGraphicsState => {
-                        // An unbalanced `Q` is ignored rather than fatal, to
-                        // stay robust on malformed documents.
-                        if let Some(saved) = state.saved_states.pop() {
-                            state.leading = saved.leading;
-                            state.font_size = saved.font_size;
-                            state.font_name = saved.font_name;
-                        }
-                    }
-
-                    _ => {
-                        // Ignore other operations (no graphics state needed for text extraction)
+                // `string '` is `T*` followed by `Tj` (ISO 32000-1 §9.4.3,
+                // Table 109). The operator had no arm here, so the string
+                // was never emitted: not a missing separator like the `TD`
+                // gap above, but silent loss of the content itself.
+                ContentOperation::NextLineShowText(text) => {
+                    if in_text_object {
+                        let decoded = self.decode_text::<R>(&text, &state)?;
+                        let (x, y) = Self::advance_to_next_line(&mut state);
+                        Self::push_on_new_line(&mut extracted_text, &decoded);
+                        last_x = x;
+                        last_y = y;
                     }
                 }
+
+                // `aw ac string "` is `aw Tw`, `ac Tc`, then `string '`.
+                // The spacing operands are consumed and deliberately not
+                // stored: this extractor decides separators from pen
+                // positions, never from accumulated glyph advances, so
+                // there is nothing here for them to affect. `TextExtractor`
+                // does track them.
+                ContentOperation::SetSpacingNextLineShowText(_word_space, _char_space, text) => {
+                    if in_text_object {
+                        let decoded = self.decode_text::<R>(&text, &state)?;
+                        let (x, y) = Self::advance_to_next_line(&mut state);
+                        Self::push_on_new_line(&mut extracted_text, &decoded);
+                        last_x = x;
+                        last_y = y;
+                    }
+                }
+
+                ContentOperation::ShowText(text) => {
+                    if in_text_object {
+                        let decoded = self.decode_text::<R>(&text, &state)?;
+
+                        // Calculate position (only x, y - no width/height needed)
+                        let (x, y) = transform_point(0.0, 0.0, &state.text_matrix);
+
+                        // Add spacing based on position change
+                        if !extracted_text.is_empty() {
+                            let dx = x - last_x;
+                            let dy = (y - last_y).abs();
+
+                            if dy > self.config.newline_threshold {
+                                extracted_text.push('\n');
+                            } else if dx > self.config.space_threshold * state.font_size {
+                                extracted_text.push(' ');
+                            }
+                        }
+
+                        extracted_text.push_str(&decoded);
+                        last_x = x;
+                        last_y = y;
+                    }
+                }
+
+                ContentOperation::ShowTextArray(array) => {
+                    if in_text_object {
+                        // Inter-operator spacing once, at the start of the
+                        // array, mirroring the single-`Tj` path.
+                        let (x, y) = transform_point(0.0, 0.0, &state.text_matrix);
+                        if !extracted_text.is_empty() {
+                            let dx = x - last_x;
+                            let dy = (y - last_y).abs();
+                            if dy > self.config.newline_threshold {
+                                extracted_text.push('\n');
+                            } else if dx > self.config.space_threshold * state.font_size {
+                                extracted_text.push(' ');
+                            }
+                        }
+
+                        for item in array {
+                            match item {
+                                TextElement::Text(bytes) => {
+                                    let decoded = self.decode_text::<R>(&bytes, &state)?;
+                                    extracted_text.push_str(&decoded);
+                                }
+                                TextElement::Spacing(adjustment) => {
+                                    // Negative adjustment shifts the pen
+                                    // forward. A wide forward advance is an
+                                    // implicit word break (issue #272): emit
+                                    // one space unless the previous char is
+                                    // already a space.
+                                    let tx = -(adjustment as f64) / 1000.0 * state.font_size;
+                                    if tx > self.config.tj_space_threshold * state.font_size
+                                        && !extracted_text.is_empty()
+                                        && !extracted_text.ends_with(' ')
+                                    {
+                                        extracted_text.push(' ');
+                                    }
+                                    state.text_matrix = multiply_matrix(
+                                        &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
+                                        &state.text_matrix,
+                                    );
+                                }
+                            }
+                        }
+
+                        last_x = transform_point(0.0, 0.0, &state.text_matrix).0;
+                        last_y = y;
+                    }
+                }
+
+                ContentOperation::SetFont(name, size) => {
+                    state.font_name = Some(name);
+                    state.font_size = size as f64;
+                }
+
+                ContentOperation::SetLeading(leading) => {
+                    state.leading = leading as f64;
+                }
+
+                // Text state is graphics state (ISO 32000-1 §9.3, Table
+                // 52), so a leading or font set inside a `q … Q` block must
+                // not survive it (issue #452). The text matrices are not
+                // saved: they are text object state, owned by `BT`/`ET`.
+                ContentOperation::SaveGraphicsState => {
+                    state.save_graphics_state();
+                }
+
+                ContentOperation::RestoreGraphicsState => {
+                    // An unbalanced `Q` is ignored rather than fatal, to
+                    // stay robust on malformed documents.
+                    if let Some(saved) = state.saved_states.pop() {
+                        state.leading = saved.leading;
+                        state.font_size = saved.font_size;
+                        state.font_name = saved.font_name;
+                    }
+                }
+
+                _ => {
+                    // Ignore other operations (no graphics state needed for text extraction)
+                }
             }
+        }
 
         // Apply line break mode processing
         let processed_text = self.apply_line_break_mode(&extracted_text);

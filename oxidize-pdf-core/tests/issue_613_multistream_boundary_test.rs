@@ -64,10 +64,13 @@ fn build_multistream_split_coordinates_pdf() -> Vec<u8> {
 #[test]
 fn test_multistream_operand_operator_split_text_extraction() {
     let pdf_bytes = build_multistream_split_operand_pdf();
-    let reader = PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::lenient()).unwrap();
+    let reader =
+        PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::lenient()).unwrap();
     let doc = PdfDocument::new(reader);
     let mut extractor = TextExtractor::new();
-    let page_text = extractor.extract_from_page(&doc, 0).expect("extract from page");
+    let page_text = extractor
+        .extract_from_page(&doc, 0)
+        .expect("extract from page");
 
     assert_eq!(page_text.text.trim(), "HELLO");
 }
@@ -77,13 +80,16 @@ fn test_multistream_operand_split_coordinates_text_extraction() {
     use oxidize_pdf::text::ExtractionOptions;
 
     let pdf_bytes = build_multistream_split_coordinates_pdf();
-    let reader = PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::lenient()).unwrap();
+    let reader =
+        PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::lenient()).unwrap();
     let doc = PdfDocument::new(reader);
     let mut extractor = TextExtractor::with_options(ExtractionOptions {
         preserve_layout: true,
         ..Default::default()
     });
-    let page_text = extractor.extract_from_page(&doc, 0).expect("extract from page");
+    let page_text = extractor
+        .extract_from_page(&doc, 0)
+        .expect("extract from page");
 
     assert_eq!(page_text.text.trim(), "WORLD");
     assert!(!page_text.fragments.is_empty(), "must extract fragments");
@@ -96,10 +102,13 @@ fn test_multistream_plaintext_extraction() {
     use oxidize_pdf::text::PlainTextExtractor;
 
     let pdf_bytes = build_multistream_split_operand_pdf();
-    let reader = PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::lenient()).unwrap();
+    let reader =
+        PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::lenient()).unwrap();
     let doc = PdfDocument::new(reader);
     let mut extractor = PlainTextExtractor::new();
-    let page_text = extractor.extract(&doc, 0).expect("extract plaintext from page");
+    let page_text = extractor
+        .extract(&doc, 0)
+        .expect("extract plaintext from page");
 
     assert_eq!(page_text.text.trim(), "HELLO");
 }
@@ -118,13 +127,22 @@ fn test_content_parser_parse_content_streams() {
 #[test]
 fn test_combined_content_stream_helpers() {
     let pdf_bytes = build_multistream_split_operand_pdf();
-    let mut reader = PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap();
-    let doc = PdfDocument::new(PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap());
+    let mut reader =
+        PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap();
+    let doc = PdfDocument::new(
+        PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap(),
+    );
     let page = doc.get_page(0).expect("get page");
 
-    let combined_doc = doc.get_combined_page_content_stream(&page).expect("combined from doc");
-    let combined_page = page.combined_content_stream_with_document(&doc).expect("combined from page with doc");
-    let combined_reader = page.combined_content_stream(&mut reader).expect("combined from page with reader");
+    let combined_doc = doc
+        .get_combined_page_content_stream(&page)
+        .expect("combined from doc");
+    let combined_page = page
+        .combined_content_stream_with_document(&doc)
+        .expect("combined from page with doc");
+    let combined_reader = page
+        .combined_content_stream(&mut reader)
+        .expect("combined from page with reader");
 
     assert_eq!(combined_doc, combined_page);
     assert_eq!(combined_doc, combined_reader);
@@ -137,16 +155,28 @@ fn test_combined_content_stream_helpers() {
 fn test_combine_streams_corner_cases() {
     // Empty streams
     let empty: Vec<Vec<u8>> = Vec::new();
-    assert_eq!(ContentParser::combine_streams_owned(empty), Vec::<u8>::new());
-    assert_eq!(ContentParser::combine_streams::<&[u8]>(&[]), Vec::<u8>::new());
+    assert_eq!(
+        ContentParser::combine_streams_owned(empty),
+        Vec::<u8>::new()
+    );
+    assert_eq!(
+        ContentParser::combine_streams::<&[u8]>(&[]),
+        Vec::<u8>::new()
+    );
 
     // Single stream (no extra newline)
     let single = vec![b"single stream".to_vec()];
-    assert_eq!(ContentParser::combine_streams_owned(single), b"single stream".to_vec());
+    assert_eq!(
+        ContentParser::combine_streams_owned(single),
+        b"single stream".to_vec()
+    );
 
     // Multiple streams
     let multi = vec![b"stream1".to_vec(), b"stream2".to_vec()];
-    assert_eq!(ContentParser::combine_streams_owned(multi), b"stream1\nstream2\n".to_vec());
+    assert_eq!(
+        ContentParser::combine_streams_owned(multi),
+        b"stream1\nstream2\n".to_vec()
+    );
 }
 
 #[test]
@@ -164,6 +194,9 @@ fn test_stream_text_multistream_boundary() {
     })
     .unwrap();
 
-    assert!(!collected.is_empty(), "must extract chunk across stream boundary");
+    assert!(
+        !collected.is_empty(),
+        "must extract chunk across stream boundary"
+    );
     assert_eq!(collected.join("").trim(), "HELLO");
 }

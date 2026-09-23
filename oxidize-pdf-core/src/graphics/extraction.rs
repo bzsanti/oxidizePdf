@@ -275,9 +275,8 @@ impl GraphicsExtractor {
 
         // Process content streams per ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3
         let combined_stream = ContentParser::combine_streams_owned(streams);
-        let operations = ContentParser::parse(&combined_stream).map_err(|e| {
-            ExtractionError::ParseError(format!("Failed to parse content: {}", e))
-        })?;
+        let operations = ContentParser::parse(&combined_stream)
+            .map_err(|e| ExtractionError::ParseError(format!("Failed to parse content: {}", e)))?;
 
         self.process_operations(&operations, &mut state, &mut graphics)?;
 
