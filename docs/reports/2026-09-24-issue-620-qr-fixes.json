@@ -1,0 +1,51 @@
+{
+  "issue": 620,
+  "tests": {
+    "gate_python": 33,
+    "local_exporter_rust": 6,
+    "stats_exporter_rust": 8,
+    "release_python": 5,
+    "stats_application_rust": 42,
+    "dashboard_node": 12
+  },
+  "mutations": [
+    {
+      "mutation": "remove summary contract",
+      "detected": true
+    },
+    {
+      "mutation": "empty vectors",
+      "detected": true
+    },
+    {
+      "mutation": "missing-required vectors",
+      "detected": true
+    },
+    {
+      "mutation": "duplicate vectors",
+      "detected": true
+    }
+  ],
+  "files": {
+    "tools/benchmarks/omnidocbench_gate.py": "58a3e179cd548a78b53c8b097d24a41a1ba9a9ce557d77a3c1e5645fdc01eb9f",
+    "tools/benchmarks/omnidocbench_gate_test.py": "8b6d90ff18815633952e2177222e2c20da238174ed4fd71593657373e5059746",
+    "oxidize-pdf-core/examples/support/omnidocbench_serialization.rs": "4424e3c580ec8b9c32d3f30e27f391fedb9745fd825611ceda14e4902fdd2802",
+    "oxidize-pdf-core/examples/support/omnidocbench-serialization-v1.json": "36fbdf6a4f1710df9eea85a2866a94564114182d5b38d56909f8c919738c71b0",
+    "../oxidize-stats/src/db.rs": "4c3975400ad82c8b3c7def1e7416e82f80864eaef6f97c6eb8b57243226c53f1",
+    "../oxidize-stats/src/benchmark_worker.rs": "98a44a4fe520fbc1d33106b2ccf9e69f4ed49a351bddf9018c9bdd830d0744fb",
+    "../oxidize-stats/src/web/dashboard.js": "848395d45c618ec39ee2a854badb8fdd3595b2178fa4fb68b6ddfa9d8cfe14d3",
+    "../oxidize-stats/tests/benchmark_worker.rs": "7dff05892a907f4233e4b87bb60dc95fc9cbf409fac726a0824e224ae9e00a58",
+    "../oxidize-stats/tests/integration.rs": "f6d16121fd2e81a2d04d3d143af168f040f261cb93243af89cc8ad09c78d4cb4",
+    "../oxidize-stats/tests/dashboard-benchmarks.cjs": "4b396b31d89e9ca0a5c4fc5f3f70e7c41d979806db1b97393de254fa00ace672",
+    "../oxidize-stats/tests/fixtures/benchmark-schema-v13.sql": "6177e1354e7a2f18a6066336deed79eca715df7ec114abb48200d64017beb5b7",
+    "../oxidize-stats/benchmark/scripts/release_oracle.py": "ffe33e8ca25b34a12a6523686b393a1608230def0dbebd354190200ad0972a0d",
+    "../oxidize-stats/benchmark/scripts/test_release_oracle.py": "3e9e88fc63fa2f555a0bf6e896bc3269d08734a985e9541182a5a3c48c8f76b2",
+    "../oxidize-stats/benchmark/src/bin/support/omnidocbench_serialization.rs": "4424e3c580ec8b9c32d3f30e27f391fedb9745fd825611ceda14e4902fdd2802"
+  },
+  "limits": [
+    "Full official corpus evaluation not repeated after these tooling fixes. Existing historical evidence retained unchanged.",
+    "Evaluation runner regression uses a controlled substitute for the external evaluator.",
+    "Database migration tested on fixtures, not applied to production.",
+    "No commits, pushes or PRs created."
+  ]
+}

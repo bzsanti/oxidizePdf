@@ -1,5 +1,52 @@
 # Seguimiento diario
 
+## Issue #620 — contrato de serialización OmniDocBench
+
+- Issue: #620 — benchmark(quality): define a consistent OmniDocBench text serialization contract — https://github.com/bzsanti/oxidizePdf/issues/620
+- Estado: `[-]` los 7 hallazgos corregidos y validados localmente; integración
+  en curso; stats permanece local por instrucción del usuario. Prioridad: P2. Responsable: Codex / mantenimiento (`bzsanti`).
+- Criterio de cierre: exportadores conformes e integrados en ambos repositorios,
+  comparaciones incompatibles rechazadas, equivalencia histórica de 981
+  predicciones y evaluación oficial local con evidencia por página.
+- Plan: `docs/plans/2026-09-24-issue-620-serialization-tdd.md`.
+- Implementación: normalización histórica predeterminada, variante preservada
+  explícita, serializador/vectores compartidos, identidad v2 y verificador de
+  bytes. Adaptación de stats autorizada; cambios previos preservados.
+- Última validación: 106 tests pasan (33 gate, 6 exportador, 8 exportador stats,
+  5 release, 42 aplicación stats, 12 dashboard). Formato y Clippy pasan en ambos
+  repositorios; diff check pasa. Cuatro mutaciones de tests detectadas.
+- Correcciones: contrato tipado y persistente con migración v14 de stats;
+  comparación por identidad en dashboard; ejecución vinculada a scores;
+  YAML de una pasada; hashes de fuentes copiadas; procedencia estricta;
+  tests de resumen y vectores reforzados.
+- Informe de correcciones: `docs/reports/2026-09-24-issue-620-qr-fixes.md` y
+  hashes en el JSON homónimo. Migración probada solo en bases de tests.
+- Evidencia: 981/981 predicciones históricas idénticas; 994 archivos históricos
+  sin cambios. Ambos exportadores coinciden en 981 archivos sobre develop.
+  Evaluador fijado: texto 0,47311686306064565; orden 0,29228846821555693;
+  921 páginas puntuables, 780 nativas, un error de extracción y un fallback
+  oficial de timeout conservados. Sin recalibrar baseline.
+- Procedencia: base `e1792e83dbf0fdb42f65742fbc705dc8de906e25`; los 141 objetos
+  LFS materializados coinciden con la revisión del dataset. Código rastreado
+  del evaluador sin cambios; entornos virtuales no rastreados documentados.
+- Informe: `docs/reports/2026-09-24-issue-620-implementation.md`; hashes y
+  resultados en `docs/reports/2026-09-24-issue-620-validation.json`.
+- Dependencia externa: integración coordinada en oxidize-stats (`bzsanti`).
+- QR: `docs/reports/2026-09-24-issue-620-quality-review.md`. Se repitieron
+  46 tests, formato y Clippy: pasan. Kripteia Rust 98/100 (12 tests únicos);
+  Python no detecta unittest (0 tests). Security sin hallazgos automáticos.
+  Siete hallazgos manuales/reproducidos: contrato descartado por stats,
+  scores sin vínculo a ejecución, YAML con rutas corruptas, hash de fuente
+  viva distinto al harness, campos obligatorios vacíos y dos pruebas débiles.
+- Siguiente acción: preparar integración coordinada en ambos repositorios;
+  ejecutar el nuevo flujo export/evaluate/summarize/compare desde revisiones
+  limpias antes de usarlo como gate oficial. No se repitió el corpus completo
+  tras estas correcciones ni se relabeló la evidencia anterior.
+- Restricciones: no alterar históricos, corpus, evaluador o baselines; todo
+  el trabajo local está en este worktree y su target, sin usar /tmp. No se
+  autoriza commit/PR/fusión de oxidize-pdf y despliegue local de stats;
+  no crear remoto ni publicar stats.
+
 ## Premortem de aceptación masiva
 
 - Estado: `[-]` en curso — promovida a `main`; release cancelada por el usuario

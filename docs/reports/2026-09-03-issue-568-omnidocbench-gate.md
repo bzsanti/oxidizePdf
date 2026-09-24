@@ -100,3 +100,9 @@ pages must still have prediction files.
 
 The implementation checklist and remaining external full-run validation are in
 `docs/plans/2026-09-03-issue-568-omnidocbench-gate-tdd.md`.
+
+## Contract update (#620)
+
+This report records the original v1 gate. New exports use the v2 identity and
+explicit serialization described in [the serialization contract](../omnidocbench-serialization.md).
+Legacy artifacts retain their original identity and require separate equivalence evidence.
