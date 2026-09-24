@@ -667,7 +667,21 @@ fn external_tools_render_and_verify_custom_visible_signature_appearance() {
         prepare_incremental_signature_with_appearance(&source, &options, &appearance).unwrap();
     let directory = tempfile::tempdir().unwrap();
     let cms = openssl_cms_for_digest(&directory, &prepared.bytes_to_digest());
+    let digest = prepared.bytes_to_digest();
+    let ranges = prepared.byte_range().ranges().to_vec();
     let signed = prepared.finalize(&cms).unwrap();
+    let finalized_digest: Vec<u8> = ranges
+        .iter()
+        .flat_map(|&(offset, length)| {
+            signed[offset as usize..(offset + length) as usize]
+                .iter()
+                .copied()
+        })
+        .collect();
+    assert_eq!(
+        finalized_digest, digest,
+        "finalization must preserve every byte verified by OpenSSL, including the appearance"
+    );
     let path = directory.path().join("custom-visible-signature.pdf");
     std::fs::write(&path, signed).unwrap();
     let output = Command::new("qpdf")

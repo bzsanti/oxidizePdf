@@ -7,7 +7,7 @@
 //!
 //! - **Detection**: Find signature fields in PDF documents
 //! - **Parsing**: Extract signature dictionaries and byte ranges
-//! - **Validation** (future): Verify cryptographic signatures
+//! - **Validation**: Verify cryptographic signatures
 //!
 //! # Example
 //!
@@ -57,7 +57,8 @@ pub(crate) use permissions::{ensure_modification_allowed, IncrementalModificatio
 pub use signing::{
     prepare_incremental_signature, prepare_incremental_signature_with_appearance,
     CertificationPermission, FieldLock, PreparedSignature, SignatureAppearance,
-    SignaturePreparationOptions, SignatureRect, SignatureTarget, SignatureWatermark,
+    SignatureAppearanceLayout, SignaturePreparationOptions, SignatureRect, SignatureTarget,
+    SignatureWatermark,
 };
 pub use types::{ByteRange, SignatureField};
 // FullSignatureValidationResult is defined below in this file

@@ -133,12 +133,12 @@ fn alpha_runs(s: &str) -> HashSet<String> {
 /// poppler's side, so it does not move when our extractor gets better or worse
 /// — which is what makes `fusions / candidates` a sound ratchet where the bare
 /// `fusions` count is not (see `common/differential_ratchet.rs`).
-fn fusion_count(ours: &str, pop: &str) -> (usize, usize) {
+fn fusion_details(ours: &str, pop: &str) -> (Vec<String>, usize) {
     let ours_runs = alpha_runs(ours);
     let pop_runs = alpha_runs(pop);
     let toks: Vec<&str> = pop.split_whitespace().collect();
     let mut seen = HashSet::new();
-    let mut n = 0;
+    let mut fusions = Vec::new();
     let mut candidates = 0;
     for w in toks.windows(2) {
         let (a, b) = (w[0], w[1]);
@@ -151,15 +151,21 @@ fn fusion_count(ours: &str, pop: &str) -> (usize, usize) {
         }
         candidates += 1;
         if ours_runs.contains(&fused) && !pop_runs.contains(&fused) {
-            n += 1;
+            fusions.push(format!("{a} {b}"));
         }
     }
-    (n, candidates)
+    fusions.sort();
+    (fusions, candidates)
+}
+
+fn fusion_count(ours: &str, pop: &str) -> (usize, usize) {
+    let (fusions, candidates) = fusion_details(ours, pop);
+    (fusions.len(), candidates)
 }
 
 /// One file's contribution to the gate: `(fusions, candidates, our letters,
 /// poppler letters)`. The letter counts feed the content-coverage floor.
-type FileSample = (usize, usize, u64, u64);
+type FileSample = (usize, usize, u64, u64, Vec<String>);
 
 /// Fusion count for one file, run on a worker thread with a hard timeout so a
 /// hang in our parser (see the ~10% hang rate on adversarial corpora) is
@@ -174,12 +180,13 @@ fn fusion_for_file(path: &Path) -> Option<FileSample> {
             let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 match (ours(&p), poppler(&p)) {
                     (Some(o), Some(pop)) => {
-                        let (n, candidates) = fusion_count(&o, &pop);
+                        let (fusions, candidates) = fusion_details(&o, &pop);
                         Some((
-                            n,
+                            fusions.len(),
                             candidates,
                             ratchet::alpha_chars(&o),
                             ratchet::alpha_chars(&pop),
+                            fusions,
                         ))
                     }
                     _ => None,
@@ -195,6 +202,29 @@ fn fusion_for_file(path: &Path) -> Option<FileSample> {
     // (None), not counted as zero.
     rx.recv_timeout(Duration::from_secs(PER_FILE_TIMEOUT_SECS))
         .unwrap_or_default()
+}
+
+fn print_fusion_diagnostics(samples: &[(PathBuf, FileSample)]) {
+    let mut offenders: Vec<_> = samples
+        .iter()
+        .filter(|(_, (fusions, _, _, _, _))| *fusions > 0)
+        .collect();
+    offenders.sort_by(|(left_path, left), (right_path, right)| {
+        right.0.cmp(&left.0).then_with(|| left_path.cmp(right_path))
+    });
+    eprintln!("top differential-fusion sources (up to 20 files; up to 12 pairs each):");
+    for (path, (fusions, candidates, _, _, pairs)) in offenders.into_iter().take(20) {
+        let preview = pairs
+            .iter()
+            .take(12)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(" | ");
+        eprintln!(
+            "  {}: fusions={fusions} candidates={candidates}; pairs={preview}",
+            path.display()
+        );
+    }
 }
 
 fn corpus_dir() -> PathBuf {
@@ -259,14 +289,16 @@ fn flat_extraction_does_not_fuse_more_words_than_poppler() {
     let mut total_candidates = 0usize;
     let mut our_chars = 0u64;
     let mut pop_chars = 0u64;
+    let mut samples = Vec::new();
     for pdf in &pdfs {
         match fusion_for_file(pdf) {
-            Some((n, candidates, ours_len, pop_len)) => {
+            Some(sample @ (n, candidates, ours_len, pop_len, _)) => {
                 compared += 1;
                 total_fusions += n;
                 total_candidates += candidates;
                 our_chars += ours_len;
                 pop_chars += pop_len;
+                samples.push((pdf.clone(), sample));
             }
             None => skipped += 1,
         }
@@ -322,6 +354,9 @@ fn flat_extraction_does_not_fuse_more_words_than_poppler() {
         }
         ratchet::Baseline::Found(baseline) => {
             let found = ratchet::regressions(&current, &baseline, "fusion");
+            if !found.is_empty() {
+                print_fusion_diagnostics(&samples);
+            }
             assert!(
                 found.is_empty(),
                 "differential fusion gate FAILED [{key}]:\n  - {}\n\
@@ -342,4 +377,12 @@ fn flat_extraction_does_not_fuse_more_words_than_poppler() {
             }
         }
     }
+}
+
+#[test]
+fn fusion_details_reports_the_actual_poppler_word_pair() {
+    let (pairs, candidates) = fusion_details("alphaBeta", "alpha Beta");
+    assert_eq!(candidates, 1);
+    assert_eq!(pairs, vec!["alpha Beta"]);
+    assert_eq!(fusion_count("alphaBeta", "alpha Beta"), (1, 1));
 }
