@@ -1249,35 +1249,25 @@ impl TextExtractor {
             cur_group: None,
         };
 
-        // Process each content stream
-        for (stream_idx, stream_data) in streams.iter().enumerate() {
+        // Process content streams. Per ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3,
+        // if `/Contents` is an array of streams, the effect shall be as if all streams
+        // in the array were concatenated, in order, to form a single stream, with
+        // whitespace inserted between streams. This preserves operands and operators
+        // split across stream boundaries (issue #613).
+        let combined_stream = ContentParser::combine_streams_owned(streams);
+        if !combined_stream.is_empty() {
             let operations = match {
                 let _span = tracing::info_span!("content_parse").entered();
-                ContentParser::parse_content(stream_data)
+                ContentParser::parse_content(&combined_stream)
             } {
                 Ok(ops) => ops,
                 Err(e) => {
-                    // Enhanced diagnostic logging for content stream parsing failures
                     tracing::debug!(
-                        "Warning: Failed to parse content stream on page {}, stream {}/{}",
+                        "Warning: Failed to parse content stream on page {}: {}",
                         page_index + 1,
-                        stream_idx + 1,
-                        streams.len()
+                        e
                     );
-                    tracing::debug!("         Error: {}", e);
-                    tracing::debug!("         Stream size: {} bytes", stream_data.len());
-
-                    // Show first 100 bytes for diagnosis (or less if stream is smaller)
-                    let preview_len = stream_data.len().min(100);
-                    let preview = String::from_utf8_lossy(&stream_data[..preview_len]);
-                    tracing::debug!(
-                        "         Stream preview (first {} bytes): {:?}",
-                        preview_len,
-                        preview.chars().take(80).collect::<String>()
-                    );
-
-                    // Continue processing other streams
-                    continue;
+                    Vec::new()
                 }
             };
 
@@ -1290,12 +1280,6 @@ impl TextExtractor {
                 page_index,
                 0,
             )?;
-
-            // Per-page byte budget reached (issue #382): don't decode the
-            // remaining content streams — the text is already at the limit.
-            if run.truncated {
-                break;
-            }
         }
 
         let OpRunState {

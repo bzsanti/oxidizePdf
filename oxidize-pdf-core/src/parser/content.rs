@@ -1089,6 +1089,61 @@ impl ContentParser {
         parser.parse_operators()
     }
 
+    /// Concatenate multiple content stream byte slices into a single continuous stream,
+    /// inserting a newline separator between streams per ISO 32000-1 §7.7.3.3 and
+    /// ISO 32000-2 §7.7.3.3.
+    pub fn combine_streams<T: AsRef<[u8]>>(streams: &[T]) -> Vec<u8> {
+        if streams.is_empty() {
+            return Vec::new();
+        }
+        if streams.len() == 1 {
+            return streams[0].as_ref().to_vec();
+        }
+        let total_len: usize = streams.iter().map(|s| s.as_ref().len() + 1).sum();
+        let mut combined = Vec::with_capacity(total_len);
+        for s in streams {
+            combined.extend_from_slice(s.as_ref());
+            combined.push(b'\n');
+        }
+        combined
+    }
+
+    /// Concatenate multiple owned content stream buffers into a single continuous stream,
+    /// avoiding reallocations when possible, per ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3.
+    pub fn combine_streams_owned(streams: Vec<Vec<u8>>) -> Vec<u8> {
+        let mut iter = streams.into_iter();
+        let Some(first) = iter.next() else {
+            return Vec::new();
+        };
+        if iter.len() == 0 {
+            return first;
+        }
+        let additional: usize = iter.as_slice().iter().map(|s| s.len() + 1).sum();
+        let mut combined = first;
+        combined.reserve(additional + 1);
+        combined.push(b'\n');
+        for s in iter {
+            combined.extend_from_slice(&s);
+            combined.push(b'\n');
+        }
+        combined
+    }
+
+    /// Parse multiple content streams as a single concatenated content stream per
+    /// ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3.
+    pub fn parse_content_streams<T: AsRef<[u8]>>(
+        streams: &[T],
+    ) -> ParseResult<Vec<ContentOperation>> {
+        if streams.is_empty() {
+            return Ok(Vec::new());
+        }
+        if streams.len() == 1 {
+            return Self::parse_content(streams[0].as_ref());
+        }
+        let combined = Self::combine_streams(streams);
+        Self::parse_content(&combined)
+    }
+
     fn parse_operators(&mut self) -> ParseResult<Vec<ContentOperation>> {
         let mut operators = Vec::new();
         let mut operand_stack: Vec<Token> = Vec::new();

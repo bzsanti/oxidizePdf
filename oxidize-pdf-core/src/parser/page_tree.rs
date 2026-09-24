@@ -810,6 +810,19 @@ impl ParsedPage {
         Ok(streams)
     }
 
+    /// Get the combined content stream for this page.
+    ///
+    /// Per ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3, if `/Contents` is an array
+    /// of streams, the effect shall be as if all streams were concatenated in order
+    /// to form a single stream, with whitespace inserted between streams.
+    pub fn combined_content_stream<R: Read + Seek>(
+        &self,
+        reader: &mut PdfReader<R>,
+    ) -> ParseResult<Vec<u8>> {
+        let streams = self.content_streams(reader)?;
+        Ok(crate::parser::content::ContentParser::combine_streams_owned(streams))
+    }
+
     /// Get content streams using PdfDocument (recommended method).
     ///
     /// This is the preferred method for accessing content streams as it uses the
@@ -849,6 +862,18 @@ impl ParsedPage {
         document: &PdfDocument<R>,
     ) -> ParseResult<Vec<Vec<u8>>> {
         document.get_page_content_streams(self)
+    }
+
+    /// Get the combined content stream for this page using `PdfDocument`.
+    ///
+    /// Per ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3, if `/Contents` is an array
+    /// of streams, the effect shall be as if all streams were concatenated in order
+    /// to form a single stream, with whitespace inserted between streams.
+    pub fn combined_content_stream_with_document<R: Read + Seek>(
+        &self,
+        document: &PdfDocument<R>,
+    ) -> ParseResult<Vec<u8>> {
+        document.get_combined_page_content_stream(self)
     }
 
     /// Get the effective resources for this page (including inherited).

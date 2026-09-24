@@ -218,12 +218,10 @@ where
     F: FnMut(TextChunk) -> Result<()>,
 {
     let mut streamer = TextStreamer::new(TextStreamOptions::default());
-
-    for stream in content_streams {
-        let chunks = streamer.process_chunk(&stream)?;
-        for chunk in chunks {
-            callback(chunk)?;
-        }
+    let combined = ContentParser::combine_streams_owned(content_streams);
+    let chunks = streamer.process_chunk(&combined)?;
+    for chunk in chunks {
+        callback(chunk)?;
     }
 
     Ok(())
