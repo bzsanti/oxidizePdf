@@ -272,8 +272,7 @@ impl PlainTextExtractor {
         // Process content streams. Per ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3,
         // if `/Contents` is an array of streams, concatenate them with whitespace
         // separators before parsing (issue #613).
-        let combined_stream = ContentParser::combine_streams_owned(streams);
-        let operations = match ContentParser::parse_content(&combined_stream) {
+        let operations = match ContentParser::parse_content_streams(&streams) {
             Ok(ops) => ops,
             Err(e) => {
                 tracing::debug!("Warning: Failed to parse content stream, skipping: {}", e);
