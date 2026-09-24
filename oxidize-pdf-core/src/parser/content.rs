@@ -53,9 +53,10 @@
 //! - XObject operators (Do)
 //! - Marked content operators (BMC, BDC, EMC, etc.)
 
+use std::collections::HashMap;
+
 use super::{ParseError, ParseResult};
 use crate::objects::Object;
-use std::collections::HashMap;
 
 /// A single value inside a marked-content properties dictionary or array.
 ///
@@ -619,6 +620,16 @@ impl<'a> ContentTokenizer<'a> {
                     b'(' => result.push(b'('),
                     b')' => result.push(b')'),
                     b'\\' => result.push(b'\\'),
+                    b'\r' => {
+                        // Escaped line break per ISO 32000-1 §7.3.4.2: discard the EOL.
+                        // If followed by \n (CRLF), consume \n as part of the EOL marker.
+                        if self.position < self.input.len() && self.input[self.position] == b'\n' {
+                            self.position += 1;
+                        }
+                    }
+                    b'\n' => {
+                        // Escaped line break per ISO 32000-1 §7.3.4.2: discard the EOL.
+                    }
                     b'0'..=b'7' => {
                         // Octal escape sequence
                         self.position -= 1;
