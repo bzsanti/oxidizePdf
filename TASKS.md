@@ -1,5 +1,18 @@
 # Seguimiento diario
 
+## Integración local de upstream para Studio — 2026-09-24
+
+- Estado: `[x]` integración local validada.
+- Prioridad: `P1`.
+- Responsable: Codex.
+- Solicitud: actualizar upstream y renderizador y corregir la firma de Studio.
+- Criterio de cierre: conservar la preparación de firmas por participantes e incorporar 5.1.3 y #606; suite completa y Clippy sin warnings.
+- Resultado: origin/develop 7115feee integrado en feature/signature-preparation mediante c0ba713d; se conservan los cuatro documentos locales anteriores.
+- Validación: 9.630 tests correctos, 47 ignorados por la configuración existente y 119 ejecutables de ejemplos completados; firma y previsualización verificadas en Studio, con OpenSSL y comprobación visual de los artefactos.
+- Análisis estático: Clippy completo correcto con -D warnings; registro target/signature-update-clippy.log.
+- Autorización: el usuario confirma commit y push de las ramas del motor y renderizador el 2026-09-24.
+- Siguiente acción: publicar esta rama y fijar su revisión Git en Studio y el renderizador.
+
 ## Premortem de aceptación masiva
 
 - Estado: `[-]` en curso — promovida a `main`; release cancelada por el usuario
