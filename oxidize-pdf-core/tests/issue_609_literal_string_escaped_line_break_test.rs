@@ -4,6 +4,19 @@
 //! "An end-of-line marker preceded by a reverse solidus shall not be considered a part of the string."
 //! An end-of-line marker may be CR, LF, or CRLF.
 
+mod common;
+use common::pdf_assembler::{assemble_pdf, stream_obj};
+
+fn text_pdf(content: &[u8]) -> Vec<u8> {
+    assemble_pdf(&[
+        b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_vec(),
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /T1 5 0 R >> >> >>".to_vec(),
+        stream_obj("", content),
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".to_vec(),
+    ])
+}
+
 use std::io::Cursor;
 
 use oxidize_pdf::parser::lexer::{Lexer, Token};
@@ -48,32 +61,15 @@ fn test_lexer_escaped_multiple_line_breaks_iso_example() {
 
 #[test]
 fn test_pdf_extraction_escaped_crlf() {
-    let pdf_data = b"%PDF-1.4
-1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj
-2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj
-3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
-4 0 obj <</Length 55>> stream
-BT
+    let pdf_data = text_pdf(
+        b"BT
 /F1 12 Tf
 100 700 Td
 (Docu\\\r\nment) Tj
-ET
-endstream endobj
-5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj
-xref
-0 6
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000266 00000 n 
-0000000373 00000 n 
-trailer <</Size 6 /Root 1 0 R>>
-startxref
-449
-%%EOF";
+ET",
+    );
 
-    let doc = PdfReader::new_with_options(Cursor::new(pdf_data), ParseOptions::lenient())
+    let doc = PdfReader::new_with_options(Cursor::new(pdf_data), ParseOptions::strict())
         .unwrap()
         .into_document();
     let mut extractor = TextExtractor::new();
@@ -83,32 +79,33 @@ startxref
 
 #[test]
 fn test_pdf_extraction_escaped_lf() {
-    let pdf_data = b"%PDF-1.4
-1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj
-2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj
-3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
-4 0 obj <</Length 53>> stream
-BT
+    let pdf_data = text_pdf(
+        b"BT
 /F1 12 Tf
 100 700 Td
 (Docu\\\nment) Tj
-ET
-endstream endobj
-5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj
-xref
-0 6
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000266 00000 n 
-0000000373 00000 n 
-trailer <</Size 6 /Root 1 0 R>>
-startxref
-447
-%%EOF";
+ET",
+    );
 
-    let doc = PdfReader::new_with_options(Cursor::new(pdf_data), ParseOptions::lenient())
+    let doc = PdfReader::new_with_options(Cursor::new(pdf_data), ParseOptions::strict())
+        .unwrap()
+        .into_document();
+    let mut extractor = TextExtractor::new();
+    let text = extractor.extract_from_page(&doc, 0).unwrap().text;
+    assert_eq!(text.trim(), "Document");
+}
+
+#[test]
+fn test_pdf_extraction_escaped_cr() {
+    let pdf_data = text_pdf(
+        b"BT
+/F1 12 Tf
+100 700 Td
+(Docu\\\rment) Tj
+ET",
+    );
+
+    let doc = PdfReader::new_with_options(Cursor::new(pdf_data), ParseOptions::strict())
         .unwrap()
         .into_document();
     let mut extractor = TextExtractor::new();

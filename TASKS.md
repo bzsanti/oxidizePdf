@@ -258,3 +258,13 @@
   del evaluador (comando, configuración, resultados por página y resumen).
 - Restricciones de seguridad o arquitectura: no inventar LaTeX, OCR ni
   estructuras que la API pública no exponga.
+
+## Issue #619 — fixtures y contrato del helper (2026-09-24)
+
+- Issue: #619 — test(parser): build valid PDF fixtures and assert multistream TJ operands — https://github.com/bzsanti/oxidizePdf/issues/619
+- Estado: implementación local validada. Prioridad: P2. Responsable: Codex.
+- Criterio de cierre: fixtures válidos y aserción exacta del helper sensible a pérdida de TJ.
+- TDD: siete fixtures fallan en modo estricto antes del cambio; después pasan
+  7+5+7 tests. Mutación a parseo independiente hace fallar el test del helper.
+- Siguiente acción: revisar/publicar el cambio y continuar con #616.
+- Restricción: #620 pertenece al usuario en otra sesión.
