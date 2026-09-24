@@ -328,3 +328,23 @@
 - Criterio de desbloqueo: issue aplicable confirmada abierta en GitHub.
 - Siguiente acción: crear/vincular issue antes de corregir esta API.
 - Restricción: no implementar corrección bajo esta entrada sin issue.
+
+## QR y validación final — fixes #619/#616/#615/#617/#618 (2026-09-24)
+
+- Estado: implementación y QR completados; publicación de PR pendiente.
+- Responsable: Codex. Prioridad: P1 (#619 P2). Issues vinculadas en las entradas anteriores.
+- Criterio de cierre: TDD reproducido, QR completado antes del PR y gates locales aprobados.
+- Código validado: `e28e4f54eb69057bafc4d8e67c8bd3680f2b26db`; base `e1792e83`.
+- Resultado: 63 focalizadas, T2–T6 (23/22/25/26/23), diferenciales (34/38),
+  biblioteca (6.791, 3 ignoradas), Clippy all-targets y formato pasan.
+  T4/T5 omiten precisión por falta de ground truth. Baselines intactas.
+- QR: 91/100 en 360 tests; seguridad auditó tres métodos unsafe del allocator
+  de tests. Tres hallazgos de implementación corregidos; defecto preexistente
+  del buffer por lotes bloqueado sin issue, registrado arriba.
+- OmniDocBench local: 981 predicciones finales idénticas a la base integrada;
+  texto global 0,473116863, nativo 0,378039828, orden 0,292288468 en ambos.
+  Evaluación oficial completa sobre entradas idénticas, reutilización trazable
+  en manifiestos y compare del gate aprobado. No se modifica #620.
+- Evidencia: `docs/reports/2026-09-24-fixes-615-619-quality-review.md` y JSON asociado.
+- Siguiente acción: publicar cinco PR separados, dependientes en el orden
+  #619 → #616 → #615 → #617 → #618. Ninguno se crea antes de este QR completo.
