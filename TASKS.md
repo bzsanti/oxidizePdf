@@ -268,3 +268,12 @@
   7+5+7 tests. Mutación a parseo independiente hace fallar el test del helper.
 - Siguiente acción: revisar/publicar el cambio y continuar con #616.
 - Restricción: #620 pertenece al usuario en otra sesión.
+
+## Issue #616 — composición del footer (2026-09-24)
+
+- Issue: #616 — fix(page): delimit preserved content before appending generated footer — https://github.com/bzsanti/oxidizePdf/issues/616
+- Estado: implementación local validada. Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: preservar FOOTER tras operador/comentario sin EOL.
+- TDD: RED 2 fallos y 1 control pasa; GREEN 3/3 más 7/7 multistream.
+- Cambio: separador LF antes del footer generado; contenido original intacto.
+- Siguiente acción: revisión final e integración; continuar con #615.

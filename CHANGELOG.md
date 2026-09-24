@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- Preserve generated footers after imported content without a final newline,
+  including trailing comments (#616).
+
 ## [5.1.3] - 2026-09-19
 
 ### Changed

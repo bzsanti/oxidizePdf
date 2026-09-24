@@ -1852,6 +1852,12 @@ impl Page {
             if let (Some(page_num), Some(total)) = (page_number, total_pages) {
                 let footer_content =
                     self.render_header_footer(footer, page_num, total, custom_values)?;
+                // Preserved content can end in a token or an unterminated
+                // comment. A newline separates the generated operators and
+                // terminates comments without rewriting the original bytes (#616).
+                if !final_content.is_empty() && !footer_content.is_empty() {
+                    final_content.push(b'\n');
+                }
                 final_content.extend_from_slice(&footer_content);
             }
         }
