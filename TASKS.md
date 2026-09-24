@@ -38,16 +38,19 @@
   Siete hallazgos manuales/reproducidos: contrato descartado por stats,
   scores sin vínculo a ejecución, YAML con rutas corruptas, hash de fuente
   viva distinto al harness, campos obligatorios vacíos y dos pruebas débiles.
-- Integración en curso: PR #628 abierto; stats desplegado solo localmente en
-  Docker, esquema v14 y 11 resultados históricos preservados. Backup consistente
-  y temporizador del worker restaurado; sin remoto de stats.
-- Regresión adicional observada en ejecución real: resolver el symlink de Python
-  perdía el entorno virtual; se conserva ahora la ruta absoluta original.
-  Test RED confirmado; validación final en curso.
-- Siguiente acción: completar evaluación oficial y CI de #628;
-  ejecutar el nuevo flujo export/evaluate/summarize/compare desde revisiones
-  limpias antes de usarlo como gate oficial. No se repitió el corpus completo
-  tras estas correcciones ni se relabeló la evidencia anterior.
+- Integración: PR #628 — https://github.com/bzsanti/oxidizePdf/pull/628.
+  Stats permanece local: desplegados web/scheduler/worker, esquema v14,
+  11 resultados históricos y todos los datos anteriores preservados; health e
+  integrity_check pasan. Backup online y versiones anteriores conservados.
+- Validación oficial final: base e1792e8 y candidato b7fe817 (develop 4c479b2)
+  completan export/evaluate/summarize/compare; 981 predicciones, 921 puntuables,
+  780 nativas, un fallo y fallback oficial. Delta global/nativo 0.0.
+  Exportadores idénticos en 981 archivos. Wrapper 84e274e conserva el entorno
+  virtual; test RED reproducido y suite GREEN.
+- Informe de integración: `docs/reports/2026-09-24-issue-620-integration.md`
+  y JSON homónimo con hashes y evidencia del despliegue.
+- Siguiente acción: esperar CI del último commit de #628 y fusionar en develop;
+  confirmar merge y cerrar #620. Stats no requiere PR ni publicación remota.
 - Restricciones: no alterar históricos, corpus, evaluador o baselines; todo
   el trabajo local está en este worktree y su target, sin usar /tmp. No se
   autoriza commit/PR/fusión de oxidize-pdf y despliegue local de stats;
