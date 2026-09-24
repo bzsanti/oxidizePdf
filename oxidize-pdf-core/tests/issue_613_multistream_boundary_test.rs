@@ -65,7 +65,7 @@ fn build_multistream_split_coordinates_pdf() -> Vec<u8> {
 fn test_multistream_operand_operator_split_text_extraction() {
     let pdf_bytes = build_multistream_split_operand_pdf();
     let reader =
-        PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::lenient()).unwrap();
+        PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::strict()).unwrap();
     let doc = PdfDocument::new(reader);
     let mut extractor = TextExtractor::new();
     let page_text = extractor
@@ -81,7 +81,7 @@ fn test_multistream_operand_split_coordinates_text_extraction() {
 
     let pdf_bytes = build_multistream_split_coordinates_pdf();
     let reader =
-        PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::lenient()).unwrap();
+        PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::strict()).unwrap();
     let doc = PdfDocument::new(reader);
     let mut extractor = TextExtractor::with_options(ExtractionOptions {
         preserve_layout: true,
@@ -103,7 +103,7 @@ fn test_multistream_plaintext_extraction() {
 
     let pdf_bytes = build_multistream_split_operand_pdf();
     let reader =
-        PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::lenient()).unwrap();
+        PdfReader::new_with_options(Cursor::new(pdf_bytes), ParseOptions::strict()).unwrap();
     let doc = PdfDocument::new(reader);
     let mut extractor = PlainTextExtractor::new();
     let page_text = extractor
@@ -121,16 +121,30 @@ fn test_content_parser_parse_content_streams() {
     let streams = vec![stream1.to_vec(), stream2.to_vec()];
     let ops = ContentParser::parse_content_streams(&streams).expect("parse content streams");
 
-    assert!(!ops.is_empty());
+    use oxidize_pdf::parser::content::{ContentOperation as Op, TextElement};
+    assert_eq!(
+        ops,
+        vec![
+            Op::BeginText,
+            Op::SetFont("F1".into(), 12.0),
+            Op::MoveText(100.0, 700.0),
+            Op::ShowTextArray(vec![
+                TextElement::Text(b"HE".to_vec()),
+                TextElement::Spacing(10.0),
+                TextElement::Text(b"LLO".to_vec()),
+            ]),
+            Op::EndText,
+        ]
+    );
 }
 
 #[test]
 fn test_combined_content_stream_helpers() {
     let pdf_bytes = build_multistream_split_operand_pdf();
     let mut reader =
-        PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap();
+        PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::strict()).unwrap();
     let doc = PdfDocument::new(
-        PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap(),
+        PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::strict()).unwrap(),
     );
     let page = doc.get_page(0).expect("get page");
 
@@ -199,4 +213,46 @@ fn test_stream_text_multistream_boundary() {
         "must extract chunk across stream boundary"
     );
     assert_eq!(collected.join("").trim(), "HELLO");
+}
+
+#[test]
+fn streaming_skips_inline_image_data_across_stream_boundaries() {
+    use oxidize_pdf::streaming::stream_text;
+    for streams in [
+        vec![
+            b"BT /F1 12 Tf (FIRST) Tj ET BI /W 1 /H 1 /BPC 8 /CS /G ID".to_vec(),
+            b" (GHOST) Tj \nEI BT (LAST) Tj ET".to_vec(),
+        ],
+        vec![
+            b"BT /F1 12 Tf (FIRST) Tj ET BI /W 1 /H 1 /BPC 8 /CS /G ID abc".to_vec(),
+            b" (GHOST) Tj \nEI BT (LAST) Tj ET".to_vec(),
+        ],
+    ] {
+        let mut text = Vec::new();
+        stream_text(streams, |chunk| {
+            text.push(chunk.text);
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(text, vec!["FIRST", "LAST"]);
+    }
+}
+
+#[test]
+fn streaming_recovers_after_bad_stream_without_losing_split_operands() {
+    use oxidize_pdf::streaming::stream_text;
+    let mut text = Vec::new();
+    stream_text(
+        vec![
+            b"<GG>".to_vec(),
+            b"BT /F1 12 Tf [(HE)".to_vec(),
+            b"10 (LLO)] TJ ET".to_vec(),
+        ],
+        |chunk| {
+            text.push(chunk.text);
+            Ok(())
+        },
+    )
+    .unwrap();
+    assert_eq!(text, vec!["HELLO"]);
 }

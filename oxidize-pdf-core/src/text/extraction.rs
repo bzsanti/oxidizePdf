@@ -1254,11 +1254,10 @@ impl TextExtractor {
         // in the array were concatenated, in order, to form a single stream, with
         // whitespace inserted between streams. This preserves operands and operators
         // split across stream boundaries (issue #613).
-        let combined_stream = ContentParser::combine_streams_owned(streams);
-        if !combined_stream.is_empty() {
+        if !streams.is_empty() {
             let operations = match {
                 let _span = tracing::info_span!("content_parse").entered();
-                ContentParser::parse_content(&combined_stream)
+                ContentParser::parse_content_streams(&streams)
             } {
                 Ok(ops) => ops,
                 Err(e) => {
@@ -1583,9 +1582,9 @@ impl TextExtractor {
                                 );
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
-                                } else if (positioned_run_boundary
-                                    || dx > self.flat_space_gap_threshold(&state))
-                                    && !suppress_space
+                                } else if positioned_run_boundary
+                                    || (dx > self.flat_space_gap_threshold(&state)
+                                        && !suppress_space)
                                 {
                                     Some(' ')
                                 } else {
@@ -3539,6 +3538,7 @@ fn should_suppress_space_before_punctuation(
         matches!(c, '.' | ',' | ';' | ':' | '!' | '?' | ')' | ']')
             && !extracted_text.ends_with(' ')
             && !extracted_text.ends_with('\n')
+            && dx >= 0.0
             && dx < effective_font_size * TJ_BOUNDARY_SPACE_EM
     })
 }
