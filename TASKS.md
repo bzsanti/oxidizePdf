@@ -331,7 +331,7 @@
 
 ## QR y validación final — fixes #619/#616/#615/#617/#618 (2026-09-24)
 
-- Estado: implementación y QR completados; publicación de PR pendiente.
+- Estado: implementación y QR completados; PR #622–#626 abiertos.
 - Responsable: Codex. Prioridad: P1 (#619 P2). Issues vinculadas en las entradas anteriores.
 - Criterio de cierre: TDD reproducido, QR completado antes del PR y gates locales aprobados.
 - Código validado: `e28e4f54eb69057bafc4d8e67c8bd3680f2b26db`; base `e1792e83`.
@@ -348,3 +348,25 @@
 - Evidencia: `docs/reports/2026-09-24-fixes-615-619-quality-review.md` y JSON asociado.
 - Siguiente acción: publicar cinco PR separados, dependientes en el orden
   #619 → #616 → #615 → #617 → #618. Ninguno se crea antes de este QR completo.
+
+## Publicación posterior al QR — 2026-09-24
+
+- Estado: fixes implementados con TDD, QR cerrado y cinco PR confirmados abiertos.
+- Responsable: Codex. Prioridad: P1 (#619 P2). Issues #615–#619 siguen vinculadas
+  a sus entradas anteriores; #620 pertenece al usuario en otra sesión.
+- PR #622 / issue #619: https://github.com/bzsanti/oxidizePdf/pull/622 — base develop.
+- PR #623 / issue #616: https://github.com/bzsanti/oxidizePdf/pull/623 — base fix/issue-619-review-fixtures.
+- PR #624 / issue #615: https://github.com/bzsanti/oxidizePdf/pull/624 — base fix/issue-616-imported-footer.
+- PR #625 / issue #617: https://github.com/bzsanti/oxidizePdf/pull/625 — base fix/issue-615-positioned-punctuation.
+- PR #626 / issue #618: https://github.com/bzsanti/oxidizePdf/pull/626 — base fix/issue-617-stream-recovery.
+- Última validación: GitHub confirma ramas/HEAD y PR abiertos. #622 tiene CI
+  en curso (SemVer ya pasa); #623–#626 aún sin checks remotos en sus bases
+  temporales. La validación local completa está publicada con el informe QR.
+- Criterio de cierre de implementación: cumplido (TDD, QR y gates locales);
+  integración remota pendiente. No se afirma CI remota completa ni issues cerradas.
+- Siguiente acción exacta: revisar #622 y verificar su CI; tras integrarlo,
+  retargetear #623 a develop, validar CI y repetir en el orden indicado.
+- Los cambios ya están publicados; no dependen exclusivamente de /tmp.
+  Código medido: e28e4f54eb69057bafc4d8e67c8bd3680f2b26db; documentación de QR
+  publicada en 380272fa8c08cbb448d0efbb5df09c4f7accd5ef. Los commits posteriores
+  solo registran publicación y no alteran ese árbol Rust ni los resultados.
