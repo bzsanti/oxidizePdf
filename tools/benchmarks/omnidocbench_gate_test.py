@@ -4,6 +4,7 @@ import json
 import argparse
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -415,9 +416,13 @@ class PdfResolutionTests(unittest.TestCase):
 
             scores = root / "scores.json"
             scores.write_text('{"source.pdf_1.jpg":0.25}', encoding="utf-8")
+            venv_python = root / "venv/bin/python"
+            venv_python.parent.mkdir(parents=True)
+            venv_python.symlink_to(sys.executable)
             run_dir = root / "evaluation"
-            evaluator_args = argparse.Namespace(dataset=dataset, predictions=predictions, manifest=manifest, evaluator_root=repository, python=Path("/usr/bin/python3"), output=run_dir)
+            evaluator_args = argparse.Namespace(dataset=dataset, predictions=predictions, manifest=manifest, evaluator_root=repository, python=venv_python, output=run_dir)
             def fake_evaluator(command, cwd, check):
+                self.assertEqual(command[0], str(venv_python.absolute()), "must preserve virtualenv executable path")
                 # Test double for the external metric engine; production runner owns
                 # the fresh directory, snapshots, invocation and completion record.
                 (cwd / "result/predictions_quick_match_text_block_per_page_edit.json").write_bytes(scores.read_bytes())

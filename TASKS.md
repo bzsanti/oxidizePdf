@@ -38,7 +38,13 @@
   Siete hallazgos manuales/reproducidos: contrato descartado por stats,
   scores sin vínculo a ejecución, YAML con rutas corruptas, hash de fuente
   viva distinto al harness, campos obligatorios vacíos y dos pruebas débiles.
-- Siguiente acción: preparar integración coordinada en ambos repositorios;
+- Integración en curso: PR #628 abierto; stats desplegado solo localmente en
+  Docker, esquema v14 y 11 resultados históricos preservados. Backup consistente
+  y temporizador del worker restaurado; sin remoto de stats.
+- Regresión adicional observada en ejecución real: resolver el symlink de Python
+  perdía el entorno virtual; se conserva ahora la ruta absoluta original.
+  Test RED confirmado; validación final en curso.
+- Siguiente acción: completar evaluación oficial y CI de #628;
   ejecutar el nuevo flujo export/evaluate/summarize/compare desde revisiones
   limpias antes de usarlo como gate oficial. No se repitió el corpus completo
   tras estas correcciones ni se relabeló la evidencia anterior.

@@ -585,7 +585,7 @@ def evaluate_command(args: argparse.Namespace) -> None:
     configuration = output / "evaluation.yaml"
     configuration.write_text(render_evaluation_config(template.decode("utf-8"), dataset, predictions), encoding="utf-8")
     (output / "result").mkdir()
-    command = [str(args.python.resolve()), str(args.evaluator_root.resolve() / "pdf_validation.py"), "--config", str(configuration)]
+    command = [str(args.python.absolute()), str(args.evaluator_root.resolve() / "pdf_validation.py"), "--config", str(configuration)]
     before = {"dataset_sha256": file_hash(dataset), "predictions_sha256": tree_hash(predictions), "evaluation_config_sha256": file_hash(configuration)}
     subprocess.run(command, cwd=output, check=True)
     after = {"dataset_sha256": file_hash(dataset), "predictions_sha256": tree_hash(predictions), "evaluation_config_sha256": file_hash(configuration)}
