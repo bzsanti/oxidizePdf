@@ -277,3 +277,13 @@
 - TDD: RED 2 fallos y 1 control pasa; GREEN 3/3 más 7/7 multistream.
 - Cambio: separador LF antes del footer generado; contenido original intacto.
 - Siguiente acción: revisión final e integración; continuar con #615.
+
+## Issue #615 — límites de objetos ante puntuación (2026-09-24)
+
+- Issue: #615 — fix(text): preserve positioned text boundaries before punctuation and cover TJ — https://github.com/bzsanti/oxidizePdf/issues/615
+- Estado: implementación local validada; corpus/OmniDocBench pendientes.
+- Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: separar objetos posicionados y conservar supresión válida con Tj/TJ.
+- TDD: RED reproduce Right.Left; GREEN 4 nuevas y 5 originales pasan.
+  Mutación retirando supresión TJ falla en cambio de fuente (exit 101).
+- Siguiente acción: validación conjunta local; continuar con #617.

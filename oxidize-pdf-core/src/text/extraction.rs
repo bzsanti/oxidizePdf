@@ -1583,9 +1583,9 @@ impl TextExtractor {
                                 );
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
-                                } else if (positioned_run_boundary
-                                    || dx > self.flat_space_gap_threshold(&state))
-                                    && !suppress_space
+                                } else if positioned_run_boundary
+                                    || (dx > self.flat_space_gap_threshold(&state)
+                                        && !suppress_space)
                                 {
                                     Some(' ')
                                 } else {
@@ -3539,6 +3539,7 @@ fn should_suppress_space_before_punctuation(
         matches!(c, '.' | ',' | ';' | ':' | '!' | '?' | ')' | ']')
             && !extracted_text.ends_with(' ')
             && !extracted_text.ends_with('\n')
+            && dx >= 0.0
             && dx < effective_font_size * TJ_BOUNDARY_SPACE_EM
     })
 }

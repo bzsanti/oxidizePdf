@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve separators between independently positioned text objects before
+  punctuation, with consistent Tj/TJ coverage (#615).
+
 - Preserve generated footers after imported content without a final newline,
   including trailing comments (#616).
 
