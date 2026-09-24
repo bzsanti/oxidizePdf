@@ -1254,11 +1254,10 @@ impl TextExtractor {
         // in the array were concatenated, in order, to form a single stream, with
         // whitespace inserted between streams. This preserves operands and operators
         // split across stream boundaries (issue #613).
-        let combined_stream = ContentParser::combine_streams_owned(streams);
-        if !combined_stream.is_empty() {
+        if !streams.is_empty() {
             let operations = match {
                 let _span = tracing::info_span!("content_parse").entered();
-                ContentParser::parse_content(&combined_stream)
+                ContentParser::parse_content_streams(&streams)
             } {
                 Ok(ops) => ops,
                 Err(e) => {

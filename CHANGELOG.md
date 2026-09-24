@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Recover valid later page content streams after a lexical error without
+  losing operands across healthy stream boundaries (#617).
+
 - Preserve separators between independently positioned text objects before
   punctuation, with consistent Tj/TJ coverage (#615).
 

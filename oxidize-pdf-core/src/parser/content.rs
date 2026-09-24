@@ -1141,7 +1141,51 @@ impl ContentParser {
             return Self::parse_content(streams[0].as_ref());
         }
         let combined = Self::combine_streams(streams);
-        Self::parse_content(&combined)
+        let mut boundaries = Vec::with_capacity(streams.len());
+        let mut end = 0;
+        for stream in streams {
+            end += stream.as_ref().len() + 1;
+            boundaries.push(end);
+        }
+        let mut tokenizer = ContentTokenizer::new(&combined);
+        let mut offset = 0;
+        let mut tokens = Vec::new();
+        let mut operations = Vec::new();
+        loop {
+            match tokenizer.next_token() {
+                Ok(Some(token)) => tokens.push(token),
+                Ok(None) => break,
+                Err(error) => {
+                    // Keep complete operations before the error, but never carry
+                    // incomplete operands from damaged content into a healthy stream.
+                    operations.extend(
+                        Self {
+                            tokens: std::mem::take(&mut tokens),
+                            position: 0,
+                        }
+                        .parse_operators()?,
+                    );
+                    let error_position = offset + tokenizer.position;
+                    // Boundaries are sorted. Avoid rescanning all earlier
+                    // streams for each error in an adversarial page.
+                    let next_index = boundaries.partition_point(|&end| end <= error_position);
+                    let Some(&next) = boundaries.get(next_index) else {
+                        break;
+                    };
+                    tracing::debug!("recovering at next content stream after: {error}");
+                    offset = next;
+                    tokenizer = ContentTokenizer::new(&combined[offset..]);
+                }
+            }
+        }
+        operations.extend(
+            Self {
+                tokens,
+                position: 0,
+            }
+            .parse_operators()?,
+        );
+        Ok(operations)
     }
 
     fn parse_operators(&mut self) -> ParseResult<Vec<ContentOperation>> {

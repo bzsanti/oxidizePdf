@@ -287,3 +287,13 @@
 - TDD: RED reproduce Right.Left; GREEN 4 nuevas y 5 originales pasan.
   Mutación retirando supresión TJ falla en cambio de fuente (exit 101).
 - Siguiente acción: validación conjunta local; continuar con #617.
+
+## Issue #617 — recuperación por límite de stream (2026-09-24)
+
+- Issue: #617 — fix(parser): recover valid later streams after a malformed content stream — https://github.com/bzsanti/oxidizePdf/issues/617
+- Estado: corrección local; validación conjunta pendiente. Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: recuperar streams sanos y conservar operandos entre límites válidos.
+- TDD: RED 3 fallos / 1 control; GREEN 4/4 nuevas y 7/7 originales.
+  APIs predeterminada/plaintext/preserve_layout cubiertas. ParseOptions controla
+  estructura PDF; parse_strict continúa rechazando contenido malformado.
+- Siguiente acción: validar corpus y benchmark conjunto; continuar #618.
