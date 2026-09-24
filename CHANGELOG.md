@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Deliver streaming text callbacks incrementally, retaining operand state and
+  allowing cancellation before parsing the remaining page (#618).
+
 - Recover valid later page content streams after a lexical error without
   losing operands across healthy stream boundaries (#617).
 

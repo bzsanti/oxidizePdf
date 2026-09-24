@@ -297,3 +297,34 @@
   APIs predeterminada/plaintext/preserve_layout cubiertas. ParseOptions controla
   estructura PDF; parse_strict continúa rechazando contenido malformado.
 - Siguiente acción: validar corpus y benchmark conjunto; continuar #618.
+
+## Issue #618 — callbacks incrementales (2026-09-24)
+
+- Issue: #618 — fix(streaming): emit callbacks before materializing all page content operations — https://github.com/bzsanti/oxidizePdf/issues/618
+- Estado: corrección local; validación conjunta pendiente. Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: entrega temprana, cancelación y estado entre streams, sin materializar toda la página.
+- TDD: RED asignaciones antes del callback 2.706 → 9.696.385 bytes al crecer
+  la cola; GREEN 447 → 447, tanto stream único como varios. Cancelación conserva
+  OperationCancelled; entrega completa comprueba texto/posición de 10.001 chunks.
+- Regresión adicional RED/GREEN: imágenes inline divididas no emiten texto
+  espurio desde sus datos. Pasan 9 multistream, 4 recuperación, 2 posicionamiento
+  y 1 test de asignaciones/cancelación. No es medición de RSS ni pico vivo.
+- Siguiente acción: quality-review, T2–T6, diferenciales y OmniDocBench local.
+
+## QR — buffer por lotes vaciado al superar el límite (2026-09-24)
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P2.
+- Responsable: mantenimiento (`bzsanti`), responsable de crear/vincular la issue.
+- Issue: pendiente. #618 cubre callbacks incrementales; este defecto preexiste
+  en `TextStreamer::check_buffer_size` y afecta a la API por lotes.
+- Hallazgo: `total_size` no se actualiza dentro del bucle de eliminación; cuando
+  excede el máximo se eliminan todos los elementos, incluidos los que cabrían.
+- Última validación: con límite 5 y chunks AAAA/BBBB se emiten ambos pero el
+  buffer queda vacío; debería conservar BBBB. Código idéntico en develop base.
+  Reproducción: `/tmp/oxidize-fixes-validation/buffer_probe.log`.
+- Criterio de cierre: conservar los chunks recientes que caben y probar el
+  límite sin depender del tiempo ni confundirlo con RSS.
+- Dependencia externa: mantenimiento debe crear o vincular una issue específica.
+- Criterio de desbloqueo: issue aplicable confirmada abierta en GitHub.
+- Siguiente acción: crear/vincular issue antes de corregir esta API.
+- Restricción: no implementar corrección bajo esta entrada sin issue.

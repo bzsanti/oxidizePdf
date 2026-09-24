@@ -214,3 +214,45 @@ fn test_stream_text_multistream_boundary() {
     );
     assert_eq!(collected.join("").trim(), "HELLO");
 }
+
+#[test]
+fn streaming_skips_inline_image_data_across_stream_boundaries() {
+    use oxidize_pdf::streaming::stream_text;
+    for streams in [
+        vec![
+            b"BT /F1 12 Tf (FIRST) Tj ET BI /W 1 /H 1 /BPC 8 /CS /G ID".to_vec(),
+            b" (GHOST) Tj \nEI BT (LAST) Tj ET".to_vec(),
+        ],
+        vec![
+            b"BT /F1 12 Tf (FIRST) Tj ET BI /W 1 /H 1 /BPC 8 /CS /G ID abc".to_vec(),
+            b" (GHOST) Tj \nEI BT (LAST) Tj ET".to_vec(),
+        ],
+    ] {
+        let mut text = Vec::new();
+        stream_text(streams, |chunk| {
+            text.push(chunk.text);
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(text, vec!["FIRST", "LAST"]);
+    }
+}
+
+#[test]
+fn streaming_recovers_after_bad_stream_without_losing_split_operands() {
+    use oxidize_pdf::streaming::stream_text;
+    let mut text = Vec::new();
+    stream_text(
+        vec![
+            b"<GG>".to_vec(),
+            b"BT /F1 12 Tf [(HE)".to_vec(),
+            b"10 (LLO)] TJ ET".to_vec(),
+        ],
+        |chunk| {
+            text.push(chunk.text);
+            Ok(())
+        },
+    )
+    .unwrap();
+    assert_eq!(text, vec!["HELLO"]);
+}
