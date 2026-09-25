@@ -1,0 +1,172 @@
+{
+  "issue": 620,
+  "base_sha": "e1792e83dbf0fdb42f65742fbc705dc8de906e25",
+  "validation": "local-uncommitted",
+  "identity": {
+    "schema_version": "oxidize-pdf-omnidocbench-gate/v2",
+    "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+    "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+    "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+    "ocr_enabled": false,
+    "population_version": "native-text-v1",
+    "extraction_config": {
+      "api": "PlainTextExtractor::preserve_layout",
+      "preserve_layout": true,
+      "line_break_mode": "PreserveAll",
+      "space_threshold": 0.3,
+      "tj_space_threshold": 0.2,
+      "newline_threshold": 10.0
+    },
+    "serialization": {
+      "id": "rust-split-whitespace-v1",
+      "encoding": "UTF-8",
+      "appended_newline": false
+    },
+    "serialization_vectors_sha256": "36fbdf6a4f1710df9eea85a2866a94564114182d5b38d56909f8c919738c71b0",
+    "evaluator_config_sha256": "175d873d119e1ff8611228e40e198a47190303a98fe6bbfe95ee67141dae810c",
+    "exporter_sha256": "69381f20662ef56926da96cefec1a9157a99c40cec80dc2a86853256cb68f528",
+    "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e",
+    "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+    "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)"
+  },
+  "input_provenance": {
+    "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+    "verified_materialized_lfs_files": 141,
+    "dataset_tracked_bytes_match_revision": true,
+    "dataset_untracked_metadata": [
+      "DATASET_INFO",
+      "SHA256SUMS"
+    ],
+    "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+    "evaluator_tracked_sources_match_revision": true,
+    "evaluator_untracked_runtime": [
+      ".venv/",
+      ".venv310/"
+    ]
+  },
+  "historical_equivalence": {
+    "historical_predictions": 981,
+    "byte_identical": 981,
+    "different": [],
+    "historical_manifest_sha256": "98a1a50b1e497f368749213cd1d23f54b7547349c9dc1d154ba3e4026c4b3ba2",
+    "historical_files_verified_unchanged": 994,
+    "serialization": {
+      "appended_newline": false,
+      "encoding": "UTF-8",
+      "id": "rust-split-whitespace-v1"
+    },
+    "failures": [
+      {
+        "prediction_name": "jiaocaineedrop_chap10.pdf_8.md",
+        "error": "Syntax error at position 0: Invalid Filter type"
+      }
+    ]
+  },
+  "develop_export_equivalence": {
+    "failures": 1,
+    "left_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+    "predictions": 981,
+    "right_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+    "serialization": {
+      "appended_newline": false,
+      "encoding": "UTF-8",
+      "id": "rust-split-whitespace-v1"
+    }
+  },
+  "official": {
+    "counts": {
+      "dataset": 981,
+      "official_text_scorable": 921,
+      "official_text_unscored": 60,
+      "scored": 921,
+      "included_native": 780,
+      "excluded_native": 141,
+      "missing": 0,
+      "duplicate": 0,
+      "failed": 1
+    },
+    "text_edit_distance": 0.47311686306064565,
+    "reading_order_edit_distance": 0.29228846821555693,
+    "fallback_messages": [
+      "Time out for plain text match of newspaper_0b1bb8d03b4287eb95f67b68c2cf9f92_1.jpg, match_gt2pred_simple will be used."
+    ]
+  },
+  "tests": {
+    "exporter": 6,
+    "gate": 28,
+    "stats_rust": 8,
+    "stats_release_manifest": 4
+  },
+  "mutations": [
+    {
+      "mutation": "skip-normalization",
+      "detected": true
+    },
+    {
+      "mutation": "ascii-only",
+      "detected": true
+    },
+    {
+      "mutation": "extra-newline",
+      "detected": true
+    },
+    {
+      "mutation": "omit-empty-file",
+      "detected": true
+    },
+    {
+      "mutation": "ignore-serialization-identity",
+      "detected": true
+    },
+    {
+      "mutation": "append-terminal-lf",
+      "detected": true
+    }
+  ],
+  "sources_sha256": {
+    "oxidize-pdf-core/examples/omnidocbench_export.rs": "c456b0b4a3939775d821cef6651f9a463e32a544d8f97469e6ffeb054c53829e",
+    "oxidize-pdf-core/examples/support/omnidocbench_serialization.rs": "132e0bc1582a202abbd1645a1489ada404ddaca05729e674a8fbf3e8f999a912",
+    "oxidize-pdf-core/examples/support/omnidocbench-serialization-v1.json": "36fbdf6a4f1710df9eea85a2866a94564114182d5b38d56909f8c919738c71b0",
+    "tools/benchmarks/omnidocbench_gate.py": "52062ae25bec4114bd20e57b5314e476a828783fb8938ee5423fe1bf2c1aad08",
+    "tools/benchmarks/fixtures/omnidocbench-v1-official.yaml": "175d873d119e1ff8611228e40e198a47190303a98fe6bbfe95ee67141dae810c",
+    "/home/santi/repos/BelowZero/oxidizePdf/oxidize-stats/benchmark/src/bin/quality_oracle.rs": "4496b642589937a1d68e0d6e1ec2d9a4df4745b2d0d026943cad720ae4564dd3",
+    "/home/santi/repos/BelowZero/oxidizePdf/oxidize-stats/benchmark/src/bin/support/omnidocbench_serialization.rs": "132e0bc1582a202abbd1645a1489ada404ddaca05729e674a8fbf3e8f999a912",
+    "/home/santi/repos/BelowZero/oxidizePdf/oxidize-stats/benchmark/scripts/release_oracle.py": "6425a8f619b982a4da854f344fdd0941a843e7853f00080c5d8d1a51cc183454",
+    "target/issue-620/historical-runner/Cargo.lock": "f258e1f2936004342a64137aff76f942fab47c33e5a2a2dacdb0aa7351b3bc29",
+    "target/issue-620/stats-runner/Cargo.lock": "03cb1cc78d0c4e7307fcfce249520621a73096523b5f317208c565ac4260e960"
+  },
+  "artifacts_sha256": {
+    "official-develop/result/develop-predictions_quick_match_metric_result.json": "207ca836e435f168b112bed9d553d7ff8e0788296d82559705ce2fecf07f91f6",
+    "official-develop/result/develop-predictions_quick_match_reading_order_per_page_edit.json": "76b286956cc626d4d6169392a2ac1a29cea5c26e716d88ad3fe438bc0f38d568",
+    "official-develop/result/develop-predictions_quick_match_reading_order_result.json": "1c3f5edbcf75c970ee0e2bbd3308d229199593374a2f257ece856749137bf4c3",
+    "official-develop/result/develop-predictions_quick_match_text_block_per_page_edit.json": "2862e24581b894f1dd2a531568adb8024cd95cdf0856876ac86eef29d6290f02",
+    "official-develop/result/develop-predictions_quick_match_text_block_result.json": "bb208d85a17c3bf2141449e9a1ea1596276f6d74b6230b9e5622ce47c89efb42",
+    "historical-equivalence.json": "cc98a25ac6a21c26fea02add7450f5cf6e13afcb14eb596542f074babe8e57d4",
+    "develop-export-equivalence.json": "99aa79ab07f5731c85784e0f5a7e74b92e74136f85a5d27de0a50d46fb966cd4",
+    "develop-text-summary.json": "3831cbea2a5138e3528d168509f03d6b498fb7157d4c1c4261a2af542f7c47ec",
+    "official-develop/evaluation.yaml": "0a528bcad66ecd0bab7fb48af2c13d4d191b43a5387b12b372b63dc096a641ca",
+    "stats-session.diff": "79cc6aa241b63a0ef12f4d4f7f201d775307650b65761249b1368b0befa0460a",
+    "develop-final-export-equivalence.json": "99aa79ab07f5731c85784e0f5a7e74b92e74136f85a5d27de0a50d46fb966cd4",
+    "cli-contract-checks.json": "47743012efa49ec993280e0ed1ae585561f43d54942edbea465b1913ba50a92e",
+    "stats-runner/src/bin/quality_export_only.rs": "4195a1189c15cbdf6eee19d1b67e9159a705078a782c7cd7fda97c507d6d03f2",
+    "stats-runner/target/debug/quality_export_only": "f47d3c4cd019a23276d6cdbbae0b7ceb0dab371825ff6cb224b3f0db662d50de",
+    "stats-runner/target/debug/quality_oracle": "1b5ef9f774751282ac14a671dacb8d5af01109947a9914a556da652b146d5d7e",
+    "historical-runner/target/debug/issue-620-historical-export": "7692e55ffb947226073ffe709b3b7d381c5a636927aab2d8c085af2875510d6b"
+  },
+  "work_directory": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf-issue-620/target/issue-620",
+  "final_stats_writer_equivalence": {
+    "failures": 1,
+    "left_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+    "predictions": 981,
+    "right_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+    "serialization": {
+      "appended_newline": false,
+      "encoding": "UTF-8",
+      "id": "rust-split-whitespace-v1"
+    }
+  },
+  "cli_checks": {
+    "preserved_cli": true,
+    "unknown_cli_rejected_before_output": true
+  }
+}

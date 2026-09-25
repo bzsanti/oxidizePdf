@@ -415,13 +415,12 @@ impl<R: Read + Seek> ImageExtractor<R> {
         }
 
         if self.options.extract_inline {
-            for content in self
+            let content_streams = self
                 .document
                 .get_page_content_streams(&page)
-                .map_err(|error| OperationError::ParseError(error.to_string()))?
-            {
-                self.visit_inline_images(&content, page_number, &mut image_index, budget, visitor)?;
-            }
+                .map_err(|error| OperationError::ParseError(error.to_string()))?;
+            let combined = crate::parser::ContentParser::combine_streams_owned(content_streams);
+            self.visit_inline_images(&combined, page_number, &mut image_index, budget, visitor)?;
         }
         Ok(())
     }

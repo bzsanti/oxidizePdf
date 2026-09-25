@@ -1,5 +1,98 @@
 # Seguimiento diario
 
+## Avisos de dependencias retiradas durante release 5.1.4
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P2.
+- Responsable: mantenimiento (`bzsanti`), responsable de crear/vincular issue.
+- Issue: pendiente; las issues abiertas consultadas no cubren estos avisos.
+- Última validación: `cargo package --locked --offline` avisa de chacha20 0.10.0
+  y spin 0.9.8 retirados del registro. Ambas entradas ya estaban en develop;
+  la release no cambia el grafo de dependencias. No se infiere vulnerabilidad.
+- Dependencia externa y desbloqueo: issue específica confirmada OPEN.
+- Criterio de cierre: investigar motivo de retirada y resolver/validar el
+  seguimiento de dependencias con evidencia reproducible.
+- Siguiente acción: mantenimiento crea/vincula issue antes de corregir.
+- Restricciones: no actualizar dependencias ni recalibrar métricas bajo esta
+  entrada sin issue; no confundir con la eliminación de C de #627.
+
+
+## Release 5.1.4 — 2026-09-25
+
+- Issue: #629 — release: publish oxidize-pdf 5.1.4 maintenance fixes — https://github.com/bzsanti/oxidizePdf/issues/629
+- Estado: `[-]` preparación y validación en curso. Prioridad: P1.
+- Responsable: Codex / bzsanti. Publicación autorizada por el usuario.
+- Alcance: develop `410358d`, fixes #609/#610/#613/#615–#619 y contrato #620.
+- Última validación: #629 OPEN, última GitHub Release y registro crates.io 5.1.3;
+  #620 integrado por #628. Copia independiente: `/tmp/oxidize-release-5.1.4`.
+- Criterio de cierre: gates locales y CI verdes, PR fusionado en main,
+  etiqueta sobre merge validado, workflow exitoso, GitHub Release y crates.io.
+- Validación local final: workspace 9.801 pasan (73 ignorados), Clippy all-targets,
+  formato, contrato Python 33/Rust 6 y compilación del paquete pasan. QR cerrado
+  antes del PR; Kripteia Rust 94/100 y Security inspeccionado. Corpus oficial:
+  evidencia integrada previa, no nueva ejecución. Informes de release en docs/reports.
+- Siguiente acción: publicar rama y PR a main, esperar CI verde y fusionar;
+  etiquetar el merge validado y verificar workflow, GitHub Release y crates.io.
+- Restricciones: preservar cambios locales y baselines; #627 permanece pendiente
+  y obligatoria. Esta versión conserva C en signatures/bindings por autorización
+  explícita de publicar antes de #627. No corregir hallazgos ajenos sin issue.
+
+
+## Issue #620 — contrato de serialización OmniDocBench
+
+- Issue: #620 — benchmark(quality): define a consistent OmniDocBench text serialization contract — https://github.com/bzsanti/oxidizePdf/issues/620
+- Estado: `[-]` los 7 hallazgos corregidos y validados localmente; integración
+  en curso; stats permanece local por instrucción del usuario. Prioridad: P2. Responsable: Codex / mantenimiento (`bzsanti`).
+- Criterio de cierre: exportadores conformes e integrados en ambos repositorios,
+  comparaciones incompatibles rechazadas, equivalencia histórica de 981
+  predicciones y evaluación oficial local con evidencia por página.
+- Plan: `docs/plans/2026-09-24-issue-620-serialization-tdd.md`.
+- Implementación: normalización histórica predeterminada, variante preservada
+  explícita, serializador/vectores compartidos, identidad v2 y verificador de
+  bytes. Adaptación de stats autorizada; cambios previos preservados.
+- Última validación: 106 tests pasan (33 gate, 6 exportador, 8 exportador stats,
+  5 release, 42 aplicación stats, 12 dashboard). Formato y Clippy pasan en ambos
+  repositorios; diff check pasa. Cuatro mutaciones de tests detectadas.
+- Correcciones: contrato tipado y persistente con migración v14 de stats;
+  comparación por identidad en dashboard; ejecución vinculada a scores;
+  YAML de una pasada; hashes de fuentes copiadas; procedencia estricta;
+  tests de resumen y vectores reforzados.
+- Informe de correcciones: `docs/reports/2026-09-24-issue-620-qr-fixes.md` y
+  hashes en el JSON homónimo. Migración probada solo en bases de tests.
+- Evidencia: 981/981 predicciones históricas idénticas; 994 archivos históricos
+  sin cambios. Ambos exportadores coinciden en 981 archivos sobre develop.
+  Evaluador fijado: texto 0,47311686306064565; orden 0,29228846821555693;
+  921 páginas puntuables, 780 nativas, un error de extracción y un fallback
+  oficial de timeout conservados. Sin recalibrar baseline.
+- Procedencia: base `e1792e83dbf0fdb42f65742fbc705dc8de906e25`; los 141 objetos
+  LFS materializados coinciden con la revisión del dataset. Código rastreado
+  del evaluador sin cambios; entornos virtuales no rastreados documentados.
+- Informe: `docs/reports/2026-09-24-issue-620-implementation.md`; hashes y
+  resultados en `docs/reports/2026-09-24-issue-620-validation.json`.
+- Dependencia externa: integración coordinada en oxidize-stats (`bzsanti`).
+- QR: `docs/reports/2026-09-24-issue-620-quality-review.md`. Se repitieron
+  46 tests, formato y Clippy: pasan. Kripteia Rust 98/100 (12 tests únicos);
+  Python no detecta unittest (0 tests). Security sin hallazgos automáticos.
+  Siete hallazgos manuales/reproducidos: contrato descartado por stats,
+  scores sin vínculo a ejecución, YAML con rutas corruptas, hash de fuente
+  viva distinto al harness, campos obligatorios vacíos y dos pruebas débiles.
+- Integración: PR #628 — https://github.com/bzsanti/oxidizePdf/pull/628.
+  Stats permanece local: desplegados web/scheduler/worker, esquema v14,
+  11 resultados históricos y todos los datos anteriores preservados; health e
+  integrity_check pasan. Backup online y versiones anteriores conservados.
+- Validación oficial final: base e1792e8 y candidato b7fe817 (develop 4c479b2)
+  completan export/evaluate/summarize/compare; 981 predicciones, 921 puntuables,
+  780 nativas, un fallo y fallback oficial. Delta global/nativo 0.0.
+  Exportadores idénticos en 981 archivos. Wrapper 84e274e conserva el entorno
+  virtual; test RED reproducido y suite GREEN.
+- Informe de integración: `docs/reports/2026-09-24-issue-620-integration.md`
+  y JSON homónimo con hashes y evidencia del despliegue.
+- Siguiente acción: esperar CI del último commit de #628 y fusionar en develop;
+  confirmar merge y cerrar #620. Stats no requiere PR ni publicación remota.
+- Restricciones: no alterar históricos, corpus, evaluador o baselines; todo
+  el trabajo local está en este worktree y su target, sin usar /tmp. No se
+  autoriza commit/PR/fusión de oxidize-pdf y despliegue local de stats;
+  no crear remoto ni publicar stats.
+
 ## Premortem de aceptación masiva
 
 - Estado: `[-]` en curso — promovida a `main`; release cancelada por el usuario
@@ -258,3 +351,115 @@
   del evaluador (comando, configuración, resultados por página y resumen).
 - Restricciones de seguridad o arquitectura: no inventar LaTeX, OCR ni
   estructuras que la API pública no exponga.
+
+## Issue #619 — fixtures y contrato del helper (2026-09-24)
+
+- Issue: #619 — test(parser): build valid PDF fixtures and assert multistream TJ operands — https://github.com/bzsanti/oxidizePdf/issues/619
+- Estado: implementación local validada. Prioridad: P2. Responsable: Codex.
+- Criterio de cierre: fixtures válidos y aserción exacta del helper sensible a pérdida de TJ.
+- TDD: siete fixtures fallan en modo estricto antes del cambio; después pasan
+  7+5+7 tests. Mutación a parseo independiente hace fallar el test del helper.
+- Siguiente acción: revisar/publicar el cambio y continuar con #616.
+- Restricción: #620 pertenece al usuario en otra sesión.
+
+## Issue #616 — composición del footer (2026-09-24)
+
+- Issue: #616 — fix(page): delimit preserved content before appending generated footer — https://github.com/bzsanti/oxidizePdf/issues/616
+- Estado: implementación local validada. Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: preservar FOOTER tras operador/comentario sin EOL.
+- TDD: RED 2 fallos y 1 control pasa; GREEN 3/3 más 7/7 multistream.
+- Cambio: separador LF antes del footer generado; contenido original intacto.
+- Siguiente acción: revisión final e integración; continuar con #615.
+
+## Issue #615 — límites de objetos ante puntuación (2026-09-24)
+
+- Issue: #615 — fix(text): preserve positioned text boundaries before punctuation and cover TJ — https://github.com/bzsanti/oxidizePdf/issues/615
+- Estado: implementación local validada; corpus/OmniDocBench pendientes.
+- Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: separar objetos posicionados y conservar supresión válida con Tj/TJ.
+- TDD: RED reproduce Right.Left; GREEN 4 nuevas y 5 originales pasan.
+  Mutación retirando supresión TJ falla en cambio de fuente (exit 101).
+- Siguiente acción: validación conjunta local; continuar con #617.
+
+## Issue #617 — recuperación por límite de stream (2026-09-24)
+
+- Issue: #617 — fix(parser): recover valid later streams after a malformed content stream — https://github.com/bzsanti/oxidizePdf/issues/617
+- Estado: corrección local; validación conjunta pendiente. Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: recuperar streams sanos y conservar operandos entre límites válidos.
+- TDD: RED 3 fallos / 1 control; GREEN 4/4 nuevas y 7/7 originales.
+  APIs predeterminada/plaintext/preserve_layout cubiertas. ParseOptions controla
+  estructura PDF; parse_strict continúa rechazando contenido malformado.
+- Siguiente acción: validar corpus y benchmark conjunto; continuar #618.
+
+## Issue #618 — callbacks incrementales (2026-09-24)
+
+- Issue: #618 — fix(streaming): emit callbacks before materializing all page content operations — https://github.com/bzsanti/oxidizePdf/issues/618
+- Estado: corrección local; validación conjunta pendiente. Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: entrega temprana, cancelación y estado entre streams, sin materializar toda la página.
+- TDD: RED asignaciones antes del callback 2.706 → 9.696.385 bytes al crecer
+  la cola; GREEN 447 → 447, tanto stream único como varios. Cancelación conserva
+  OperationCancelled; entrega completa comprueba texto/posición de 10.001 chunks.
+- Regresión adicional RED/GREEN: imágenes inline divididas no emiten texto
+  espurio desde sus datos. Pasan 9 multistream, 4 recuperación, 2 posicionamiento
+  y 1 test de asignaciones/cancelación. No es medición de RSS ni pico vivo.
+- Siguiente acción: quality-review, T2–T6, diferenciales y OmniDocBench local.
+
+## QR — buffer por lotes vaciado al superar el límite (2026-09-24)
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P2.
+- Responsable: mantenimiento (`bzsanti`), responsable de crear/vincular la issue.
+- Issue: pendiente. #618 cubre callbacks incrementales; este defecto preexiste
+  en `TextStreamer::check_buffer_size` y afecta a la API por lotes.
+- Hallazgo: `total_size` no se actualiza dentro del bucle de eliminación; cuando
+  excede el máximo se eliminan todos los elementos, incluidos los que cabrían.
+- Última validación: con límite 5 y chunks AAAA/BBBB se emiten ambos pero el
+  buffer queda vacío; debería conservar BBBB. Código idéntico en develop base.
+  Reproducción: `/tmp/oxidize-fixes-validation/buffer_probe.log`.
+- Criterio de cierre: conservar los chunks recientes que caben y probar el
+  límite sin depender del tiempo ni confundirlo con RSS.
+- Dependencia externa: mantenimiento debe crear o vincular una issue específica.
+- Criterio de desbloqueo: issue aplicable confirmada abierta en GitHub.
+- Siguiente acción: crear/vincular issue antes de corregir esta API.
+- Restricción: no implementar corrección bajo esta entrada sin issue.
+
+## QR y validación final — fixes #619/#616/#615/#617/#618 (2026-09-24)
+
+- Estado: implementación y QR completados; PR #622–#626 abiertos.
+- Responsable: Codex. Prioridad: P1 (#619 P2). Issues vinculadas en las entradas anteriores.
+- Criterio de cierre: TDD reproducido, QR completado antes del PR y gates locales aprobados.
+- Código validado: `e28e4f54eb69057bafc4d8e67c8bd3680f2b26db`; base `e1792e83`.
+- Resultado: 63 focalizadas, T2–T6 (23/22/25/26/23), diferenciales (34/38),
+  biblioteca (6.791, 3 ignoradas), Clippy all-targets y formato pasan.
+  T4/T5 omiten precisión por falta de ground truth. Baselines intactas.
+- QR: 91/100 en 360 tests; seguridad auditó tres métodos unsafe del allocator
+  de tests. Tres hallazgos de implementación corregidos; defecto preexistente
+  del buffer por lotes bloqueado sin issue, registrado arriba.
+- OmniDocBench local: 981 predicciones finales idénticas a la base integrada;
+  texto global 0,473116863, nativo 0,378039828, orden 0,292288468 en ambos.
+  Evaluación oficial completa sobre entradas idénticas, reutilización trazable
+  en manifiestos y compare del gate aprobado. No se modifica #620.
+- Evidencia: `docs/reports/2026-09-24-fixes-615-619-quality-review.md` y JSON asociado.
+- Siguiente acción: publicar cinco PR separados, dependientes en el orden
+  #619 → #616 → #615 → #617 → #618. Ninguno se crea antes de este QR completo.
+
+## Publicación posterior al QR — 2026-09-24
+
+- Estado: fixes implementados con TDD, QR cerrado y cinco PR confirmados abiertos.
+- Responsable: Codex. Prioridad: P1 (#619 P2). Issues #615–#619 siguen vinculadas
+  a sus entradas anteriores; #620 pertenece al usuario en otra sesión.
+- PR #622 / issue #619: https://github.com/bzsanti/oxidizePdf/pull/622 — base develop.
+- PR #623 / issue #616: https://github.com/bzsanti/oxidizePdf/pull/623 — base fix/issue-619-review-fixtures.
+- PR #624 / issue #615: https://github.com/bzsanti/oxidizePdf/pull/624 — base fix/issue-616-imported-footer.
+- PR #625 / issue #617: https://github.com/bzsanti/oxidizePdf/pull/625 — base fix/issue-615-positioned-punctuation.
+- PR #626 / issue #618: https://github.com/bzsanti/oxidizePdf/pull/626 — base fix/issue-617-stream-recovery.
+- Última validación: GitHub confirma ramas/HEAD y PR abiertos. #622 tiene CI
+  en curso (SemVer ya pasa); #623–#626 aún sin checks remotos en sus bases
+  temporales. La validación local completa está publicada con el informe QR.
+- Criterio de cierre de implementación: cumplido (TDD, QR y gates locales);
+  integración remota pendiente. No se afirma CI remota completa ni issues cerradas.
+- Siguiente acción exacta: revisar #622 y verificar su CI; tras integrarlo,
+  retargetear #623 a develop, validar CI y repetir en el orden indicado.
+- Los cambios ya están publicados; no dependen exclusivamente de /tmp.
+  Código medido: e28e4f54eb69057bafc4d8e67c8bd3680f2b26db; documentación de QR
+  publicada en 380272fa8c08cbb448d0efbb5df09c4f7accd5ef. Los commits posteriores
+  solo registran publicación y no alteran ese árbol Rust ni los resultados.

@@ -22,7 +22,7 @@ workflows or continue into structure-aware chunks for AI/RAG applications.
 
 ```toml
 [dependencies]
-oxidize-pdf = "5.1.3"
+oxidize-pdf = "5.1.4"
 ```
 
 Structure-aware RAG remains a first-class workflow:
@@ -63,7 +63,7 @@ Most PDF libraries give you a wall of text. oxidize-pdf gives you **structured, 
 
 ```toml
 [dependencies]
-oxidize-pdf = "5.1.3"
+oxidize-pdf = "5.1.4"
 ```
 
 ### RAG Pipeline

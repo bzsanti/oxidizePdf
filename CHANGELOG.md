@@ -8,6 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.1.4] - 2026-09-25
+
+### Fixed
+
+- Deliver streaming text callbacks incrementally, retaining operand state and
+  allowing cancellation before parsing the remaining page (#618).
+
+- Recover valid later page content streams after a lexical error without
+  losing operands across healthy stream boundaries (#617).
+
+- Preserve separators between independently positioned text objects before
+  punctuation, with consistent Tj/TJ coverage (#615).
+
+- Preserve generated footers after imported content without a final newline,
+  including trailing comments (#616).
+
+- Strip escaped LF, CR and CRLF continuations from PDF literal strings (#609).
+- Avoid synthetic spaces before punctuation in fragmented text runs (#610).
+- Preserve operands across page content streams according to PDF concatenation
+  semantics, with valid fixtures covering multi-stream text arrays (#613, #619).
+
+### Changed
+
+- Give OmniDocBench text serialization an explicit, verified contract; bind
+  predictions, evaluator inputs and scores through provenance manifests (#620).
+
+### Known limitations
+
+- Signature verification still uses the C-backed `ring` dependency through
+  `rustls-webpki`. Removing C from supported configurations and bindings remains
+  mandatory follow-up #627; this maintenance release does not resolve it.
+
 ## [5.1.3] - 2026-09-19
 
 ### Changed

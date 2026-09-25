@@ -1,0 +1,172 @@
+[
+  {
+    "name": "ascii",
+    "input": " A\r\n\tB  C \n",
+    "normalized": "A B C"
+  },
+  {
+    "name": "lines",
+    "input": "A\rB\nC",
+    "normalized": "A B C"
+  },
+  {
+    "name": "unicode",
+    "input": "A\u00a0B\u2003C\u202fD\u3000E",
+    "normalized": "A B C D E"
+  },
+  {
+    "name": "unicode-lines",
+    "input": "A\u0085B\u2028C\u2029D",
+    "normalized": "A B C D"
+  },
+  {
+    "name": "empty",
+    "input": "",
+    "normalized": ""
+  },
+  {
+    "name": "whitespace",
+    "input": " \t\r\n\u00a0",
+    "normalized": ""
+  },
+  {
+    "name": "non-whitespace",
+    "input": "A\u200bB\ufeffC",
+    "normalized": "A\u200bB\ufeffC"
+  },
+  {
+    "name": "composition",
+    "input": "\u00e1rbol, \u4e2d\u6587 e\u0301",
+    "normalized": "\u00e1rbol, \u4e2d\u6587 e\u0301"
+  },
+  {
+    "name": "python-controls",
+    "input": "A\u001cB\u001dC\u001eD\u001fE",
+    "normalized": "A\u001cB\u001dC\u001eD\u001fE"
+  },
+  {
+    "name": "U+0009",
+    "input": "A\tB",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+000A",
+    "input": "A\nB",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+000B",
+    "input": "A\u000bB",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+000C",
+    "input": "A\fB",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+000D",
+    "input": "A\rB",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+0020",
+    "input": "A B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+0085",
+    "input": "A\u0085B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+00A0",
+    "input": "A\u00a0B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+1680",
+    "input": "A\u1680B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2000",
+    "input": "A\u2000B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2001",
+    "input": "A\u2001B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2002",
+    "input": "A\u2002B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2003",
+    "input": "A\u2003B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2004",
+    "input": "A\u2004B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2005",
+    "input": "A\u2005B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2006",
+    "input": "A\u2006B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2007",
+    "input": "A\u2007B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2008",
+    "input": "A\u2008B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2009",
+    "input": "A\u2009B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+200A",
+    "input": "A\u200aB",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2028",
+    "input": "A\u2028B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+2029",
+    "input": "A\u2029B",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+202F",
+    "input": "A\u202fB",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+205F",
+    "input": "A\u205fB",
+    "normalized": "A B"
+  },
+  {
+    "name": "U+3000",
+    "input": "A\u3000B",
+    "normalized": "A B"
+  }
+]

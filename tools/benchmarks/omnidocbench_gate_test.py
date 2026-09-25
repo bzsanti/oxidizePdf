@@ -4,6 +4,7 @@ import json
 import argparse
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -42,6 +43,7 @@ def sealed_summary(identity=None, dataset_count=1, similarity=0.5):
             "dataset_sha256": "dataset",
             "scores_sha256": "scores",
             "predictions_sha256": "predictions",
+            "evaluation_run_sha256": "run",
         },
         "counts": {
             "dataset": dataset_count,
@@ -120,7 +122,71 @@ class JsonAndPopulationTests(unittest.TestCase):
         self.assertAlmostEqual(result["metrics"]["native_text_similarity"], 0.8)
 
 
+class ExportEquivalenceTests(unittest.TestCase):
+    def test_compares_bytes_and_keeps_empty_predictions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            left, right = root / "left", root / "right"
+            left.mkdir(); right.mkdir()
+            for path in (left, right):
+                (path / "page.md").write_bytes(b"Alpha Beta")
+                (path / "empty.md").write_bytes(b"")
+            report = {"serialization": GATE.serialization_contract("rust-split-whitespace-v1"), "extraction_config": {"api": "test"}, "counts": {"written": 2, "failed": 0}, "failures": []}
+            result = GATE.verify_exports(left, report, right, report)
+            self.assertEqual(result["predictions"], 2)
+            (right / "page.md").write_bytes(b"Alpha Beta\n")
+            with self.assertRaisesRegex(ValueError, "bytes.*page.md"):
+                GATE.verify_exports(left, report, right, report)
+            (right / "page.md").write_bytes(b"Alpha Beta")
+            (right / "empty.md").unlink()
+            with self.assertRaisesRegex(ValueError, "population"):
+                GATE.verify_exports(left, report, right, report)
+
+
 class IdentityAndHashTests(unittest.TestCase):
+    def test_compare_rejects_different_serialization(self):
+        baseline = sealed_summary(GATE.identity_fixture(serialization=GATE.serialization_contract("rust-split-whitespace-v1")))
+        candidate = sealed_summary(GATE.identity_fixture(serialization=GATE.serialization_contract("preserve-text-v1")))
+        with self.assertRaisesRegex(ValueError, "serialization"):
+            GATE.compare_summaries(baseline, candidate)
+
+    def test_compare_rejects_missing_serialization_on_both_sides(self):
+        identity = GATE.identity_fixture()
+        identity.pop("serialization", None)
+        with self.assertRaisesRegex(ValueError, "serialization"):
+            GATE.compare_summaries(sealed_summary(identity), sealed_summary(identity))
+
+    def test_compare_rejects_unknown_or_misdeclared_serialization(self):
+        for serialization in ({"id": "future-v9"}, {"id": "rust-split-whitespace-v1", "encoding": "UTF-16", "appended_newline": False}):
+            with self.subTest(serialization=serialization):
+                identity = GATE.identity_fixture(serialization=serialization)
+                with self.assertRaisesRegex(ValueError, "serialization"):
+                    GATE.compare_summaries(sealed_summary(identity), sealed_summary(identity))
+
+    def test_compare_accepts_conformant_exporters_with_distinct_provenance(self):
+        candidate = sealed_summary(GATE.identity_fixture(exporter_sha256="c" * 64, source_lock_sha256="d" * 64), similarity=0.75)
+        result = GATE.compare_summaries(sealed_summary(), candidate)
+        self.assertEqual(result["official_global_text_similarity_delta"], 0.25)
+        self.assertEqual(result["candidate_summary_sha256"], candidate["summary_sha256"])
+
+    def test_compare_rejects_missing_provenance_on_both_sides(self):
+        identity = GATE.identity_fixture()
+        del identity["exporter_sha256"]
+        with self.assertRaisesRegex(ValueError, "exporter_sha256"):
+            GATE.compare_summaries(sealed_summary(identity), sealed_summary(identity))
+
+    def test_compare_rejects_different_evaluation_config(self):
+        candidate = sealed_summary(GATE.identity_fixture(evaluator_config_sha256="different"))
+        with self.assertRaisesRegex(ValueError, "evaluator_config"):
+            GATE.compare_summaries(sealed_summary(), candidate)
+
+    def test_comparison_requires_evaluation_run_provenance(self):
+        summary = sealed_summary()
+        del summary["artifacts"]["evaluation_run_sha256"]
+        summary["summary_sha256"] = GATE.canonical_hash({k:v for k,v in summary.items() if k != "summary_sha256"})
+        with self.assertRaisesRegex(ValueError, "artifact identity"):
+            GATE.compare_summaries(summary, summary)
+
     def test_canonical_hash_ignores_mapping_order(self):
         self.assertEqual(GATE.canonical_hash({"b": 2, "a": 1}), GATE.canonical_hash({"a": 1, "b": 2}))
 
@@ -220,6 +286,76 @@ class IdentityAndHashTests(unittest.TestCase):
             GATE.compare_summaries(baseline, candidate)
 
 
+class ReviewRegressionTests(unittest.TestCase):
+    def test_required_provenance_rejects_empty_and_wrong_types(self):
+        for field in GATE.IMPLEMENTATION_FIELDS + ("evaluator_config_sha256",):
+            for value in ("", " ", False, 7, [], {}):
+                with self.subTest(field=field, value=value), self.assertRaisesRegex(ValueError, field):
+                    GATE.validate_identity(GATE.identity_fixture(**{field: value}))
+        for field in ("exporter_sha256", "source_lock_sha256", "evaluator_config_sha256"):
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, field):
+                GATE.validate_identity(GATE.identity_fixture(**{field: "not-a-hash"}))
+
+    def test_yaml_paths_are_replaced_once_and_remain_json_scalars(self):
+        dataset = Path('/predictions-dataset/with "quotes"/OmniDocBench.json')
+        predictions = Path('/dataset/OmniDocBench.json/predictions')
+        rendered = GATE.render_evaluation_config('data: /dataset/OmniDocBench.json\nprediction: /predictions\n', dataset, predictions)
+        self.assertEqual(json.loads(rendered.splitlines()[0].split(': ', 1)[1]), str(dataset))
+        self.assertEqual(json.loads(rendered.splitlines()[1].split(': ', 1)[1]), str(predictions))
+
+
+    def test_evaluator_failure_or_changed_inputs_never_emit_completion(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "dataset.json"
+            GATE._write_json(dataset, [page("a.jpg")])
+            predictions = root / "source-predictions"
+            predictions.mkdir()
+            (predictions / "a.md").write_text("Alpha Beta")
+            manifest = root / "export.json"
+            GATE._write_json(manifest, {"identity": GATE.identity_fixture(), "predictions_sha256": GATE.tree_hash(predictions), "dataset_sha256": GATE.file_hash(dataset), "counts": {"failed": 0}})
+            for mode in ("failure", "changed-input"):
+                output = root / mode
+                args = argparse.Namespace(manifest=manifest, dataset=dataset, predictions=predictions, evaluator_root=root, python=Path("/usr/bin/python3"), output=output)
+                def evaluator(command, cwd, check):
+                    if mode == "failure":
+                        raise subprocess.CalledProcessError(1, command)
+                    (cwd / "predictions/a.md").write_text("changed")
+                with mock.patch.object(GATE, "verified_revision"), mock.patch.object(GATE.subprocess, "run", side_effect=evaluator), self.assertRaises((ValueError, subprocess.CalledProcessError)):
+                    GATE.evaluate_command(args)
+                self.assertFalse((output / "evaluation-run.json").exists())
+    def test_export_hash_uses_copied_sources_when_live_files_change(self):
+        repository = MODULE_PATH.parents[2]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fake_gate = root / "tools/benchmarks/omnidocbench_gate.py"
+            fake_gate.parent.mkdir(parents=True)
+            examples = root / "oxidize-pdf-core/examples"
+            shutil.copytree(repository / "oxidize-pdf-core/examples/support", examples / "support")
+            exporter = examples / "omnidocbench_export.rs"
+            shutil.copyfile(repository / "oxidize-pdf-core/examples/omnidocbench_export.rs", exporter)
+            expected = GATE.exporter_bundle_hash(examples)
+            dataset = root / "dataset.json"
+            GATE._write_json(dataset, [page("source.pdf_1.jpg")])
+            (root / "source.pdf").write_bytes(b"fixture")
+            predictions = root / "predictions"
+            args = argparse.Namespace(dataset=dataset,dataset_root=root,evaluator_root=repository,pdf_root=root,source_root=repository,predictions=predictions,manifest=root / "manifest.json",dataset_revision="dataset",evaluator_revision="evaluator",allow_dirty=True,serialization="rust-split-whitespace-v1")
+            real_run = subprocess.run
+            def command(cmd, **kwargs):
+                if cmd[0] != "cargo":
+                    return real_run(cmd, **kwargs)
+                exporter.write_text("changed after snapshot")
+                predictions.mkdir()
+                (predictions / "source.pdf_1.md").write_text("fixture")
+                report_path = Path(cmd[cmd.index("--") + 3])
+                GATE._write_json(report_path, {"serialization":GATE.serialization_contract(args.serialization),"extraction_config":{"api":"fixture"},"counts":{"attempted":1,"written":1,"failed":0},"failures":[]})
+            with mock.patch.object(GATE, "__file__", str(fake_gate)), mock.patch.object(GATE, "verified_revision", return_value={}), mock.patch.object(GATE, "git_provenance", return_value={}), mock.patch.object(GATE, "command_version", return_value="fixture-version"), mock.patch.object(GATE.subprocess, "run", side_effect=command):
+                GATE.export_predictions(args)
+            recorded = GATE.load_json(args.manifest)
+            self.assertEqual(recorded["identity"]["exporter_sha256"], expected)
+            self.assertNotEqual(recorded["identity"]["exporter_sha256"], GATE.exporter_bundle_hash(examples))
+
+
 class PdfResolutionTests(unittest.TestCase):
     def test_prefers_page_specific_pdf_when_dataset_stores_split_pages(self):
         entry = page("source.pdf_7.jpg", page_no=7)
@@ -267,6 +403,7 @@ class PdfResolutionTests(unittest.TestCase):
                 dataset_revision="dataset-rev",
                 evaluator_revision="evaluator-rev",
                 allow_dirty=True,
+                serialization="rust-split-whitespace-v1",
             )
             with mock.patch.object(GATE, "verified_revision", return_value={"git_sha": "verified", "worktree_clean": True}), mock.patch.object(
                 GATE, "git_provenance", return_value={"git_sha": "candidate", "worktree_clean": True}
@@ -279,10 +416,25 @@ class PdfResolutionTests(unittest.TestCase):
 
             scores = root / "scores.json"
             scores.write_text('{"source.pdf_1.jpg":0.25}', encoding="utf-8")
+            venv_python = root / "venv/bin/python"
+            venv_python.parent.mkdir(parents=True)
+            venv_python.symlink_to(sys.executable)
+            run_dir = root / "evaluation"
+            evaluator_args = argparse.Namespace(dataset=dataset, predictions=predictions, manifest=manifest, evaluator_root=repository, python=venv_python, output=run_dir)
+            def fake_evaluator(command, cwd, check):
+                self.assertEqual(command[0], str(venv_python.absolute()), "must preserve virtualenv executable path")
+                # Test double for the external metric engine; production runner owns
+                # the fresh directory, snapshots, invocation and completion record.
+                (cwd / "result/predictions_quick_match_text_block_per_page_edit.json").write_bytes(scores.read_bytes())
+            with mock.patch.object(GATE, "verified_revision"), mock.patch.object(GATE.subprocess, "run", side_effect=fake_evaluator):
+                GATE.evaluate_command(evaluator_args)
+            evaluation_run = run_dir / "evaluation-run.json"
+            scores = run_dir / "result/predictions_quick_match_text_block_per_page_edit.json"
             summary = root / "summary.json"
             summary_args = argparse.Namespace(
                 dataset=dataset,
                 scores=scores,
+                evaluation_run=evaluation_run,
                 predictions=predictions,
                 evaluator_root=repository,
                 manifest=manifest,
@@ -291,6 +443,16 @@ class PdfResolutionTests(unittest.TestCase):
             with mock.patch.object(GATE, "verified_revision", return_value={"git_sha": "verified", "worktree_clean": True}):
                 GATE.summarize_command(summary_args)
             self.assertEqual(GATE.load_json(summary)["metrics"]["official_global_text_similarity"], 0.75)
+            original_scores = scores.read_bytes()
+            scores.write_text('{"source.pdf_1.jpg":0.9}')
+            with mock.patch.object(GATE, "verified_revision"), self.assertRaisesRegex(ValueError, "evaluation run scores_sha256"):
+                GATE.summarize_command(summary_args)
+            scores.write_bytes(original_scores)
+            run = GATE.load_json(evaluation_run)
+            run["identity"]["serialization"] = GATE.serialization_contract("preserve-text-v1")
+            GATE._write_json(evaluation_run, run)
+            with mock.patch.object(GATE, "verified_revision"), self.assertRaisesRegex(ValueError, "evaluation run identity"):
+                GATE.summarize_command(summary_args)
             (predictions / "source.pdf_1.md").write_text("tampered", encoding="utf-8")
             with mock.patch.object(GATE, "verified_revision", return_value={"git_sha": "verified", "worktree_clean": True}), self.assertRaisesRegex(ValueError, "prediction tree hash"):
                 GATE.summarize_command(summary_args)
