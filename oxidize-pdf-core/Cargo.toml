@@ -59,7 +59,8 @@ ecdsa = { version = "0.16", optional = true }        # ECDSA signature verificat
 p256 = { version = "0.13", optional = true }         # NIST P-256 curve
 p384 = { version = "0.13", optional = true }         # NIST P-384 curve
 webpki-roots = { version = "1.0", optional = true }  # Mozilla CA bundle for certificate validation
-rustls-webpki = { version = "0.103", features = ["ring", "std"], optional = true }
+rustls-webpki = { version = "0.103", default-features = false, features = ["std"], optional = true }
+ed25519-dalek = { version = "2.2", default-features = false, features = ["std"], optional = true }
 rustls-pki-types = { version = "1.0", optional = true }
 time = { version = "0.3", optional = true }          # Date/time for certificate validity checks
 
@@ -464,6 +465,7 @@ signatures = [
     "dep:ecdsa",
     "dep:p256",
     "dep:p384",
+    "dep:ed25519-dalek",
     "dep:webpki-roots",
     "dep:rustls-webpki",
     "dep:rustls-pki-types",

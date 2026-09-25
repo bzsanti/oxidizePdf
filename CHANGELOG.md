@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Replace native certificate-verification cryptography with Rust primitives,
+  preserving certificate chains, supported algorithms and CRL checks; add
+  dependency gates for supported product and binding configurations (#627).
+
 - Deliver streaming text callbacks incrementally, retaining operand state and
   allowing cancellation before parsing the remaining page (#618).
 

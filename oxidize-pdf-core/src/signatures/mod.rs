@@ -28,6 +28,8 @@
 
 mod certificate;
 mod cms;
+#[cfg(feature = "signatures")]
+mod crypto_provider;
 mod detection;
 mod error;
 mod permissions;

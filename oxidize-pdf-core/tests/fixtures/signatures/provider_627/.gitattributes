@@ -1,0 +1,4 @@
+# Cryptographic vectors must be byte-identical on Windows and Unix.
+*.sig binary
+*.spki binary
+message.bin binary

@@ -1,5 +1,37 @@
 # Seguimiento diario
 
+## Issue #627 — certificados sin dependencias C
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[-]` en curso. Prioridad: P1. Responsable: Codex / bzsanti.
+- Base: develop `410358d8`; clon independiente, sin worktrees.
+- Criterio de cierre: eliminar C del producto y bindings conservando algoritmos,
+  cadenas, confianza, vigencia, uso de clave y revocación; TDD, gate de
+  dependencias por feature/target, interoperabilidad y QR tests/security.
+- Alcance ratificado: certificados obligatorios; Tesseract opcional no bloquea
+  esta sustitución. No retirar verificación ni modificar #620/baselines.
+- Última validación: proveedor Rust integrado; 6.821 pruebas de biblioteca,
+  27 pruebas de cadenas/firmas, 3 de interoperabilidad, 11 del gate y 3 de
+  binding instalado pasan. Clippy all-targets y formato pasan. Gate RED
+  reproduce ring/cc; GREEN 20 configuraciones (5 targets × 4 selecciones).
+  Compilación máxima del producto con CC/CXX=false pasa en Linux.
+  Consumidor sin dev-dependencies acepta cadena válida y rechaza revocada
+  con compression,signatures; gate y ejecución usan el lock copiado del core.
+- Wheel Linux y sdist autocontenido reconstruido pasan con el core candidato;
+  grafo real del binding sin ring/cc. Override de path solo en copia de
+  validación de oxidize-python `81a74e6b`; no altera su árbol local sucio.
+  Primer sdist con path absoluto descartado como prueba de aislamiento;
+  el definitivo usa path relativo y compila su propia copia del core.
+- QR: manual más Kripteia Rust 93/100 focalizado (22 tests), 91/100 del
+  módulo completo (127 tests); Security sin hallazgos automáticos. Python
+  no reconoce unittest (0 tests detectados), inspección y 11+3 tests reales.
+  Mutación que omite el gate detectada. Hallazgo preexistente del wrapper
+  Python registrado separadamente y bloqueado sin issue.
+- Siguiente acción: conservar informe/evidencia, preparar PR del core; después
+  integrar, publicar core y fijar esa versión en Python antes de cerrar #627.
+  La CI multiplataforma está añadida, todavía no ejecutada remotamente.
+  No se afirma cumplimiento de wheels ya publicados ni cierre de la issue.
+
 ## Issue #620 — contrato de serialización OmniDocBench
 
 - Issue: #620 — benchmark(quality): define a consistent OmniDocBench text serialization contract — https://github.com/bzsanti/oxidizePdf/issues/620
@@ -426,3 +458,41 @@
   Código medido: e28e4f54eb69057bafc4d8e67c8bd3680f2b26db; documentación de QR
   publicada en 380272fa8c08cbb448d0efbb5df09c4f7accd5ef. Los commits posteriores
   solo registran publicación y no alteran ese árbol Rust ni los resultados.
+
+## Hallazgo del binding Python durante #627 — valid=True para PDF alterado
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P1.
+- Responsable: bzsanti / mantenimiento de oxidize-python, crear/vincular issue.
+- Issue: pendiente. #627 sustituye el proveedor; este defecto del wrapper es
+  preexistente e independiente, no se corrige bajo esta entrada.
+- Evidencia: `oxidize-python/src/parser.rs:1913` usa `.is_ok()` como `valid`
+  en `verify_pdf_signatures`. El fixture `signed_rsa_altered.pdf` devuelve
+  valid=True tanto en el entorno Python previo como en el wheel candidato.
+- Criterio de cierre: el wrapper informa del resultado de integridad, firma y
+  certificados conforme a su contrato; tests positivos y negativos con PDFs
+  reales distinguen errores de ejecución de resultados inválidos.
+- Dependencia externa: issue de oxidize-python creada/vinculada por bzsanti.
+- Criterio de desbloqueo: issue específica confirmada OPEN.
+- Última validación: reproducción en ambos wheels, código del binding idéntico;
+  las pruebas Rust de #526/#627 detectan correctamente las alteraciones.
+- Siguiente acción: crear/vincular issue; después corregir wrapper y contrato.
+- Restricciones: no presentar el booleano de este wrapper como prueba de
+  validación completa ni modificar código del binding sin la issue aplicable.
+
+## Configuración sin compression — hallazgo durante #627
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P2.
+- Responsable: mantenimiento (`bzsanti`), crear/vincular issue.
+- Issue: pendiente; las issues abiertas consultadas no cubren este defecto.
+- Hallazgo: `--no-default-features --features signatures` como dependencia real
+  falla por referencias a flate2 sin cfg y try_standard_zlib_decode ausente.
+  `compression.rs:7` y los demás imports son idénticos a develop base;
+  los tests pueden ocultarlo al disponer de flate2 como dev-dependency.
+- Última validación: consumidor aislado sin dev-dependencies falla con 19
+  errores; log `/tmp/oxidize-627-product-probe-no-compression.log`.
+- Criterio de cierre: configurar correctamente la dependencia obligatoria o
+  implementar la opción sin compresión, con prueba desde consumidor externo.
+- Dependencia externa y desbloqueo: issue específica confirmada OPEN.
+- Siguiente acción: mantenimiento crea/vincula issue antes de corregir.
+- Restricciones: no corregir bajo #627 ni afirmar que un grafo sin C implica
+  compilación correcta. La matriz mínima de producto incluye compression.
