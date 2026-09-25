@@ -1,5 +1,42 @@
 # Seguimiento diario
 
+## Avisos de dependencias retiradas durante release 5.1.4
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P2.
+- Responsable: mantenimiento (`bzsanti`), responsable de crear/vincular issue.
+- Issue: pendiente; las issues abiertas consultadas no cubren estos avisos.
+- Última validación: `cargo package --locked --offline` avisa de chacha20 0.10.0
+  y spin 0.9.8 retirados del registro. Ambas entradas ya estaban en develop;
+  la release no cambia el grafo de dependencias. No se infiere vulnerabilidad.
+- Dependencia externa y desbloqueo: issue específica confirmada OPEN.
+- Criterio de cierre: investigar motivo de retirada y resolver/validar el
+  seguimiento de dependencias con evidencia reproducible.
+- Siguiente acción: mantenimiento crea/vincula issue antes de corregir.
+- Restricciones: no actualizar dependencias ni recalibrar métricas bajo esta
+  entrada sin issue; no confundir con la eliminación de C de #627.
+
+
+## Release 5.1.4 — 2026-09-25
+
+- Issue: #629 — release: publish oxidize-pdf 5.1.4 maintenance fixes — https://github.com/bzsanti/oxidizePdf/issues/629
+- Estado: `[-]` preparación y validación en curso. Prioridad: P1.
+- Responsable: Codex / bzsanti. Publicación autorizada por el usuario.
+- Alcance: develop `410358d`, fixes #609/#610/#613/#615–#619 y contrato #620.
+- Última validación: #629 OPEN, última GitHub Release y registro crates.io 5.1.3;
+  #620 integrado por #628. Copia independiente: `/tmp/oxidize-release-5.1.4`.
+- Criterio de cierre: gates locales y CI verdes, PR fusionado en main,
+  etiqueta sobre merge validado, workflow exitoso, GitHub Release y crates.io.
+- Validación local final: workspace 9.801 pasan (73 ignorados), Clippy all-targets,
+  formato, contrato Python 33/Rust 6 y compilación del paquete pasan. QR cerrado
+  antes del PR; Kripteia Rust 94/100 y Security inspeccionado. Corpus oficial:
+  evidencia integrada previa, no nueva ejecución. Informes de release en docs/reports.
+- Siguiente acción: publicar rama y PR a main, esperar CI verde y fusionar;
+  etiquetar el merge validado y verificar workflow, GitHub Release y crates.io.
+- Restricciones: preservar cambios locales y baselines; #627 permanece pendiente
+  y obligatoria. Esta versión conserva C en signatures/bindings por autorización
+  explícita de publicar antes de #627. No corregir hallazgos ajenos sin issue.
+
+
 ## Issue #620 — contrato de serialización OmniDocBench
 
 - Issue: #620 — benchmark(quality): define a consistent OmniDocBench text serialization contract — https://github.com/bzsanti/oxidizePdf/issues/620
