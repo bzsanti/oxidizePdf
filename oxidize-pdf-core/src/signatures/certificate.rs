@@ -425,7 +425,7 @@ fn validate_trust_chain(
         }
     };
     let path_result = end_entity.verify_for_usage(
-        super::crypto_provider::ALL_VERIFICATION_ALGS,
+        oxidize_webpki::ALL_VERIFICATION_ALGS,
         anchors,
         &intermediates,
         timestamp,
@@ -462,7 +462,7 @@ fn validate_trust_chain(
         .with_expiration_policy(webpki::ExpirationPolicy::Enforce)
         .build();
     match end_entity.verify_for_usage(
-        super::crypto_provider::ALL_VERIFICATION_ALGS,
+        oxidize_webpki::ALL_VERIFICATION_ALGS,
         anchors,
         &intermediates,
         timestamp,

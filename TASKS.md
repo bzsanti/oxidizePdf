@@ -1,5 +1,89 @@
 # Seguimiento diario
 
+## Integración y cierre de #627 — 2026-09-26
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[-]` en curso por petición del usuario. Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: PR #631 integrado con CI verde, core publicado desde GitHub,
+  Python fijado a versión del registro sin C y wheel/sdist verificados; criterios
+  originales de criptografía, gate y QR conservados. No cierre anticipado.
+- Última validación: issue OPEN, #631 draft en b8e8f173, develop 410358d8;
+  main/release v5.1.4, Python main usa =5.1.3 y contiene cambios documentales ajenos.
+- Siguiente acción: publicar actualización revisada del PR, validar CI nativa,
+  integrar y preparar release del core; después actualizar binding en checkout
+  separado preservando cambios locales. Publicaciones mediante GitHub Actions.
+
+## Repositorio y publicación de oxidize-webpki — 2026-09-26
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[x]` traslado, repositorio público MIT, publicación desde GitHub y
+  consumidor del registro completados. Prioridad: P1. Responsable: Codex / bzsanti.
+- Ubicación autorizada: `/home/santi/repos/BelowZero/oxidize-webpki`, repositorio
+  Git propio limpio. Sustituye el crate alojado inicialmente dentro del clon PDF.
+- GitHub: https://github.com/bzsanti/oxidize-webpki, PUBLIC, MIT, main en
+  64972dcb49e1acb1e7b1eae33703f25e73cb3082. Workflows CI/publicación activos.
+- Publicación: https://crates.io/crates/oxidize-webpki/0.1.0, confirmada no retirada
+  por índice oficial; checksum 462e96cb3710b049a843bb9f1da726053b6709d67c267fc5bf94fa54cdb887aa.
+  Publicada EXCLUSIVAMENTE desde GitHub Actions, nunca desde local.
+- Run: https://github.com/bzsanti/oxidize-webpki/actions/runs/36258653754,
+  completed/success. Cinco gates (Linux/Windows/macOS, MSRV 1.88, lint) y job
+  publish pasan. CI de push 36258641966 también success sobre mismo commit.
+- Criterio de cierre satisfecho: paquete publicado verificable, licencia y ruta
+  correctas, consumidor compilado con fuente registry y checksum actualizado.
+- Última validación: descarga real de crates.io; código/documentos/licencia y
+  vectores contrastados byte por byte (27 archivos); cargo check y 27 tests de
+  firmas/certificados pasan. Consumidor externo con CC/CXX=false y sin dev-deps
+  acepta cadena válida y rechaza revocada; gate normal/build sin errores.
+- Consumidor en clon de #627: dependencia `oxidize-webpki = { version = "0.1.0",
+  optional = true }`, sin path/git. Cargo.lock fija fuente registry y checksum.
+- Autenticación: scope workflow habilitado por usuario; secreto cifrado
+  CARGO_REGISTRY_TOKEN configurado en GitHub para paso de publicación, sin
+  exponerlo en informes ni habilitarlo en validación de pull requests.
+- Evidencia: docs/reports/2026-09-26-oxidize-webpki-publication.json y
+  2026-09-26-oxidize-webpki-registry-consumer.patch; informe sin secretos.
+- Siguiente acción de #627: actualizar PR #631 con consumidor del registro y
+  verificar CI completa del core antes de integrar/publicar core y fijar Python.
+  Esta publicación no afirma que ese PR esté actualizado ni que #627 esté cerrada.
+- Restricciones: cambios originales preservados; sin sustitutos git/path para
+  el proveedor. No se modificó el sibling Python sucio.
+
+## Extracción de oxidize-webpki — 2026-09-26
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[x]` extracción local completada, validada y aprobada en revisión
+  independiente. Prioridad: P1. Responsable: Codex / bzsanti.
+- Alcance: `oxidize-webpki` 0.1.0, crate independiente de PDF/TLS/WebPKI con
+  metadatos propios, API pública ALL_VERIFICATION_ALGS, MIT y 24 fixtures;
+  consumidor oxidize-pdf actualizado y CI extendida. Sin cambios de primitivas.
+- Criterio de cierre: paquete autónomo verificable, contrato/vectores preservados,
+  MSRV 1.88, consumidor/bindings validados y revisión independiente completada.
+  Integración/publicación del core y pin Python son seguimiento separado de #627.
+- Última validación: cinco tests y un doctest del proveedor, MSRV, package y tests
+  del paquete extraído; 27 tests de consumidor; 11 del gate; diez grafos en cinco
+  targets y builds Linux del proveedor/producto con CC/CXX=false pasan.
+  Consumidor externo acepta cadena válida y rechaza revocada; formato/Clippy
+  pasan. Wheels Python directo y desde sdist compilan sin C/C++ y pasan 4 smoke
+  tests cada uno; snapshot con path, no versiones publicadas.
+- Windows: reproducidos exactamente los dos fallos anteriores mediante CRLF
+  en cms_content.bin; corregidos atributos Git binary. Checkout autocrlf conserva
+  bytes y las 18 pruebas #526 pasan. CI nativa remota posterior aún no ejecutada.
+- Revisión del autor y Kripteia tests/security completadas (98/100, sin hallazgos
+  automáticos de seguridad); cfg desplazado detectado/corregido, default check
+  pasa. Revisión independiente autorizada y completada por agente separado:
+  40 entradas revisadas, cero hallazgos nuevos, tests/MSRV/package/consumidor
+  repetidos con éxito; informe independiente conservado.
+- Nombre: API crates.io responde 403; índice oficial responde 404. Sin reserva
+  ni publicación. Aviso spin retirado permanece bajo el bloqueo previo.
+- Evidencias: docs/reports/2026-09-26-oxidize-webpki-{validation.json,
+  quality-review.md,implementation.patch}. Implementación en clon aislado
+  `/tmp/oxidize-issue-627`, base b8e8f173; PR #631 remoto sin actualizar.
+- Siguiente acción exacta de #627: actualizar PR #631 y verificar CI nativa
+  multiplataforma antes de integrar; preparar publicación del proveedor antes
+  del core, y después actualizar pin/binding. Esta extracción no publica
+  paquetes ni cierra el resto de #627.
+- Restricciones: cambios originales preservados; sin commits/push/publicación,
+  sin alterar sibling Python sucio ni corregir el booleano ajeno a esta tarea.
+
 ## Issue #627 — certificados sin dependencias C
 
 - Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627

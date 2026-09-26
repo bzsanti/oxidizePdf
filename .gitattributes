@@ -19,3 +19,10 @@
 *.gif   binary
 *.ico   binary
 *.jbig2 binary
+
+# Signed messages and cryptographic encodings must retain exact bytes on Windows.
+*.bin  binary
+*.der  binary
+*.spki binary
+*.sig  binary
+*.crl  binary

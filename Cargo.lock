@@ -1623,7 +1623,6 @@ dependencies = [
  "criterion",
  "der",
  "ecdsa",
- "ed25519-dalek",
  "flate2",
  "image",
  "indicatif",
@@ -1632,6 +1631,7 @@ dependencies = [
  "md5",
  "memchr",
  "num_cpus",
+ "oxidize-webpki",
  "p256",
  "p384",
  "proptest",
@@ -1664,6 +1664,22 @@ dependencies = [
  "winapi",
  "x509-cert",
  "zeroize",
+]
+
+[[package]]
+name = "oxidize-webpki"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "462e96cb3710b049a843bb9f1da726053b6709d67c267fc5bf94fa54cdb887aa"
+dependencies = [
+ "der",
+ "ecdsa",
+ "ed25519-dalek",
+ "p256",
+ "p384",
+ "rsa",
+ "rustls-pki-types",
+ "sha2",
 ]
 
 [[package]]

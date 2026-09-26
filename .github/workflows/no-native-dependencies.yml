@@ -30,8 +30,6 @@ jobs:
         run: python scripts/check_no_native_dependencies.py --product-features --target ${{ matrix.target }} --build
       - name: Validate certificates from a consumer without dev-dependencies
         run: python scripts/check_certificate_product.py --target ${{ matrix.target }}
-      - name: Verify certificates and cryptographic primitives
-        run: cargo test --locked -p oxidize-pdf --features signatures --lib crypto_provider
       - name: Verify certificate chains and CRLs
         run: cargo test --locked -p oxidize-pdf --features signatures --test issue_526_signature_validation_test --test issue_627_certificate_provider_test --test signature_integration_test
 

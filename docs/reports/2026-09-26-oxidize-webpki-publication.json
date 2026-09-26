@@ -1,0 +1,570 @@
+{
+  "status": "complete",
+  "location": "/home/santi/repos/BelowZero/oxidize-webpki",
+  "repository": {
+    "defaultBranchRef": {
+      "name": "main"
+    },
+    "licenseInfo": {
+      "key": "mit",
+      "name": "MIT License",
+      "nickname": ""
+    },
+    "nameWithOwner": "bzsanti/oxidize-webpki",
+    "url": "https://github.com/bzsanti/oxidize-webpki",
+    "visibility": "PUBLIC"
+  },
+  "publication_run": {
+    "conclusion": "success",
+    "headSha": "64972dcb49e1acb1e7b1eae33703f25e73cb3082",
+    "jobs": [
+      {
+        "completedAt": "2026-09-26T17:20:38Z",
+        "conclusion": "success",
+        "databaseId": 108450142521,
+        "name": "validate / lint",
+        "startedAt": "2026-09-26T17:20:12Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-26T17:20:13Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-26T17:20:13Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:14Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v5",
+            "number": 2,
+            "startedAt": "2026-09-26T17:20:13Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:15Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "startedAt": "2026-09-26T17:20:14Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:17Z",
+            "conclusion": "success",
+            "name": "Run cargo fmt --check",
+            "number": 4,
+            "startedAt": "2026-09-26T17:20:15Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:37Z",
+            "conclusion": "success",
+            "name": "Run cargo clippy --locked --all-targets -- -D warnings",
+            "number": 5,
+            "startedAt": "2026-09-26T17:20:17Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:37Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v5",
+            "number": 10,
+            "startedAt": "2026-09-26T17:20:37Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:37Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-09-26T17:20:37Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/bzsanti/oxidize-webpki/actions/runs/36258653754/job/108450142521"
+      },
+      {
+        "completedAt": "2026-09-26T17:21:05Z",
+        "conclusion": "success",
+        "databaseId": 108450142606,
+        "name": "validate / test (windows-latest, stable)",
+        "startedAt": "2026-09-26T17:20:12Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-26T17:20:14Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-26T17:20:13Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:20Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v5",
+            "number": 2,
+            "startedAt": "2026-09-26T17:20:14Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:27Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@master",
+            "number": 3,
+            "startedAt": "2026-09-26T17:20:20Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:00Z",
+            "conclusion": "success",
+            "name": "Run cargo test --locked",
+            "number": 4,
+            "startedAt": "2026-09-26T17:20:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:01Z",
+            "conclusion": "success",
+            "name": "Run cargo package --locked",
+            "number": 5,
+            "startedAt": "2026-09-26T17:21:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:03Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v5",
+            "number": 10,
+            "startedAt": "2026-09-26T17:21:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:03Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-09-26T17:21:03Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/bzsanti/oxidize-webpki/actions/runs/36258653754/job/108450142606"
+      },
+      {
+        "completedAt": "2026-09-26T17:20:34Z",
+        "conclusion": "success",
+        "databaseId": 108450142714,
+        "name": "validate / test (ubuntu-latest, stable)",
+        "startedAt": "2026-09-26T17:20:12Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-26T17:20:14Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-26T17:20:13Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:15Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v5",
+            "number": 2,
+            "startedAt": "2026-09-26T17:20:14Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:16Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@master",
+            "number": 3,
+            "startedAt": "2026-09-26T17:20:15Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:30Z",
+            "conclusion": "success",
+            "name": "Run cargo test --locked",
+            "number": 4,
+            "startedAt": "2026-09-26T17:20:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:31Z",
+            "conclusion": "success",
+            "name": "Run cargo package --locked",
+            "number": 5,
+            "startedAt": "2026-09-26T17:20:30Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:31Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v5",
+            "number": 10,
+            "startedAt": "2026-09-26T17:20:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:31Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-09-26T17:20:31Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/bzsanti/oxidize-webpki/actions/runs/36258653754/job/108450142714"
+      },
+      {
+        "completedAt": "2026-09-26T17:20:50Z",
+        "conclusion": "success",
+        "databaseId": 108450142841,
+        "name": "validate / test (macos-latest, stable)",
+        "startedAt": "2026-09-26T17:20:20Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-26T17:20:21Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-26T17:20:20Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:23Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v5",
+            "number": 2,
+            "startedAt": "2026-09-26T17:20:21Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:24Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@master",
+            "number": 3,
+            "startedAt": "2026-09-26T17:20:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:44Z",
+            "conclusion": "success",
+            "name": "Run cargo test --locked",
+            "number": 4,
+            "startedAt": "2026-09-26T17:20:24Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:45Z",
+            "conclusion": "success",
+            "name": "Run cargo package --locked",
+            "number": 5,
+            "startedAt": "2026-09-26T17:20:44Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:46Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v5",
+            "number": 10,
+            "startedAt": "2026-09-26T17:20:45Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:47Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-09-26T17:20:46Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/bzsanti/oxidize-webpki/actions/runs/36258653754/job/108450142841"
+      },
+      {
+        "completedAt": "2026-09-26T17:20:44Z",
+        "conclusion": "success",
+        "databaseId": 108450143103,
+        "name": "validate / test (ubuntu-latest, 1.88)",
+        "startedAt": "2026-09-26T17:20:12Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-26T17:20:14Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-26T17:20:13Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:15Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v5",
+            "number": 2,
+            "startedAt": "2026-09-26T17:20:14Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:24Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@master",
+            "number": 3,
+            "startedAt": "2026-09-26T17:20:15Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:34Z",
+            "conclusion": "success",
+            "name": "Run cargo test --locked",
+            "number": 4,
+            "startedAt": "2026-09-26T17:20:24Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:41Z",
+            "conclusion": "success",
+            "name": "Run cargo package --locked",
+            "number": 5,
+            "startedAt": "2026-09-26T17:20:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:41Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v5",
+            "number": 10,
+            "startedAt": "2026-09-26T17:20:41Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:20:41Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-09-26T17:20:41Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/bzsanti/oxidize-webpki/actions/runs/36258653754/job/108450143103"
+      },
+      {
+        "completedAt": "2026-09-26T17:21:23Z",
+        "conclusion": "success",
+        "databaseId": 108450296184,
+        "name": "publish",
+        "startedAt": "2026-09-26T17:21:07Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-26T17:21:09Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-26T17:21:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:10Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v5",
+            "number": 2,
+            "startedAt": "2026-09-26T17:21:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:11Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "startedAt": "2026-09-26T17:21:10Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:11Z",
+            "conclusion": "success",
+            "name": "Check requested version",
+            "number": 4,
+            "startedAt": "2026-09-26T17:21:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:20Z",
+            "conclusion": "success",
+            "name": "Publish verified crate",
+            "number": 5,
+            "startedAt": "2026-09-26T17:21:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:21Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v5",
+            "number": 10,
+            "startedAt": "2026-09-26T17:21:20Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-26T17:21:21Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-09-26T17:21:21Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/bzsanti/oxidize-webpki/actions/runs/36258653754/job/108450296184"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/bzsanti/oxidize-webpki/actions/runs/36258653754"
+  },
+  "ci_run": {
+    "conclusion": "success",
+    "headSha": "64972dcb49e1acb1e7b1eae33703f25e73cb3082",
+    "status": "completed",
+    "url": "https://github.com/bzsanti/oxidize-webpki/actions/runs/36258641966"
+  },
+  "registry_index": [
+    {
+      "name": "oxidize-webpki",
+      "vers": "0.1.0",
+      "deps": [
+        {
+          "name": "der",
+          "req": "^0.7",
+          "features": [],
+          "optional": false,
+          "default_features": true,
+          "target": null,
+          "kind": "normal"
+        },
+        {
+          "name": "ecdsa",
+          "req": "^0.16",
+          "features": [],
+          "optional": false,
+          "default_features": true,
+          "target": null,
+          "kind": "normal"
+        },
+        {
+          "name": "ed25519-dalek",
+          "req": "^2.2",
+          "features": [
+            "std"
+          ],
+          "optional": false,
+          "default_features": false,
+          "target": null,
+          "kind": "normal"
+        },
+        {
+          "name": "p256",
+          "req": "^0.13",
+          "features": [],
+          "optional": false,
+          "default_features": true,
+          "target": null,
+          "kind": "normal"
+        },
+        {
+          "name": "p384",
+          "req": "^0.13",
+          "features": [],
+          "optional": false,
+          "default_features": true,
+          "target": null,
+          "kind": "normal"
+        },
+        {
+          "name": "rsa",
+          "req": "^0.9",
+          "features": [],
+          "optional": false,
+          "default_features": true,
+          "target": null,
+          "kind": "normal"
+        },
+        {
+          "name": "rustls-pki-types",
+          "req": "^1.14",
+          "features": [],
+          "optional": false,
+          "default_features": true,
+          "target": null,
+          "kind": "normal"
+        },
+        {
+          "name": "sha2",
+          "req": "^0.10",
+          "features": [
+            "oid"
+          ],
+          "optional": false,
+          "default_features": true,
+          "target": null,
+          "kind": "normal"
+        },
+        {
+          "name": "spki",
+          "req": "^0.7",
+          "features": [],
+          "optional": false,
+          "default_features": true,
+          "target": null,
+          "kind": "dev"
+        }
+      ],
+      "cksum": "462e96cb3710b049a843bb9f1da726053b6709d67c267fc5bf94fa54cdb887aa",
+      "features": {},
+      "yanked": false,
+      "rust_version": "1.88",
+      "pubtime": "2026-09-26T17:21:19Z"
+    }
+  ],
+  "registry_source_verification": {
+    "manifest_path": "/home/santi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/oxidize-webpki-0.1.0/Cargo.toml",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "matched_files": [
+      "src/lib.rs",
+      "src/tests.rs",
+      "README.md",
+      "LICENSE",
+      "tests/fixtures/rsa_pkcs1_sha512.sig",
+      "tests/fixtures/p256_ecdsa_sha256.sig",
+      "tests/fixtures/rsa_pss_sha512.sig",
+      "tests/fixtures/ed25519_wrong.spki",
+      "tests/fixtures/rsa_pkcs1_sha384.sig",
+      "tests/fixtures/p384_wrong.spki",
+      "tests/fixtures/rsa.spki",
+      "tests/fixtures/rsa_pkcs1_sha256.sig",
+      "tests/fixtures/rsa_wrong.spki",
+      "tests/fixtures/rsa_pss_sha384.sig",
+      "tests/fixtures/p256_wrong.spki",
+      "tests/fixtures/ed25519.spki",
+      "tests/fixtures/message.bin",
+      "tests/fixtures/p384_ecdsa_sha384.sig",
+      "tests/fixtures/p384_ecdsa_sha256.sig",
+      "tests/fixtures/p384.spki",
+      "tests/fixtures/rsa_pss_salt_32.sig",
+      "tests/fixtures/rsa_pss_sha256.sig",
+      "tests/fixtures/README.md",
+      "tests/fixtures/p256_ecdsa_sha384.sig",
+      "tests/fixtures/ed25519.sig",
+      "tests/fixtures/p256.spki",
+      "tests/fixtures/rsa_pss_salt_0.sig"
+    ]
+  },
+  "consumer_manifest": "oxidize-webpki = { version = \"0.1.0\", optional = true }",
+  "consumer_checkout": "/tmp/oxidize-issue-627",
+  "tests": "    Blocking waiting for file lock on build directory\n   Compiling oxidize-webpki v0.1.0\n   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-issue-627/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 40.49s\n     Running tests/issue_526_signature_validation_test.rs (target/debug/deps/issue_526_signature_validation_test-ae77865706822806)\n\nrunning 18 tests\ntest incomplete_chain_fails_closed ... ok\ntest byte_range_exclusion_must_be_the_actual_cms_contents ... ok\ntest malformed_byte_ranges_fail_before_cryptographic_validation ... ok\ntest malformed_crl_is_rejected_at_the_trust_boundary ... ok\ntest altered_signed_content_invalidates_only_document_integrity ... ok\ntest altered_signed_attributes_break_the_cryptographic_signature ... ok\ntest altered_message_digest_fails_closed ... ok\ntest certificate_without_digital_signature_usage_is_rejected ... ok\ntest untrusted_self_signed_signer_is_not_trusted ... ok\ntest complete_chain_builds_to_explicit_trust_anchor ... ok\ntest chain_order_is_irrelevant_but_missing_intermediate_is_not ... ok\ntest openssl_rsa_and_ecdsa_signed_attributes_verify ... ok\ntest validity_is_checked_at_the_requested_time ... ok\ntest post_signature_bytes_are_reported_separately_from_integrity ... ok\ntest valid_crl_makes_the_chain_fully_valid ... ok\ntest revoked_signer_fails_closed_with_an_explicit_status ... ok\ntest mutation_inside_the_signed_ranges_breaks_integrity ... ok\ntest real_pdf_signature_passes_the_complete_validation_pipeline ... ok\n\ntest result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s\n\n     Running tests/issue_627_certificate_provider_test.rs (target/debug/deps/issue_627_certificate_provider_test-fb556923ac3a69dc)\n\nrunning 4 tests\ntest malformed_certificate_inputs_return_errors ... ok\ntest revoked_certificate_still_fails_with_valid_chain ... ok\ntest certificate_signature_mutation_fails_with_unchanged_identity_and_validity ... ok\ntest crl_signature_mutation_cannot_report_checked_valid ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s\n\n     Running tests/signature_integration_test.rs (target/debug/deps/signature_integration_test-5066cf5baeda6668)\n\nrunning 5 tests\ntest unsigned_pdf_has_no_signature_fields ... ok\ntest default_public_roots_do_not_trust_the_fixture_ca ... ok\ntest verifies_integrity_signature_chain_usage_and_revocation ... ok\ntest detects_the_signature_dictionary_and_signer ... ok\ntest distinguishes_signed_content_mutation_from_later_bytes ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s\n\n",
+  "product_probe": "{\n  \"target\": \"x86_64-unknown-linux-gnu\",\n  \"features\": [\n    \"--features\",\n    \"\"\n  ],\n  \"packages\": [\n    \"adler2@2.0.1\",\n    \"aes@0.8.4\",\n    \"aho-corasick@1.1.4\",\n    \"autocfg@1.5.1\",\n    \"base16ct@0.2.0\",\n    \"base64ct@1.8.3\",\n    \"bitflags@2.13.0\",\n    \"block-buffer@0.10.4\",\n    \"block-padding@0.3.3\",\n    \"cbc@0.1.2\",\n    \"certificate-product-probe@0.0.0\",\n    \"cfg-if@1.0.4\",\n    \"chacha20@0.10.0\",\n    \"chrono@0.4.45\",\n    \"cipher@0.4.4\",\n    \"cms@0.2.3\",\n    \"const-oid@0.9.6\",\n    \"cpufeatures@0.2.17\",\n    \"cpufeatures@0.3.0\",\n    \"crc32fast@1.5.0\",\n    \"crypto-bigint@0.5.5\",\n    \"crypto-common@0.1.7\",\n    \"curve25519-dalek-derive@0.1.1\",\n    \"curve25519-dalek@4.1.3\",\n    \"der@0.7.10\",\n    \"der_derive@0.7.3\",\n    \"deranged@0.5.8\",\n    \"digest@0.10.7\",\n    \"ecdsa@0.16.9\",\n    \"ed25519-dalek@2.2.0\",\n    \"ed25519@2.2.3\",\n    \"elliptic-curve@0.13.8\",\n    \"fastrand@2.4.1\",\n    \"ff@0.13.1\",\n    \"flagset@0.4.7\",\n    \"flate2@1.1.9\",\n    \"generic-array@0.14.7\",\n    \"getrandom@0.2.17\",\n    \"getrandom@0.4.2\",\n    \"group@0.13.0\",\n    \"hkdf@0.12.4\",\n    \"hmac@0.12.1\",\n    \"iana-time-zone@0.1.65\",\n    \"inout@0.1.4\",\n    \"lazy_static@1.5.0\",\n    \"libc@0.2.186\",\n    \"libm@0.2.16\",\n    \"linux-raw-sys@0.12.1\",\n    \"md5@0.8.0\",\n    \"memchr@2.8.1\",\n    \"miniz_oxide@0.8.9\",\n    \"num-bigint-dig@0.8.6\",\n    \"num-conv@0.2.2\",\n    \"num-integer@0.1.46\",\n    \"num-iter@0.1.45\",\n    \"num-traits@0.2.19\",\n    \"num_cpus@1.17.0\",\n    \"once_cell@1.21.4\",\n    \"oxidize-pdf@5.1.3\",\n    \"oxidize-webpki@0.1.0\",\n    \"p256@0.13.2\",\n    \"p384@0.13.1\",\n    \"pem-rfc7468@0.7.0\",\n    \"pin-project-lite@0.2.17\",\n    \"pkcs1@0.7.5\",\n    \"pkcs8@0.10.2\",\n    \"powerfmt@0.2.0\",\n    \"ppv-lite86@0.2.21\",\n    \"primeorder@0.13.6\",\n    \"proc-macro2@1.0.106\",\n    \"quick-xml@0.41.0\",\n    \"quote@1.0.45\",\n    \"rand@0.10.1\",\n    \"rand@0.8.6\",\n    \"rand_chacha@0.3.1\",\n    \"rand_core@0.10.1\",\n    \"rand_core@0.6.4\",\n    \"regex-automata@0.4.14\",\n    \"regex-syntax@0.8.10\",\n    \"regex@1.12.3\",\n    \"rfc6979@0.4.0\",\n    \"rsa@0.9.10\",\n    \"rustc_version@0.4.1\",\n    \"rustix@1.1.4\",\n    \"rustls-pki-types@1.14.1\",\n    \"rustls-webpki@0.103.13\",\n    \"sec1@0.7.3\",\n    \"semver@1.0.28\",\n    \"serde@1.0.228\",\n    \"serde_core@1.0.228\",\n    \"serde_derive@1.0.228\",\n    \"serde_spanned@1.1.1\",\n    \"sha2@0.10.9\",\n    \"signature@2.2.0\",\n    \"simd-adler32@0.3.9\",\n    \"smallvec@1.15.1\",\n    \"spin@0.9.8\",\n    \"spki@0.7.3\",\n    \"subtle@2.6.1\",\n    \"syn@2.0.117\",\n    \"tempfile@3.27.0\",\n    \"thiserror-impl@2.0.18\",\n    \"thiserror@2.0.18\",\n    \"time-core@0.1.8\",\n    \"time@0.3.47\",\n    \"tinyvec@1.11.0\",\n    \"tinyvec_macros@0.1.1\",\n    \"toml@0.9.12+spec-1.1.0\",\n    \"toml_datetime@0.7.5+spec-1.1.0\",\n    \"toml_parser@1.1.2+spec-1.1.0\",\n    \"toml_writer@1.1.1+spec-1.1.0\",\n    \"tracing-attributes@0.1.31\",\n    \"tracing-core@0.1.36\",\n    \"tracing@0.1.44\",\n    \"typenum@1.20.1\",\n    \"unicode-ident@1.0.24\",\n    \"unicode-normalization@0.1.25\",\n    \"untrusted@0.9.0\",\n    \"version_check@0.9.5\",\n    \"webpki-roots@1.0.7\",\n    \"winnow@0.7.15\",\n    \"winnow@1.0.3\",\n    \"x509-cert@0.2.5\",\n    \"zerocopy@0.8.50\",\n    \"zeroize@1.8.2\",\n    \"zeroize_derive@1.4.3\"\n  ],\n  \"errors\": []\n}\n    Blocking waiting for file lock on build directory\n   Compiling oxidize-webpki v0.1.0\n   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-issue-627/oxidize-pdf-core)\n   Compiling certificate-product-probe v0.0.0 (/tmp/oxidize-certificate-consumer-4wpyi_tn)\n    Finished `dev` profile [unoptimized] target(s) in 1m 14s\n     Running `target/x86_64-unknown-linux-gnu/debug/certificate-product-probe /tmp/oxidize-issue-627/oxidize-pdf-core/tests/fixtures/signatures`\nProduct-only graph: trusted valid chain accepted; revoked chain rejected\n",
+  "publication_origin": "GitHub Actions only",
+  "remaining": "PR #631/core integration and core/Python release remain separate work"
+}

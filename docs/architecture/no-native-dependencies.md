@@ -5,7 +5,8 @@ Issue: [#627](https://github.com/bzsanti/oxidizePdf/issues/627).
 Certificate verification is required product functionality. Its Cargo feature
 must not be disabled to satisfy the no-C requirement. `rustls-webpki` retains
 certificate path construction, trust anchors, validity, constraints, PDF EKU,
-and CRL verification. A private `SignatureVerificationAlgorithm` adapter calls
+and CRL verification. `oxidize-webpki`, the independent
+`SignatureVerificationAlgorithm` adapter crate published on crates.io, delegates to
 RustCrypto `rsa`, `p256`, `p384`, `sha2`, and `ed25519-dalek`; it does not implement
 cryptographic arithmetic or replace certificate validation.
 
