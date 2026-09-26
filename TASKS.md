@@ -1,5 +1,121 @@
 # Seguimiento diario
 
+## Integración y cierre de #627 — 2026-09-26
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[-]` en curso por petición del usuario. Prioridad: P1. Responsable: Codex.
+- Criterio de cierre: PR #631 integrado con CI verde, core publicado desde GitHub,
+  Python fijado a versión del registro sin C y wheel/sdist verificados; criterios
+  originales de criptografía, gate y QR conservados. No cierre anticipado.
+- Última validación: issue OPEN, #631 draft en b8e8f173, develop 410358d8;
+  main/release v5.1.4, Python main usa =5.1.3 y contiene cambios documentales ajenos.
+- Siguiente acción: publicar actualización revisada del PR, validar CI nativa,
+  integrar y preparar release del core; después actualizar binding en checkout
+  separado preservando cambios locales. Publicaciones mediante GitHub Actions.
+
+## Repositorio y publicación de oxidize-webpki — 2026-09-26
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[x]` traslado, repositorio público MIT, publicación desde GitHub y
+  consumidor del registro completados. Prioridad: P1. Responsable: Codex / bzsanti.
+- Ubicación autorizada: `/home/santi/repos/BelowZero/oxidize-webpki`, repositorio
+  Git propio limpio. Sustituye el crate alojado inicialmente dentro del clon PDF.
+- GitHub: https://github.com/bzsanti/oxidize-webpki, PUBLIC, MIT, main en
+  64972dcb49e1acb1e7b1eae33703f25e73cb3082. Workflows CI/publicación activos.
+- Publicación: https://crates.io/crates/oxidize-webpki/0.1.0, confirmada no retirada
+  por índice oficial; checksum 462e96cb3710b049a843bb9f1da726053b6709d67c267fc5bf94fa54cdb887aa.
+  Publicada EXCLUSIVAMENTE desde GitHub Actions, nunca desde local.
+- Run: https://github.com/bzsanti/oxidize-webpki/actions/runs/36258653754,
+  completed/success. Cinco gates (Linux/Windows/macOS, MSRV 1.88, lint) y job
+  publish pasan. CI de push 36258641966 también success sobre mismo commit.
+- Criterio de cierre satisfecho: paquete publicado verificable, licencia y ruta
+  correctas, consumidor compilado con fuente registry y checksum actualizado.
+- Última validación: descarga real de crates.io; código/documentos/licencia y
+  vectores contrastados byte por byte (27 archivos); cargo check y 27 tests de
+  firmas/certificados pasan. Consumidor externo con CC/CXX=false y sin dev-deps
+  acepta cadena válida y rechaza revocada; gate normal/build sin errores.
+- Consumidor en clon de #627: dependencia `oxidize-webpki = { version = "0.1.0",
+  optional = true }`, sin path/git. Cargo.lock fija fuente registry y checksum.
+- Autenticación: scope workflow habilitado por usuario; secreto cifrado
+  CARGO_REGISTRY_TOKEN configurado en GitHub para paso de publicación, sin
+  exponerlo en informes ni habilitarlo en validación de pull requests.
+- Evidencia: docs/reports/2026-09-26-oxidize-webpki-publication.json y
+  2026-09-26-oxidize-webpki-registry-consumer.patch; informe sin secretos.
+- Siguiente acción de #627: actualizar PR #631 con consumidor del registro y
+  verificar CI completa del core antes de integrar/publicar core y fijar Python.
+  Esta publicación no afirma que ese PR esté actualizado ni que #627 esté cerrada.
+- Restricciones: cambios originales preservados; sin sustitutos git/path para
+  el proveedor. No se modificó el sibling Python sucio.
+
+## Extracción de oxidize-webpki — 2026-09-26
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[x]` extracción local completada, validada y aprobada en revisión
+  independiente. Prioridad: P1. Responsable: Codex / bzsanti.
+- Alcance: `oxidize-webpki` 0.1.0, crate independiente de PDF/TLS/WebPKI con
+  metadatos propios, API pública ALL_VERIFICATION_ALGS, MIT y 24 fixtures;
+  consumidor oxidize-pdf actualizado y CI extendida. Sin cambios de primitivas.
+- Criterio de cierre: paquete autónomo verificable, contrato/vectores preservados,
+  MSRV 1.88, consumidor/bindings validados y revisión independiente completada.
+  Integración/publicación del core y pin Python son seguimiento separado de #627.
+- Última validación: cinco tests y un doctest del proveedor, MSRV, package y tests
+  del paquete extraído; 27 tests de consumidor; 11 del gate; diez grafos en cinco
+  targets y builds Linux del proveedor/producto con CC/CXX=false pasan.
+  Consumidor externo acepta cadena válida y rechaza revocada; formato/Clippy
+  pasan. Wheels Python directo y desde sdist compilan sin C/C++ y pasan 4 smoke
+  tests cada uno; snapshot con path, no versiones publicadas.
+- Windows: reproducidos exactamente los dos fallos anteriores mediante CRLF
+  en cms_content.bin; corregidos atributos Git binary. Checkout autocrlf conserva
+  bytes y las 18 pruebas #526 pasan. CI nativa remota posterior aún no ejecutada.
+- Revisión del autor y Kripteia tests/security completadas (98/100, sin hallazgos
+  automáticos de seguridad); cfg desplazado detectado/corregido, default check
+  pasa. Revisión independiente autorizada y completada por agente separado:
+  40 entradas revisadas, cero hallazgos nuevos, tests/MSRV/package/consumidor
+  repetidos con éxito; informe independiente conservado.
+- Nombre: API crates.io responde 403; índice oficial responde 404. Sin reserva
+  ni publicación. Aviso spin retirado permanece bajo el bloqueo previo.
+- Evidencias: docs/reports/2026-09-26-oxidize-webpki-{validation.json,
+  quality-review.md,implementation.patch}. Implementación en clon aislado
+  `/tmp/oxidize-issue-627`, base b8e8f173; PR #631 remoto sin actualizar.
+- Siguiente acción exacta de #627: actualizar PR #631 y verificar CI nativa
+  multiplataforma antes de integrar; preparar publicación del proveedor antes
+  del core, y después actualizar pin/binding. Esta extracción no publica
+  paquetes ni cierra el resto de #627.
+- Restricciones: cambios originales preservados; sin commits/push/publicación,
+  sin alterar sibling Python sucio ni corregir el booleano ajeno a esta tarea.
+
+## Issue #627 — certificados sin dependencias C
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[-]` en curso. Prioridad: P1. Responsable: Codex / bzsanti.
+- Base: develop `410358d8`; clon independiente, sin worktrees.
+- Criterio de cierre: eliminar C del producto y bindings conservando algoritmos,
+  cadenas, confianza, vigencia, uso de clave y revocación; TDD, gate de
+  dependencias por feature/target, interoperabilidad y QR tests/security.
+- Alcance ratificado: certificados obligatorios; Tesseract opcional no bloquea
+  esta sustitución. No retirar verificación ni modificar #620/baselines.
+- Última validación: proveedor Rust integrado; 6.821 pruebas de biblioteca,
+  27 pruebas de cadenas/firmas, 3 de interoperabilidad, 11 del gate y 3 de
+  binding instalado pasan. Clippy all-targets y formato pasan. Gate RED
+  reproduce ring/cc; GREEN 20 configuraciones (5 targets × 4 selecciones).
+  Compilación máxima del producto con CC/CXX=false pasa en Linux.
+  Consumidor sin dev-dependencies acepta cadena válida y rechaza revocada
+  con compression,signatures; gate y ejecución usan el lock copiado del core.
+- Wheel Linux y sdist autocontenido reconstruido pasan con el core candidato;
+  grafo real del binding sin ring/cc. Override de path solo en copia de
+  validación de oxidize-python `81a74e6b`; no altera su árbol local sucio.
+  Primer sdist con path absoluto descartado como prueba de aislamiento;
+  el definitivo usa path relativo y compila su propia copia del core.
+- QR: manual más Kripteia Rust 93/100 focalizado (22 tests), 91/100 del
+  módulo completo (127 tests); Security sin hallazgos automáticos. Python
+  no reconoce unittest (0 tests detectados), inspección y 11+3 tests reales.
+  Mutación que omite el gate detectada. Hallazgo preexistente del wrapper
+  Python registrado separadamente y bloqueado sin issue.
+- Siguiente acción: conservar informe/evidencia, preparar PR del core; después
+  integrar, publicar core y fijar esa versión en Python antes de cerrar #627.
+  La CI multiplataforma está añadida, todavía no ejecutada remotamente.
+  No se afirma cumplimiento de wheels ya publicados ni cierre de la issue.
+
 ## Issue #620 — contrato de serialización OmniDocBench
 
 - Issue: #620 — benchmark(quality): define a consistent OmniDocBench text serialization contract — https://github.com/bzsanti/oxidizePdf/issues/620
@@ -426,3 +542,41 @@
   Código medido: e28e4f54eb69057bafc4d8e67c8bd3680f2b26db; documentación de QR
   publicada en 380272fa8c08cbb448d0efbb5df09c4f7accd5ef. Los commits posteriores
   solo registran publicación y no alteran ese árbol Rust ni los resultados.
+
+## Hallazgo del binding Python durante #627 — valid=True para PDF alterado
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P1.
+- Responsable: bzsanti / mantenimiento de oxidize-python, crear/vincular issue.
+- Issue: pendiente. #627 sustituye el proveedor; este defecto del wrapper es
+  preexistente e independiente, no se corrige bajo esta entrada.
+- Evidencia: `oxidize-python/src/parser.rs:1913` usa `.is_ok()` como `valid`
+  en `verify_pdf_signatures`. El fixture `signed_rsa_altered.pdf` devuelve
+  valid=True tanto en el entorno Python previo como en el wheel candidato.
+- Criterio de cierre: el wrapper informa del resultado de integridad, firma y
+  certificados conforme a su contrato; tests positivos y negativos con PDFs
+  reales distinguen errores de ejecución de resultados inválidos.
+- Dependencia externa: issue de oxidize-python creada/vinculada por bzsanti.
+- Criterio de desbloqueo: issue específica confirmada OPEN.
+- Última validación: reproducción en ambos wheels, código del binding idéntico;
+  las pruebas Rust de #526/#627 detectan correctamente las alteraciones.
+- Siguiente acción: crear/vincular issue; después corregir wrapper y contrato.
+- Restricciones: no presentar el booleano de este wrapper como prueba de
+  validación completa ni modificar código del binding sin la issue aplicable.
+
+## Configuración sin compression — hallazgo durante #627
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P2.
+- Responsable: mantenimiento (`bzsanti`), crear/vincular issue.
+- Issue: pendiente; las issues abiertas consultadas no cubren este defecto.
+- Hallazgo: `--no-default-features --features signatures` como dependencia real
+  falla por referencias a flate2 sin cfg y try_standard_zlib_decode ausente.
+  `compression.rs:7` y los demás imports son idénticos a develop base;
+  los tests pueden ocultarlo al disponer de flate2 como dev-dependency.
+- Última validación: consumidor aislado sin dev-dependencies falla con 19
+  errores; log `/tmp/oxidize-627-product-probe-no-compression.log`.
+- Criterio de cierre: configurar correctamente la dependencia obligatoria o
+  implementar la opción sin compresión, con prueba desde consumidor externo.
+- Dependencia externa y desbloqueo: issue específica confirmada OPEN.
+- Siguiente acción: mantenimiento crea/vincula issue antes de corregir.
+- Restricciones: no corregir bajo #627 ni afirmar que un grafo sin C implica
+  compilación correcta. La matriz mínima de producto incluye compression.

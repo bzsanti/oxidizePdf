@@ -35,7 +35,10 @@ let chunks = PdfDocument::open("paper.pdf")?.rag_chunks()?;
 ## Why oxidize-pdf?
 
 - **One toolkit:** generation, parsing, manipulation, extraction and validation.
-- **Pure Rust deployment:** no C library, Java runtime or Python process.
+- **Pure Rust deployment:** PDF processing and certificate verification use Rust
+  implementations without a native crypto library. See the
+  [dependency gate and architecture](docs/architecture/no-native-dependencies.md)
+  for supported builds, platform interfaces and the optional Tesseract integration.
 - **AI-ready when needed:** page references, bounding boxes, element types,
   heading context and token estimates are available from the same parser.
 - **Explicit scope:** page rasterization is not provided; use a renderer such as
