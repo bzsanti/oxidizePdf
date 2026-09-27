@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve per-part tagged structure and rebuild recoverable parent/ID indexes
+  when splitting tagged PDFs; identify reachable zero-offset references and
+  reject unsafe repairs without publishing partial outputs (#621).
+
 - Replace native certificate-verification cryptography with Rust primitives,
   preserving certificate chains, supported algorithms and CRL checks; add
   dependency gates for supported product and binding configurations (#627).

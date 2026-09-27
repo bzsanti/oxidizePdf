@@ -1,5 +1,25 @@
 # Seguimiento diario
 
+## Corrección #621 — 2026-09-27
+
+- Issue: #621 — Split fails on reachable zero-offset catalog references; tagged structure needs per-part preservation — https://github.com/bzsanti/oxidizePdf/issues/621
+- Estado: `[-]` en curso por petición del usuario. Prioridad: P1. Responsable: Codex.
+- Alcance: core exclusivamente, clon persistente ../oxidize-pdf-621,
+  rama fix/issue-621-tagged-split desde develop f9132e16. Sin cambios en Studio,
+  Python, estadísticas ni otras issues.
+- Criterio de cierre: fixture sintético 12 páginas dividido 1–3/4–6/7–12,
+  contenido/orden/etiquetas y ParentTree/IDTree coherentes, diagnóstico de
+  referencias malformadas, fuente y permisos preservados, publicación atómica;
+  tests RED/GREEN, regresiones y QR antes de PR.
+- Última validación: RED 4 fallos/1 control; GREEN 14 regresiones nuevas,
+  37 pruebas existentes de operaciones/etiquetas y 6791 unitarias (3 omitidas).
+  Seis partes verificadas con qpdf exit 0; Clippy all-targets sin avisos.
+  Proyección incremental de K/ParentTree/IDTree, diagnóstico de objeto offset0,
+  rechazo de alias/ciclos/índices corruptos y permisos/atomicidad conservados.
+  QR completado antes de PR; Kripteia 94/100 en 117 tests, security sin hallazgos.
+- Siguiente acción: registrar QR sobre fuente final, crear PR y validar CI
+  multiplataforma antes de integrar. Sin publicación de release bajo esta tarea.
+
 ## Integración y cierre de #627 — 2026-09-26
 
 - Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627

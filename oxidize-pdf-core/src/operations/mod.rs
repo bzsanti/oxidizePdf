@@ -16,6 +16,7 @@ mod semantic_preservation;
 pub mod semantic_redactor;
 pub mod source_highlighter;
 pub mod split;
+mod tagged_split;
 
 pub use chunk_page_mapper::ChunkPageMapper;
 pub use extract_images::{
