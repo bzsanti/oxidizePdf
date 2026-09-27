@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Write valid outline sibling links when preceding siblings have descendants,
+  including nested branches (#633).
+- Apply the requested document metadata policy during reconstructive extraction
+  and splitting so outputs agree with their preservation reports (#634).
+
 - Preserve per-part tagged structure and rebuild recoverable parent/ID indexes
   when splitting tagged PDFs; identify reachable zero-offset references and
   reject unsafe repairs without publishing partial outputs (#621).

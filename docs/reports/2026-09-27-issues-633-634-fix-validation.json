@@ -1,0 +1,30 @@
+{
+  "base": "ff263dbad6bd95a14a37a6b38a59d4c9d65556ce",
+  "red": {
+    "outline_fail": 2,
+    "metadata_fail": 2,
+    "controls_pass": 3
+  },
+  "green": {
+    "new": 9,
+    "existing": 37,
+    "library_pass": 6791,
+    "library_ignored": 3
+  },
+  "clippy": "all-targets -D warnings PASS",
+  "fmt": "PASS",
+  "kripteia": {
+    "score": 98,
+    "tests": 141,
+    "security": "No security issues found",
+    "scope": "selected source/test files"
+  },
+  "sha256": {
+    "oxidize-pdf-core/src/writer/pdf_writer/mod.rs": "5cd5ac444e319f053702806480d61bdda27f5d2e72985ced2a2d44dcf3b7283a",
+    "oxidize-pdf-core/src/operations/semantic_preservation.rs": "65e8722b42f04336e507354a6c1a6729ee5d7a60c0eed10617ad729b55af8c5c",
+    "oxidize-pdf-core/tests/issue_633_outline_writer_test.rs": "83b6a8a82fe0ac0bee9f63652273c011b313f400162e7c0bb4d12eec3c33e0ce",
+    "oxidize-pdf-core/tests/issue_634_reconstruct_metadata_test.rs": "3adc860a1c2d738ea4b00b2c88280fd3b04083df8d893e8d930c6640c165674a"
+  },
+  "ci": "pending",
+  "release": "not requested"
+}
