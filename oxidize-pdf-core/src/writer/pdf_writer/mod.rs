@@ -1168,134 +1168,41 @@ impl<W: Write> PdfWriter<W> {
         let mut outline_root = Dictionary::new();
         outline_root.set("Type", Object::Name("Outlines".to_string()));
 
-        if !outline_tree.items.is_empty() {
-            // Reserve IDs for all outline items
-            let mut item_ids = Vec::new();
-
-            // Count all items and assign IDs
-            fn count_items(items: &[crate::structure::OutlineItem]) -> usize {
-                let mut count = items.len();
-                for item in items {
-                    count += count_items(&item.children);
-                }
-                count
-            }
-
-            let total_items = count_items(&outline_tree.items);
-
-            // Reserve IDs for all items
-            for _ in 0..total_items {
-                item_ids.push(self.allocate_object_id());
-            }
-
-            let mut id_index = 0;
-
-            // Write root items
-            let first_id = item_ids[0];
-            let last_id = item_ids[outline_tree.items.len() - 1];
-
-            outline_root.set("First", Object::Reference(first_id));
-            outline_root.set("Last", Object::Reference(last_id));
-
-            // Visible count
-            let visible_count = outline_tree.visible_count();
-            outline_root.set("Count", Object::Integer(visible_count));
-
-            // Write all items recursively
-            let mut written_items = Vec::new();
-
-            for (i, item) in outline_tree.items.iter().enumerate() {
-                let item_id = item_ids[id_index];
-                id_index += 1;
-
-                let prev_id = if i > 0 { Some(item_ids[i - 1]) } else { None };
-                let next_id = if i < outline_tree.items.len() - 1 {
-                    Some(item_ids[i + 1])
-                } else {
-                    None
-                };
-
-                // Write this item and its children
-                let children_ids = self.write_outline_item(
-                    item,
-                    item_id,
-                    outline_root_id,
-                    prev_id,
-                    next_id,
-                    &mut item_ids,
-                    &mut id_index,
-                )?;
-
-                written_items.extend(children_ids);
-            }
+        let (first, last) = self.write_outline_items(&outline_tree.items, outline_root_id)?;
+        if let (Some(first), Some(last)) = (first, last) {
+            outline_root.set("First", Object::Reference(first));
+            outline_root.set("Last", Object::Reference(last));
+            outline_root.set("Count", Object::Integer(outline_tree.visible_count()));
         }
 
         self.write_object(outline_root_id, Object::Dictionary(outline_root))?;
         Ok(outline_root_id)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn write_outline_item(
+    /// Reserve the IDs of this sibling list before allocating any descendants.
+    /// First/Last/Prev/Next must refer to siblings, never preorder offsets.
+    fn write_outline_items(
         &mut self,
-        item: &crate::structure::OutlineItem,
-        item_id: ObjectId,
+        items: &[crate::structure::OutlineItem],
         parent_id: ObjectId,
-        prev_id: Option<ObjectId>,
-        next_id: Option<ObjectId>,
-        all_ids: &mut Vec<ObjectId>,
-        id_index: &mut usize,
-    ) -> Result<Vec<ObjectId>> {
-        let mut written_ids = vec![item_id];
-
-        // Handle children if any
-        let (first_child_id, last_child_id) = if !item.children.is_empty() {
-            let first_idx = *id_index;
-            let first_id = all_ids[first_idx];
-            let last_idx = first_idx + item.children.len() - 1;
-            let last_id = all_ids[last_idx];
-
-            // Write children
-            for (i, child) in item.children.iter().enumerate() {
-                let child_id = all_ids[*id_index];
-                *id_index += 1;
-
-                let child_prev = if i > 0 {
-                    Some(all_ids[first_idx + i - 1])
-                } else {
-                    None
-                };
-                let child_next = if i < item.children.len() - 1 {
-                    Some(all_ids[first_idx + i + 1])
-                } else {
-                    None
-                };
-
-                let child_ids = self.write_outline_item(
-                    child, child_id, item_id, // This item is the parent
-                    child_prev, child_next, all_ids, id_index,
-                )?;
-
-                written_ids.extend(child_ids);
-            }
-
-            (Some(first_id), Some(last_id))
-        } else {
-            (None, None)
-        };
-
-        // Create item dictionary
-        let item_dict = crate::structure::outline_item_to_dict(
-            item,
-            parent_id,
-            first_child_id,
-            last_child_id,
-            prev_id,
-            next_id,
-        );
-
-        self.write_object(item_id, Object::Dictionary(item_dict))?;
-
-        Ok(written_ids)
+    ) -> Result<(Option<ObjectId>, Option<ObjectId>)> {
+        let ids: Vec<_> = items.iter().map(|_| self.allocate_object_id()).collect();
+        for (index, item) in items.iter().enumerate() {
+            let item_id = ids[index];
+            let (first_child, last_child) = self.write_outline_items(&item.children, item_id)?;
+            let previous = index.checked_sub(1).map(|previous| ids[previous]);
+            let next = ids.get(index + 1).copied();
+            let dictionary = crate::structure::outline_item_to_dict(
+                item,
+                parent_id,
+                first_child,
+                last_child,
+                previous,
+                next,
+            );
+            self.write_object(item_id, Object::Dictionary(dictionary))?;
+        }
+        Ok((ids.first().copied(), ids.last().copied()))
     }
 
     /// Writes the structure tree for Tagged PDF (ISO 32000-1 §14.8)

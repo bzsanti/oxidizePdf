@@ -1,5 +1,28 @@
 # Seguimiento diario
 
+## Corrección #633 y #634 — 2026-09-27
+
+- Issue: #633 — Outline writer creates invalid sibling links when preceding items have children (5.1.5) — https://github.com/bzsanti/oxidizePdf/issues/633
+- Issue: #634 — Reconstructive extract/split retain metadata while reporting DocumentInfo Discarded (5.1.5) — https://github.com/bzsanti/oxidizePdf/issues/634
+- Estado: implementación y QR locales completados; integración/CI pendientes.
+  Prioridad: P1. Responsable: Codex.
+- Alcance: core, rama fix/issues-633-634 desde develop ff263dba en este checkout.
+  Reservar IDs por lista de hermanos; propagar ReconstructMetadataPolicy al
+  extractor compartido por extract/split. Sin cambios en Python ni release.
+- Criterio de cierre: round-trip de jerarquías raíz/anidadas con destinos y
+  estilos; extract/split Discard y FirstInputWins concuerdan con metadata real
+  e informe en cada parte; RED/GREEN, QR y CI multiplataforma antes de integración.
+- Última validación: RED 4 fallos/3 controles; GREEN 9 tests nuevos y 37 tests
+  existentes (#539, #548, #621), 46 en total. Kripteia 98/100 sobre 141 tests;
+  security sin hallazgos. Biblioteca: 6791 pasan/3 omitidos; Clippy all-targets
+  -D warnings, formato y diff check pasan. QR cerrado antes de crear PR.
+- Seguimiento previo: docs/reports/2026-09-27-issues-633-634-review.md.
+- Preparación: retirada release/v5.1.3-606 local/remota tras comprobar PR #608
+  integrado sin commits pendientes; archivos locales preservados byte por byte,
+  copia /tmp/oxidize-checkout-cleanup-20260927 y stash checkout cleanup.
+- Siguiente acción: terminar QR/validaciones, crear PR hacia develop y verificar
+  Linux/Windows/macOS antes de integrar y cerrar ambas issues.
+
 ## Corrección #621 — 2026-09-27
 
 - Issue: #621 — Split fails on reachable zero-offset catalog references; tagged structure needs per-part preservation — https://github.com/bzsanti/oxidizePdf/issues/621
