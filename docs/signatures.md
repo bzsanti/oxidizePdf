@@ -57,3 +57,30 @@ Certificate-based **recipient encryption** is different from signing and
 certificate verification. In 5.1.5 its legacy handler simulates success and must
 not be used to protect documents. Containment is tracked in #640 and actual
 recipient encryption in #642.
+
+## Participant signature slots (next release, #646)
+
+`create_signature_slot` appends an unsigned root signature widget with portable
+application metadata. `list_signature_slots` and `read_signature_slot` inspect
+these widgets; `remove_signature_slot` removes an unsigned, uncompleted slot.
+Each operation preserves the original PDF bytes as an incremental prefix.
+Encrypted inputs and prohibited DocMDP/FieldMDP changes are rejected.
+
+Use `complete_signature_slot(..., true)` for handwriting-only completion. It
+creates a visible appearance and marks the slot read-only; it does **not** create
+a CMS signature. For combined handwriting and cryptographic signing, call
+`draw_signature_slot(..., false, label)` (or `complete_signature_slot(..., false)`),
+then `prepare_incremental_signature` with
+`SignaturePreparationOptions::existing(field_name)`, sign the covered bytes with
+your external signer, and finalize. The existing appearance is preserved.
+
+A slot's `digitally_signed` flag reports a non-null `/V` entry, not successful
+cryptographic verification. Validate the resulting signature separately.
+
+Slot names are 1–128 ASCII alphanumeric/hyphen bytes, metadata is UTF-8 up to
+4096 bytes, and at most 100 slots can be prepared. Rectangles use unrotated PDF
+page coordinates within the crop/media box; appearance rotation supports
+0/90/180/270 degrees. Strokes use normalized coordinates in a 3:1 input pad,
+with at most 1000 strokes and 20,000 points. Optional labels must fit at 8 pt
+and be representable in WinAnsi. This API does not manage participants' identity,
+consent, private keys, or a signing service.

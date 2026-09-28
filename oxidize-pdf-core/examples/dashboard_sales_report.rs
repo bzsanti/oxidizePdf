@@ -224,6 +224,7 @@ fn create_sales_pivot_table(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use oxidize_pdf::dashboard::DashboardComponent;
 
     #[test]
     fn test_dashboard_creation() {

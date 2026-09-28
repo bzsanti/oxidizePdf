@@ -195,7 +195,7 @@ fn wrap_appearance_lines(
 }
 
 impl SignatureRect {
-    fn validate(self) -> SignatureResult<()> {
+    pub(super) fn validate(self) -> SignatureResult<()> {
         let values = [self.left, self.bottom, self.right, self.top];
         if values.iter().any(|value| !value.is_finite())
             || !(self.right - self.left).is_finite()
@@ -208,7 +208,7 @@ impl SignatureRect {
         Ok(())
     }
 
-    fn object(self) -> PdfObject {
+    pub(super) fn object(self) -> PdfObject {
         PdfObject::Array(PdfArray(vec![
             PdfObject::Real(self.left),
             PdfObject::Real(self.bottom),
@@ -726,7 +726,7 @@ fn transform(method: &str, params: PdfDictionary) -> PdfObject {
     PdfObject::Dictionary(dictionary)
 }
 
-fn append_page_annotation(
+pub(super) fn append_page_annotation(
     reader: &mut PdfReader<Cursor<&[u8]>>,
     update: &mut IncrementalUpdate<'_>,
     page_id: (u32, u16),
@@ -755,7 +755,7 @@ fn append_page_annotation(
     Ok(())
 }
 
-fn append_acroform_field(
+pub(super) fn append_acroform_field(
     reader: &mut PdfReader<Cursor<&[u8]>>,
     update: &mut IncrementalUpdate<'_>,
     catalog: &mut PdfDictionary,
@@ -807,7 +807,7 @@ fn append_field_array(
     Ok(())
 }
 
-fn root_field_references(
+pub(super) fn root_field_references(
     reader: &mut PdfReader<Cursor<&[u8]>>,
     catalog: &PdfDictionary,
 ) -> SignatureResult<Vec<(u32, u16)>> {
@@ -837,7 +837,7 @@ fn root_field_references(
         .collect::<SignatureResult<Vec<_>>>()?)
 }
 
-fn ensure_field_name_available(
+pub(super) fn ensure_field_name_available(
     reader: &mut PdfReader<Cursor<&[u8]>>,
     catalog: &PdfDictionary,
     name: &str,
@@ -848,7 +848,7 @@ fn ensure_field_name_available(
     Ok(())
 }
 
-fn find_signature_field(
+pub(super) fn find_signature_field(
     reader: &mut PdfReader<Cursor<&[u8]>>,
     catalog: &PdfDictionary,
     name: &str,
@@ -971,7 +971,7 @@ fn find_named_field(
     Ok(found)
 }
 
-fn ensure_fieldmdp_allows_signature(
+pub(super) fn ensure_fieldmdp_allows_signature(
     reader: &mut PdfReader<Cursor<&[u8]>>,
     target: &str,
 ) -> SignatureResult<()> {
@@ -1318,16 +1318,16 @@ fn find_all(haystack: &[u8], needle: &[u8]) -> Vec<usize> {
         .filter_map(|(index, value)| (value == needle).then_some(index))
         .collect()
 }
-fn reference(id: (u32, u16)) -> PdfObject {
+pub(super) fn reference(id: (u32, u16)) -> PdfObject {
     PdfObject::Reference(id.0, id.1)
 }
-fn name(value: &str) -> PdfObject {
+pub(super) fn name(value: &str) -> PdfObject {
     PdfObject::Name(PdfName::new(value.to_string()))
 }
-fn text(value: &str) -> PdfObject {
+pub(super) fn text(value: &str) -> PdfObject {
     PdfObject::String(PdfString::new(value.as_bytes().to_vec()))
 }
-fn invalid(details: impl Into<String>) -> SignatureError {
+pub(super) fn invalid(details: impl Into<String>) -> SignatureError {
     SignatureError::InvalidSignatureDict {
         details: details.into(),
     }
