@@ -2,8 +2,10 @@
 
 Documentation correction checked against 5.1.5 / fb4042fd on 2026-09-28.
 The inventory links consumer evidence and separately identifies implemented,
-external, commercial, unsupported and false-success operations. Unsupported
-comparative tables and ROI assertions were removed. Basic signature scope and
+external, extension, unsupported and false-success operations. Unsupported
+comparative tables are replaced by a separately measured, bounded five-engine
+generation comparison; unsupported ROI assertions are removed. See the
+[performance report](2026-09-28-generation-performance.md). Basic signature scope and
 the external CMS contract are now consistent across public entry points.
 
 ## Monitoring evidence (2026-09-27; not a new run)
@@ -40,6 +42,6 @@ probability is claimed.
 #637/#638 filter errors, #639 writer fingerprints, #640 recipient-encryption
 containment and #642 actual recipient encryption retain their own acceptance
 criteria. Documenting their limitations does not fix or close them. #641's basic
-signature documentation is addressed alongside #603; no advanced PAdES or
-commercial implementation is added. Publishing this source documentation does
+signature documentation is addressed alongside #603; PAdES is left as an
+extension for anyone who wants to implement it. No PAdES implementation is added. Publishing this source documentation does
 not rewrite the immutable 5.1.5 package or its historical docs.rs pages.

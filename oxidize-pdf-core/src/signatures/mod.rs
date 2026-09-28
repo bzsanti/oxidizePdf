@@ -7,9 +7,9 @@
 //! [`PreparedSignature::finalize`]. Finalization checks the outer DER SEQUENCE envelope and
 //! capacity; it does not validate CMS SignedData, cryptographic validity or trust.
 //!
-//! Advanced PAdES is outside the open-source core scope and reserved for commercial
-//! extensions. No complete PAdES profile, certification or existing commercial
-//! implementation is asserted by these APIs.
+//! PAdES is left as an extension for anyone who wants to implement it using the
+//! existing external-signing interfaces. The core does not provide a complete
+//! PAdES implementation; preparing/embedding CMS does not establish profile compliance.
 //!
 //! Inspect hash/signature/certificate results, errors, warnings and later
 //! modifications. An `Ok` result alone does not mean a signature is valid.

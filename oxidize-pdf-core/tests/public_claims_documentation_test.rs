@@ -45,7 +45,9 @@ fn public_claims_do_not_restore_unsupported_comparisons_or_profiles() {
     let contract = include_str!("../../docs/signatures.md");
     for document in [README, IDEAL_USE_CASES, CLAIMS, module, contract] {
         let normalized = document.split_whitespace().collect::<Vec<_>>().join(" ");
-        assert!(normalized.contains("Advanced PAdES is outside the open-source core scope"));
+        assert!(normalized
+            .contains("PAdES is left as an extension for anyone who wants to implement it"));
+        assert!(!normalized.to_lowercase().contains("commercial"));
         assert!(!normalized.contains("according to ISO 32000 and PAdES standards"));
     }
     for unsupported in [

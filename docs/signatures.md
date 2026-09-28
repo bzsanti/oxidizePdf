@@ -44,14 +44,14 @@ The executable preparation example is in the public
 `issue_540_incremental_signing_test.rs` covers the external CMS workflow and its
 failure cases; its interoperability tests use an external test signer.
 
-## Commercial boundary
+## PAdES extension
 
-Advanced PAdES is outside the open-source core scope and reserved for commercial
-extensions. No complete PAdES profile, timestamp-service integration, long-term
-validation/archival service or compliance certification is promised by the
-prepare/embed APIs. This boundary does not claim a commercial implementation
-already exists. External providers can use the neutral byte/CMS interfaces;
-this documentation adds no advanced signing implementation.
+PAdES is left as an extension for anyone who wants to implement it using the
+existing external-signing interfaces. The core does not provide a complete PAdES
+implementation. Anyone building an extension can use the neutral byte/CMS
+interfaces and is responsible for implementing and validating the chosen profile,
+including any required timestamps and long-term validation data. Preparing or
+embedding CMS alone does not establish profile compliance or certification.
 
 Certificate-based **recipient encryption** is different from signing and
 certificate verification. In 5.1.5 its legacy handler simulates success and must

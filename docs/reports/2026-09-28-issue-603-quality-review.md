@@ -12,7 +12,7 @@ Es una excepción documental a la ruta develop de la plantilla, no una release.
 
 ## Contratos y evidencia
 
-- README/casos/inventario/rustdoc: capacidades básicas y frontera comercial
+- README/casos/inventario/rustdoc: capacidades básicas e interfaces de extensión PAdES
   coherentes; dos guards pasan. Mutación que restaura «2x faster than PDFSharp»
   hace fallar el nuevo guard. Enlaces relativos de documentos comprobados.
 - Firmas: 35 pruebas de consumidor pasan (18 #526, 10 #540, 7 #606); tres
