@@ -1,3 +1,47 @@
+## Integración signature-preparation #646 — 2026-09-28
+
+- Issue: #646 — feat(signatures): integrate participant signature preparation for next release — https://github.com/bzsanti/oxidizePdf/issues/646
+- Estado: `[x]` integrada en develop; issue cerrada. Prioridad: P1. Responsable: Codex.
+- Petición expresa: integrar feature/signature-preparation contra develop y
+  disponer de sus APIs en la próxima release. Requisito en PR y Unreleased.
+- Criterio de cierre: rama actualizada, regresiones de preparación/firma/permisos,
+  QR completo, PR contra develop y nota Unreleased. Integración completada; publicación de release pendiente.
+- Última validación: develop 93e6796 integrado sin conflictos de código;
+  TASKS combina ambos historiales. QR corrigió cuatro hallazgos con RED/GREEN.
+  Workspace final: 9895 pasan, cero fallos, 72 omitidos; corpus T0–T6
+  y diferenciales pasan. Focalizadas 46; default 10; interop externa 3 pasan.
+  Consumidor compression-only pasa. Clippy/formato pasan; Kripteia 91/99/96,
+  seguridad sin hallazgos. Mutaciones de DocMDP/FieldMDP detectadas por los tests.
+- Evidencia: docs/reports/2026-09-28-issue-646-{quality-review.md,validation.json,consumer.rs}.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/647 — MERGED contra develop.
+  Merge 32e380324062c20606c83089d4f6c5c9bf61c8d0, 2026-09-28T20:59:41Z.
+  Head revisado d502249f1733c3d25d0565a36b31c62c53c0fc4d.
+- CI final: 17 SUCCESS / 0 FAILED / 2 SKIPPED (corpus programado,
+  validado localmente). Issue #646 cerrada tras verificar el merge.
+- Siguiente acción: incluir esta integración en la próxima release;
+  la publicación de la release sigue pendiente.
+
+# Seguimiento #603 y #641 — 2026-09-28
+
+- Issue: #603 — docs(adoption): reconcile public claims and establish audited adoption monitoring — https://github.com/bzsanti/oxidizePdf/issues/603
+- Issue: #641 — docs(signatures): delimit basic support and PAdES extension points — https://github.com/bzsanti/oxidizePdf/issues/641
+- Estado: en curso. Prioridad: P2. Responsable: Codex.
+- Criterio de cierre: documentación publicada coherente, inventario con evidencia
+  y límites, ejemplo ejecutable y guard documental; aceptación de monitorización
+  registrada sin presentar datos sintéticos como adopción real.
+- Base de integración: develop b76f738; inventario y medición de release 5.1.5.
+  PR #644 corregida a develop; cambios de #640 y demás correcciones preservados.
+- Última validación: 35 tests de firmas, dos guards y cinco doctests pasan;
+  revisión final y Kripteia tests/security completados (log/informe adjuntos).
+- Instrucción vigente del usuario: PAdES queda como extensión para quien quiera
+  implementarlo; se retiran las referencias comerciales de esta propuesta.
+- Rendimiento: el usuario solicita medir; stats incorpora pdf-generation-v1,
+  comparativa ampliada a cinco motores (pdf_oxide 0.3.78) y panel separado. README usa resultados
+  observados, incluidos los desfavorables; artefactos reproducibles adjuntos al informe.
+- Publicación aprobada por el usuario el 2026-09-28.
+- Siguiente acción: publicar PR, verificar CI e integración, desplegar stats y
+  comprobar aceptación antes de cerrar #603. Batir a pdf_oxide no es un objetivo.
+
 # Seguimiento diario
 
 ## Corrección #638 — 2026-09-28
@@ -25,8 +69,23 @@
   con internal-testing,unstable-spi,semantic (E0282/E0283). Sustituidas por
   is_empty() sin cambios del parser; GREEN 18 regresiones #638 + 6 de #514.
   Kripteia 98/100 y Security sin hallazgos nuevos. Issue OPEN reconfirmada.
-- Siguiente acción: publicar la corrección y comprobar CI completa del PR;
+- Integración: develop 32e3803 incorporado; único conflicto en TASKS resuelto
+  conservando ambos historiales. Código fusionado automáticamente.
+- Siguiente acción: comprobar CI completa del PR actualizado;
   integración pendiente. #647 ya integrada en develop en tarea separada.
+
+## Integración local de upstream para Studio — 2026-09-24
+
+- Estado: `[x]` integración local validada.
+- Prioridad: `P1`.
+- Responsable: Codex.
+- Solicitud: actualizar upstream y renderizador y corregir la firma de Studio.
+- Criterio de cierre: conservar la preparación de firmas por participantes e incorporar 5.1.3 y #606; suite completa y Clippy sin warnings.
+- Resultado: origin/develop 7115feee integrado en feature/signature-preparation mediante c0ba713d; se conservan los cuatro documentos locales anteriores.
+- Validación: 9.630 tests correctos, 47 ignorados por la configuración existente y 119 ejecutables de ejemplos completados; firma y previsualización verificadas en Studio, con OpenSSL y comprobación visual de los artefactos.
+- Análisis estático: Clippy completo correcto con -D warnings; registro target/signature-update-clippy.log.
+- Autorización: el usuario confirma commit y push de las ramas del motor y renderizador el 2026-09-24.
+- Siguiente acción: publicar esta rama y fijar su revisión Git en Studio y el renderizador.
 
 ## Contención #640 — 2026-09-28
 

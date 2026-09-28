@@ -1,37 +1,68 @@
-//! Digital Signature support for PDF documents
+//! Basic digital signatures and external signing for PDF documents.
 //!
-//! This module provides functionality to detect, parse, and validate
-//! digital signatures in PDF documents according to ISO 32000 and PAdES standards.
+//! Detect and parse signature fields, verify supported PKCS#7/CMS signatures,
+//! and validate certificates with configured trust and revocation data.
+//! Preparation is not a completed cryptographic signature. The caller signs
+//! [`PreparedSignature::bytes_to_digest`] externally and passes DER CMS to
+//! [`PreparedSignature::finalize`]. Finalization checks the outer DER SEQUENCE envelope and
+//! capacity; it does not validate CMS SignedData, cryptographic validity or trust.
 //!
-//! # Features
+//! PAdES is left as an extension for anyone who wants to implement it using the
+//! existing external-signing interfaces. The core does not provide a complete
+//! PAdES implementation; preparing/embedding CMS does not establish profile compliance.
 //!
-//! - **Detection**: Find signature fields in PDF documents
-//! - **Parsing**: Extract signature dictionaries and byte ranges
-//! - **Validation**: Verify cryptographic signatures
+//! Inspect hash/signature/certificate results, errors, warnings and later
+//! modifications. An `Ok` result alone does not mean a signature is valid.
+//! Missing revocation evidence is not checked-valid. Cryptographic verification
+//! requires the `signatures` feature and caller-appropriate trust configuration.
 //!
-//! # Example
+//! # Prepare bytes for an external signer
 //!
-//! ```ignore
-//! use oxidize_pdf::signatures::detect_signature_fields;
-//! use oxidize_pdf::parser::PdfReader;
-//!
-//! let mut reader = PdfReader::open("signed.pdf")?;
-//! let signatures = detect_signature_fields(&mut reader)?;
-//!
-//! for sig in signatures {
-//!     println!("Found signature: {}", sig.filter);
-//!     if let Some(name) = &sig.name {
-//!         println!("  Field name: {}", name);
-//!     }
-//! }
 //! ```
+//! use oxidize_pdf::{Document, Page};
+//! use oxidize_pdf::signatures::{
+//!     prepare_incremental_signature, SignaturePreparationOptions,
+//! };
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut document = Document::new();
+//! document.add_page(Page::a4());
+//! let base = document.to_bytes()?;
+//! let options = SignaturePreparationOptions::invisible("Approval");
+//! let prepared = prepare_incremental_signature(&base, &options)?;
+//! let bytes_to_sign = prepared.bytes_to_digest(); // bytes, not a digest
+//! let expected: Vec<u8> = prepared.byte_range().ranges().iter()
+//!     .flat_map(|&(offset, length)| {
+//!         prepared.prepared_pdf()[offset as usize..(offset + length) as usize]
+//!             .iter().copied()
+//!     }).collect();
+//! assert_eq!(bytes_to_sign, expected);
+//! assert!(prepared.prepared_pdf().starts_with(&base));
+//! // Supply bytes_to_sign to your external CMS signer, then finalize(&cms).
+//! // Empty CMS is rejected; no signature has been created by preparation.
+//! assert!(prepared.finalize(&[]).is_err());
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! [`SignaturePreparationOptions`] controls field/widget selection, reserved
+//! capacity, filter/sub-filter, metadata, DocMDP/FieldMDP and additional entries.
+//! Structural entries cannot be overridden. Encrypted PDFs and modifications
+//! prohibited by existing permissions are rejected. Reprepare and sign again if
+//! CMS exceeds the reserved capacity. Appearance artwork is covered by the CMS.
+//! See the [operation-level contract](https://github.com/bzsanti/oxidizePdf/blob/main/docs/signatures.md).
 
 mod certificate;
 mod cms;
 mod detection;
 mod error;
 mod permissions;
+mod preparation;
 mod signing;
+pub use preparation::{
+    complete_signature_slot, create_signature_slot, draw_signature_slot, list_signature_slots,
+    read_signature_slot, remove_signature_slot, SignatureSlot,
+};
 mod types;
 mod verification;
 
@@ -112,7 +143,7 @@ impl FullSignatureValidationResult {
     /// A signature is valid when:
     /// - The document hash matches
     /// - The cryptographic signature verifies
-    /// - The certificate is valid (if certificate validation was performed)
+    /// - A certificate result is present and valid
     /// - There are no modifications after signing
     pub fn is_valid(&self) -> bool {
         self.hash_valid

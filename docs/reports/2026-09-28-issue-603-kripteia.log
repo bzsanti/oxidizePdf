@@ -1,0 +1,81 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 86 | Tests: 13 | Files: 2
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ue-603-review-scope/public_claims_documentation_test.rs        2    100
+/tmp/issue-603-review-scope/signatures.rs                        11     84
+
+--- Worst Offenders ---
+  test_full_signature_validation_result_invalid_hash (/tmp/issue-603-review-scope/signatures.rs:222) - Score: 70
+    - Test 'test_full_signature_validation_result_invalid_hash' has identical neighborhood to 'test_full_signature_validation_result_invalid_signature'
+    - Test 'test_full_signature_validation_result_invalid_hash' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+    - Test 'test_full_signature_validation_result_invalid_hash' does not call any production code
+  test_full_signature_validation_result_invalid_signature (/tmp/issue-603-review-scope/signatures.rs:242) - Score: 70
+    - Test 'test_full_signature_validation_result_invalid_signature' has identical neighborhood to 'test_full_signature_validation_result_invalid_hash'
+    - Test 'test_full_signature_validation_result_invalid_signature' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+    - Test 'test_full_signature_validation_result_invalid_signature' does not call any production code
+  test_full_signature_validation_result_modified_after_signing (/tmp/issue-603-review-scope/signatures.rs:262) - Score: 80
+    - Test 'test_full_signature_validation_result_modified_after_signing' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+    - Test 'test_full_signature_validation_result_modified_after_signing' does not call any production code
+  test_full_signature_validation_result_invalid_certificate (/tmp/issue-603-review-scope/signatures.rs:376) - Score: 80
+    - Test 'test_full_signature_validation_result_invalid_certificate' has low assert-to-setup ratio (4%): 1 asserts vs 24 setup lines
+    - Test 'test_full_signature_validation_result_invalid_certificate' does not call any production code
+  test_full_signature_validation_result_clone (/tmp/issue-603-review-scope/signatures.rs:405) - Score: 80
+    i Test 'test_full_signature_validation_result_clone' has multiple assertions without diagnostic messages
+    - Test 'test_full_signature_validation_result_clone' has low assert-to-setup ratio (11%): 2 asserts vs 16 setup lines
+    - Test 'test_full_signature_validation_result_clone' does not call any production code
+
+--- Details ---
+/tmp/issue-603-review-scope/public_claims_documentation_test.rs:
+  public_claims_preserve_supported_capabilities_and_their_limits (line 11) - Score: 100
+    i Test 'public_claims_preserve_supported_capabilities_and_their_limits' has multiple assertions without diagnostic messages
+  public_claims_do_not_restore_unsupported_comparisons_or_profiles (line 43) - Score: 100
+    i Test 'public_claims_do_not_restore_unsupported_comparisons_or_profiles' has multiple assertions without diagnostic messages
+
+/tmp/issue-603-review-scope/signatures.rs:
+  test_full_signature_validation_result_is_valid_all_pass (line 193) - Score: 90
+    - Test 'test_full_signature_validation_result_is_valid_all_pass' has low assert-to-setup ratio (4%): 1 asserts vs 24 setup lines
+  test_full_signature_validation_result_invalid_hash (line 222) - Score: 70
+    - Test 'test_full_signature_validation_result_invalid_hash' has identical neighborhood to 'test_full_signature_validation_result_invalid_signature'
+    - Test 'test_full_signature_validation_result_invalid_hash' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+    - Test 'test_full_signature_validation_result_invalid_hash' does not call any production code
+  test_full_signature_validation_result_invalid_signature (line 242) - Score: 70
+    - Test 'test_full_signature_validation_result_invalid_signature' has identical neighborhood to 'test_full_signature_validation_result_invalid_hash'
+    - Test 'test_full_signature_validation_result_invalid_signature' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+    - Test 'test_full_signature_validation_result_invalid_signature' does not call any production code
+  test_full_signature_validation_result_modified_after_signing (line 262) - Score: 80
+    - Test 'test_full_signature_validation_result_modified_after_signing' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+    - Test 'test_full_signature_validation_result_modified_after_signing' does not call any production code
+  test_full_signature_validation_result_signer_name (line 282) - Score: 90
+    i Test 'test_full_signature_validation_result_signer_name' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_full_signature_validation_result_signer_name' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+  test_full_signature_validation_result_signer_name_unknown (line 302) - Score: 90
+    i Test 'test_full_signature_validation_result_signer_name_unknown' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_full_signature_validation_result_signer_name_unknown' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+  test_full_signature_validation_result_has_warnings (line 322) - Score: 90
+    - Test 'test_full_signature_validation_result_has_warnings' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+  test_full_signature_validation_result_all_warnings (line 342) - Score: 90
+    i Test 'test_full_signature_validation_result_all_warnings' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_full_signature_validation_result_all_warnings' has multiple assertions without diagnostic messages
+    - Test 'test_full_signature_validation_result_all_warnings' has low assert-to-setup ratio (13%): 4 asserts vs 26 setup lines
+  test_full_signature_validation_result_invalid_certificate (line 376) - Score: 80
+    - Test 'test_full_signature_validation_result_invalid_certificate' has low assert-to-setup ratio (4%): 1 asserts vs 24 setup lines
+    - Test 'test_full_signature_validation_result_invalid_certificate' does not call any production code
+  test_full_signature_validation_result_clone (line 405) - Score: 80
+    i Test 'test_full_signature_validation_result_clone' has multiple assertions without diagnostic messages
+    - Test 'test_full_signature_validation_result_clone' has low assert-to-setup ratio (11%): 2 asserts vs 16 setup lines
+    - Test 'test_full_signature_validation_result_clone' does not call any production code
+  test_full_signature_validation_result_debug (line 427) - Score: 90
+    i Test 'test_full_signature_validation_result_debug' has multiple assertions without diagnostic messages
+    - Test 'test_full_signature_validation_result_debug' has low assert-to-setup ratio (11%): 2 asserts vs 16 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

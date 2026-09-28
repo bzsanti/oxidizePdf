@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Added
+
+- Prepare participant signature fields through incremental create/list/read/remove
+  APIs, render handwritten strokes and optional certificate labels, and pass the
+  prepared appearance to existing detached signing APIs. Handwritten completion
+  remains distinct from a cryptographic signature; DocMDP/FieldMDP restrictions
+  apply. Required for the next release (#646).
+
+### Documentation
+
+- Reconcile public adoption claims, remove unsupported comparisons, and record
+  versioned limitations and evidence (#603). Define basic signature operations,
+  external CMS responsibilities and the PAdES extension interfaces (#641).
+
 ### Fixed
 
 - Propagate invalid Flate/LZW predictor errors instead of returning untransformed
