@@ -6,7 +6,8 @@
 - Criterio de cierre: documentación publicada coherente, inventario con evidencia
   y límites, ejemplo ejecutable y guard documental; aceptación de monitorización
   registrada sin presentar datos sintéticos como adopción real.
-- Base: main/v5.1.5 fb4042fd; clon aislado. Cambios en curso de #640 preservados.
+- Base de integración: develop b76f738; inventario y medición de release 5.1.5.
+  PR #644 corregida a develop; cambios de #640 y demás correcciones preservados.
 - Última validación: 35 tests de firmas, dos guards y cinco doctests pasan;
   revisión final y Kripteia tests/security completados (log/informe adjuntos).
 - Instrucción vigente del usuario: PAdES queda como extensión para quien quiera

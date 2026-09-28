@@ -45,3 +45,18 @@ criteria. Documenting their limitations does not fix or close them. #641's basic
 signature documentation is addressed alongside #603; PAdES is left as an
 extension for anyone who wants to implement it. No PAdES implementation is added. Publishing this source documentation does
 not rewrite the immutable 5.1.5 package or its historical docs.rs pages.
+
+## Publication and deployment — 2026-09-28
+
+PR #644 targets develop and preserves its recent fixes, including #640 via #643.
+The release audit and performance measurements still identify published 5.1.5;
+merging documentation into develop does not publish a new crate or update main.
+The reproduction archive is included alongside the measurement report.
+
+oxidize-stats was backed up before migration/import. Deployment exposed both
+historical and five-engine runs through /api/performance (8 and 10 rows).
+Both Docker services are healthy. The audit chain remains at 11 records with
+head a3e3ff3161eb8d2126fa697036c5ede19e7306588cafcf0e03b84c1c61b7b51c.
+An upgrade-path defect (v15 early return skipping v16) was corrected before
+activation, with a data-preservation/idempotency regression test; all 71 Rust
+service tests and Clippy pass. No synthetic adoption records were added.
