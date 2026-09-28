@@ -115,3 +115,24 @@ las rutas de recuperación de recursos cubiertas por #637.
   (91,6%) supera 90%; sin cambios de baselines ni umbrales.
 - Verificación pendiente: CI del futuro PR contra develop.
 - Logs: `/tmp/issue-638-{red,red-final,qr-form-red,green-final,clippy-final,consumer-final,kripteia-filters-final,kripteia-tests-final,workspace-final}.log`.
+
+## Corrección de CI del PR #645 — 2026-09-28
+
+1. **Corregido, bloqueante para CI:** en
+   `oxidize-pdf-core/tests/issue_638_predictor_errors_test.rs:200`, las dos
+   comparaciones con `[]` no compilaban con `internal-testing,unstable-spi,semantic`.
+   `serde_json` introduce otra implementación de `PartialEq` y Rust no puede
+   inferir el tipo del array vacío (E0282/E0283). Evidencia RED: run
+   36471334187, job 109094052597. Se sustituyen por `.is_empty()`, conservando
+   `.unwrap()` para que cualquier error del decoder siga haciendo fallar el test.
+   No cambia el código productivo ni se debilita el oráculo de salida vacía.
+
+Formato y Clippy del test con las tres features y `-D warnings`: pasan.
+GREEN: 18 regresiones #638 y 6 de DecodeParms #514 pasan con la combinación
+exacta de features que falló. Kripteia: 98/100, 18 tests; Security: sin hallazgos.
+Revisión manual del diff: sólo las dos aserciones; los helpers siguen llamando
+al parser real. Los avisos del scanner sobre wrappers y constantes mantienen
+la evaluación ya documentada. La compilación con semantic faltaba en la
+validación local original; ahora queda verificada explícitamente.
+Logs: `/tmp/issue-638-ci-fix-{tests,clippy,kripteia}.log`.
+CI completa del nuevo commit pendiente de publicación y ejecución.

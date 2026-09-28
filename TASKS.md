@@ -3,7 +3,7 @@
 ## Corrección #638 — 2026-09-28
 
 - Issue: #638 — fix(parser): propagate invalid predictor errors in strict stream decoding — https://github.com/bzsanti/oxidizePdf/issues/638
-- Estado: `[-]` en curso. Prioridad: P1. Responsable: Codex.
+- Estado: `[-]` PR #645 abierto; corrección de CI validada localmente. Prioridad: P1. Responsable: Codex.
 - Activación: OPEN confirmada en GitHub; clon aislado /tmp/oxidize-issue-638,
   rama fix/issue-638-predictor-errors desde develop b76f738.
 - Criterio de cierre: predictores inválidos/unsupported producen error explícito;
@@ -20,8 +20,13 @@
   Workspace final: 9847 pasan, cero fallos, 73 omitidos; exit 0.
   Corpus T0–T6 y diferenciales pasan; T3 1613/1761 (91,6%).
   QR del autor cerrado. Baselines y umbrales intactos.
-- Siguiente acción: commit y PR independiente contra develop; validar CI
-  antes de integrar. PR #644 pertenece a otra sesión y no se modifica aquí.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/645 — base develop.
+- Revisión de CI: run 36471334187 falla al compilar dos comparaciones con []
+  con internal-testing,unstable-spi,semantic (E0282/E0283). Sustituidas por
+  is_empty() sin cambios del parser; GREEN 18 regresiones #638 + 6 de #514.
+  Kripteia 98/100 y Security sin hallazgos nuevos. Issue OPEN reconfirmada.
+- Siguiente acción: publicar la corrección y comprobar CI completa del PR;
+  integración pendiente. #647 ya integrada en develop en tarea separada.
 
 ## Contención #640 — 2026-09-28
 

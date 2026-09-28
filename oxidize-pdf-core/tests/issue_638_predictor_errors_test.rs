@@ -197,11 +197,12 @@ fn no_predictor_and_predictor_one_are_identity() {
 #[test]
 fn valid_empty_png_data_is_empty() {
     for o in modes() {
-        assert_eq!(decode_stream(&zip(&[]), &dict(params()), &o).unwrap(), []);
-        assert_eq!(
-            decode_stream_with_limit(&zip(&[]), &dict(params()), &o, 0).unwrap(),
-            []
-        );
+        assert!(decode_stream(&zip(&[]), &dict(params()), &o)
+            .unwrap()
+            .is_empty());
+        assert!(decode_stream_with_limit(&zip(&[]), &dict(params()), &o, 0)
+            .unwrap()
+            .is_empty());
     }
 }
 #[test]
