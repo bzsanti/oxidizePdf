@@ -17,10 +17,16 @@ pub struct SignatureSlot {
     pub rotation: i32,
     pub rect: SignatureRect,
     pub completed: bool,
+    /// Whether the field has a non-null /V; this does not verify its CMS signature.
     pub digitally_signed: bool,
 }
 
 /// Create one empty field without touching any private key or original byte.
+///
+/// At most 100 application-prepared slots are supported. Names use 1–128 ASCII
+/// alphanumeric/hyphen bytes; metadata is UTF-8 with at most 4096 bytes.
+/// Rectangles use PDF page coordinates and must lie within the crop/media box.
+/// Page rotation must be a multiple of 90 degrees.
 pub fn create_signature_slot(
     base: &[u8],
     field_name: &str,
@@ -51,12 +57,18 @@ pub fn create_signature_slot(
     )?;
     ensure_fieldmdp_allows_signature(&mut reader, field_name)?;
     ensure_field_name_available(&mut reader, &catalog, field_name)?;
+    if list_signature_slots(base)?.len() >= 100 {
+        return Err(invalid("too many signature slots"));
+    }
     let document = PdfReader::new(Cursor::new(base))
         .map_err(|e| invalid(e.to_string()))?
         .into_document();
     let page = document
         .get_page(u32::try_from(page_index).map_err(|_| invalid("page index overflow"))?)
         .map_err(|e| invalid(e.to_string()))?;
+    if ![0, 90, 180, 270].contains(&page.rotation.rem_euclid(360)) {
+        return Err(invalid("unsupported page rotation"));
+    }
     let [l, b, r, t] = page.crop_box.unwrap_or(page.media_box);
     if rect.left < l || rect.bottom < b || rect.right > r || rect.top > t {
         return Err(invalid("slot lies outside the page"));
@@ -160,6 +172,10 @@ fn slot(dictionary: &PdfDictionary, source: &[u8]) -> SignatureResult<SignatureS
         top: number(3)?,
     };
     rect.validate()?;
+    let [l, b, r, t] = page.crop_box.unwrap_or(page.media_box);
+    if rect.left < l || rect.bottom < b || rect.right > r || rect.top > t {
+        return Err(invalid("slot lies outside the page"));
+    }
     let digitally_signed = dictionary
         .get("V")
         .is_some_and(|v| !matches!(v, PdfObject::Null));
@@ -461,7 +477,8 @@ pub fn draw_signature_slot(
     field.insert("AP".into(), PdfObject::Dictionary(ap));
     if complete {
         field.insert("OxidizeCompleted".into(), PdfObject::Boolean(true));
-        field.insert("Ff".into(), PdfObject::Integer(1));
+        let flags = field.get("Ff").and_then(PdfObject::as_integer).unwrap_or(0);
+        field.insert("Ff".into(), PdfObject::Integer(flags | 1));
     }
     update.replace(id, PdfObject::Dictionary(field))?;
     Ok(update.finish()?)

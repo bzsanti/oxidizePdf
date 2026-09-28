@@ -1,346 +1,67 @@
-# Ideal Use Cases for oxidize-pdf
+# Choosing oxidize-pdf
 
-## 🎯 Where oxidize-pdf Excels
+oxidize-pdf is a Rust library for generating PDFs, extracting content and applying
+supported document operations. The [claims inventory](CLAIMS.md) records checked
+versions, evidence and limits. Evaluate your actual documents before adoption.
 
-This document provides guidance on when to choose oxidize-pdf over alternatives.
-Capability claims are governed by [`docs/CLAIMS.md`](CLAIMS.md); that inventory
-records the source, checked date, version and limitation for each public claim.
-Historical benchmark figures below are not comparative evidence unless their
-protocol and artefacts are linked from that inventory.
+## Supported workflows and boundaries
 
-## ✅ Perfect Use Cases
+| Workflow | Available capability | Boundary |
+|---|---|---|
+| Generate invoices and reports | Text, graphics, images and tables through `Document` and `Page` | See the measured synthetic workloads below; validate performance for your actual documents. |
+| Rust backend and AI/RAG ingestion | Native extraction and structured chunks with page references | Complex layouts, malformed streams and scanned content require evaluation; see the known filter defects in CLAIMS. |
+| Existing-document operations | Split, merge, rotate and selected incremental updates | Reconstruction is not a lossless round trip. Check each operation's preservation report and permission handling. |
+| Searchable scanned documents | Incremental OCR layers from supplied recognition results | Recognition and rendering are separate dependencies; there is no built-in page rasterizer. |
+| Archival inspection | PDF/A conformance validation for eight levels | PDF/A authoring or certification, remediation and legal assurance are not provided. |
+| Basic signatures | Detection, PKCS#7 verification, certificate validation and incremental preparation | Read the operation-level contract below; preparation is not a completed cryptographic signature. |
 
-### 1. High-Performance PDF Generation Services
+## Signatures and enterprise scope
 
-**Scenario**: Microservice generating thousands of invoices per minute
-
-**Why oxidize-pdf wins**:
-- 215 PDFs/second throughput (2x faster than PDFSharp)
-- 5.2 MB container size (vs 200+ MB for IronPDF)
-- Zero memory leaks guaranteed
-
-**Example Architecture**:
-```rust
-// Serverless function generating invoices
-use oxidize_pdf::{Document, Page};
-
-pub async fn generate_invoice(data: InvoiceData) -> Vec<u8> {
-    let mut doc = Document::new();
-    // ... generate invoice ...
-    doc.to_bytes().unwrap() // Direct to memory, no file I/O
-}
-```
-
-**Real Benchmark**:
-```bash
-# oxidize-pdf: 1,000 invoices
-Time: 4.65 seconds
-Memory: 45 MB peak
-Binary size: 5.2 MB
-
-# PDFSharp: 1,000 invoices  
-Time: 10.2 seconds
-Memory: 312 MB peak
-Runtime size: 85 MB (.NET)
-```
-
-### 2. Embedded Systems & IoT
-
-**Scenario**: Industrial printer generating reports on ARM device
-
-**Why oxidize-pdf wins**:
-- Single 5MB binary (no runtime required)
-- Cross-compiles to any target
-- Predictable memory usage
-
-**Deployment Comparison**:
-```bash
-# oxidize-pdf on Raspberry Pi
-scp oxidize-pdf-binary pi@device:/usr/bin/
-# Done. It works.
-
-# PDFSharp on Raspberry Pi
-# Install .NET runtime (150+ MB)
-# Configure dependencies
-# Deal with ARM compatibility issues
-```
-
-### 3. Security-Critical Applications
-
-**Scenario**: Government system processing sensitive documents
-
-**Why oxidize-pdf wins**:
-- Memory safety eliminates buffer overflows
-- No unsafe code in core library
-- Auditable single binary
-
-**Security Advantages**:
-```rust
-// This is impossible in oxidize-pdf (Rust prevents it)
-char* buffer = malloc(100);
-strcpy(buffer, user_input); // Buffer overflow
-
-// oxidize-pdf enforces safety at compile time
-let mut page = Page::a4();
-page.text().write(&user_input)?; // Always safe
-```
-
-### 4. Rust Ecosystem Integration
-
-**Scenario**: Rust web service needing PDF reports
-
-**Why oxidize-pdf wins**:
-- Native Rust, no FFI needed
-- Integrates with async/await
-- Works with popular frameworks (Actix, Rocket, Axum)
-
-**Integration Example**:
-```rust
-use axum::response::IntoResponse;
-use oxidize_pdf::Document;
-
-async fn download_report() -> impl IntoResponse {
-    let doc = generate_report().await;
-    let bytes = doc.to_bytes().unwrap();
-    
-    (
-        [("content-type", "application/pdf")],
-        bytes
-    )
-}
-```
-
-### 5. CI/CD Pipeline Integration
-
-**Scenario**: Generating test reports in GitHub Actions
-
-**Why oxidize-pdf wins**:
-- 5MB binary downloads in seconds
-- No dependencies to cache
-- Works in minimal containers
-
-**GitHub Action Example**:
-```yaml
-- name: Generate PDF Report
-  run: |
-    curl -L https://github.com/oxidize-pdf/releases/oxidize-pdf > oxidize-pdf
-    chmod +x oxidize-pdf
-    ./oxidize-pdf generate-report test-results.json report.pdf
-    # Total time: 3 seconds
-```
-
-## ⚠️ Good But Not Ideal Use Cases
-
-### PDF Parsing/Modification
-
-**Current State**: parsing and basic modification are supported; complex forms,
-JavaScript and lossless round trips remain outside the supported workflow.
-
-**Limitations**:
-- Complex forms may not parse correctly
-- JavaScript in PDFs is ignored
-- Some advanced features lost in round-trip
-
-**Recommendation**: Use for simple modifications (rotate, split, merge). For complex editing, consider iText or Aspose.
-
-### Enterprise Document Management
-
-**Current State**: PDF/A conformance validation, signature detection, PKCS#7
+PDF/A conformance validation, signature detection, PKCS#7
 verification, certificate validation and an incremental-signature preparation
-API are available. This is not a claim of end-to-end archival, PDF/UA or
-managed enterprise support.
+API are available. With caller-supplied CMS, finalization embeds that container
+in the prepared revision. The [signature contract](signatures.md) documents
+trust anchors, revocation results, failure states and configuration hooks.
 
-**Not provided as an enterprise service**:
-- PDF/A authoring or certification
-- Managed-key, certificate-issuing or signing-service workflows (the caller
-  supplies the external signer for the signature-preparation API)
-- Section 508 accessibility
-- Phone support
+PAdES is left as an extension for anyone who wants to implement it using the
+existing external-signing interfaces. The core does not provide a complete PAdES
+implementation; preparing/embedding CMS alone does not satisfy a complete profile.
 
-**Recommendation**: Fine for SMBs. Enterprises should consider iText or Aspose.
+Managed-key, certificate-issuing or signing-service workflows are not provided.
+Neither are PDF/UA compliance, archival certification or managed enterprise
+support. Certificate-based recipient encryption is a separate, unsupported
+workflow in 5.1.5; its public handler has known simulated-success defects (#640).
+Do not use that handler to protect documents.
 
-## ❌ Not Recommended Use Cases
+## Deployment and evaluation
 
-### 1. PDF/A Authoring or Certification Requirements
+Use the [dependency architecture](architecture/no-native-dependencies.md) for
+supported Rust configurations and the optional Tesseract integration. Rust's
+memory-safety model does not guarantee zero leaks, zero crashes or safe processing
+of every hostile PDF. Apply resource limits and evaluate failure behavior.
 
-**Why not**: oxidize-pdf validates PDF/A conformance; it does not promise to
-author, remediate or certify archival PDFs.
+## Measured generation performance
 
-**Use instead**: PDFSharp 6.2 (has PDF/A), iText
+The new `pdf-generation-v1` measurements provide evidence instead of the previous
+unverified throughput figures. For oxidize-pdf 5.1.5 the median is **6,311 one-page
+documents/sec** or **732 ten-page reports/sec**, on Intel i7-3770, Linux and Rust
+1.96.0 release builds. Each case contains twenty samples; one-page samples generate
+1,000 separate documents, and ten-page samples generate 100 reports.
 
-### 2. Complex Forms with JavaScript
+The [full comparison](reports/2026-09-28-generation-performance.md) includes lopdf,
+pdf-writer, printpdf and pdf_oxide 0.3.78, measured together in a new run. All four
+have higher median throughput here; the one-page uncertainty intervals for
+oxidize-pdf and pdf_oxide overlap, so median ordering alone is not conclusive. It
+records latency, process RSS, output size, versions and measurement scope.
+Defaults differ by adapter; no general superiority or real-world throughput is
+inferred. Structure, page count and exact text are independently checked on one
+representative PDF per sample.
 
-**Why not**: No JavaScript execution engine
+PDFSharp/QuestPDF/IronPDF comparisons, zero-leak guarantees, deployment sizes,
+ROI and product-price claims remain unsupported by this experiment. They must
+not be inferred from these generation measurements.
 
-**Use instead**: iText, Adobe SDK
-
-### 3. Accessibility Compliance (Section 508)
-
-**Why not**: No PDF/UA support yet
-
-**Use instead**: PDFSharp 6.2, iText
-
-### 4. .NET Applications (Currently)
-
-**Why not**: No native C# bindings (yet)
-
-**Use instead**: PDFSharp (obvious choice for .NET)
-
-## 📊 Performance Benchmarks
-
-### Test: Generate 1,000 Simple Invoices
-
-| Library | Time | Memory | Binary Size | Dependencies |
-|---------|------|--------|-------------|--------------|
-| **oxidize-pdf** | **4.65s** | **45 MB** | **5.2 MB** | **0** |
-| PDFSharp | 10.2s | 312 MB | 15 MB | .NET Runtime |
-| QuestPDF | 8.3s | 245 MB | 25 MB | SkiaSharp |
-| IronPDF | 20.1s | 1.2 GB | 200+ MB | Chrome |
-
-### Test: Parse 100 Real-World PDFs
-
-| Library | Success Rate | Time | Errors |
-|---------|-------------|------|--------|
-| **oxidize-pdf** | 97.2% | **0.46s** | 3 encrypted |
-| PDFSharp | 94% | 1.2s | 6 various |
-| iText | 99% | 0.8s | 1 corrupted |
-
-### Test: Memory Safety (Fuzzing)
-
-| Library | Crashes | Memory Leaks | Buffer Overflows |
-|---------|---------|--------------|------------------|
-| **oxidize-pdf** | **0** | **0** | **0** (impossible) |
-| PDFSharp | 2 | 5 | 0 (managed) |
-| Native C libs | 15+ | 12 | 8 |
-
-## 🎪 Decision Matrix
-
-| Your Need | Choose oxidize-pdf? | Alternative |
-|-----------|-------------------|-------------|
-| Maximum performance | ✅ YES | - |
-| Minimal dependencies | ✅ YES | - |
-| Memory safety critical | ✅ YES | - |
-| Rust application | ✅ YES | - |
-| Embedded/IoT device | ✅ YES | - |
-| Serverless functions | ✅ YES | - |
-| Simple PDF generation | ✅ YES | - |
-| Basic PDF operations | ✅ YES | - |
-| PDF/A validation | ✅ YES, validation only | — |
-| PDF/A authoring/certification | ❌ NO | PDFSharp, iText |
-| Complex forms | ❌ NO | iText, Aspose |
-| .NET application | ❌ NO (yet) | PDFSharp |
-| Enterprise support | ❌ NO | iText, Aspose |
-
-## 💡 Migration Guides
-
-### From PDFSharp to oxidize-pdf
-
-**Equivalent Operations**:
-```csharp
-// PDFSharp
-var document = new PdfDocument();
-var page = document.AddPage();
-var gfx = XGraphics.FromPdfPage(page);
-gfx.DrawString("Hello", font, brush, 100, 100);
-
-// oxidize-pdf
-let mut doc = Document::new();
-let mut page = Page::a4();
-page.text().at(100.0, 100.0).write("Hello")?;
-doc.add_page(page);
-```
-
-### From iText to oxidize-pdf
-
-**Note**: Only migrate if you're using basic features
-
-```java
-// iText (Java)
-PdfDocument pdf = new PdfDocument(new PdfWriter(dest));
-Document document = new Document(pdf);
-document.add(new Paragraph("Hello"));
-
-// oxidize-pdf
-let mut doc = Document::new();
-let mut page = Page::a4();
-page.text().write("Hello")?;
-doc.add_page(page);
-```
-
-## 🚀 Getting Started Examples
-
-### Fastest Possible Invoice
-
-```rust
-use oxidize_pdf::{Document, Page};
-
-fn generate_invoice(invoice_no: &str, amount: f64) -> Vec<u8> {
-    let mut doc = Document::new();
-    let mut page = Page::a4();
-    
-    page.text()
-        .at(50.0, 750.0)
-        .write(&format!("Invoice #{}", invoice_no))?
-        .at(50.0, 700.0)
-        .write(&format!("Amount: ${:.2}", amount))?;
-    
-    doc.add_page(page);
-    doc.to_bytes().unwrap()
-}
-
-// Generates in ~4ms per invoice
-```
-
-### Minimal Container Deployment
-
-```dockerfile
-# Multi-stage build
-FROM rust:1.70 as builder
-COPY . .
-RUN cargo build --release
-
-# Runtime - only 10MB total!
-FROM scratch
-COPY --from=builder /target/release/pdf-service /
-EXPOSE 8080
-CMD ["/pdf-service"]
-```
-
-## 📈 ROI Calculator
-
-### Switching from IronPDF to oxidize-pdf
-
-| Metric | IronPDF | oxidize-pdf | Savings |
-|--------|---------|-------------|---------|
-| License cost | $749/year | $0 | $749 |
-| AWS Lambda size | 200 MB | 5 MB | 195 MB |
-| Cold start time | 8s | 0.2s | 7.8s |
-| Memory usage | 1 GB | 50 MB | 950 MB |
-| **Monthly AWS cost** | $125 | $8 | **$117** |
-
-### Performance Impact
-
-```
-Daily PDF generation: 10,000
-Time with PDFSharp: 1000 seconds (16.7 minutes)
-Time with oxidize-pdf: 465 seconds (7.75 minutes)
-Daily time saved: 8.95 minutes
-Yearly time saved: 54 hours
-```
-
-## 🎬 Summary
-
-**Choose oxidize-pdf when you need**:
-- Maximum performance
-- Minimum size
-- Zero dependencies
-- Memory safety
-- Rust integration
-
-**Choose alternatives when you need**:
-- PDF/A authoring, remediation or certification
-- Complex forms with JavaScript
-- Enterprise support
-- .NET native API (for now)
-
-**The Bottom Line**: oxidize-pdf excels at high-performance, secure, simple PDF generation. If that's what you need, we're the best choice. If you need enterprise features, look elsewhere (for now).
+Start with the [README](../README.md) and repository examples. Record the input
+cohort, version, protocol, denominator and observed outcomes before making an
+adoption or performance claim. An empty monitoring baseline is not a calibrated
+probability of adoption.

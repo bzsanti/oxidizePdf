@@ -1,0 +1,10 @@
+   Compiling oxidize-public-contract-probe v0.1.0 (/tmp/oxidize-603-findings-probe)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.57s
+     Running `/tmp/oxidize-603-findings-probe/target/debug/oxidize-public-contract-probe`
+strict_invalid_flate=Ok([])
+bounded_invalid_flate=Err(StreamDecodeError("bounded FlateDecode failed: corrupt deflate stream"))
+strict_invalid_predictor=Ok([0, 42, 43])
+bounded_invalid_predictor=Err(StreamDecodeError("PNG predictor: data length not multiple of row size"))
+invalid_certificate_accepted=true
+unrelated_keys_return_same_seed=true
+output_contains_build_marker=true

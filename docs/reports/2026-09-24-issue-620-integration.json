@@ -1,0 +1,147 @@
+{
+  "issue": 620,
+  "pull_request": "https://github.com/bzsanti/oxidizePdf/pull/628",
+  "baseline_revision": "e1792e83dbf0fdb42f65742fbc705dc8de906e25",
+  "candidate_extractor_revision": "b7fe817ca53584c3dd902a103637ad85fe6f72ac",
+  "evaluator_wrapper_revision": "84e274e08d94417bfce0614aef8f24c256e38180",
+  "comparison": {
+    "baseline_summary_sha256": "f8c737db7cd6137564bb36c8da85e0a34571cc69e40966a2fba4d54a00681d5c",
+    "candidate_summary_sha256": "9ee092c31503483a638967f6bd90728384f2963fc5d40cbe84be7040762d4856",
+    "identity_sha256": "bbd33db0a66dcb4ede3e5f0b361191765adeccd1a144bf23ee062b75ea7b82e4",
+    "native_text_similarity_delta": 0.0,
+    "official_global_text_similarity_delta": 0.0
+  },
+  "candidate_summary": {
+    "artifacts": {
+      "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+      "evaluation_config_sha256": "db061d6efd3ed78385f5a671a32e48bd414aa6b3febbe5311c13ad93e7f0a03f",
+      "evaluation_run_sha256": "e663b97fdebde10a47cd3eed3d3d2c02b0ce5c9156ffb82869186006895fb9b9",
+      "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+      "scores_sha256": "f92d9c423724c4d86cc85e0b0b00865554d827072985848d55241ad74068d1f7"
+    },
+    "counts": {
+      "dataset": 981,
+      "duplicate": 0,
+      "excluded_native": 141,
+      "failed": 1,
+      "included_native": 780,
+      "missing": 0,
+      "official_text_scorable": 921,
+      "official_text_unscored": 60,
+      "scored": 921
+    },
+    "identity": {
+      "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+      "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+      "evaluator_config_sha256": "175d873d119e1ff8611228e40e198a47190303a98fe6bbfe95ee67141dae810c",
+      "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+      "exporter_sha256": "9e85e44199d0473bbe2b639ed669dc804299ce6ef3f0830c7c203c6cea2a3489",
+      "extraction_config": {
+        "api": "PlainTextExtractor::preserve_layout",
+        "line_break_mode": "PreserveAll",
+        "newline_threshold": 10.0,
+        "preserve_layout": true,
+        "space_threshold": 0.3,
+        "tj_space_threshold": 0.2
+      },
+      "ocr_enabled": false,
+      "population_version": "native-text-v1",
+      "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+      "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+      "schema_version": "oxidize-pdf-omnidocbench-gate/v2",
+      "serialization": {
+        "appended_newline": false,
+        "encoding": "UTF-8",
+        "id": "rust-split-whitespace-v1"
+      },
+      "serialization_vectors_sha256": "36fbdf6a4f1710df9eea85a2866a94564114182d5b38d56909f8c919738c71b0",
+      "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+    },
+    "metrics": {
+      "native_text_edit_distance": 0.3780398277711069,
+      "native_text_similarity": 0.6219601722288931,
+      "official_global_text_edit_distance": 0.4731168630606457,
+      "official_global_text_similarity": 0.5268831369393543
+    },
+    "population": {
+      "excluded_data_sources": [
+        "note"
+      ],
+      "excluded_special_issues": [
+        "fuzzy_scan"
+      ],
+      "scored_pages_sha256": "ab0cf0c4fbd220b09338dc45fb07e1cf22299abc313b755fa7d5e474673cfa35",
+      "version": "native-text-v1"
+    },
+    "provenance": {
+      "dataset_repository": {
+        "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+        "verified_materialized_lfs_files": 141,
+        "worktree_clean": true
+      },
+      "evaluator_repository": {
+        "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+        "worktree_clean": true
+      },
+      "git_sha": "b7fe817ca53584c3dd902a103637ad85fe6f72ac",
+      "worktree_clean": true
+    },
+    "summary_sha256": "9ee092c31503483a638967f6bd90728384f2963fc5d40cbe84be7040762d4856"
+  },
+  "export_equivalence": {
+    "failures": 1,
+    "left_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+    "predictions": 981,
+    "right_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+    "serialization": {
+      "appended_newline": false,
+      "encoding": "UTF-8",
+      "id": "rust-split-whitespace-v1"
+    }
+  },
+  "stats_deployment": {
+    "previous_images": {
+      "oxidize-stats-web-1": "sha256:c8a5cb111ec9d1d66c3740de2623c43a7023eacef98247cc1452e1e0f99ba0be",
+      "oxidize-stats-scheduler-1": "sha256:a2543af119c40c535de7008f2cf5a39766d2e2dd52053e149b610d69bd575393"
+    },
+    "image": "sha256:d2466bfaf23c735c2c9a027ba9c52767ae3dad359f625933dc00b3ff0210fd32",
+    "backup": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf-issue-620/target/issue-620/integration/stats-before-deploy.sqlite3",
+    "schema": 14,
+    "historical_results": 11,
+    "health": "passed",
+    "timer": "active",
+    "integrity_check": "ok",
+    "unchanged_rows_by_table": {
+      "projects": 6,
+      "collection_runs": 36,
+      "metric_points": 3448,
+      "raw_snapshots": 2276,
+      "collection_errors": 35,
+      "events": 7,
+      "benchmark_breakdowns": 370,
+      "public_adoptions": 0,
+      "crate_version_downloads": 1769,
+      "release_benchmark_jobs": 2,
+      "benchmark_results": 11,
+      "release_benchmark_jobs_legacy_archive": 1
+    },
+    "worker_sha256": "7580b092bffd386952b5a238c29e9d75cd01b00bfa8c3f81ad6b0eebb4b7f662"
+  },
+  "artifact_root": "target/issue-620/integration",
+  "artifacts_sha256": {
+    "baseline-export.json": "002f4d232511ff0a443ec10c49f6e0526062ff768012df0b41d574ed143a3af8",
+    "baseline-summary.json": "a6b3bae714f9c3992bb36fc447a57dc298c90d5dfa9e00fb5a77793aacdea080",
+    "baseline-evaluation-2/evaluation-run.json": "a3969e5b59811aaf87b046882d1e900e27c466d7e9ced89eb1e462d1133e4b0a",
+    "baseline-evaluation-2/evaluation.yaml": "a93338834da0a41b4f67b382fd2c388406330164b7638eef8ce6d0a9569ca523",
+    "baseline-evaluation-2/result/predictions_quick_match_metric_result.json": "207ca836e435f168b112bed9d553d7ff8e0788296d82559705ce2fecf07f91f6",
+    "baseline-evaluation-2/result/predictions_quick_match_text_block_per_page_edit.json": "2862e24581b894f1dd2a531568adb8024cd95cdf0856876ac86eef29d6290f02",
+    "baseline-evaluation-2/result/predictions_quick_match_reading_order_per_page_edit.json": "76b286956cc626d4d6169392a2ac1a29cea5c26e716d88ad3fe438bc0f38d568",
+    "candidate-export.json": "60bc729d527c2316b4d3de01855461dfb0540bc91d23465f7ae286b446a7c61c",
+    "candidate-summary.json": "36e4384381a684738cc1653bb745ad0f41108cedc99eaaab6d6eb1fa6a38391d",
+    "candidate-evaluation-2/evaluation-run.json": "e663b97fdebde10a47cd3eed3d3d2c02b0ce5c9156ffb82869186006895fb9b9",
+    "candidate-evaluation-2/evaluation.yaml": "db061d6efd3ed78385f5a671a32e48bd414aa6b3febbe5311c13ad93e7f0a03f",
+    "candidate-evaluation-2/result/predictions_quick_match_metric_result.json": "207ca836e435f168b112bed9d553d7ff8e0788296d82559705ce2fecf07f91f6",
+    "candidate-evaluation-2/result/predictions_quick_match_text_block_per_page_edit.json": "2862e24581b894f1dd2a531568adb8024cd95cdf0856876ac86eef29d6290f02",
+    "candidate-evaluation-2/result/predictions_quick_match_reading_order_per_page_edit.json": "76b286956cc626d4d6169392a2ac1a29cea5c26e716d88ad3fe438bc0f38d568"
+  }
+}

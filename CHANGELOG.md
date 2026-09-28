@@ -8,6 +8,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Added
+
+- Prepare participant signature fields through incremental create/list/read/remove
+  APIs, render handwritten strokes and optional certificate labels, and pass the
+  prepared appearance to existing detached signing APIs. Handwritten completion
+  remains distinct from a cryptographic signature; DocMDP/FieldMDP restrictions
+  apply. Required for the next release (#646).
+
+### Documentation
+
+- Reconcile public adoption claims, remove unsupported comparisons, and record
+  versioned limitations and evidence (#603). Define basic signature operations,
+  external CMS responsibilities and the PAdES extension interfaces (#641).
+
+### Fixed
+
+- Reject unsupported certificate-based recipient encryption and decryption
+  explicitly instead of returning simulated success, including every public-key
+  security-handler cryptographic entry point. Permission checks deny access;
+  dictionary helpers remain metadata-only. See the migration boundary in
+  `docs/recipient-encryption.md` (#640).
+
+- Write valid outline sibling links when preceding siblings have descendants,
+  including nested branches (#633).
+- Apply the requested document metadata policy during reconstructive extraction
+  and splitting so outputs agree with their preservation reports (#634).
+
+- Preserve per-part tagged structure and rebuild recoverable parent/ID indexes
+  when splitting tagged PDFs; identify reachable zero-offset references and
+  reject unsafe repairs without publishing partial outputs (#621).
+
+- Replace native certificate-verification cryptography with Rust primitives,
+  preserving certificate chains, supported algorithms and CRL checks; add
+  dependency gates for supported product and binding configurations (#627).
+
+- Deliver streaming text callbacks incrementally, retaining operand state and
+  allowing cancellation before parsing the remaining page (#618).
+
+- Recover valid later page content streams after a lexical error without
+  losing operands across healthy stream boundaries (#617).
+
+- Preserve separators between independently positioned text objects before
+  punctuation, with consistent Tj/TJ coverage (#615).
+
+- Preserve generated footers after imported content without a final newline,
+  including trailing comments (#616).
+
 ## [5.1.3] - 2026-09-19
 
 ### Changed

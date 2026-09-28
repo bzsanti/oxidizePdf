@@ -1,0 +1,98 @@
+{
+  "synthetic": true,
+  "production_database_mounted": false,
+  "started_at": "2026-09-27T19:43:28.064Z",
+  "isolated_directory": "/tmp/oxidize-603-e2e-3ilMnJ",
+  "checks": [
+    "Deployed collector image initializes an isolated schema and private key.",
+    "Collector accepts experiment, subject-bound consent, observation, feedback, deterministic assessment and human review.",
+    "Uncalibrated high-probability evidence requests more data and cannot block promotion.",
+    "Read-only live API exposes the complete workflow, rejects writes and excludes private identifiers.",
+    "Real Chrome renders the experiment, deterministic decision and human review without JavaScript errors; screenshot saved.",
+    "Deployed scheduler started; waiting for actual consent expiry and its automatic retention cycle.",
+    "Actual scheduler erased feedback after expiry, appended an erasure record and preserved a valid seven-record audit chain.",
+    "UI refresh displays the updated audit count and no pending expired feedback."
+  ],
+  "web_image": "sha256:f0f76085dd4727101cf480aa7fa6cac6c79dc4f090e9b3bb1b559ec39960224e",
+  "scheduler_image": "sha256:f0f76085dd4727101cf480aa7fa6cac6c79dc4f090e9b3bb1b559ec39960224e",
+  "base_url": "http://127.0.0.1:32771",
+  "consent_expires_at": "2026-09-27T19:44:59.471Z",
+  "record_ids": {
+    "experiment": "20b55d65-6ecc-4cff-867a-0bc4db613af4",
+    "observation": "1e6bd8e6-03f4-4c96-b74d-2ac003d5a045",
+    "feedback": "ff0d478a-5c57-4c1f-a128-fbbb48729222",
+    "assessment": "f3f4b9af-13fa-4b4b-af33-4f852149406f",
+    "review": "b513badc-e9e9-4b6f-803b-85dbf9a6238c"
+  },
+  "api_before_expiry": {
+    "assessments": [
+      {
+        "decision": "request_more_data",
+        "event_id": "f3f4b9af-13fa-4b4b-af33-4f852149406f",
+        "experiment_id": "e2e-603",
+        "recorded_at": "2026-09-27T19:43:30Z",
+        "risk": "compatibility",
+        "sample": 1
+      }
+    ],
+    "audit": {
+      "head": "02a03599cf5bcf9177622fafba5544ed13c0bd2b2db2003ba3b99bbaeb212a93",
+      "records": 6
+    },
+    "automatic_promotion_block": false,
+    "calibrations": 0,
+    "experiments": [
+      {
+        "denominator_id": "e2e-cohort",
+        "denominator_reason": "One synthetic subject for acceptance only",
+        "due_date": "2026-09-28",
+        "experiment_id": "e2e-603",
+        "failure_criterion": "Synthetic quickstart fails",
+        "minimum_sample": 2,
+        "next_action": "Verify UI, human review and scheduler expiry",
+        "owner": "synthetic-test",
+        "privacy_policy": "categorical-only-v1",
+        "replaces_event_id": null,
+        "retention_days": 1,
+        "sampling_rule": "Synthetic acceptance fixture; never product evidence",
+        "segment": "rust-backend-rag",
+        "status": "active",
+        "success_criterion": "Synthetic quickstart completes"
+      }
+    ],
+    "expired_feedback_pending_erasure": 0,
+    "observations": 1,
+    "policy_version": "adoption-v1",
+    "reviews": [
+      {
+        "assessment_id": "f3f4b9af-13fa-4b4b-af33-4f852149406f",
+        "next_action": "Collect real evidence before making a product decision",
+        "outcome": "investigate",
+        "reviewer": "synthetic-reviewer"
+      }
+    ]
+  },
+  "screenshot": "docs/evidence/issue-603-monitoring-e2e.png",
+  "browser_errors": [],
+  "erasure": {
+    "data": {
+      "consent_id": "e2e-consent",
+      "deleted_at": "2026-09-27T19:45:34Z",
+      "feedback_id": "ff0d478a-5c57-4c1f-a128-fbbb48729222",
+      "reason": "retention_expired"
+    },
+    "event_id": "9a5a12c4-8f8a-4c7f-924e-cd89e9462da7",
+    "kind": "erasure",
+    "policy_version": "adoption-v1",
+    "previous_event_hash": "02a03599cf5bcf9177622fafba5544ed13c0bd2b2db2003ba3b99bbaeb212a93",
+    "recorded_at": "2026-09-27T19:45:34Z",
+    "schema_version": 1
+  },
+  "final_checkpoint": {
+    "records": 7,
+    "head": "413ce7e65d4b1b23ce42c11db65f25f016fdd63dfb818b9e29f2898334d32da4"
+  },
+  "visible_after_expiry": "1 registros de observación · 7 registros de auditoría verificados · Sin probabilidad de adopción calibrada. Sin categorías caducadas pendientes.",
+  "completed_at": "2026-09-27T19:45:35.318Z",
+  "result": "passed"
+}

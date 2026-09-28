@@ -6,6 +6,9 @@ Cargo.lock
 # Compiled binaries and executables - NEVER COMMIT
 debug_*
 test_*
+!scripts/test_no_native_dependencies.py
+!scripts/test_certificate_binding.py
+__pycache__/
 !examples/src/test_*.rs
 /debug_cjk
 *.exe

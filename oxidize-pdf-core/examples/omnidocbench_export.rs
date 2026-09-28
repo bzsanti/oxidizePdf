@@ -1,5 +1,9 @@
 //! Deterministic native-text prediction exporter for OmniDocBench.
 
+#[path = "support/omnidocbench_serialization.rs"]
+mod serialization;
+use serialization::Serialization;
+
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::plaintext::{PlainTextConfig, PlainTextExtractor};
 use serde::{Deserialize, Serialize};
@@ -43,6 +47,7 @@ struct Report {
     counts: Counts,
     failures: Vec<Failure>,
     extraction_config: ExtractionConfig,
+    serialization: serde_json::Value,
 }
 
 fn prediction_path(output: &Path, name: &str) -> Result<PathBuf, String> {
@@ -75,7 +80,11 @@ fn temporary_output_path(output: &Path) -> Result<PathBuf, String> {
     Ok(output.with_file_name(format!(".{name}.tmp-{}", std::process::id())))
 }
 
-fn write_predictions(jobs: &[Job], staging: &Path) -> Result<Vec<Failure>, String> {
+fn write_predictions(
+    jobs: &[Job],
+    staging: &Path,
+    serialization: Serialization,
+) -> Result<Vec<Failure>, String> {
     let mut jobs_by_pdf: BTreeMap<&Path, Vec<&Job>> = BTreeMap::new();
     for job in jobs {
         jobs_by_pdf.entry(&job.pdf_path).or_default().push(job);
@@ -104,9 +113,8 @@ fn write_predictions(jobs: &[Job], staging: &Path) -> Result<Vec<Failure>, Strin
                 (Err(error), _) | (_, Err(error)) => Err(error.clone()),
             };
             match extracted {
-                Ok(text) => {
-                    fs::write(destination, text.as_bytes()).map_err(|error| error.to_string())?
-                }
+                Ok(text) => fs::write(destination, serialization.serialize(&text).as_bytes())
+                    .map_err(|error| error.to_string())?,
                 Err(error) => {
                     fs::write(destination, []).map_err(|write_error| write_error.to_string())?;
                     failures.push(Failure {
@@ -120,7 +128,12 @@ fn write_predictions(jobs: &[Job], staging: &Path) -> Result<Vec<Failure>, Strin
     Ok(failures)
 }
 
-fn run(jobs_path: &Path, output: &Path, report_path: &Path) -> Result<(), String> {
+fn run(
+    jobs_path: &Path,
+    output: &Path,
+    report_path: &Path,
+    serialization: Serialization,
+) -> Result<(), String> {
     let jobs: Vec<Job> = serde_json::from_slice(
         &fs::read(jobs_path).map_err(|error| format!("read jobs: {error}"))?,
     )
@@ -145,7 +158,7 @@ fn run(jobs_path: &Path, output: &Path, report_path: &Path) -> Result<(), String
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
     fs::create_dir(&staging).map_err(|error| error.to_string())?;
-    let mut failures = match write_predictions(&jobs, &staging) {
+    let mut failures = match write_predictions(&jobs, &staging, serialization) {
         Ok(failures) => failures,
         Err(error) => {
             let _ = fs::remove_dir_all(&staging);
@@ -161,6 +174,7 @@ fn run(jobs_path: &Path, output: &Path, report_path: &Path) -> Result<(), String
         },
         failures,
         extraction_config: extraction_config(),
+        serialization: serialization.configuration(),
     };
     let mut rendered = serde_json::to_vec_pretty(&report).map_err(|error| error.to_string())?;
     rendered.push(b'\n');
@@ -170,14 +184,23 @@ fn run(jobs_path: &Path, output: &Path, report_path: &Path) -> Result<(), String
 
 fn main() {
     let args: Vec<_> = env::args_os().collect();
-    if args.len() != 4 {
-        eprintln!("usage: omnidocbench_export <jobs.json> <predictions-dir> <report.json>");
+    if args.len() != 4 && !(args.len() == 6 && args[4] == "--serialization") {
+        eprintln!("usage: omnidocbench_export <jobs.json> <predictions-dir> <report.json> [--serialization <contract-id>]");
         std::process::exit(2);
     }
+    let serialization = match args.get(5) {
+        Some(id) => Serialization::parse(&id.to_string_lossy()),
+        None => Ok(Serialization::default()),
+    }
+    .unwrap_or_else(|error| {
+        eprintln!("error: {error}");
+        std::process::exit(2)
+    });
     if let Err(error) = run(
         Path::new(&args[1]),
         Path::new(&args[2]),
         Path::new(&args[3]),
+        serialization,
     ) {
         eprintln!("error: {error}");
         std::process::exit(2);
@@ -187,6 +210,89 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_export_matches_historical_normalized_bytes() {
+        use oxidize_pdf::{Document, Font, Page};
+        let root = tempfile::tempdir().unwrap();
+        let pdf = root.path().join("two-lines.pdf");
+        let mut document = Document::new();
+        let mut page = Page::a4();
+        page.text()
+            .set_font(Font::Helvetica, 12.0)
+            .at(72.0, 720.0)
+            .write("Alpha")
+            .unwrap();
+        page.text()
+            .set_font(Font::Helvetica, 12.0)
+            .at(72.0, 690.0)
+            .write("Beta")
+            .unwrap();
+        document.add_page(page);
+        document.save(&pdf).unwrap();
+        let jobs = root.path().join("jobs.json");
+        fs::write(
+            &jobs,
+            serde_json::to_vec(&serde_json::json!([
+                {"prediction_name":"page.md", "pdf_path":pdf, "page_index":0}
+            ]))
+            .unwrap(),
+        )
+        .unwrap();
+        let output = root.path().join("predictions");
+        run(
+            &jobs,
+            &output,
+            &root.path().join("report.json"),
+            Serialization::default(),
+        )
+        .unwrap();
+        assert_eq!(fs::read(output.join("page.md")).unwrap(), b"Alpha Beta");
+        let preserved = root.path().join("preserved");
+        let report = root.path().join("preserved-report.json");
+        run(&jobs, &preserved, &report, Serialization::Preserved).unwrap();
+        assert_eq!(fs::read(preserved.join("page.md")).unwrap(), b"Alpha\nBeta");
+        let report: serde_json::Value = serde_json::from_slice(&fs::read(report).unwrap()).unwrap();
+        assert_eq!(
+            report["serialization"],
+            Serialization::Preserved.configuration()
+        );
+    }
+
+    #[test]
+    fn empty_pages_and_failed_pages_remain_distinct_in_report() {
+        use oxidize_pdf::{Document, Page};
+        let root = tempfile::tempdir().unwrap();
+        let pdf = root.path().join("empty.pdf");
+        let mut document = Document::new();
+        document.add_page(Page::a4());
+        document.save(&pdf).unwrap();
+        let jobs = root.path().join("jobs.json");
+        fs::write(
+            &jobs,
+            serde_json::to_vec(&serde_json::json!([
+                {"prediction_name":"empty.md", "pdf_path":pdf, "page_index":0},
+                {"prediction_name":"failed.md", "pdf_path":pdf, "page_index":1}
+            ]))
+            .unwrap(),
+        )
+        .unwrap();
+        let output = root.path().join("predictions");
+        let report = root.path().join("report.json");
+        run(&jobs, &output, &report, Serialization::default()).unwrap();
+        assert_eq!(fs::read(output.join("empty.md")).unwrap(), b"");
+        assert_eq!(fs::read(output.join("failed.md")).unwrap(), b"");
+        let report: serde_json::Value = serde_json::from_slice(&fs::read(report).unwrap()).unwrap();
+        assert_eq!(
+            report["counts"],
+            serde_json::json!({"attempted":2,"written":2,"failed":1})
+        );
+        assert_eq!(report["failures"][0]["prediction_name"], "failed.md");
+        assert_eq!(
+            report["serialization"],
+            Serialization::default().configuration()
+        );
+    }
 
     #[test]
     fn prediction_names_are_flat_markdown_files() {

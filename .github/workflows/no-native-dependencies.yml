@@ -1,0 +1,50 @@
+name: No native product dependencies
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  product:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test dependency policy
+        run: python scripts/test_no_native_dependencies.py
+      - name: Inspect and build the complete Rust product without C/C++ compilation
+        run: python scripts/check_no_native_dependencies.py --product-features --target ${{ matrix.target }} --build
+      - name: Validate certificates from a consumer without dev-dependencies
+        run: python scripts/check_certificate_product.py --target ${{ matrix.target }}
+      - name: Verify certificate chains and CRLs
+        run: cargo test --locked -p oxidize-pdf --features signatures --test issue_526_signature_validation_test --test issue_627_certificate_provider_test --test signature_integration_test
+
+  binding-targets:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, x86_64-pc-windows-msvc, x86_64-apple-darwin, aarch64-apple-darwin]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Inspect the Python core feature selection
+        run: python scripts/check_no_native_dependencies.py --no-default-features --features compression,signatures,semantic,language-detection --target ${{ matrix.target }}
+      - name: Inspect maximal product features
+        run: python scripts/check_no_native_dependencies.py --product-features --target ${{ matrix.target }}

@@ -401,11 +401,41 @@ fn mutate_pdf_bytes_lossless(
         .filter(|(index, _)| !retained.contains(index))
         .map(|(_, page)| page.reference)
         .collect();
+    let projection = if !deleted_refs.is_empty() && catalog.contains_key("StructTreeRoot") {
+        if planned
+            .iter()
+            .any(|page| !matches!(page, PlannedPage::Existing { .. }))
+        {
+            return Err(invalid_lossless(
+                "tagged deletion combined with cloning/import is unsupported",
+            ));
+        }
+        super::tagged_split::project(
+            &mut reader,
+            &catalog,
+            source_pages
+                .iter()
+                .map(|page| (page.reference, page.dictionary.clone()))
+                .collect(),
+            &source_pages
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| retained.contains(i))
+                .map(|(_, p)| p.reference)
+                .collect(),
+        )?
+    } else {
+        super::tagged_split::Projection::default()
+    };
+    let mut source_reachable =
+        reachable_from_catalog(&mut reader, &catalog, &projection.recovered)?;
+    source_reachable.extend(projection.recovered_ids.iter().copied());
     ensure_catalog_does_not_reference_deleted_pages(
         &mut reader,
         &catalog,
         root_reference,
         &deleted_refs,
+        &projection.replacements,
     )?;
     ensure_retained_pages_do_not_reference_deleted_pages(
         &mut reader,
@@ -413,8 +443,8 @@ fn mutate_pdf_bytes_lossless(
         &retained,
         root_reference,
         &deleted_refs,
+        &projection.replacements,
     )?;
-    let source_reachable = reachable_from_catalog(&mut reader, &catalog)?;
 
     let root_inherited = inherited_values(&root_dictionary);
     let root_preserved_values: Vec<_> = root_dictionary
@@ -430,6 +460,12 @@ fn mutate_pdf_bytes_lossless(
     let mut replacements = HashSet::new();
     let mut preserved_source_refs = HashSet::new();
     replacements.insert(root_reference);
+    let mut projected_ids: Vec<_> = projection.replacements.keys().copied().collect();
+    projected_ids.sort_unstable();
+    for id in projected_ids {
+        update.replace(id, projection.replacements[&id].clone())?;
+        replacements.insert(id);
+    }
     let mut imported_documents = HashMap::new();
     for source in planned.iter().filter_map(|page| match page {
         PlannedPage::Import { source, .. } => Some(source),
@@ -549,7 +585,10 @@ fn mutate_pdf_bytes_lossless(
         &root_preserved_values,
         &source_pages,
         &retained,
-        &preserved_source_refs,
+        SourceGraph {
+            preserved: &preserved_source_refs,
+            overrides: &projection.replacements,
+        },
     )?;
     let mut unreachable_objects: Vec<_> = source_reachable
         .difference(&output_reachable)
@@ -574,7 +613,8 @@ fn mutate_pdf_bytes_lossless(
             .catalog()
             .map_err(|error| invalid_lossless(format!("read output catalog: {error}")))?
             .clone();
-        let actual_reachable = reachable_from_catalog(&mut output_reader, &output_catalog)?;
+        let actual_reachable =
+            reachable_from_catalog(&mut output_reader, &output_catalog, &HashMap::new())?;
         let mut actual_unreachable: Vec<_> = source_reachable
             .difference(&actual_reachable)
             .copied()
@@ -584,6 +624,16 @@ fn mutate_pdf_bytes_lossless(
             return Err(invalid_lossless(
                 "dry-run reachability report differs from the materialized revision",
             ));
+        }
+        if !projection.replacements.is_empty() {
+            let tags =
+                crate::verification::tagged_pdf::validate_tagged_pdf(&bytes, &Default::default())?;
+            if !tags.valid {
+                return Err(invalid_lossless(format!(
+                    "projected tagged structure is invalid: {:?}",
+                    tags.findings
+                )));
+            }
         }
         Some(bytes)
     } else {
@@ -1129,6 +1179,7 @@ fn object_from_pending(added: &[((u32, u16), PdfObject)], id: (u32, u16)) -> Pdf
 fn reachable_from_catalog<R: Read + Seek>(
     reader: &mut PdfReader<R>,
     catalog: &PdfDictionary,
+    overrides: &HashMap<(u32, u16), PdfObject>,
 ) -> Result<HashSet<(u32, u16)>, PdfError> {
     let mut pending: Vec<_> = catalog.0.values().cloned().collect();
     let mut reachable = HashSet::new();
@@ -1145,12 +1196,10 @@ fn reachable_from_catalog<R: Read + Seek>(
                     ));
                 }
                 pending.push(
-                    reader
-                        .get_object(number, generation)
+                    super::tagged_split::read_object(reader, (number, generation), overrides)
                         .map_err(|error| {
                             invalid_lossless(format!("walk document object graph: {error}"))
-                        })?
-                        .clone(),
+                        })?,
                 );
             }
             PdfObject::Array(array) => pending.extend(array.0),
@@ -1162,6 +1211,11 @@ fn reachable_from_catalog<R: Read + Seek>(
     Ok(reachable)
 }
 
+struct SourceGraph<'a> {
+    preserved: &'a HashSet<(u32, u16)>,
+    overrides: &'a HashMap<(u32, u16), PdfObject>,
+}
+
 fn prospective_source_references<R: Read + Seek>(
     reader: &mut PdfReader<R>,
     catalog: &PdfDictionary,
@@ -1169,7 +1223,7 @@ fn prospective_source_references<R: Read + Seek>(
     root_preserved_values: &[PdfObject],
     pages: &[LosslessPage],
     retained: &HashSet<usize>,
-    preserved: &HashSet<(u32, u16)>,
+    graph: SourceGraph<'_>,
 ) -> Result<HashSet<(u32, u16)>, PdfError> {
     let mut pending: Vec<_> = catalog
         .0
@@ -1191,7 +1245,12 @@ fn prospective_source_references<R: Read + Seek>(
                     .map(|(_, value)| value.clone())
             }),
     );
-    pending.extend(preserved.iter().map(|id| PdfObject::Reference(id.0, id.1)));
+    pending.extend(
+        graph
+            .preserved
+            .iter()
+            .map(|id| PdfObject::Reference(id.0, id.1)),
+    );
 
     let mut reachable = HashSet::from([page_root]);
     reachable.extend(
@@ -1213,12 +1272,11 @@ fn prospective_source_references<R: Read + Seek>(
                         "prospective document graph exceeds the supported object count",
                     ));
                 }
-                let object = reader
-                    .get_object(number, generation)
-                    .map_err(|error| {
-                        invalid_lossless(format!("plan prospective object graph: {error}"))
-                    })?
-                    .clone();
+                let object =
+                    super::tagged_split::read_object(reader, (number, generation), graph.overrides)
+                        .map_err(|error| {
+                            invalid_lossless(format!("plan prospective object graph: {error}"))
+                        })?;
                 match object {
                     PdfObject::Dictionary(dictionary)
                         if dictionary
@@ -1250,6 +1308,7 @@ fn ensure_catalog_does_not_reference_deleted_pages<R: Read + Seek>(
     catalog: &PdfDictionary,
     page_root: (u32, u16),
     deleted: &HashSet<(u32, u16)>,
+    overrides: &HashMap<(u32, u16), PdfObject>,
 ) -> Result<(), PdfError> {
     if deleted.is_empty() {
         return Ok(());
@@ -1274,12 +1333,10 @@ fn ensure_catalog_does_not_reference_deleted_pages<R: Read + Seek>(
                     continue;
                 }
                 pending.push(
-                    reader
-                        .get_object(number, generation)
+                    super::tagged_split::read_object(reader, (number, generation), overrides)
                         .map_err(|error| {
                             invalid_lossless(format!("inspect catalog references: {error}"))
-                        })?
-                        .clone(),
+                        })?,
                 );
             }
             PdfObject::Array(array) => pending.extend(array.0),
@@ -1297,6 +1354,7 @@ fn ensure_retained_pages_do_not_reference_deleted_pages<R: Read + Seek>(
     retained: &HashSet<usize>,
     page_root: (u32, u16),
     deleted: &HashSet<(u32, u16)>,
+    overrides: &HashMap<(u32, u16), PdfObject>,
 ) -> Result<(), PdfError> {
     if deleted.is_empty() {
         return Ok(());
@@ -1327,12 +1385,10 @@ fn ensure_retained_pages_do_not_reference_deleted_pages<R: Read + Seek>(
                     continue;
                 }
                 pending.push(
-                    reader
-                        .get_object(number, generation)
+                    super::tagged_split::read_object(reader, (number, generation), overrides)
                         .map_err(|error| {
                             invalid_lossless(format!("inspect retained page references: {error}"))
-                        })?
-                        .clone(),
+                        })?,
                 );
             }
             PdfObject::Array(array) => pending.extend(array.0),

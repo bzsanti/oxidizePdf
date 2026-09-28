@@ -37,6 +37,7 @@ fn prepared_slots_respect_certification_and_field_locks() {
     for permission in [
         CertificationPermission::NoChanges,
         CertificationPermission::FormFillAndSign,
+        CertificationPermission::FormFillSignAndAnnotate,
     ] {
         let mut options = SignaturePreparationOptions::invisible("certification");
         options.certification = Some(permission);
@@ -48,7 +49,7 @@ fn prepared_slots_respect_certification_and_field_locks() {
         assert!(remove_signature_slot(&signed, "prepared").is_err());
         assert_eq!(
             complete_signature_slot(&signed, "prepared", &strokes, true).is_ok(),
-            permission == CertificationPermission::FormFillAndSign
+            permission != CertificationPermission::NoChanges
         );
     }
     let mut options = SignaturePreparationOptions::invisible("lock");

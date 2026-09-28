@@ -1167,7 +1167,7 @@ pub fn extract_pdf_pages(
         ExistingDocumentPolicy::PreserveBase(_) => {
             extract_pdf_pages_preserving(input, output, pages, policy)
         }
-        ExistingDocumentPolicy::Reconstruct(_) => {
+        ExistingDocumentPolicy::Reconstruct(reconstruct_policy) => {
             let snapshot = read_snapshot(input)?;
             let merge_input =
                 ExistingDocumentMergeInput::with_pages(input, PageRange::List(pages.to_vec()));
@@ -1183,10 +1183,11 @@ pub fn extract_pdf_pages(
                     .filter(|parent| !parent.as_os_str().is_empty())
                     .unwrap_or_else(|| Path::new(".")),
             )?;
-            super::page_extraction::extract_pages_to_file(
+            reconstruct_pages_to_file(
                 snapshot_file.path(),
                 pages,
                 temporary.path(),
+                reconstruct_policy,
             )?;
             temporary.as_file().sync_all()?;
             temporary
@@ -1195,6 +1196,28 @@ pub fn extract_pdf_pages(
             Ok(report)
         }
     }
+}
+
+// Both reconstructive operations must apply the policy used to build their report.
+fn reconstruct_pages_to_file(
+    input: &Path,
+    pages: &[usize],
+    output: &Path,
+    policy: ReconstructPolicy,
+) -> OperationResult<()> {
+    use super::page_extraction::{PageExtractionOptions, PageExtractor};
+    let reader =
+        PdfReader::open(input).map_err(|error| OperationError::ParseError(error.to_string()))?;
+    let options = PageExtractionOptions {
+        preserve_metadata: policy.metadata() == ReconstructMetadataPolicy::FirstInputWins,
+        ..PageExtractionOptions::default()
+    };
+    let mut extractor =
+        PageExtractor::with_options(crate::parser::PdfDocument::new(reader), options);
+    extractor
+        .extract_pages(pages)?
+        .save(output)
+        .map_err(OperationError::PdfError)
 }
 
 /// Plan a split using an explicit preservation policy.
@@ -1258,7 +1281,7 @@ pub fn split_pdf(
         ExistingDocumentPolicy::PreserveBase(_) => {
             split_pdf_preserving(input, ranges, outputs, policy)
         }
-        ExistingDocumentPolicy::Reconstruct(_) => {
+        ExistingDocumentPolicy::Reconstruct(reconstruct_policy) => {
             if ranges.len() != outputs.len() {
                 return Err(OperationError::InvalidPath {
                     reason: format!(
@@ -1307,10 +1330,11 @@ pub fn split_pdf(
                     .filter(|parent| !parent.as_os_str().is_empty())
                     .unwrap_or_else(|| Path::new("."));
                 let temporary = tempfile::NamedTempFile::new_in(parent)?;
-                super::page_extraction::extract_pages_to_file(
+                reconstruct_pages_to_file(
                     snapshot_file.path(),
                     &report.inputs[0].selected_pages,
                     temporary.path(),
+                    reconstruct_policy,
                 )?;
                 temporary.as_file().sync_all()?;
                 staged.push(temporary);

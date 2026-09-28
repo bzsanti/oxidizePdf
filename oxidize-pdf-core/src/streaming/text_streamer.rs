@@ -75,17 +75,17 @@ impl TextStreamer {
 
     /// Emit one text-showing operator's bytes as a chunk at the current
     /// position, honoring the minimum-font-size filter.
-    fn emit_text(&self, bytes: &[u8], chunks: &mut Vec<TextChunk>) {
+    fn emit_text(&self, bytes: &[u8]) -> Option<TextChunk> {
         if self.current_font_size < self.options.min_font_size {
-            return;
+            return None;
         }
-        chunks.push(TextChunk {
+        Some(TextChunk {
             text: String::from_utf8_lossy(bytes).to_string(),
             x: self.current_x,
             y: self.current_y,
             font_size: self.current_font_size,
             font_name: self.current_font.clone(),
-        });
+        })
     }
 
     /// Process a content stream chunk
@@ -94,75 +94,8 @@ impl TextStreamer {
             .map_err(|e| crate::error::PdfError::ParseError(e.to_string()))?;
 
         let mut chunks = Vec::new();
-
         for op in operations {
-            match op {
-                ContentOperation::SetFont(name, size) => {
-                    self.current_font = Some(name);
-                    self.current_font_size = size as f64;
-                }
-                // Td: move to the start of the next line, offset from the
-                // current line origin (§9.4.2).
-                ContentOperation::MoveText(x, y) => {
-                    self.current_x += x as f64;
-                    self.current_y += y as f64;
-                }
-                // TD: like Td, and also set the leading to -ty (§9.4.2). Without
-                // this and the operators below, every line placed by anything
-                // other than Td landed on the previous line's baseline (#453).
-                ContentOperation::MoveTextSetLeading(x, y) => {
-                    self.current_leading = -(y as f64);
-                    self.current_x += x as f64;
-                    self.current_y += y as f64;
-                }
-                // TL: set the leading consumed by T*, ', and ".
-                ContentOperation::SetLeading(leading) => {
-                    self.current_leading = leading as f64;
-                }
-                // T*: move down one leading to the next line (§9.4.2).
-                ContentOperation::NextLine => {
-                    self.current_y -= self.current_leading;
-                }
-                // Tm: set the text (line) matrix absolutely; this streamer tracks
-                // only translation, which is its origin (§9.4.2).
-                ContentOperation::SetTextMatrix(_a, _b, _c, _d, e, f) => {
-                    self.current_x = e as f64;
-                    self.current_y = f as f64;
-                }
-                ContentOperation::ShowText(bytes) => {
-                    self.emit_text(&bytes, &mut chunks);
-                }
-                // TJ: an array of strings and numeric position adjustments. The
-                // adjustments nudge glyphs horizontally within the line; this
-                // streamer does not measure glyph advances, so it concatenates
-                // the strings at the line position rather than dropping them.
-                ContentOperation::ShowTextArray(elements) => {
-                    let mut text = Vec::new();
-                    for el in elements {
-                        if let crate::parser::content::TextElement::Text(bytes) = el {
-                            text.extend_from_slice(&bytes);
-                        }
-                    }
-                    self.emit_text(&text, &mut chunks);
-                }
-                // ': move to the next line, then show (§9.4.3).
-                ContentOperation::NextLineShowText(bytes) => {
-                    self.current_y -= self.current_leading;
-                    self.emit_text(&bytes, &mut chunks);
-                }
-                // ": set word/char spacing, move to the next line, then show. The
-                // spacings affect glyph advance, which this streamer does not
-                // track; the line move and the text must not be lost (§9.4.3).
-                ContentOperation::SetSpacingNextLineShowText(_aw, _ac, bytes) => {
-                    self.current_y -= self.current_leading;
-                    self.emit_text(&bytes, &mut chunks);
-                }
-                ContentOperation::BeginText => {
-                    self.current_x = 0.0;
-                    self.current_y = 0.0;
-                }
-                _ => {} // Non-text operators do not affect extraction.
-            }
+            chunks.extend(self.process_operation(op));
         }
 
         // Add to buffer if needed
@@ -174,6 +107,80 @@ impl TextStreamer {
         self.check_buffer_size();
 
         Ok(chunks)
+    }
+
+    // Shared state transition for batch and callback APIs. The callback path
+    // deliberately does not retain chunks in the streamer's batch buffer.
+    fn process_operation(&mut self, op: ContentOperation) -> Option<TextChunk> {
+        match op {
+            ContentOperation::SetFont(name, size) => {
+                self.current_font = Some(name);
+                self.current_font_size = size as f64;
+            }
+            // Td: move to the start of the next line, offset from the
+            // current line origin (§9.4.2).
+            ContentOperation::MoveText(x, y) => {
+                self.current_x += x as f64;
+                self.current_y += y as f64;
+            }
+            // TD: like Td, and also set the leading to -ty (§9.4.2). Without
+            // this and the operators below, every line placed by anything
+            // other than Td landed on the previous line's baseline (#453).
+            ContentOperation::MoveTextSetLeading(x, y) => {
+                self.current_leading = -(y as f64);
+                self.current_x += x as f64;
+                self.current_y += y as f64;
+            }
+            // TL: set the leading consumed by T*, ', and ".
+            ContentOperation::SetLeading(leading) => {
+                self.current_leading = leading as f64;
+            }
+            // T*: move down one leading to the next line (§9.4.2).
+            ContentOperation::NextLine => {
+                self.current_y -= self.current_leading;
+            }
+            // Tm: set the text (line) matrix absolutely; this streamer tracks
+            // only translation, which is its origin (§9.4.2).
+            ContentOperation::SetTextMatrix(_a, _b, _c, _d, e, f) => {
+                self.current_x = e as f64;
+                self.current_y = f as f64;
+            }
+            ContentOperation::ShowText(bytes) => {
+                return self.emit_text(&bytes);
+            }
+            // TJ: an array of strings and numeric position adjustments. The
+            // adjustments nudge glyphs horizontally within the line; this
+            // streamer does not measure glyph advances, so it concatenates
+            // the strings at the line position rather than dropping them.
+            ContentOperation::ShowTextArray(elements) => {
+                let mut text = Vec::new();
+                for el in elements {
+                    if let crate::parser::content::TextElement::Text(bytes) = el {
+                        text.extend_from_slice(&bytes);
+                    }
+                }
+                return self.emit_text(&text);
+            }
+            // ': move to the next line, then show (§9.4.3).
+            ContentOperation::NextLineShowText(bytes) => {
+                self.current_y -= self.current_leading;
+                return self.emit_text(&bytes);
+            }
+            // ": set word/char spacing, move to the next line, then show. The
+            // spacings affect glyph advance, which this streamer does not
+            // track; the line move and the text must not be lost (§9.4.3).
+            ContentOperation::SetSpacingNextLineShowText(_aw, _ac, bytes) => {
+                self.current_y -= self.current_leading;
+                return self.emit_text(&bytes);
+            }
+            ContentOperation::BeginText => {
+                self.current_x = 0.0;
+                self.current_y = 0.0;
+            }
+            _ => {} // Non-text operators do not affect extraction.
+        }
+
+        None
     }
 
     /// Get all buffered text chunks
@@ -218,15 +225,12 @@ where
     F: FnMut(TextChunk) -> Result<()>,
 {
     let mut streamer = TextStreamer::new(TextStreamOptions::default());
-
-    for stream in content_streams {
-        let chunks = streamer.process_chunk(&stream)?;
-        for chunk in chunks {
+    ContentParser::visit_content_streams(&content_streams, |operation| {
+        if let Some(chunk) = streamer.process_operation(operation) {
             callback(chunk)?;
         }
-    }
-
-    Ok(())
+        Ok(())
+    })
 }
 
 #[cfg(test)]

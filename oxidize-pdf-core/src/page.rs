@@ -315,13 +315,9 @@ impl Page {
         // Extract and preserve existing content streams
         let content_streams = parsed_page.content_streams_with_document(document)?;
 
-        // Concatenate all content streams
-        let mut preserved_content = Vec::new();
-        for stream in content_streams {
-            preserved_content.extend_from_slice(&stream);
-            // Add a newline between streams for safety
-            preserved_content.push(b'\n');
-        }
+        // Concatenate all content streams per ISO 32000-1 §7.7.3.3
+        let preserved_content =
+            crate::parser::content::ContentParser::combine_streams_owned(content_streams);
 
         // Store the original content
         // We'll need to wrap it with q/Q to isolate it when overlaying
@@ -1856,6 +1852,12 @@ impl Page {
             if let (Some(page_num), Some(total)) = (page_number, total_pages) {
                 let footer_content =
                     self.render_header_footer(footer, page_num, total, custom_values)?;
+                // Preserved content can end in a token or an unterminated
+                // comment. A newline separates the generated operators and
+                // terminates comments without rewriting the original bytes (#616).
+                if !final_content.is_empty() && !footer_content.is_empty() {
+                    final_content.push(b'\n');
+                }
                 final_content.extend_from_slice(&footer_content);
             }
         }

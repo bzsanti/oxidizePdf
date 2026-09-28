@@ -1,0 +1,167 @@
+{
+  "issue": 646,
+  "branch": "feature/signature-preparation",
+  "feature_head": "12359b73d3dc63a3acffac9fcf5705bcbe20b6dd",
+  "develop_base": "93e6796c462c426f62db5d7fee5d53449afa2673",
+  "status": "local validation complete; author QR closed before PR",
+  "checks": [
+    {
+      "name": "focused final",
+      "exit_code": 0,
+      "log": "/tmp/signature-preparation-green-final.log",
+      "sha256": "192bfa46662f69487c1e0226577842941a032a64335f4c4f8f7cf978fd1c4e2e",
+      "totals": {
+        "passed": 46,
+        "failed": 0,
+        "ignored": 3
+      }
+    },
+    {
+      "name": "QR geometry RED",
+      "exit_code": 101,
+      "log": "/tmp/signature-preparation-qr-red-final.log",
+      "sha256": "5b3bad974fc0b587c97ae261321dab34f92dfc8b491e61d444b4122bbea982ee",
+      "totals": {
+        "passed": 6,
+        "failed": 3,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "QR flags RED",
+      "exit_code": 101,
+      "log": "/tmp/signature-preparation-flags-red.log",
+      "sha256": "dd8f750085a753fc8ea9756ace033c447c6501ecbbbeea1c33e86152f8f831ab",
+      "totals": {
+        "passed": 0,
+        "failed": 1,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "DocMDP guard mutation",
+      "exit_code": 101,
+      "log": "/tmp/signature-preparation-docmdp-mutation.log",
+      "sha256": "1add39ef425c82f5fb3c18a71517afd82ca3de72e2504f963d471bf4e8087799",
+      "totals": {
+        "passed": 0,
+        "failed": 1,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "FieldMDP guard mutation",
+      "exit_code": 101,
+      "log": "/tmp/signature-preparation-fieldmdp-mutation.log",
+      "sha256": "9f2292d175700e28a960f79be1223cb52dd8ac39fa24b63dda82c46031447858",
+      "totals": {
+        "passed": 0,
+        "failed": 1,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "Clippy final",
+      "exit_code": 0,
+      "log": "/tmp/signature-preparation-clippy-final.log",
+      "sha256": "8b6431395527f9abf6d6e3fe5ecd05b0feabe180ff3f78d45dd17338c1717711"
+    },
+    {
+      "name": "interop qpdf OpenSSL Poppler",
+      "exit_code": 0,
+      "log": "/tmp/signature-preparation-interop.log",
+      "sha256": "6e4b0e5893b19d687d05c1f4d4978f1a8dd450fe6e9c744ddc6ea250ea28644c",
+      "totals": {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "default-feature regression suite",
+      "exit_code": 0,
+      "log": "/tmp/signature-preparation-default.log",
+      "sha256": "2cf529f6eddb9d0c402459e93a852efc69c48b934de4686c5979391f1251c3ee",
+      "totals": {
+        "passed": 10,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "final standalone consumer",
+      "exit_code": 0,
+      "log": "/tmp/signature-preparation-consumer-final.log",
+      "sha256": "ddbbfa396a3682f83fbc55b5c07d5a75393f21a2aca42412ec24331cdbb7bb15"
+    },
+    {
+      "name": "final formatting",
+      "exit_code": 0,
+      "log": "/tmp/signature-preparation-format-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "source_sha256": {
+    "oxidize-pdf-core/examples/dashboard_sales_report.rs": "6efc9ace8c45f04c12f637c17762632d296c5f1894794bd5efe80569b9a3736d",
+    "oxidize-pdf-core/examples/icc_indexed_colors.rs": "33bd54747d76494629a186fe2121230cbe924ec9a0ec4c20eadebddc52417b12",
+    "oxidize-pdf-core/src/signatures/mod.rs": "d7161c3623a0eaed8c8ce4b1ef3df26e10520f7f95bf4d8f466c8b4af46646d3",
+    "oxidize-pdf-core/src/signatures/permissions.rs": "2ffdda8b505546ce41c2da84c354faae38059125002db979bf2d4112523854d1",
+    "oxidize-pdf-core/src/signatures/preparation.rs": "e14e3779dad96a7e388c766030a26cb38009bfd36bb3323900a66c25f6212e3e",
+    "oxidize-pdf-core/src/signatures/signing.rs": "ee27b37b8fd9e0cb71912691e5ce696a06f5a0ffbdb8518739210b42fd37ef24",
+    "oxidize-pdf-core/tests/issue_540_incremental_signing_test.rs": "6b38be3222ff1f62716f008f875ea4661c572f519a1ac67c01ff9a96826b8bee",
+    "oxidize-pdf-core/tests/signature_preparation_test.rs": "ebae6dc66601c5597431ef0be8119f40b0c51ee19d85e2ea544141705cc48411"
+  },
+  "corpus_pdf_counts": {
+    "t2-realworld": 484,
+    "t5-quality": 2907,
+    "t4-ai-target": 130,
+    "t3-stress": 1802,
+    "t0-regression": 13,
+    "t1-spec": 3554,
+    "t6-adversarial": 161
+  },
+  "baselines_modified": false,
+  "workspace_command": "OXIDIZE_DIFF_REQUIRE_CORPUS=1 CARGO_TARGET_DIR=/tmp/oxidize-627-release-target cargo test --locked --offline --workspace --features signatures --no-fail-fast",
+  "workspace_log": "/tmp/signature-preparation-workspace-final.log",
+  "workspace_exit_code": 0,
+  "qr_findings_fixed": 4,
+  "release_requirement": "include in next release; no release performed",
+  "pr": null,
+  "workspace_totals": {
+    "passed": 9895,
+    "failed": 0,
+    "ignored": 72
+  },
+  "workspace_log_sha256": "24aa610a836f0211e1acc956cd2be0b3526b014f0b6b6610744082abf43ba1ed",
+  "independent_output_validation": {
+    "qpdf_outputs": [
+      "prepared.pdf",
+      "drawn.pdf",
+      "removed.pdf"
+    ],
+    "all_exit_codes": 0,
+    "render": "Poppler PNG viewed: handwritten stroke and escaped participant label visible",
+    "consumer_source": "docs/reports/2026-09-28-issue-646-consumer.rs"
+  },
+  "kripteia": {
+    "source": {
+      "score": 91,
+      "detected_tests": 122
+    },
+    "preparation_tests": {
+      "score": 99,
+      "detected_tests": 10
+    },
+    "signing_tests": {
+      "score": 96,
+      "detected_tests": 14
+    },
+    "security": "No security issues found in all three scans"
+  },
+  "limitations": [
+    "Windows/macOS and CI pending.",
+    "Synthetic CMS in slot-combination test proves structural integration only; separate existing external interop tests use OpenSSL.",
+    "Guard mutations preceded final field-flag preservation fix; guard callsites unchanged and final permission tests pass.",
+    "No release or merge to develop performed."
+  ]
+}

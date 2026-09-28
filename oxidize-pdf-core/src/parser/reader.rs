@@ -827,6 +827,13 @@ impl<R: Read + Seek> PdfReader<R> {
             }
         };
 
+        if current_offset == 0 {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: format!("in-use reference {obj_num} {gen_num} R has zero storage offset; object is absent"),
+            });
+        }
+
         // Try normal parsing first - only use manual reconstruction as fallback
 
         // Seek to the (potentially corrected) object position

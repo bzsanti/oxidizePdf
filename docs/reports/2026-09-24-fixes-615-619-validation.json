@@ -1,0 +1,1585 @@
+{
+  "review": {
+    "base": "e1792e83dbf0fdb42f65742fbc705dc8de906e25",
+    "head": "e28e4f54eb69057bafc4d8e67c8bd3680f2b26db",
+    "files": {
+      "oxidize-pdf-core/src/page.rs": "d88bb80eef38c959ecb8f590022d2a9ca71020f435ddaf6dee7eeeba356e034a",
+      "oxidize-pdf-core/src/parser/content.rs": "b5ff7df4928391ce29dea61c99ade3abb9ac01d665ec5d647587d0b30911c87f",
+      "oxidize-pdf-core/src/streaming/text_streamer.rs": "799a79b88f33a26298397bba5ca221e7e9fc9c3cd3465876e4bcc3374cfe02fd",
+      "oxidize-pdf-core/src/text/extraction.rs": "a2d52e417a08363306c62c3b45d04b42f3c5690659720d2aceaf28cf13ffd265",
+      "oxidize-pdf-core/src/text/plaintext/extractor.rs": "1bf7d3c057bb9534e927623698d75794eef74a7c107485d6dd305d78c407b370",
+      "oxidize-pdf-core/tests/issue_609_literal_string_escaped_line_break_test.rs": "ca012fbaf185f862aec92b77978340c3887dbfad29326f1c3c9420edfa27f407",
+      "oxidize-pdf-core/tests/issue_610_no_space_before_punctuation_test.rs": "334f642dadb9ae7d5c31333e127ea7a90fe46091e6aa5511c02351a683629ac2",
+      "oxidize-pdf-core/tests/issue_613_multistream_boundary_test.rs": "c489a9232219e09b5330d8c8dee6de0fdaedf78e64fb2afce959f8fbf0c647aa",
+      "oxidize-pdf-core/tests/issue_615_punctuation_boundaries_test.rs": "a25fa35ac02b94d34cf9e790d4aa3a3245a075ce64af295c1c933244b01eedae",
+      "oxidize-pdf-core/tests/issue_616_imported_footer_test.rs": "b4c0cbcc6dd249ba69efe4f33391a93a6a6a5ae46af27c9af63d581c339837e3",
+      "oxidize-pdf-core/tests/issue_617_stream_recovery_test.rs": "169a5650d1d9f5cbfe529b67dce5e95f9660809dd00e50145e7ab55bc578d52f",
+      "oxidize-pdf-core/tests/issue_618_incremental_callbacks_test.rs": "1bfe26fe683752022f753a2546c3ff10c806da7584283aeb1e5c99fdb79e6a34"
+    }
+  },
+  "checks": [
+    {
+      "name": "issue_609_literal_string_escaped_line_break_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_609_literal_string_escaped_line_break_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 1.411278247833252,
+      "counts": {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_610_no_space_before_punctuation_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_610_no_space_before_punctuation_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 1.3903794288635254,
+      "counts": {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_613_multistream_boundary_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_613_multistream_boundary_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 0.4011092185974121,
+      "counts": {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_615_punctuation_boundaries_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_615_punctuation_boundaries_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 1.431887149810791,
+      "counts": {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_616_imported_footer_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_616_imported_footer_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 1.5609626770019531,
+      "counts": {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_617_stream_recovery_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_617_stream_recovery_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 0.3779306411743164,
+      "counts": {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_618_incremental_callbacks_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_618_incremental_callbacks_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 0.3824443817138672,
+      "counts": {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_458_tj_boundary_space_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_458_tj_boundary_space_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 1.7054414749145508,
+      "counts": {
+        "passed": 16,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_382_extract_page_byte_limit",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_382_extract_page_byte_limit",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 1.6185107231140137,
+      "counts": {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_453_text_streamer_positioning_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_453_text_streamer_positioning_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 0.3516867160797119,
+      "counts": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_319_content_recovery_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_319_content_recovery_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 1.2027673721313477,
+      "counts": {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "issue_319_form_xobject_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "issue_319_form_xobject_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 1.1447768211364746,
+      "counts": {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "t2_realworld",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "t2_realworld",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 558.2671856880188,
+      "counts": {
+        "passed": 23,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "t3_stress",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "t3_stress",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 435.2128767967224,
+      "counts": {
+        "passed": 22,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "t4_ai_target",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "t4_ai_target",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 174.75213932991028,
+      "counts": {
+        "passed": 25,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "t5_quality",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "t5_quality",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 79.89640736579895,
+      "counts": {
+        "passed": 26,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "t6_adversarial",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "t6_adversarial",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 23.394659280776978,
+      "counts": {
+        "passed": 23,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "differential_fusion_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "differential_fusion_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 107.9813585281372,
+      "counts": {
+        "passed": 34,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "differential_order_test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--test",
+        "differential_order_test",
+        "--",
+        "--nocapture",
+        "--test-threads=2"
+      ],
+      "exit": 0,
+      "seconds": 124.2576355934143,
+      "counts": {
+        "passed": 38,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "library",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--lib"
+      ],
+      "exit": 0,
+      "seconds": 34.65814709663391,
+      "counts": {
+        "passed": 6791,
+        "failed": 0,
+        "ignored": 3
+      }
+    },
+    {
+      "name": "clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "-p",
+        "oxidize-pdf",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit": 0,
+      "seconds": 141.50610995292664
+    }
+  ],
+  "tdd_logs": {
+    "oxidize-617-red.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 5.78s\n     Running tests/issue_617_stream_recovery_test.rs (target/debug/deps/issue_617_stream_recovery_test-0551afa372ca0a6e)\n\nrunning 4 tests\ntest strict_content_parser_still_rejects_malformed_content ... ok\ntest recovery_keeps_prefix_operations_but_discards_incomplete_operands ... FAILED\ntest healthy_streams_keep_operands_after_recovery_and_empty_streams ... FAILED\ntest later_valid_text_survives_lexical_error_in_every_extraction_facade ... FAILED\n\nfailures:\n\n---- recovery_keeps_prefix_operations_but_discards_incomplete_operands stdout ----\n\nthread 'recovery_keeps_prefix_operations_but_discards_incomplete_operands' (396) panicked at oxidize-pdf-core/tests/issue_617_stream_recovery_test.rs:38:5:\nassertion `left == right` failed\n  left: [ShowText([66, 69, 70, 79, 82, 69])]\n right: [ShowText([66, 69, 70, 79, 82, 69]), ShowText([65, 70, 84, 69, 82])]\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n---- healthy_streams_keep_operands_after_recovery_and_empty_streams stdout ----\n\nthread 'healthy_streams_keep_operands_after_recovery_and_empty_streams' (394) panicked at oxidize-pdf-core/tests/issue_617_stream_recovery_test.rs:46:5:\nassertion `left == right` failed\n  left: []\n right: [MoveText(100.0, 700.0), ShowTextArray([Text([72, 69]), Spacing(10.0), Text([76, 76, 79])])]\n\n---- later_valid_text_survives_lexical_error_in_every_extraction_facade stdout ----\n\nthread 'later_valid_text_survives_lexical_error_in_every_extraction_facade' (395) panicked at oxidize-pdf-core/tests/issue_617_stream_recovery_test.rs:27:9:\nassertion `left == right` failed\n  left: \"\"\n right: \"KEEP\"\n\n\nfailures:\n    healthy_streams_keep_operands_after_recovery_and_empty_streams\n    later_valid_text_survives_lexical_error_in_every_extraction_facade\n    recovery_keeps_prefix_operations_but_discards_incomplete_operands\n\ntest result: FAILED. 1 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --test issue_617_stream_recovery_test`\n",
+    "oxidize-615-mutation.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\nwarning: unused variable: `suppress_space`\n    --> oxidize-pdf-core/src/text/extraction.rs:1786:45\n     |\n1786 | ...                   let suppress_space =\n     |                           ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_suppress_space`\n     |\n     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default\n\nwarning: `oxidize-pdf` (lib) generated 1 warning (run `cargo fix --lib -p oxidize-pdf` to apply 1 suggestion)\n    Finished `test` profile [unoptimized] target(s) in 5.47s\n     Running tests/issue_615_punctuation_boundaries_test.rs (target/debug/deps/issue_615_punctuation_boundaries_test-47233e3cb6582eee)\n\nrunning 1 test\ntest punctuation_suppression_covers_tj_font_change_and_em_boundary ... FAILED\n\nfailures:\n\n---- punctuation_suppression_covers_tj_font_change_and_em_boundary stdout ----\n\nthread 'punctuation_suppression_covers_tj_font_change_and_em_boundary' (360) panicked at oxidize-pdf-core/tests/issue_615_punctuation_boundaries_test.rs:68:13:\nassertion `left == right` failed\n  left: \"v .x\"\n right: \"v.x\"\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    punctuation_suppression_covers_tj_font_change_and_em_boundary\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --test issue_615_punctuation_boundaries_test`\n",
+    "oxidize-618-inline-red.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 0.61s\n     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)\n\nrunning 1 test\ntest streaming_skips_inline_image_data_across_stream_boundaries ... FAILED\n\nfailures:\n\n---- streaming_skips_inline_image_data_across_stream_boundaries stdout ----\n\nthread 'streaming_skips_inline_image_data_across_stream_boundaries' (121) panicked at oxidize-pdf-core/tests/issue_613_multistream_boundary_test.rs:229:9:\nassertion `left == right` failed\n  left: [\"FIRST\", \"GHOST\", \"LAST\"]\n right: [\"FIRST\", \"LAST\"]\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    streaming_skips_inline_image_data_across_stream_boundaries\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --test issue_613_multistream_boundary_test`\n",
+    "oxidize-615-green.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 5.77s\n     Running tests/issue_610_no_space_before_punctuation_test.rs (target/debug/deps/issue_610_no_space_before_punctuation_test-581893754124cd18)\n\nrunning 5 tests\ntest test_no_synthetic_space_before_closing_paren_across_tj_boundary ... ok\ntest test_no_synthetic_space_before_comma_across_tj_boundary ... ok\ntest test_no_synthetic_space_before_colon_across_tj_boundary ... ok\ntest test_preserves_space_between_words_across_tj_boundary ... ok\ntest test_no_synthetic_space_before_period_across_tj_boundary ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_615_punctuation_boundaries_test.rs (target/debug/deps/issue_615_punctuation_boundaries_test-47233e3cb6582eee)\n\nrunning 4 tests\ntest exact_em_boundary_keeps_existing_operator_thresholds ... ok\ntest punctuation_suppression_covers_tj_font_change_and_em_boundary ... ok\ntest explicit_spaces_and_word_boundaries_survive ... ok\ntest backwards_positioned_objects_keep_their_separator ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+    "oxidize-618-red.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 0.55s\n     Running tests/issue_618_incremental_callbacks_test.rs (target/debug/deps/issue_618_incremental_callbacks_test-eab3d52ad8233db5)\n\nrunning 1 test\ntest first_callback_and_cancellation_do_not_materialize_the_tail ... FAILED\n\nfailures:\n\n---- first_callback_and_cancellation_do_not_materialize_the_tail stdout ----\nsame_stream=false: first callback allocation requests 2706 -> 9696385\n\nthread 'first_callback_and_cancellation_do_not_materialize_the_tail' (83) panicked at oxidize-pdf-core/tests/issue_618_incremental_callbacks_test.rs:61:9:\ntail allocation before callback: 2706 -> 9696385\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    first_callback_and_cancellation_do_not_materialize_the_tail\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --test issue_618_incremental_callbacks_test`\n",
+    "oxidize-619-green.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 1.66s\n     Running tests/issue_609_literal_string_escaped_line_break_test.rs (target/debug/deps/issue_609_literal_string_escaped_line_break_test-d3a999109ba1bd02)\n\nrunning 7 tests\ntest test_lexer_escaped_carriage_return ... ok\ntest test_lexer_escaped_crlf ... ok\ntest test_lexer_escaped_line_feed ... ok\ntest test_lexer_escaped_multiple_line_breaks_iso_example ... ok\ntest test_pdf_extraction_escaped_cr ... ok\ntest test_pdf_extraction_escaped_lf ... ok\ntest test_pdf_extraction_escaped_crlf ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_610_no_space_before_punctuation_test.rs (target/debug/deps/issue_610_no_space_before_punctuation_test-581893754124cd18)\n\nrunning 5 tests\ntest test_preserves_space_between_words_across_tj_boundary ... ok\ntest test_no_synthetic_space_before_colon_across_tj_boundary ... ok\ntest test_no_synthetic_space_before_comma_across_tj_boundary ... ok\ntest test_no_synthetic_space_before_closing_paren_across_tj_boundary ... ok\ntest test_no_synthetic_space_before_period_across_tj_boundary ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)\n\nrunning 7 tests\ntest test_combine_streams_corner_cases ... ok\ntest test_content_parser_parse_content_streams ... ok\ntest test_stream_text_multistream_boundary ... ok\ntest test_multistream_operand_operator_split_text_extraction ... ok\ntest test_multistream_operand_split_coordinates_text_extraction ... ok\ntest test_multistream_plaintext_extraction ... ok\ntest test_combined_content_stream_helpers ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+    "oxidize-616-green.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 9.04s\n     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)\n\nrunning 7 tests\ntest test_combine_streams_corner_cases ... ok\ntest test_content_parser_parse_content_streams ... ok\ntest test_multistream_plaintext_extraction ... ok\ntest test_multistream_operand_operator_split_text_extraction ... ok\ntest test_combined_content_stream_helpers ... ok\ntest test_multistream_operand_split_coordinates_text_extraction ... ok\ntest test_stream_text_multistream_boundary ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_616_imported_footer_test.rs (target/debug/deps/issue_616_imported_footer_test-7a6cf9078d14853d)\n\nrunning 3 tests\ntest footer_after_comment_without_final_eol ... ok\ntest footer_after_operator_without_final_eol ... ok\ntest footer_after_terminated_content ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+    "oxidize-619-red.log": "   Compiling proc-macro2 v1.0.106\n   Compiling quote v1.0.45\n   Compiling unicode-ident v1.0.24\n   Compiling cfg-if v1.0.4\n   Compiling libc v0.2.186\n   Compiling syn v2.0.117\n   Compiling stable_deref_trait v1.2.1\n   Compiling version_check v0.9.5\n   Compiling generic-array v0.14.7\n   Compiling typenum v1.20.1\n   Compiling shlex v2.0.1\n   Compiling find-msvc-tools v0.1.9\n   Compiling serde_core v1.0.228\n   Compiling cc v1.2.63\n   Compiling synstructure v0.13.2\n   Compiling zerofrom-derive v0.1.7\n   Compiling zerofrom v0.1.8\n   Compiling yoke-derive v0.8.2\n   Compiling zerovec-derive v0.11.3\n   Compiling yoke v0.8.3\n   Compiling displaydoc v0.2.6\n   Compiling zerovec v0.11.6\n   Compiling memchr v2.8.1\n   Compiling once_cell v1.21.4\n   Compiling autocfg v1.5.1\n   Compiling num-traits v0.2.19\n   Compiling zerocopy v0.8.50\n   Compiling tinystr v0.8.3\n   Compiling zerocopy-derive v0.8.50\n   Compiling zeroize_derive v1.4.3\n   Compiling writeable v0.6.3\n   Compiling litemap v0.8.2\n   Compiling icu_locale_core v2.2.0\n   Compiling zeroize v1.8.2\n   Compiling potential_utf v0.1.5\n   Compiling zerotrie v0.2.4\n   Compiling crypto-common v0.1.7\n   Compiling serde v1.0.228\n   Compiling regex-syntax v0.8.10\n   Compiling crossbeam-utils v0.8.21\n   Compiling getrandom v0.4.2\n   Compiling icu_properties_data v2.2.0\n   Compiling utf8_iter v1.0.4\n   Compiling bitflags v2.13.0\n   Compiling rand_core v0.10.1\n   Compiling getrandom v0.3.4\n   Compiling icu_normalizer_data v2.2.0\n   Compiling icu_collections v2.2.0\n   Compiling icu_provider v2.2.0\n   Compiling aho-corasick v1.1.4\n   Compiling serde_derive v1.0.228\n   Compiling ring v0.17.14\n   Compiling crc32fast v1.5.0\n   Compiling rustix v1.1.4\n   Compiling simd-adler32 v0.3.9\n   Compiling smallvec v1.15.1\n   Compiling regex-automata v0.4.14\n   Compiling rustls-pki-types v1.14.1\n   Compiling block-padding v0.3.3\n   Compiling linux-raw-sys v0.12.1\n   Compiling utf8parse v0.2.2\n   Compiling zmij v1.0.21\n   Compiling adler2 v2.0.1\n   Compiling miniz_oxide v0.8.9\n   Compiling anstyle-parse v1.0.0\n   Compiling inout v0.1.4\n   Compiling icu_normalizer v2.2.0\n   Compiling rand_core v0.9.5\n   Compiling icu_properties v2.2.0\n   Compiling crossbeam-epoch v0.9.18\n   Compiling tracing-core v0.1.36\n   Compiling block-buffer v0.10.4\n   Compiling getrandom v0.2.17\n   Compiling const-oid v0.9.6\n   Compiling is_terminal_polyfill v1.70.2\n   Compiling untrusted v0.9.0\n   Compiling anstyle-query v1.1.5\n   Compiling anstyle v1.0.14\n   Compiling serde_json v1.0.150\n   Compiling cpufeatures v0.2.17\n   Compiling log v0.4.32\n   Compiling colorchoice v1.0.5\n   Compiling fastrand v2.4.1\n   Compiling either v1.16.0\n   Compiling rayon-core v1.13.0\n   Compiling tempfile v3.27.0\n   Compiling anstream v1.0.0\n   Compiling digest v0.10.7\n   Compiling flate2 v1.1.9\n   Compiling crossbeam-deque v0.8.6\n   Compiling idna_adapter v1.2.2\n   Compiling cipher v0.4.4\n   Compiling fdeflate v0.3.7\n   Compiling half v2.7.1\n   Compiling tracing-attributes v0.1.31\n   Compiling alloca v0.4.0\n   Compiling strsim v0.11.1\n   Compiling plotters-backend v0.3.7\n   Compiling itoa v1.0.18\n   Compiling pin-project-lite v0.2.17\n   Compiling heck v0.5.0\n   Compiling thiserror v2.0.18\n   Compiling ciborium-io v0.2.2\n   Compiling percent-encoding v2.3.2\n   Compiling subtle v2.6.1\n   Compiling rustls v0.23.40\n   Compiling lazy_static v1.5.0\n   Compiling cpufeatures v0.3.0\n   Compiling tinyvec_macros v0.1.1\n   Compiling clap_lex v1.1.0\n   Compiling portable-atomic v1.13.1\n   Compiling pxfm v0.1.29\n   Compiling winnow v1.0.3\n   Compiling zune-core v0.5.1\n   Compiling zune-jpeg v0.5.15\n   Compiling toml_parser v1.1.2+spec-1.1.0\n   Compiling clap_builder v4.6.0\n   Compiling moxcms v0.8.1\n   Compiling tinyvec v1.11.0\n   Compiling chacha20 v0.10.0\n   Compiling form_urlencoded v1.2.2\n   Compiling ciborium-ll v0.2.2\n   Compiling tracing v0.1.44\n   Compiling clap_derive v4.6.1\n   Compiling plotters-svg v0.3.7\n   Compiling png v0.18.1\n   Compiling rustls-webpki v0.103.13\n   Compiling idna v1.1.0\n   Compiling itertools v0.13.0\n   Compiling regex v1.12.3\n   Compiling webpki-roots v1.0.7\n   Compiling ppv-lite86 v0.2.21\n   Compiling toml_datetime v0.7.5+spec-1.1.0\n   Compiling serde_spanned v1.1.1\n   Compiling thiserror-impl v2.0.18\n   Compiling wait-timeout v0.2.1\n   Compiling same-file v1.0.6\n   Compiling quick-error v1.2.3\n   Compiling fnv v1.0.7\n   Compiling iana-time-zone v0.1.65\n   Compiling winnow v0.7.15\n   Compiling bit-vec v0.8.0\n   Compiling byteorder-lite v0.1.0\n   Compiling unicode-width v0.2.2\n   Compiling bytemuck v1.25.0\n   Compiling cast v0.3.0\n   Compiling toml_writer v1.1.1+spec-1.1.0\n   Compiling toml v0.9.12+spec-1.1.0\n   Compiling criterion-plot v0.8.2\n   Compiling image v0.25.10\n   Compiling console v0.16.3\n   Compiling bit-set v0.8.0\n   Compiling chrono v0.4.45\n   Compiling rusty-fork v0.3.1\n   Compiling walkdir v2.5.0\n   Compiling rand_chacha v0.9.0\n   Compiling webpki-roots v0.26.11\n   Compiling rayon v1.12.0\n   Compiling url v2.5.8\n   Compiling plotters v0.3.7\n   Compiling tinytemplate v1.2.1\n   Compiling clap v4.6.1\n   Compiling ciborium v0.2.2\n   Compiling rand v0.10.1\n   Compiling unicode-normalization v0.1.25\n   Compiling sharded-slab v0.1.7\n   Compiling cbc v0.1.2\n   Compiling aes v0.8.4\n   Compiling sha2 v0.10.9\n   Compiling tracing-log v0.2.0\n   Compiling rand v0.9.4\n   Compiling rand_xorshift v0.4.0\n   Compiling matchers v0.2.0\n   Compiling quick-xml v0.41.0\n   Compiling page_size v0.6.0\n   Compiling num_cpus v1.17.0\n   Compiling thread_local v1.1.9\n   Compiling anes v0.1.6\n   Compiling md5 v0.8.0\n   Compiling unarray v0.1.4\n   Compiling base64 v0.22.1\n   Compiling oorandom v11.1.5\n   Compiling nu-ansi-term v0.50.3\n   Compiling unit-prefix v0.5.2\n   Compiling indicatif v0.18.4\n   Compiling tracing-subscriber v0.3.23\n   Compiling ureq v2.12.1\n   Compiling criterion v0.8.2\n   Compiling proptest v1.11.0\n   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n   Compiling sha1 v0.10.6\n   Compiling weezl v0.1.12\n    Finished `test` profile [unoptimized] target(s) in 1m 28s\n     Running tests/issue_609_literal_string_escaped_line_break_test.rs (target/debug/deps/issue_609_literal_string_escaped_line_break_test-d3a999109ba1bd02)\n\nrunning 6 tests\ntest test_lexer_escaped_carriage_return ... ok\ntest test_lexer_escaped_crlf ... ok\ntest test_lexer_escaped_multiple_line_breaks_iso_example ... ok\ntest test_lexer_escaped_line_feed ... ok\ntest test_pdf_extraction_escaped_crlf ... FAILED\ntest test_pdf_extraction_escaped_lf ... FAILED\n\nfailures:\n\n---- test_pdf_extraction_escaped_crlf stdout ----\n\nthread 'test_pdf_extraction_escaped_crlf' (3406) panicked at oxidize-pdf-core/tests/issue_609_literal_string_escaped_line_break_test.rs:77:10:\ncalled `Result::unwrap()` on an `Err` value: SyntaxError { position: 13, message: \"Unknown keyword: n\" }\n\n---- test_pdf_extraction_escaped_lf stdout ----\n\nthread 'test_pdf_extraction_escaped_lf' (3407) panicked at oxidize-pdf-core/tests/issue_609_literal_string_escaped_line_break_test.rs:112:10:\ncalled `Result::unwrap()` on an `Err` value: SyntaxError { position: 14, message: \"Unknown keyword: n\" }\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    test_pdf_extraction_escaped_crlf\n    test_pdf_extraction_escaped_lf\n\ntest result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --test issue_609_literal_string_escaped_line_break_test`\n",
+    "oxidize-616-red.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 6.07s\n     Running tests/issue_616_imported_footer_test.rs (target/debug/deps/issue_616_imported_footer_test-7a6cf9078d14853d)\n\nrunning 3 tests\ntest footer_after_terminated_content ... ok\ntest footer_after_operator_without_final_eol ... FAILED\ntest footer_after_comment_without_final_eol ... FAILED\n\nfailures:\n\n---- footer_after_operator_without_final_eol stdout ----\n\nthread 'footer_after_operator_without_final_eol' (374) panicked at oxidize-pdf-core/tests/issue_616_imported_footer_test.rs:29:5:\nassertion `left == right` failed\n  left: \"\"\n right: \"FOOTER\"\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n---- footer_after_comment_without_final_eol stdout ----\n\nthread 'footer_after_comment_without_final_eol' (373) panicked at oxidize-pdf-core/tests/issue_616_imported_footer_test.rs:29:5:\nassertion `left == right` failed\n  left: \"\"\n right: \"FOOTER\"\n\n\nfailures:\n    footer_after_comment_without_final_eol\n    footer_after_operator_without_final_eol\n\ntest result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --test issue_616_imported_footer_test`\n",
+    "oxidize-618-final-green.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 6.63s\n     Running tests/issue_453_text_streamer_positioning_test.rs (target/debug/deps/issue_453_text_streamer_positioning_test-bcfb7afa7c3538df)\n\nrunning 2 tests\ntest text_streamer_apostrophe_operator_moves_to_next_line ... ok\ntest text_streamer_honors_td_tstar_tm_positioning ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)\n\nrunning 9 tests\ntest test_combine_streams_corner_cases ... ok\ntest streaming_recovers_after_bad_stream_without_losing_split_operands ... ok\ntest streaming_skips_inline_image_data_across_stream_boundaries ... ok\ntest test_content_parser_parse_content_streams ... ok\ntest test_multistream_plaintext_extraction ... ok\ntest test_multistream_operand_operator_split_text_extraction ... ok\ntest test_multistream_operand_split_coordinates_text_extraction ... ok\ntest test_stream_text_multistream_boundary ... ok\ntest test_combined_content_stream_helpers ... ok\n\ntest result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_617_stream_recovery_test.rs (target/debug/deps/issue_617_stream_recovery_test-0551afa372ca0a6e)\n\nrunning 4 tests\ntest recovery_keeps_prefix_operations_but_discards_incomplete_operands ... ok\ntest strict_content_parser_still_rejects_malformed_content ... ok\ntest healthy_streams_keep_operands_after_recovery_and_empty_streams ... ok\ntest later_valid_text_survives_lexical_error_in_every_extraction_facade ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_618_incremental_callbacks_test.rs (target/debug/deps/issue_618_incremental_callbacks_test-eab3d52ad8233db5)\n\nrunning 1 test\nsame_stream=false: first callback allocation requests 447 -> 447\nsame_stream=true: first callback allocation requests 447 -> 447\ntest first_callback_and_cancellation_do_not_materialize_the_tail ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+    "oxidize-619-red-610.log": "    Finished `test` profile [unoptimized] target(s) in 0.16s\n     Running tests/issue_610_no_space_before_punctuation_test.rs (target/debug/deps/issue_610_no_space_before_punctuation_test-581893754124cd18)\n\nrunning 5 tests\ntest test_preserves_space_between_words_across_tj_boundary ... FAILED\ntest test_no_synthetic_space_before_comma_across_tj_boundary ... FAILED\ntest test_no_synthetic_space_before_period_across_tj_boundary ... FAILED\ntest test_no_synthetic_space_before_closing_paren_across_tj_boundary ... FAILED\ntest test_no_synthetic_space_before_colon_across_tj_boundary ... FAILED\n\nfailures:\n\n---- test_preserves_space_between_words_across_tj_boundary stdout ----\n\nthread 'test_preserves_space_between_words_across_tj_boundary' (21) panicked at oxidize-pdf-core/tests/issue_610_no_space_before_punctuation_test.rs:200:10:\ncalled `Result::unwrap()` on an `Err` value: SyntaxError { position: 14, message: \"Unknown keyword: n\" }\n\n---- test_no_synthetic_space_before_comma_across_tj_boundary stdout ----\n\nthread 'test_no_synthetic_space_before_comma_across_tj_boundary' (19) panicked at oxidize-pdf-core/tests/issue_610_no_space_before_punctuation_test.rs:85:10:\ncalled `Result::unwrap()` on an `Err` value: SyntaxError { position: 13, message: \"Unknown keyword: n\" }\n\n---- test_no_synthetic_space_before_period_across_tj_boundary stdout ----\n\nthread 'test_no_synthetic_space_before_period_across_tj_boundary' (20) panicked at oxidize-pdf-core/tests/issue_610_no_space_before_punctuation_test.rs:46:10:\ncalled `Result::unwrap()` on an `Err` value: SyntaxError { position: 7, message: \"Unknown keyword: n\" }\n\n---- test_no_synthetic_space_before_closing_paren_across_tj_boundary stdout ----\n\nthread 'test_no_synthetic_space_before_closing_paren_across_tj_boundary' (17) panicked at oxidize-pdf-core/tests/issue_610_no_space_before_punctuation_test.rs:163:10:\ncalled `Result::unwrap()` on an `Err` value: SyntaxError { position: 17, message: \"Unknown keyword: n\" }\n\n---- test_no_synthetic_space_before_colon_across_tj_boundary stdout ----\n\nthread 'test_no_synthetic_space_before_colon_across_tj_boundary' (18) panicked at oxidize-pdf-core/tests/issue_610_no_space_before_punctuation_test.rs:124:10:\ncalled `Result::unwrap()` on an `Err` value: SyntaxError { position: 12, message: \"Unknown keyword: n\" }\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    test_no_synthetic_space_before_closing_paren_across_tj_boundary\n    test_no_synthetic_space_before_colon_across_tj_boundary\n    test_no_synthetic_space_before_comma_across_tj_boundary\n    test_no_synthetic_space_before_period_across_tj_boundary\n    test_preserves_space_between_words_across_tj_boundary\n\ntest result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --test issue_610_no_space_before_punctuation_test`\n",
+    "oxidize-619-mutation.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 5.49s\n     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)\n\nrunning 1 test\ntest test_content_parser_parse_content_streams ... FAILED\n\nfailures:\n\n---- test_content_parser_parse_content_streams stdout ----\n\nthread 'test_content_parser_parse_content_streams' (380) panicked at oxidize-pdf-core/tests/issue_613_multistream_boundary_test.rs:125:5:\nassertion `left == right` failed\n  left: [BeginText, SetFont(\"F1\", 12.0), MoveText(100.0, 700.0), EndText]\n right: [BeginText, SetFont(\"F1\", 12.0), MoveText(100.0, 700.0), ShowTextArray([Text([72, 69]), Spacing(10.0), Text([76, 76, 79])]), EndText]\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    test_content_parser_parse_content_streams\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --test issue_613_multistream_boundary_test`\n",
+    "oxidize-615-red.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 0.80s\n     Running tests/issue_615_punctuation_boundaries_test.rs (target/debug/deps/issue_615_punctuation_boundaries_test-47233e3cb6582eee)\n\nrunning 4 tests\ntest backwards_positioned_objects_keep_their_separator ... FAILED\ntest explicit_spaces_and_word_boundaries_survive ... FAILED\ntest exact_em_boundary_keeps_existing_operator_thresholds ... ok\ntest punctuation_suppression_covers_tj_font_change_and_em_boundary ... ok\n\nfailures:\n\n---- backwards_positioned_objects_keep_their_separator stdout ----\n\nthread 'backwards_positioned_objects_keep_their_separator' (109) panicked at oxidize-pdf-core/tests/issue_615_punctuation_boundaries_test.rs:31:17:\nassertion `left == right` failed: BT /F1 10 Tf 1 0 0 1 100 700 Tm (Right) Tj ET BT /F1 10 Tf 1 0 0 1 70 700 Tm (.Left) Tj ET; facade=false\n  left: \"Right.Left\"\n right: \"Right .Left\"\n\n---- explicit_spaces_and_word_boundaries_survive stdout ----\n\nthread 'explicit_spaces_and_word_boundaries_survive' (111) panicked at oxidize-pdf-core/tests/issue_615_punctuation_boundaries_test.rs:63:9:\nassertion `left == right` failed\n  left: \"v  .x\"\n right: \"v .x\"\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    backwards_positioned_objects_keep_their_separator\n    explicit_spaces_and_word_boundaries_survive\n\ntest result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --test issue_615_punctuation_boundaries_test`\n",
+    "oxidize-617-green.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 10.01s\n     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)\n\nrunning 7 tests\ntest test_combine_streams_corner_cases ... ok\ntest test_content_parser_parse_content_streams ... ok\ntest test_stream_text_multistream_boundary ... ok\ntest test_multistream_plaintext_extraction ... ok\ntest test_combined_content_stream_helpers ... ok\ntest test_multistream_operand_operator_split_text_extraction ... ok\ntest test_multistream_operand_split_coordinates_text_extraction ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_617_stream_recovery_test.rs (target/debug/deps/issue_617_stream_recovery_test-0551afa372ca0a6e)\n\nrunning 4 tests\ntest strict_content_parser_still_rejects_malformed_content ... ok\ntest recovery_keeps_prefix_operations_but_discards_incomplete_operands ... ok\ntest healthy_streams_keep_operands_after_recovery_and_empty_streams ... ok\ntest later_valid_text_survives_lexical_error_in_every_extraction_facade ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+    "oxidize-618-green.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 8.64s\n     Running tests/issue_453_text_streamer_positioning_test.rs (target/debug/deps/issue_453_text_streamer_positioning_test-bcfb7afa7c3538df)\n\nrunning 2 tests\ntest text_streamer_apostrophe_operator_moves_to_next_line ... ok\ntest text_streamer_honors_td_tstar_tm_positioning ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)\n\nrunning 7 tests\ntest test_combine_streams_corner_cases ... ok\ntest test_content_parser_parse_content_streams ... ok\ntest test_stream_text_multistream_boundary ... ok\ntest test_multistream_plaintext_extraction ... ok\ntest test_multistream_operand_operator_split_text_extraction ... ok\ntest test_multistream_operand_split_coordinates_text_extraction ... ok\ntest test_combined_content_stream_helpers ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_618_incremental_callbacks_test.rs (target/debug/deps/issue_618_incremental_callbacks_test-eab3d52ad8233db5)\n\nrunning 1 test\ntest first_callback_and_cancellation_do_not_materialize_the_tail ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+    "qr-inline-red.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 3m 21s\n     Running unittests src/lib.rs (target/debug/deps/oxidize_pdf-24bdcf433267eaa0)\n\nrunning 1 test\ntest parser::content::tests::incremental_inline_image_terminator_at_next_stream_preserves_bytes ... FAILED\n\nfailures:\n\n---- parser::content::tests::incremental_inline_image_terminator_at_next_stream_preserves_bytes stdout ----\n\nthread 'parser::content::tests::incremental_inline_image_terminator_at_next_stream_preserves_bytes' (292) panicked at oxidize-pdf-core/src/parser/content.rs:2039:17:\nassertion `left == right` failed\n  left: [97, 98, 99, 10]\n right: [97, 98, 99]\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    parser::content::tests::incremental_inline_image_terminator_at_next_stream_preserves_bytes\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6792 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p oxidize-pdf --lib`\n",
+    "qr-inline-green.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 1m 06s\n     Running unittests src/lib.rs (target/debug/deps/oxidize_pdf-24bdcf433267eaa0)\n\nrunning 1 test\ntest parser::content::tests::incremental_inline_image_terminator_at_next_stream_preserves_bytes ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6792 filtered out; finished in 0.00s\n\n",
+    "qr-incremental-green.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 54.89s\n     Running unittests src/lib.rs (target/debug/deps/oxidize_pdf-24bdcf433267eaa0)\n\nrunning 72 tests\ntest parser::content::tests::incremental_inline_image_terminator_at_next_stream_preserves_bytes ... ok\ntest signatures::verification::tests::test_has_incremental_update_empty_byterange ... ok\ntest signatures::verification::tests::test_has_incremental_update_no_update ... ok\ntest signatures::signing::tests::incremental_signature_rejects_docmdp_reference_to_zero_offset_entry ... ok\ntest streaming::incremental_parser::tests::test_buffer_management ... ok\ntest streaming::incremental_parser::tests::test_complete_pdf_parsing_sequence ... ok\ntest signatures::permissions::tests::permission_levels_classify_reusable_incremental_edits ... ok\ntest streaming::incremental_parser::tests::test_feed_multiple_lines ... ok\ntest signatures::verification::tests::test_has_incremental_update_with_update ... ok\ntest streaming::incremental_parser::tests::test_ignore_input_after_completion ... ok\ntest streaming::incremental_parser::tests::test_incremental_parser_creation ... ok\ntest streaming::incremental_parser::tests::test_incremental_parser_default ... ok\ntest streaming::incremental_parser::tests::test_multiple_objects_in_sequence ... ok\ntest streaming::incremental_parser::tests::test_object_parsing_with_generation ... ok\ntest streaming::incremental_parser::tests::test_object_to_stream_transition ... ok\ntest streaming::incremental_parser::tests::test_parse_eof ... ok\ntest streaming::incremental_parser::tests::test_parse_header ... ok\ntest streaming::incremental_parser::tests::test_parse_event_debug ... ok\ntest streaming::incremental_parser::tests::test_parse_object ... ok\ntest streaming::incremental_parser::tests::test_parse_object_header_invalid ... ok\ntest document::tests::integration_tests::test_document_incremental_building ... ok\ntest streaming::incremental_parser::tests::test_parse_stream ... ok\ntest streaming::incremental_parser::tests::test_parse_object_header_valid ... ok\ntest streaming::incremental_parser::tests::test_feed_partial_lines ... ok\ntest parser::content::tests::incremental_operations_match_batch_at_lexical_boundaries ... ok\ntest streaming::incremental_parser::tests::test_parse_xref_entry_invalid ... ok\ntest streaming::incremental_parser::tests::test_feed_empty_data ... ok\ntest streaming::incremental_parser::tests::test_parse_xref_entry_valid ... ok\ntest streaming::incremental_parser::tests::test_parser_state_debug ... ok\ntest streaming::incremental_parser::tests::test_parser_state_transitions ... ok\ntest streaming::incremental_parser::tests::test_parser_with_whitespace_handling ... ok\ntest streaming::incremental_parser::tests::test_stream_data_collection ... ok\ntest streaming::incremental_parser::tests::test_process_incrementally_with_callback_error ... ok\ntest streaming::incremental_parser::tests::test_process_incrementally_with_io_error ... ok\ntest streaming::incremental_parser::tests::test_stream_to_object_transition ... ok\ntest streaming::incremental_parser::tests::test_xref_entry_debug_clone ... ok\ntest streaming::incremental_parser::tests::test_xref_to_trailer_transition ... ok\ntest signatures::signing::tests::incremental_signature_accepts_free_zero_offset_entry_control ... ok\ntest writer::incremental_form_fill::tests::incremental_trailer_carries_root_prev_size ... ok\ntest writer::incremental_form_fill::tests::incremental_trailer_emits_distinct_id_pair ... ok\ntest streaming::incremental_parser::tests::test_process_incrementally ... ok\ntest streaming::incremental_parser::tests::test_process_incrementally_empty_reader ... ok\ntest writer::incremental_form_fill::tests::literal_string_escapes_reserved_bytes ... ok\ntest streaming::incremental_parser::tests::test_xref_state_from_any_state ... ok\ntest streaming::incremental_parser::tests::test_take_events_clears_buffer ... ok\ntest writer::incremental_form_fill::tests::partial_xref_merges_adjacent_ids ... ok\ntest writer::incremental_form_fill::tests::partial_xref_groups_contiguous_subsections ... ok\ntest writer::incremental_form_fill::tests::write_indirect_stream_object_produces_valid_form_xobject ... ok\ntest writer::incremental_form_fill::tests::parse_da_string_extracts_font_and_size ... ok\ntest writer::incremental_ocr_layer::tests::dry_run_reports_only_incremental_ocr_objects ... ok\ntest writer::incremental_form_fill::tests::revision_id_differs_from_permanent_and_is_deterministic ... ok\ntest verification::semantic_comparison::tests::semantically_redundant_incremental_revision_is_serialization_only ... ok\ntest signatures::signing::tests::incremental_signature_ignores_unreferenced_in_use_zero_offset_entry ... ok\ntest writer::incremental_ocr_layer::tests::docmdp_certification_rejects_ocr_page_content_changes ... ok\ntest writer::incremental_ocr_layer::tests::dry_run_also_rejects_forbidden_docmdp_changes ... ok\ntest writer::incremental_ocr_layer::tests::supports_xref_stream_sources ... ok\ntest writer::incremental_tagged_pdf::tests::association_resolves_an_indirect_parent_owner_array ... ok\ntest writer::incremental_ocr_layer::tests::update_preserves_base_as_exact_prefix_and_reopens ... ok\ntest writer::incremental_ocr_layer::tests::unicode_actual_text_and_logical_order_are_extractable ... ok\ntest writer::incremental_ocr_layer::tests::page_request_order_does_not_change_output ... ok\ntest writer::incremental_ocr_layer::tests::second_application_detects_existing_ocr_layer ... ok\ntest writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_error_on_missing_base ... ok\ntest writer::pdf_writer::tests::form_filling_tests::form_filling_tests::test_incremental_update_structure_compliance ... ok\ntest writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_config ... ok\ntest writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_preserves_base_content ... ok\ntest writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_has_prev_pointer ... ok\ntest writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_pdf_version ... ok\ntest writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_with_form_fields ... ok\ntest writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_multiple_times ... ok\ntest writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_basic ... ok\ntest writer::incremental_tagged_pdf::tests::reparents_an_element_losslessly_and_rejects_cycles ... ok\ntest verification::semantic_comparison::tests::incremental_changes_are_attributed_to_their_revision ... ok\n\ntest result: ok. 72 passed; 0 failed; 0 ignored; 0 measured; 6722 filtered out; finished in 0.05s\n\n",
+    "post-qr-focused.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 19.04s\n     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)\n\nrunning 9 tests\ntest streaming_recovers_after_bad_stream_without_losing_split_operands ... ok\ntest test_combine_streams_corner_cases ... ok\ntest test_content_parser_parse_content_streams ... ok\ntest test_multistream_plaintext_extraction ... ok\ntest test_stream_text_multistream_boundary ... ok\ntest test_multistream_operand_split_coordinates_text_extraction ... ok\ntest streaming_skips_inline_image_data_across_stream_boundaries ... ok\ntest test_combined_content_stream_helpers ... ok\ntest test_multistream_operand_operator_split_text_extraction ... ok\n\ntest result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/issue_617_stream_recovery_test.rs (target/debug/deps/issue_617_stream_recovery_test-0551afa372ca0a6e)\n\nrunning 4 tests\ntest healthy_streams_keep_operands_after_recovery_and_empty_streams ... ok\ntest later_valid_text_survives_lexical_error_in_every_extraction_facade ... ok\ntest strict_content_parser_still_rejects_malformed_content ... ok\ntest recovery_keeps_prefix_operations_but_discards_incomplete_operands ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/issue_618_incremental_callbacks_test.rs (target/debug/deps/issue_618_incremental_callbacks_test-eab3d52ad8233db5)\n\nrunning 1 test\nsame_stream=false: first callback allocation requests 447 -> 447\nsame_stream=true: first callback allocation requests 447 -> 447\ntest first_callback_and_cancellation_do_not_materialize_the_tail ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s\n\n",
+    "qr-streaming-refactor.log": "   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-fixes-615-619/oxidize-pdf-core)\n    Finished `test` profile [unoptimized] target(s) in 17.48s\n     Running tests/issue_453_text_streamer_positioning_test.rs (target/debug/deps/issue_453_text_streamer_positioning_test-bcfb7afa7c3538df)\n\nrunning 2 tests\ntest text_streamer_apostrophe_operator_moves_to_next_line ... ok\ntest text_streamer_honors_td_tstar_tm_positioning ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)\n\nrunning 9 tests\ntest streaming_recovers_after_bad_stream_without_losing_split_operands ... ok\ntest streaming_skips_inline_image_data_across_stream_boundaries ... ok\ntest test_multistream_operand_split_coordinates_text_extraction ... ok\ntest test_multistream_operand_operator_split_text_extraction ... ok\ntest test_combined_content_stream_helpers ... ok\ntest test_combine_streams_corner_cases ... ok\ntest test_content_parser_parse_content_streams ... ok\ntest test_stream_text_multistream_boundary ... ok\ntest test_multistream_plaintext_extraction ... ok\n\ntest result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/issue_618_incremental_callbacks_test.rs (target/debug/deps/issue_618_incremental_callbacks_test-eab3d52ad8233db5)\n\nrunning 1 test\nsame_stream=false: first callback allocation requests 159 -> 159\nsame_stream=true: first callback allocation requests 159 -> 159\ntest first_callback_and_cancellation_do_not_materialize_the_tail ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+    "buffer_probe.log": "emitted=[\"AAAA\", \"BBBB\"] buffered=\"\"\n",
+    "footer-0-qpdf.log": "checking /tmp/oxidize-fixes-validation/footer-0.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "footer-1-qpdf.log": "checking /tmp/oxidize-fixes-validation/footer-1.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n"
+  },
+  "kripteia": {
+    "score": 91,
+    "tests": 360,
+    "rust_files": 12,
+    "security": "Three unsafe allocator methods in test only; System delegation audited",
+    "log_sha256": "b89dfd404280cd8691ad156efd7959e38ef0a2646f261efbbb78176b2d334d65"
+  },
+  "omnidocbench": {
+    "baseline": {
+      "commands.json": [
+        {
+          "stage": "export",
+          "command": [
+            "python3",
+            "/tmp/oxidize-fixes-615-619/tools/benchmarks/omnidocbench_gate.py",
+            "export",
+            "--source-root",
+            "/tmp/oxidize-fixes-baseline",
+            "--dataset-root",
+            "/tmp/oxidize-pr-review-20260924/dataset",
+            "--evaluator-root",
+            "/tmp/oxidize-pr-review-20260924/evaluator",
+            "--dataset",
+            "/tmp/oxidize-pr-review-20260924/dataset/OmniDocBench.json",
+            "--pdf-root",
+            "/tmp/oxidize-pr-review-20260924/dataset/ori_pdfs",
+            "--predictions",
+            "/tmp/oxidize-fixes-validation/omni-baseline/raw-predictions",
+            "--manifest",
+            "/tmp/oxidize-fixes-validation/omni-baseline/raw-manifest.json",
+            "--dataset-revision",
+            "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "--evaluator-revision",
+            "337cc26965893db3ef53ddc119a6d6bb5bde096f"
+          ],
+          "exit": 0,
+          "seconds": 640.364739894867
+        },
+        {
+          "stage": "normalize",
+          "command": [
+            "/tmp/oxidize-pr-review-20260924/normalize_predictions",
+            "/tmp/oxidize-fixes-validation/omni-baseline/raw-predictions",
+            "/tmp/oxidize-fixes-validation/omni-baseline/predictions"
+          ],
+          "exit": 0,
+          "seconds": 0.2845621109008789
+        },
+        {
+          "stage": "evaluate",
+          "command": [
+            "/home/santi/repos/BelowZero/oxidizePdf/oxidize-stats/benchmark/evaluator/.venv310/bin/python",
+            "/tmp/oxidize-pr-review-20260924/evaluator/pdf_validation.py",
+            "--config",
+            "/tmp/oxidize-fixes-validation/omni-baseline/config.yaml"
+          ],
+          "exit": 1,
+          "seconds": 585.3327777385712
+        },
+        {
+          "stage": "evaluate_retry",
+          "command": [
+            "/home/santi/repos/BelowZero/oxidizePdf/oxidize-stats/benchmark/evaluator/.venv310/bin/python",
+            "/tmp/oxidize-pr-review-20260924/evaluator/pdf_validation.py",
+            "--config",
+            "/tmp/oxidize-fixes-validation/omni-baseline/config.yaml"
+          ],
+          "exit": 0,
+          "seconds": 440.60348200798035
+        },
+        {
+          "stage": "summarize",
+          "command": [
+            "python3",
+            "/tmp/oxidize-fixes-615-619/tools/benchmarks/omnidocbench_gate.py",
+            "summarize",
+            "--dataset",
+            "/tmp/oxidize-pr-review-20260924/dataset/OmniDocBench.json",
+            "--scores",
+            "/tmp/oxidize-fixes-validation/omni-baseline/result/predictions_quick_match_text_block_per_page_edit.json",
+            "--predictions",
+            "/tmp/oxidize-fixes-validation/omni-baseline/predictions",
+            "--evaluator-root",
+            "/tmp/oxidize-pr-review-20260924/evaluator",
+            "--manifest",
+            "/tmp/oxidize-fixes-validation/omni-baseline/manifest.json",
+            "--output",
+            "/tmp/oxidize-fixes-validation/omni-baseline/summary.json"
+          ],
+          "exit": 0,
+          "seconds": 1.8412513732910156
+        }
+      ],
+      "raw-manifest.json": {
+        "counts": {
+          "attempted": 981,
+          "failed": 1,
+          "written": 981
+        },
+        "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+        "failures": [
+          {
+            "error": "Syntax error at position 0: Invalid Filter type",
+            "prediction_name": "jiaocaineedrop_chap10.pdf_8.md"
+          }
+        ],
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "predictions_sha256": "50977e5e2bcf03b7bb94dab1e79ab947a81c5ada714675850c2b51459f99d1bc",
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "e1792e83dbf0fdb42f65742fbc705dc8de906e25",
+          "worktree_clean": true
+        }
+      },
+      "manifest.json": {
+        "counts": {
+          "attempted": 981,
+          "failed": 1,
+          "written": 981
+        },
+        "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+        "failures": [
+          {
+            "error": "Syntax error at position 0: Invalid Filter type",
+            "prediction_name": "jiaocaineedrop_chap10.pdf_8.md"
+          }
+        ],
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "d2e1aa25f6ea386c1225ade2b96e6033af5af69b64e72d72116a9068df082c19",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "postprocessing": "Rust str::split_whitespace().collect::<Vec<_>>().join(\" \") (oxidize-stats quality_oracle)",
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "e1792e83dbf0fdb42f65742fbc705dc8de906e25",
+          "serialization": {
+            "normalizer_sha256": "956f2af0ae5f85c2bb0dceaa761d60061c140c1f34af3a50f73a0ae637bb147e",
+            "raw_export_manifest_sha256": "e0bb3932408aac5b20af6ba8c8ce20b54c1a3cd9586adf46f8bdb8783d421504",
+            "raw_exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+            "reference": "Historical protocol used by review 2026-09-24; independent of concurrent #620 work"
+          },
+          "worktree_clean": true
+        }
+      },
+      "summary.json": {
+        "artifacts": {
+          "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+          "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+          "scores_sha256": "f92d9c423724c4d86cc85e0b0b00865554d827072985848d55241ad74068d1f7"
+        },
+        "counts": {
+          "dataset": 981,
+          "duplicate": 0,
+          "excluded_native": 141,
+          "failed": 1,
+          "included_native": 780,
+          "missing": 0,
+          "official_text_scorable": 921,
+          "official_text_unscored": 60,
+          "scored": 921
+        },
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "d2e1aa25f6ea386c1225ade2b96e6033af5af69b64e72d72116a9068df082c19",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "postprocessing": "Rust str::split_whitespace().collect::<Vec<_>>().join(\" \") (oxidize-stats quality_oracle)",
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "metrics": {
+          "native_text_edit_distance": 0.3780398277711069,
+          "native_text_similarity": 0.6219601722288931,
+          "official_global_text_edit_distance": 0.4731168630606457,
+          "official_global_text_similarity": 0.5268831369393543
+        },
+        "population": {
+          "excluded_data_sources": [
+            "note"
+          ],
+          "excluded_special_issues": [
+            "fuzzy_scan"
+          ],
+          "scored_pages_sha256": "ab0cf0c4fbd220b09338dc45fb07e1cf22299abc313b755fa7d5e474673cfa35",
+          "version": "native-text-v1"
+        },
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "e1792e83dbf0fdb42f65742fbc705dc8de906e25",
+          "serialization": {
+            "normalizer_sha256": "956f2af0ae5f85c2bb0dceaa761d60061c140c1f34af3a50f73a0ae637bb147e",
+            "raw_export_manifest_sha256": "e0bb3932408aac5b20af6ba8c8ce20b54c1a3cd9586adf46f8bdb8783d421504",
+            "raw_exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+            "reference": "Historical protocol used by review 2026-09-24; independent of concurrent #620 work"
+          },
+          "worktree_clean": true
+        },
+        "summary_sha256": "f7ef8ac7fb9c012aa2a4ee5f8282516a964473d847901ddb26e7caaea38f8ffd"
+      }
+    },
+    "fixed": {
+      "commands.json": [
+        {
+          "stage": "export",
+          "command": [
+            "python3",
+            "/tmp/oxidize-fixes-615-619/tools/benchmarks/omnidocbench_gate.py",
+            "export",
+            "--source-root",
+            "/tmp/oxidize-fixes-615-619",
+            "--dataset-root",
+            "/tmp/oxidize-pr-review-20260924/dataset",
+            "--evaluator-root",
+            "/tmp/oxidize-pr-review-20260924/evaluator",
+            "--dataset",
+            "/tmp/oxidize-pr-review-20260924/dataset/OmniDocBench.json",
+            "--pdf-root",
+            "/tmp/oxidize-pr-review-20260924/dataset/ori_pdfs",
+            "--predictions",
+            "/tmp/oxidize-fixes-validation/omni-fixed/raw-predictions",
+            "--manifest",
+            "/tmp/oxidize-fixes-validation/omni-fixed/raw-manifest.json",
+            "--dataset-revision",
+            "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "--evaluator-revision",
+            "337cc26965893db3ef53ddc119a6d6bb5bde096f"
+          ],
+          "exit": 0,
+          "seconds": 648.6879312992096
+        },
+        {
+          "stage": "normalize",
+          "command": [
+            "/tmp/oxidize-pr-review-20260924/normalize_predictions",
+            "/tmp/oxidize-fixes-validation/omni-fixed/raw-predictions",
+            "/tmp/oxidize-fixes-validation/omni-fixed/predictions"
+          ],
+          "exit": 0,
+          "seconds": 0.34552931785583496
+        },
+        {
+          "stage": "evaluate",
+          "exit": 130,
+          "reason": "Cancelled duplicate evaluation after proving all predictions identical to baseline"
+        },
+        {
+          "stage": "reuse_identical_predictions",
+          "exit": 0,
+          "source": "/tmp/oxidize-fixes-validation/omni-baseline",
+          "equal_files": 981
+        },
+        {
+          "stage": "summarize_reused_evaluation",
+          "command": [
+            "python3",
+            "/tmp/oxidize-fixes-615-619/tools/benchmarks/omnidocbench_gate.py",
+            "summarize",
+            "--dataset",
+            "/tmp/oxidize-pr-review-20260924/dataset/OmniDocBench.json",
+            "--scores",
+            "/tmp/oxidize-fixes-validation/omni-fixed/result/predictions_quick_match_text_block_per_page_edit.json",
+            "--predictions",
+            "/tmp/oxidize-fixes-validation/omni-fixed/predictions",
+            "--evaluator-root",
+            "/tmp/oxidize-pr-review-20260924/evaluator",
+            "--manifest",
+            "/tmp/oxidize-fixes-validation/omni-fixed/manifest.json",
+            "--output",
+            "/tmp/oxidize-fixes-validation/omni-fixed/summary.json"
+          ],
+          "exit": 0
+        }
+      ],
+      "raw-manifest.json": {
+        "counts": {
+          "attempted": 981,
+          "failed": 1,
+          "written": 981
+        },
+        "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+        "failures": [
+          {
+            "error": "Syntax error at position 0: Invalid Filter type",
+            "prediction_name": "jiaocaineedrop_chap10.pdf_8.md"
+          }
+        ],
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "predictions_sha256": "50977e5e2bcf03b7bb94dab1e79ab947a81c5ada714675850c2b51459f99d1bc",
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "80703f3a1df8496d49cb62a8ae303893d1dbcc69",
+          "worktree_clean": true
+        }
+      },
+      "manifest.json": {
+        "counts": {
+          "attempted": 981,
+          "failed": 1,
+          "written": 981
+        },
+        "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+        "failures": [
+          {
+            "error": "Syntax error at position 0: Invalid Filter type",
+            "prediction_name": "jiaocaineedrop_chap10.pdf_8.md"
+          }
+        ],
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "d2e1aa25f6ea386c1225ade2b96e6033af5af69b64e72d72116a9068df082c19",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "postprocessing": "Rust str::split_whitespace().collect::<Vec<_>>().join(\" \") (oxidize-stats quality_oracle)",
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluation_reuse": {
+            "reason": "981 byte-identical predictions and identical protocol identity; duplicate evaluation cancelled with exit 130",
+            "source": "/tmp/oxidize-fixes-validation/omni-baseline",
+            "source_manifest_sha256": "eb6b59bd6bd62c724c4d5359eeb7feed69f6b28d690f995f16d5c294cd7720bc"
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "80703f3a1df8496d49cb62a8ae303893d1dbcc69",
+          "serialization": {
+            "normalizer_sha256": "956f2af0ae5f85c2bb0dceaa761d60061c140c1f34af3a50f73a0ae637bb147e",
+            "raw_export_manifest_sha256": "88b4caa9438624ae4026faf1a42c82600b9bfb7b8acecc04d5b818282550e147",
+            "raw_exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+            "reference": "Historical protocol used by review 2026-09-24; independent of concurrent #620 work"
+          },
+          "worktree_clean": true
+        }
+      },
+      "summary.json": {
+        "artifacts": {
+          "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+          "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+          "scores_sha256": "f92d9c423724c4d86cc85e0b0b00865554d827072985848d55241ad74068d1f7"
+        },
+        "counts": {
+          "dataset": 981,
+          "duplicate": 0,
+          "excluded_native": 141,
+          "failed": 1,
+          "included_native": 780,
+          "missing": 0,
+          "official_text_scorable": 921,
+          "official_text_unscored": 60,
+          "scored": 921
+        },
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "d2e1aa25f6ea386c1225ade2b96e6033af5af69b64e72d72116a9068df082c19",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "postprocessing": "Rust str::split_whitespace().collect::<Vec<_>>().join(\" \") (oxidize-stats quality_oracle)",
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "metrics": {
+          "native_text_edit_distance": 0.3780398277711069,
+          "native_text_similarity": 0.6219601722288931,
+          "official_global_text_edit_distance": 0.4731168630606457,
+          "official_global_text_similarity": 0.5268831369393543
+        },
+        "population": {
+          "excluded_data_sources": [
+            "note"
+          ],
+          "excluded_special_issues": [
+            "fuzzy_scan"
+          ],
+          "scored_pages_sha256": "ab0cf0c4fbd220b09338dc45fb07e1cf22299abc313b755fa7d5e474673cfa35",
+          "version": "native-text-v1"
+        },
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluation_reuse": {
+            "reason": "981 byte-identical predictions and identical protocol identity; duplicate evaluation cancelled with exit 130",
+            "source": "/tmp/oxidize-fixes-validation/omni-baseline",
+            "source_manifest_sha256": "eb6b59bd6bd62c724c4d5359eeb7feed69f6b28d690f995f16d5c294cd7720bc"
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "80703f3a1df8496d49cb62a8ae303893d1dbcc69",
+          "serialization": {
+            "normalizer_sha256": "956f2af0ae5f85c2bb0dceaa761d60061c140c1f34af3a50f73a0ae637bb147e",
+            "raw_export_manifest_sha256": "88b4caa9438624ae4026faf1a42c82600b9bfb7b8acecc04d5b818282550e147",
+            "raw_exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+            "reference": "Historical protocol used by review 2026-09-24; independent of concurrent #620 work"
+          },
+          "worktree_clean": true
+        },
+        "summary_sha256": "5cefae204bca69d3ac047c25fe9bf13666c3a15854f74dbb103eb5d436b6091e"
+      }
+    },
+    "final": {
+      "commands.json": [
+        {
+          "stage": "export",
+          "command": [
+            "python3",
+            "/tmp/oxidize-fixes-615-619/tools/benchmarks/omnidocbench_gate.py",
+            "export",
+            "--source-root",
+            "/tmp/oxidize-fixes-615-619",
+            "--dataset-root",
+            "/tmp/oxidize-pr-review-20260924/dataset",
+            "--evaluator-root",
+            "/tmp/oxidize-pr-review-20260924/evaluator",
+            "--dataset",
+            "/tmp/oxidize-pr-review-20260924/dataset/OmniDocBench.json",
+            "--pdf-root",
+            "/tmp/oxidize-pr-review-20260924/dataset/ori_pdfs",
+            "--predictions",
+            "/tmp/oxidize-fixes-validation/omni-final/raw-predictions",
+            "--manifest",
+            "/tmp/oxidize-fixes-validation/omni-final/raw-manifest.json",
+            "--dataset-revision",
+            "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "--evaluator-revision",
+            "337cc26965893db3ef53ddc119a6d6bb5bde096f"
+          ],
+          "exit": 0,
+          "seconds": 250.09993767738342
+        },
+        {
+          "stage": "normalize",
+          "command": [
+            "/tmp/oxidize-pr-review-20260924/normalize_predictions",
+            "/tmp/oxidize-fixes-validation/omni-final/raw-predictions",
+            "/tmp/oxidize-fixes-validation/omni-final/predictions"
+          ],
+          "exit": 0,
+          "seconds": 0.24565815925598145
+        },
+        {
+          "stage": "evaluate",
+          "exit": 130,
+          "reason": "Cancelled duplicate evaluation after proving all predictions identical to baseline"
+        },
+        {
+          "stage": "reuse_identical_predictions",
+          "exit": 0,
+          "source": "/tmp/oxidize-fixes-validation/omni-baseline",
+          "equal_files": 981
+        },
+        {
+          "stage": "summarize_reused_evaluation",
+          "command": [
+            "python3",
+            "/tmp/oxidize-fixes-615-619/tools/benchmarks/omnidocbench_gate.py",
+            "summarize",
+            "--dataset",
+            "/tmp/oxidize-pr-review-20260924/dataset/OmniDocBench.json",
+            "--scores",
+            "/tmp/oxidize-fixes-validation/omni-final/result/predictions_quick_match_text_block_per_page_edit.json",
+            "--predictions",
+            "/tmp/oxidize-fixes-validation/omni-final/predictions",
+            "--evaluator-root",
+            "/tmp/oxidize-pr-review-20260924/evaluator",
+            "--manifest",
+            "/tmp/oxidize-fixes-validation/omni-final/manifest.json",
+            "--output",
+            "/tmp/oxidize-fixes-validation/omni-final/summary.json"
+          ],
+          "exit": 0
+        }
+      ],
+      "raw-manifest.json": {
+        "counts": {
+          "attempted": 981,
+          "failed": 1,
+          "written": 981
+        },
+        "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+        "failures": [
+          {
+            "error": "Syntax error at position 0: Invalid Filter type",
+            "prediction_name": "jiaocaineedrop_chap10.pdf_8.md"
+          }
+        ],
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "predictions_sha256": "50977e5e2bcf03b7bb94dab1e79ab947a81c5ada714675850c2b51459f99d1bc",
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "a099a579a71dcc7960879bdcb1c5044eb4ef2b1e",
+          "worktree_clean": true
+        }
+      },
+      "manifest.json": {
+        "counts": {
+          "attempted": 981,
+          "failed": 1,
+          "written": 981
+        },
+        "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+        "failures": [
+          {
+            "error": "Syntax error at position 0: Invalid Filter type",
+            "prediction_name": "jiaocaineedrop_chap10.pdf_8.md"
+          }
+        ],
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "d2e1aa25f6ea386c1225ade2b96e6033af5af69b64e72d72116a9068df082c19",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "postprocessing": "Rust str::split_whitespace().collect::<Vec<_>>().join(\" \") (oxidize-stats quality_oracle)",
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluation_reuse": {
+            "reason": "981 byte-identical predictions and identical protocol identity; duplicate evaluation cancelled with exit 130",
+            "source": "/tmp/oxidize-fixes-validation/omni-baseline",
+            "source_manifest_sha256": "eb6b59bd6bd62c724c4d5359eeb7feed69f6b28d690f995f16d5c294cd7720bc"
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "a099a579a71dcc7960879bdcb1c5044eb4ef2b1e",
+          "serialization": {
+            "normalizer_sha256": "956f2af0ae5f85c2bb0dceaa761d60061c140c1f34af3a50f73a0ae637bb147e",
+            "raw_export_manifest_sha256": "f30af9e5b5e268f55e175080238c54160287281bc66dc28ee27766e08fb45be1",
+            "raw_exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+            "reference": "Historical protocol used by review 2026-09-24; independent of concurrent #620 work"
+          },
+          "worktree_clean": true
+        }
+      },
+      "summary.json": {
+        "artifacts": {
+          "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+          "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+          "scores_sha256": "f92d9c423724c4d86cc85e0b0b00865554d827072985848d55241ad74068d1f7"
+        },
+        "counts": {
+          "dataset": 981,
+          "duplicate": 0,
+          "excluded_native": 141,
+          "failed": 1,
+          "included_native": 780,
+          "missing": 0,
+          "official_text_scorable": 921,
+          "official_text_unscored": 60,
+          "scored": 921
+        },
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "d2e1aa25f6ea386c1225ade2b96e6033af5af69b64e72d72116a9068df082c19",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "postprocessing": "Rust str::split_whitespace().collect::<Vec<_>>().join(\" \") (oxidize-stats quality_oracle)",
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "metrics": {
+          "native_text_edit_distance": 0.3780398277711069,
+          "native_text_similarity": 0.6219601722288931,
+          "official_global_text_edit_distance": 0.4731168630606457,
+          "official_global_text_similarity": 0.5268831369393543
+        },
+        "population": {
+          "excluded_data_sources": [
+            "note"
+          ],
+          "excluded_special_issues": [
+            "fuzzy_scan"
+          ],
+          "scored_pages_sha256": "ab0cf0c4fbd220b09338dc45fb07e1cf22299abc313b755fa7d5e474673cfa35",
+          "version": "native-text-v1"
+        },
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluation_reuse": {
+            "reason": "981 byte-identical predictions and identical protocol identity; duplicate evaluation cancelled with exit 130",
+            "source": "/tmp/oxidize-fixes-validation/omni-baseline",
+            "source_manifest_sha256": "eb6b59bd6bd62c724c4d5359eeb7feed69f6b28d690f995f16d5c294cd7720bc"
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "a099a579a71dcc7960879bdcb1c5044eb4ef2b1e",
+          "serialization": {
+            "normalizer_sha256": "956f2af0ae5f85c2bb0dceaa761d60061c140c1f34af3a50f73a0ae637bb147e",
+            "raw_export_manifest_sha256": "f30af9e5b5e268f55e175080238c54160287281bc66dc28ee27766e08fb45be1",
+            "raw_exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+            "reference": "Historical protocol used by review 2026-09-24; independent of concurrent #620 work"
+          },
+          "worktree_clean": true
+        },
+        "summary_sha256": "c823930f269d9433fd574f092c36c3c54b713078aa19527fd8e42b28fff1545c"
+      }
+    },
+    "head": {
+      "commands.json": [
+        {
+          "stage": "export",
+          "command": [
+            "python3",
+            "/tmp/oxidize-fixes-615-619/tools/benchmarks/omnidocbench_gate.py",
+            "export",
+            "--source-root",
+            "/tmp/oxidize-fixes-615-619",
+            "--dataset-root",
+            "/tmp/oxidize-pr-review-20260924/dataset",
+            "--evaluator-root",
+            "/tmp/oxidize-pr-review-20260924/evaluator",
+            "--dataset",
+            "/tmp/oxidize-pr-review-20260924/dataset/OmniDocBench.json",
+            "--pdf-root",
+            "/tmp/oxidize-pr-review-20260924/dataset/ori_pdfs",
+            "--predictions",
+            "/tmp/oxidize-fixes-validation/omni-head/raw-predictions",
+            "--manifest",
+            "/tmp/oxidize-fixes-validation/omni-head/raw-manifest.json",
+            "--dataset-revision",
+            "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "--evaluator-revision",
+            "337cc26965893db3ef53ddc119a6d6bb5bde096f"
+          ],
+          "exit": 0,
+          "seconds": 267.45477271080017
+        },
+        {
+          "stage": "normalize",
+          "command": [
+            "/tmp/oxidize-pr-review-20260924/normalize_predictions",
+            "/tmp/oxidize-fixes-validation/omni-head/raw-predictions",
+            "/tmp/oxidize-fixes-validation/omni-head/predictions"
+          ],
+          "exit": 0,
+          "seconds": 0.16781973838806152
+        },
+        {
+          "stage": "reuse_identical_predictions",
+          "exit": 0,
+          "source": "/tmp/oxidize-fixes-validation/omni-final",
+          "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f"
+        },
+        {
+          "stage": "summarize",
+          "command": [
+            "python3",
+            "/tmp/oxidize-fixes-615-619/tools/benchmarks/omnidocbench_gate.py",
+            "summarize",
+            "--dataset",
+            "/tmp/oxidize-pr-review-20260924/dataset/OmniDocBench.json",
+            "--scores",
+            "/tmp/oxidize-fixes-validation/omni-head/result/predictions_quick_match_text_block_per_page_edit.json",
+            "--predictions",
+            "/tmp/oxidize-fixes-validation/omni-head/predictions",
+            "--evaluator-root",
+            "/tmp/oxidize-pr-review-20260924/evaluator",
+            "--manifest",
+            "/tmp/oxidize-fixes-validation/omni-head/manifest.json",
+            "--output",
+            "/tmp/oxidize-fixes-validation/omni-head/summary.json"
+          ],
+          "exit": 0,
+          "seconds": 1.9855430126190186
+        }
+      ],
+      "raw-manifest.json": {
+        "counts": {
+          "attempted": 981,
+          "failed": 1,
+          "written": 981
+        },
+        "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+        "failures": [
+          {
+            "error": "Syntax error at position 0: Invalid Filter type",
+            "prediction_name": "jiaocaineedrop_chap10.pdf_8.md"
+          }
+        ],
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "predictions_sha256": "50977e5e2bcf03b7bb94dab1e79ab947a81c5ada714675850c2b51459f99d1bc",
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "e28e4f54eb69057bafc4d8e67c8bd3680f2b26db",
+          "worktree_clean": true
+        }
+      },
+      "manifest.json": {
+        "counts": {
+          "attempted": 981,
+          "failed": 1,
+          "written": 981
+        },
+        "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+        "failures": [
+          {
+            "error": "Syntax error at position 0: Invalid Filter type",
+            "prediction_name": "jiaocaineedrop_chap10.pdf_8.md"
+          }
+        ],
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "d2e1aa25f6ea386c1225ade2b96e6033af5af69b64e72d72116a9068df082c19",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "postprocessing": "Rust str::split_whitespace().collect::<Vec<_>>().join(\" \") (oxidize-stats quality_oracle)",
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluation_reuse": {
+            "reason": "All 981 prediction files identical; same pinned evaluator and config; reuse completed official evaluation",
+            "source": "/tmp/oxidize-fixes-validation/omni-final",
+            "source_manifest_sha256": "61e5cfbaa43b3919e0c392fe84d99e4618ea9bbcdd9798ac3e4671adc8b6e086"
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "e28e4f54eb69057bafc4d8e67c8bd3680f2b26db",
+          "serialization": {
+            "normalizer_sha256": "956f2af0ae5f85c2bb0dceaa761d60061c140c1f34af3a50f73a0ae637bb147e",
+            "raw_export_manifest_sha256": "edc50d82ce2d844808c9ee88cdbbc7e065e1f4b105261f92edf0dcdba5067b90",
+            "raw_exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+            "reference": "Historical protocol used by review 2026-09-24; independent of concurrent #620 work"
+          },
+          "worktree_clean": true
+        }
+      },
+      "summary.json": {
+        "artifacts": {
+          "dataset_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+          "predictions_sha256": "ca23487e62e2347ce0e1a7edd6d82dddf910435d8490db4debe6dcb83eab433f",
+          "scores_sha256": "f92d9c423724c4d86cc85e0b0b00865554d827072985848d55241ad74068d1f7"
+        },
+        "counts": {
+          "dataset": 981,
+          "duplicate": 0,
+          "excluded_native": 141,
+          "failed": 1,
+          "included_native": 780,
+          "missing": 0,
+          "official_text_scorable": 921,
+          "official_text_unscored": 60,
+          "scored": 921
+        },
+        "identity": {
+          "cargo_version": "cargo 1.96.0 (30a34c682 2026-05-25)",
+          "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+          "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+          "exporter_sha256": "d2e1aa25f6ea386c1225ade2b96e6033af5af69b64e72d72116a9068df082c19",
+          "extraction_config": {
+            "api": "PlainTextExtractor::preserve_layout",
+            "line_break_mode": "PreserveAll",
+            "newline_threshold": 10.0,
+            "postprocessing": "Rust str::split_whitespace().collect::<Vec<_>>().join(\" \") (oxidize-stats quality_oracle)",
+            "preserve_layout": true,
+            "space_threshold": 0.3,
+            "tj_space_threshold": 0.2
+          },
+          "ocr_enabled": false,
+          "population_version": "native-text-v1",
+          "protocol": "OmniDocBench/end2end_eval/quick_match/text",
+          "rustc_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+          "schema_version": "oxidize-pdf-omnidocbench-gate/v1",
+          "source_lock_sha256": "d1d3b5c955c53ab2aef59d60442e468de4fbf0fe25daa6c34bb7dc62a548006e"
+        },
+        "metrics": {
+          "native_text_edit_distance": 0.3780398277711069,
+          "native_text_similarity": 0.6219601722288931,
+          "official_global_text_edit_distance": 0.4731168630606457,
+          "official_global_text_similarity": 0.5268831369393543
+        },
+        "population": {
+          "excluded_data_sources": [
+            "note"
+          ],
+          "excluded_special_issues": [
+            "fuzzy_scan"
+          ],
+          "scored_pages_sha256": "ab0cf0c4fbd220b09338dc45fb07e1cf22299abc313b755fa7d5e474673cfa35",
+          "version": "native-text-v1"
+        },
+        "provenance": {
+          "dataset_repository": {
+            "git_sha": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+            "verified_materialized_lfs_files": 141,
+            "worktree_clean": true
+          },
+          "evaluation_reuse": {
+            "reason": "All 981 prediction files identical; same pinned evaluator and config; reuse completed official evaluation",
+            "source": "/tmp/oxidize-fixes-validation/omni-final",
+            "source_manifest_sha256": "61e5cfbaa43b3919e0c392fe84d99e4618ea9bbcdd9798ac3e4671adc8b6e086"
+          },
+          "evaluator_repository": {
+            "git_sha": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+            "worktree_clean": true
+          },
+          "git_sha": "e28e4f54eb69057bafc4d8e67c8bd3680f2b26db",
+          "serialization": {
+            "normalizer_sha256": "956f2af0ae5f85c2bb0dceaa761d60061c140c1f34af3a50f73a0ae637bb147e",
+            "raw_export_manifest_sha256": "edc50d82ce2d844808c9ee88cdbbc7e065e1f4b105261f92edf0dcdba5067b90",
+            "raw_exporter_sha256": "ccfaec9e18ba03199d4b215765376c3a5f22297e0bf5b67214e1e41aaaf89374",
+            "reference": "Historical protocol used by review 2026-09-24; independent of concurrent #620 work"
+          },
+          "worktree_clean": true
+        },
+        "summary_sha256": "6942596b4e63fc59610552370b25df180ff2fea53d002a8da61af4eccedfa386"
+      }
+    }
+  },
+  "comparison": {
+    "identity_sha256": "0edcbdb6846f1a9f15d67ab0e665cd5b3d5400193269d1d9cfe2736135479cde",
+    "native_text_similarity_delta": 0.0,
+    "official_global_text_similarity_delta": 0.0
+  },
+  "limits": [
+    "T4/T5 precision skipped due to unavailable ground truth",
+    "Input buffers remain resident in stream_text",
+    "Pre-existing batch-buffer bug requires a separate issue"
+  ]
+}

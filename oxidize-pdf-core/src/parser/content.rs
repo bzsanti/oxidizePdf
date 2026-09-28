@@ -53,9 +53,10 @@
 //! - XObject operators (Do)
 //! - Marked content operators (BMC, BDC, EMC, etc.)
 
+use std::collections::HashMap;
+
 use super::{ParseError, ParseResult};
 use crate::objects::Object;
-use std::collections::HashMap;
 
 /// A single value inside a marked-content properties dictionary or array.
 ///
@@ -619,6 +620,16 @@ impl<'a> ContentTokenizer<'a> {
                     b'(' => result.push(b'('),
                     b')' => result.push(b')'),
                     b'\\' => result.push(b'\\'),
+                    b'\r' => {
+                        // Escaped line break per ISO 32000-1 §7.3.4.2: discard the EOL.
+                        // If followed by \n (CRLF), consume \n as part of the EOL marker.
+                        if self.position < self.input.len() && self.input[self.position] == b'\n' {
+                            self.position += 1;
+                        }
+                    }
+                    b'\n' => {
+                        // Escaped line break per ISO 32000-1 §7.3.4.2: discard the EOL.
+                    }
                     b'0'..=b'7' => {
                         // Octal escape sequence
                         self.position -= 1;
@@ -806,8 +817,18 @@ impl<'a> ContentTokenizer<'a> {
     /// all subsequent bytes are raw image data until the EI marker is found.
     /// The EI marker is: whitespace + 'E' + 'I' + (whitespace, delimiter, or EOF).
     fn read_inline_image_data(&mut self) -> ParseResult<Option<Token>> {
+        self.read_inline_image_data_part(true)
+            .map(|(token, _)| token)
+    }
+
+    // The visitor carries incomplete image data across stream boundaries. The
+    // batch tokenizer keeps its historical best-effort result for missing EI.
+    fn read_inline_image_data_part(
+        &mut self,
+        skip_separator: bool,
+    ) -> ParseResult<(Option<Token>, bool)> {
         // Skip single whitespace byte after ID (per PDF spec §4.8.6)
-        if self.position < self.input.len() {
+        if skip_separator && self.position < self.input.len() {
             let ch = self.input[self.position];
             if ch == b' ' || ch == b'\n' || ch == b'\r' || ch == b'\t' {
                 self.position += 1;
@@ -852,7 +873,7 @@ impl<'a> ContentTokenizer<'a> {
                     }
                     let data = self.input[start..end].to_vec();
                     self.position = after_ei; // Skip past "EI"
-                    return Ok(Some(Token::InlineImageData(data)));
+                    return Ok((Some(Token::InlineImageData(data)), true));
                 }
             }
             self.position += 1;
@@ -861,7 +882,7 @@ impl<'a> ContentTokenizer<'a> {
         // No EI found — return remaining bytes as best-effort recovery
         let data = self.input[start..].to_vec();
         self.position = self.input.len();
-        Ok(Some(Token::InlineImageData(data)))
+        Ok((Some(Token::InlineImageData(data)), false))
     }
 }
 
@@ -1076,6 +1097,204 @@ impl ContentParser {
         };
 
         parser.parse_operators()
+    }
+
+    /// Concatenate multiple content stream byte slices into a single continuous stream,
+    /// inserting a newline separator between streams per ISO 32000-1 §7.7.3.3 and
+    /// ISO 32000-2 §7.7.3.3.
+    pub fn combine_streams<T: AsRef<[u8]>>(streams: &[T]) -> Vec<u8> {
+        if streams.is_empty() {
+            return Vec::new();
+        }
+        if streams.len() == 1 {
+            return streams[0].as_ref().to_vec();
+        }
+        let total_len: usize = streams.iter().map(|s| s.as_ref().len() + 1).sum();
+        let mut combined = Vec::with_capacity(total_len);
+        for s in streams {
+            combined.extend_from_slice(s.as_ref());
+            combined.push(b'\n');
+        }
+        combined
+    }
+
+    /// Concatenate multiple owned content stream buffers into a single continuous stream,
+    /// avoiding reallocations when possible, per ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3.
+    pub fn combine_streams_owned(streams: Vec<Vec<u8>>) -> Vec<u8> {
+        let mut iter = streams.into_iter();
+        let Some(first) = iter.next() else {
+            return Vec::new();
+        };
+        if iter.len() == 0 {
+            return first;
+        }
+        let additional: usize = iter.as_slice().iter().map(|s| s.len() + 1).sum();
+        let mut combined = first;
+        combined.reserve(additional + 1);
+        combined.push(b'\n');
+        for s in iter {
+            combined.extend_from_slice(&s);
+            combined.push(b'\n');
+        }
+        combined
+    }
+
+    /// Parse multiple content streams as a single concatenated content stream per
+    /// ISO 32000-1 §7.7.3.3 and ISO 32000-2 §7.7.3.3.
+    pub fn parse_content_streams<T: AsRef<[u8]>>(
+        streams: &[T],
+    ) -> ParseResult<Vec<ContentOperation>> {
+        if streams.is_empty() {
+            return Ok(Vec::new());
+        }
+        if streams.len() == 1 {
+            return Self::parse_content(streams[0].as_ref());
+        }
+        let combined = Self::combine_streams(streams);
+        let mut boundaries = Vec::with_capacity(streams.len());
+        let mut end = 0;
+        for stream in streams {
+            end += stream.as_ref().len() + 1;
+            boundaries.push(end);
+        }
+        let mut tokenizer = ContentTokenizer::new(&combined);
+        let mut offset = 0;
+        let mut tokens = Vec::new();
+        let mut operations = Vec::new();
+        loop {
+            match tokenizer.next_token() {
+                Ok(Some(token)) => tokens.push(token),
+                Ok(None) => break,
+                Err(error) => {
+                    // Keep complete operations before the error, but never carry
+                    // incomplete operands from damaged content into a healthy stream.
+                    operations.extend(
+                        Self {
+                            tokens: std::mem::take(&mut tokens),
+                            position: 0,
+                        }
+                        .parse_operators()?,
+                    );
+                    let error_position = offset + tokenizer.position;
+                    // Boundaries are sorted. Avoid rescanning all earlier
+                    // streams for each error in an adversarial page.
+                    let next_index = boundaries.partition_point(|&end| end <= error_position);
+                    let Some(&next) = boundaries.get(next_index) else {
+                        break;
+                    };
+                    tracing::debug!("recovering at next content stream after: {error}");
+                    offset = next;
+                    tokenizer = ContentTokenizer::new(&combined[offset..]);
+                }
+            }
+        }
+        operations.extend(
+            Self {
+                tokens,
+                position: 0,
+            }
+            .parse_operators()?,
+        );
+        Ok(operations)
+    }
+
+    /// Visit operations as they complete, retaining operands across stream
+    /// boundaries (which PDF requires to fall between lexical tokens).
+    /// Callback errors stop tokenization immediately. Malformed content skips
+    /// the damaged stream and clears its incomplete operands, as in the
+    /// best-effort page parser. Only one inline image is buffered at a time.
+    pub(crate) fn visit_content_streams<T, F, E>(
+        streams: &[T],
+        mut visitor: F,
+    ) -> std::result::Result<(), E>
+    where
+        T: AsRef<[u8]>,
+        F: FnMut(ContentOperation) -> std::result::Result<(), E>,
+    {
+        let mut parser = Self::new(&[]);
+        let mut operands = Vec::new();
+        let mut inline_image = false;
+        let mut image_data: Option<Vec<u8>> = None;
+        for stream in streams {
+            let mut tokenizer = ContentTokenizer::new(stream.as_ref());
+            loop {
+                let next = if tokenizer.in_inline_image || image_data.is_some() {
+                    let skip_separator = tokenizer.in_inline_image;
+                    let separator_is_boundary =
+                        skip_separator && tokenizer.position == tokenizer.input.len();
+                    tokenizer.in_inline_image = false;
+                    match tokenizer.read_inline_image_data_part(skip_separator) {
+                        Ok((Some(Token::InlineImageData(part)), complete)) => {
+                            let data = image_data.get_or_insert_with(Vec::new);
+                            // EI at the very start of a continuation is preceded
+                            // by our virtual LF. It is the delimiter, not image data.
+                            if complete
+                                && tokenizer.position == 2
+                                && tokenizer.input.starts_with(b"EI")
+                                && data.last() == Some(&b'\n')
+                            {
+                                data.pop();
+                            }
+                            data.extend(part);
+                            if !complete {
+                                // Match the virtual LF inserted between PDF streams.
+                                if !separator_is_boundary {
+                                    data.push(b'\n');
+                                }
+                                break;
+                            }
+                            let completed = std::mem::take(data);
+                            image_data = None;
+                            Ok(Some(Token::InlineImageData(completed)))
+                        }
+                        Ok((token, _)) => Ok(token),
+                        Err(error) => Err(error),
+                    }
+                } else {
+                    tokenizer.next_token()
+                };
+                let token = match next {
+                    Ok(Some(token)) => token,
+                    Ok(None) => break,
+                    Err(error) => {
+                        tracing::debug!("skipping damaged content stream: {error}");
+                        operands.clear();
+                        parser.tokens.clear();
+                        inline_image = false;
+                        image_data = None;
+                        break;
+                    }
+                };
+                if inline_image {
+                    let complete = matches!(token, Token::InlineImageData(_));
+                    parser.tokens.push(token);
+                    if complete {
+                        parser.position = 0;
+                        if let Ok(operation) = parser.parse_inline_image() {
+                            visitor(operation)?;
+                        }
+                        parser.tokens.clear();
+                        inline_image = false;
+                    }
+                    continue;
+                }
+                match token {
+                    Token::Operator(op) if op == "BI" => {
+                        operands.clear();
+                        inline_image = true;
+                    }
+                    Token::Operator(op) => match parser.parse_operator(&op, &mut operands) {
+                        Ok(operation) => visitor(operation)?,
+                        Err(error) => {
+                            tracing::debug!("skipping malformed content operator: {error}");
+                            operands.clear();
+                        }
+                    },
+                    operand => operands.push(operand),
+                }
+            }
+        }
+        Ok(())
     }
 
     fn parse_operators(&mut self) -> ParseResult<Vec<ContentOperation>> {
@@ -1819,6 +2038,46 @@ fn expand_inline_name(name: &str) -> String {
 mod tests {
     use super::*;
 
+    #[test]
+    fn incremental_operations_match_batch_at_lexical_boundaries() {
+        let program = b"BT /F1 12 Tf 100 700 Td [(HE) 10 (LLO)] TJ ET BI /W 3 /H 1 /BPC 8 /CS /G ID abc EI q Q";
+        for (index, byte) in program.iter().enumerate() {
+            if *byte != b' ' {
+                continue;
+            }
+            for split in [index, index + 1] {
+                let streams = [&program[..split], &program[split..]];
+                let expected = ContentParser::parse_content_streams(&streams).unwrap();
+                let mut actual = Vec::new();
+                ContentParser::visit_content_streams(&streams, |op| {
+                    actual.push(op);
+                    Ok::<_, ()>(())
+                })
+                .unwrap();
+                assert_eq!(actual, expected, "split at {split}");
+            }
+        }
+    }
+
+    #[test]
+    fn incremental_inline_image_terminator_at_next_stream_preserves_bytes() {
+        let streams: &[&[u8]] = &[b"BI /W 3 /H 1 /BPC 8 /CS /G ID abc", b"EI (AFTER) Tj"];
+        let mut operations = Vec::new();
+        ContentParser::visit_content_streams(streams, |op| {
+            operations.push(op);
+            Ok::<_, ()>(())
+        })
+        .unwrap();
+        assert_eq!(operations.len(), 2);
+        match &operations[0] {
+            ContentOperation::InlineImage { params, data } => {
+                assert_eq!(data, b"abc");
+                assert_eq!(params.get("Width"), Some(&Object::Integer(3)));
+            }
+            other => panic!("expected inline image, got {other:?}"),
+        }
+        assert_eq!(operations[1], ContentOperation::ShowText(b"AFTER".to_vec()));
+    }
     #[test]
     fn test_tokenize_numbers() {
         let input = b"123 -45 3.14159 -0.5 .5";

@@ -1,0 +1,26 @@
+name: OmniDocBench contract
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare dependencies and temporary directory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/target/contract-tmp"
+          cargo fetch --locked
+      - name: Verify exporter and provenance contract
+        env:
+          TMPDIR: ${{ github.workspace }}/target/contract-tmp
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          cargo test --locked --offline -p oxidize-pdf --example omnidocbench_export
+          python3 -m unittest tools/benchmarks/omnidocbench_gate_test.py

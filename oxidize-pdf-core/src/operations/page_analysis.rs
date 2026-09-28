@@ -839,59 +839,48 @@ impl PageContentAnalyzer {
         // Method 2: Find XObject referenced by this specific page's content stream
         tracing::debug!("🔍 [DEBUG] Trying Method 2: Parse content streams for Do operators");
         if let Ok(content_streams) = self.document.get_page_content_streams(&page) {
-            tracing::debug!(
-                "🔍 [DEBUG] Page {} has {} content streams",
-                page_number,
-                content_streams.len()
-            );
-            for (i, content_stream) in content_streams.iter().enumerate() {
-                let content_str = String::from_utf8_lossy(content_stream);
-                tracing::debug!(
-                    "🔍 [DEBUG] Content stream {} has {} bytes",
-                    i,
-                    content_stream.len()
-                );
+            let combined = crate::parser::ContentParser::combine_streams_owned(content_streams);
+            let content_str = String::from_utf8_lossy(&combined);
 
-                // Look for Do operators and extract the XObject name
-                // Pattern: "/ImageName Do" where ImageName is the XObject key
-                for line in content_str.lines() {
-                    if line.trim().ends_with(" Do") {
-                        // Extract XObject name from "/Name Do"
-                        let parts: Vec<&str> = line.split_whitespace().collect();
-                        if parts.len() >= 2 && parts[parts.len() - 1] == "Do" {
-                            let xobject_name = parts[parts.len() - 2];
-                            tracing::debug!(
-                                "🔍 [DEBUG] Found Do operator with XObject: {}",
-                                xobject_name
-                            );
-                            if let Some(name) = xobject_name.strip_prefix('/') {
-                                // Remove leading '/'
-                                tracing::debug!("🔍 [DEBUG] Looking for XObject: {}", name);
+            // Look for Do operators and extract the XObject name
+            // Pattern: "/ImageName Do" where ImageName is the XObject key
+            for line in content_str.lines() {
+                if line.trim().ends_with(" Do") {
+                    // Extract XObject name from "/Name Do"
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.len() >= 2 && parts[parts.len() - 1] == "Do" {
+                        let xobject_name = parts[parts.len() - 2];
+                        tracing::debug!(
+                            "🔍 [DEBUG] Found Do operator with XObject: {}",
+                            xobject_name
+                        );
+                        if let Some(name) = xobject_name.strip_prefix('/') {
+                            // Remove leading '/'
+                            tracing::debug!("🔍 [DEBUG] Looking for XObject: {}", name);
 
-                                // Try to find this specific XObject using page resources first
-                                if let Ok(image_data) =
-                                    self.find_specific_xobject_image_from_page(name, &page)
-                                {
+                            // Try to find this specific XObject using page resources first
+                            if let Ok(image_data) =
+                                self.find_specific_xobject_image_from_page(name, &page)
+                            {
+                                return Ok(image_data);
+                            } else {
+                                tracing::debug!("🔍 [DEBUG] Page-specific XObject lookup failed for: {}, trying document-wide search", name);
+                                // Fallback to document-wide search for malformed PDFs
+                                if let Ok(image_data) = self.find_specific_xobject_image(name) {
                                     return Ok(image_data);
                                 } else {
-                                    tracing::debug!("🔍 [DEBUG] Page-specific XObject lookup failed for: {}, trying document-wide search", name);
-                                    // Fallback to document-wide search for malformed PDFs
-                                    if let Ok(image_data) = self.find_specific_xobject_image(name) {
-                                        return Ok(image_data);
-                                    } else {
-                                        tracing::debug!("🔍 [DEBUG] Document-wide XObject lookup also failed for: {}", name);
-                                    }
+                                    tracing::debug!("🔍 [DEBUG] Document-wide XObject lookup also failed for: {}", name);
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                // Fallback: Look for inline images: BI ... ID ... EI
-                if content_str.contains("BI") && content_str.contains("EI") {
-                    // For now, inline image extraction would require more complex implementation
-                    // Most scanned PDFs use XObjects which we handle above
-                }
+            // Fallback: Look for inline images: BI ... ID ... EI
+            if content_str.contains("BI") && content_str.contains("EI") {
+                // For now, inline image extraction would require more complex implementation
+                // Most scanned PDFs use XObjects which we handle above
             }
         }
 
@@ -1965,28 +1954,27 @@ impl PageContentAnalyzer {
 
         // Method 2: Check for inline images and Do operators in content stream
         if let Ok(content_streams) = self.document.get_page_content_streams(&page) {
-            for content_stream in content_streams.iter() {
-                let content_str = String::from_utf8_lossy(content_stream);
+            let combined = crate::parser::ContentParser::combine_streams_owned(content_streams);
+            let content_str = String::from_utf8_lossy(&combined);
 
-                // Look for inline image operators: BI ... ID ... EI
-                let bi_count = content_str.matches("BI").count();
-                let ei_count = content_str.matches("EI").count();
+            // Look for inline image operators: BI ... ID ... EI
+            let bi_count = content_str.matches("BI").count();
+            let ei_count = content_str.matches("EI").count();
 
-                if bi_count > 0 && ei_count > 0 {
-                    image_count += bi_count.min(ei_count);
-                    // For scanned pages, inline images often cover the entire page
-                    let page_area = page.width() * page.height();
-                    total_area += page_area * (bi_count.min(ei_count) as f64);
-                }
+            if bi_count > 0 && ei_count > 0 {
+                image_count += bi_count.min(ei_count);
+                // For scanned pages, inline images often cover the entire page
+                let page_area = page.width() * page.height();
+                total_area += page_area * (bi_count.min(ei_count) as f64);
+            }
 
-                // Look for Do operators (invoke XObject) - fallback for scanned PDFs
-                let do_count = content_str.matches(" Do").count();
-                if do_count > 0 && image_count == 0 {
-                    // Assume Do operators reference large images covering the page
-                    image_count += do_count;
-                    let page_area = page.width() * page.height();
-                    total_area += page_area * (do_count as f64);
-                }
+            // Look for Do operators (invoke XObject) - fallback for scanned PDFs
+            let do_count = content_str.matches(" Do").count();
+            if do_count > 0 && image_count == 0 {
+                // Assume Do operators reference large images covering the page
+                image_count += do_count;
+                let page_area = page.width() * page.height();
+                total_area += page_area * (do_count as f64);
             }
         }
 
