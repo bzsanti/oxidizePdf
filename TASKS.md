@@ -1,11 +1,11 @@
 ## Integración signature-preparation #646 — 2026-09-28
 
 - Issue: #646 — feat(signatures): integrate participant signature preparation for next release — https://github.com/bzsanti/oxidizePdf/issues/646
-- Estado: `[-]` QR y validación local completos; PR pendiente. Prioridad: P1. Responsable: Codex.
+- Estado: `[x]` integrada en develop; issue cerrada. Prioridad: P1. Responsable: Codex.
 - Petición expresa: integrar feature/signature-preparation contra develop y
-  disponer de sus APIs en la próxima release.
+  disponer de sus APIs en la próxima release. Requisito en PR y Unreleased.
 - Criterio de cierre: rama actualizada, regresiones de preparación/firma/permisos,
-  QR completo, PR contra develop y nota Unreleased. Integración/release pendientes.
+  QR completo, PR contra develop y nota Unreleased. Integración completada; publicación de release pendiente.
 - Última validación: develop 93e6796 integrado sin conflictos de código;
   TASKS combina ambos historiales. QR corrigió cuatro hallazgos con RED/GREEN.
   Workspace final: 9895 pasan, cero fallos, 72 omitidos; corpus T0–T6
@@ -13,8 +13,13 @@
   Consumidor compression-only pasa. Clippy/formato pasan; Kripteia 91/99/96,
   seguridad sin hallazgos. Mutaciones de DocMDP/FieldMDP detectadas por los tests.
 - Evidencia: docs/reports/2026-09-28-issue-646-{quality-review.md,validation.json,consumer.rs}.
-- Siguiente acción: commit/push y PR contra develop, con prioridad de próxima
-  release registrada en Unreleased. CI, merge y publicación aún pendientes.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/647 — MERGED contra develop.
+  Merge 32e380324062c20606c83089d4f6c5c9bf61c8d0, 2026-09-28T20:59:41Z.
+  Head revisado d502249f1733c3d25d0565a36b31c62c53c0fc4d.
+- CI final: 17 SUCCESS / 0 FAILED / 2 SKIPPED (corpus programado,
+  validado localmente). Issue #646 cerrada tras verificar el merge.
+- Siguiente acción: incluir esta integración en la próxima release;
+  la publicación de la release sigue pendiente.
 
 # Seguimiento #603 y #641 — 2026-09-28
 
@@ -38,6 +43,36 @@
   comprobar aceptación antes de cerrar #603. Batir a pdf_oxide no es un objetivo.
 
 # Seguimiento diario
+
+## Corrección #638 — 2026-09-28
+
+- Issue: #638 — fix(parser): propagate invalid predictor errors in strict stream decoding — https://github.com/bzsanti/oxidizePdf/issues/638
+- Estado: `[-]` PR #645 abierto; corrección de CI validada localmente. Prioridad: P1. Responsable: Codex.
+- Activación: OPEN confirmada en GitHub; clon aislado /tmp/oxidize-issue-638,
+  rama fix/issue-638-predictor-errors desde develop b76f738.
+- Criterio de cierre: predictores inválidos/unsupported producen error explícito;
+  dimensiones/arithmetic validadas; muestras PNG válidas exactas en ambas APIs
+  y DecodeParms directos/indirectos; RED/GREEN, QR y validación proporcional.
+- Alcance: predictores Flate/LZW. #637 permanece intacta en el checkout original;
+  sin recalibración de métricas ni recuperación implícita de predictores.
+- Última validación: RED de la suite final exacta sobre base inalterada:
+  11 fallos/7 controles. GREEN final: 18 regresiones #638 y 6 de #514.
+  QR corrigió pérdida de texto en Form por una ampliación de DecodeParms
+  (retirada) y preservó defaults null según la especificación, con RED/GREEN.
+  Consumidor externo compression-only pasa. Clippy all-targets y formato pasan.
+  Kripteia 91/100 filtros y 98/100 nuevos tests; security sin hallazgos.
+  Workspace final: 9847 pasan, cero fallos, 73 omitidos; exit 0.
+  Corpus T0–T6 y diferenciales pasan; T3 1613/1761 (91,6%).
+  QR del autor cerrado. Baselines y umbrales intactos.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/645 — base develop.
+- Revisión de CI: run 36471334187 falla al compilar dos comparaciones con []
+  con internal-testing,unstable-spi,semantic (E0282/E0283). Sustituidas por
+  is_empty() sin cambios del parser; GREEN 18 regresiones #638 + 6 de #514.
+  Kripteia 98/100 y Security sin hallazgos nuevos. Issue OPEN reconfirmada.
+- Integración: develop 32e3803 incorporado; único conflicto en TASKS resuelto
+  conservando ambos historiales. Código fusionado automáticamente.
+- Siguiente acción: comprobar CI completa del PR actualizado;
+  integración pendiente. #647 ya integrada en develop en tarea separada.
 
 ## Integración local de upstream para Studio — 2026-09-24
 

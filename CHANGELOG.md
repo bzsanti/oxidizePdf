@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Propagate invalid Flate/LZW predictor errors instead of returning untransformed
+  samples. Validate predictor values, PNG dimensions, component depth and checked
+  arithmetic consistently on ordinary/bounded APIs. TIFF predictor 2 is
+  explicitly unsupported. See
+  `docs/predictor-decoding.md` (#638).
+
 - Reject unsupported certificate-based recipient encryption and decryption
   explicitly instead of returning simulated success, including every public-key
   security-handler cryptographic entry point. Permission checks deny access;

@@ -169,7 +169,12 @@ impl Filter {
     }
 }
 
-/// Decode stream data according to specified filters
+/// Decode stream data according to specified filters.
+///
+/// Flate/LZW predictor failures return [`ParseError::StreamDecodeError`] in all
+/// parse modes. Supported predictors are identity (1) and PNG (10–15); TIFF (2)
+/// and other values are explicit errors. Use `PdfDocument::decode_stream` when
+/// DecodeParms contains indirect references.
 pub fn decode_stream(
     data: &[u8],
     dict: &PdfDictionary,
@@ -271,11 +276,7 @@ pub fn decode_stream_with_limit(
             }
         };
         if applies_predictor {
-            if let Some(params) = params {
-                if let Some(predictor) = params.get("Predictor").and_then(PdfObject::as_integer) {
-                    decoded = apply_predictor(&decoded, predictor as u32, params)?;
-                }
-            }
+            decoded = apply_declared_predictor(decoded, params)?;
         }
         if decoded.len() > max_bytes {
             return Err(ParseError::StreamDecodeError(format!(
@@ -1008,9 +1009,9 @@ mod tests {
         let data = vec![1, 2, 3, 4];
         let dict = PdfDictionary::new();
 
-        // Unknown predictor should return data as-is
-        let result = apply_predictor(&data, 99, &dict).unwrap();
-        assert_eq!(result, data);
+        let result = apply_predictor(&data, 99, &dict);
+        assert!(matches!(result, Err(ParseError::StreamDecodeError(message))
+            if message.contains("unsupported predictor 99")));
     }
 
     #[test]
@@ -1730,6 +1731,7 @@ pub(crate) fn apply_filter_with_params(
     filter: Filter,
     params: Option<&PdfDictionary>,
 ) -> ParseResult<Vec<u8>> {
+    let applies_predictor = matches!(filter, Filter::FlateDecode | Filter::LZWDecode);
     let result = match filter {
         Filter::FlateDecode => {
             // Special handling for FlateDecode with Predictor
@@ -1772,23 +1774,11 @@ pub(crate) fn apply_filter_with_params(
         }
     };
 
-    // Apply predictor if specified in decode parameters
-    if let Some(params_dict) = params {
-        if let Some(predictor_obj) = params_dict.get("Predictor") {
-            if let Some(predictor) = predictor_obj.as_integer() {
-                match apply_predictor(&result, predictor as u32, params_dict) {
-                    Ok(predictor_result) => return Ok(predictor_result),
-                    Err(_) => {
-                        // If predictor fails, use raw data
-                        // This handles cases where DecodeParms are incorrect or data doesn't use predictor
-                        return Ok(result);
-                    }
-                }
-            }
-        }
+    if applies_predictor {
+        apply_declared_predictor(result, params)
+    } else {
+        Ok(result)
     }
-
-    Ok(result)
 }
 
 /// Get filter parameters for a specific filter index
@@ -1800,23 +1790,48 @@ fn get_filter_params(decode_params: Option<&PdfObject>, index: usize) -> Option<
     }
 }
 
-/// Apply predictor function to decoded data
-fn apply_predictor(data: &[u8], predictor: u32, params: &PdfDictionary) -> ParseResult<Vec<u8>> {
+fn predictor_integer(params: &PdfDictionary, name: &str, default: i64) -> ParseResult<i64> {
+    match params.get(name) {
+        None | Some(PdfObject::Null) => Ok(default),
+        Some(PdfObject::Integer(value)) => Ok(*value),
+        _ => Err(ParseError::StreamDecodeError(format!(
+            "predictor {name} must be an integer"
+        ))),
+    }
+}
+
+fn predictor_dimension(params: &PdfDictionary, name: &str) -> ParseResult<usize> {
+    let value = predictor_integer(params, name, 1)?;
+    usize::try_from(value)
+        .ok()
+        .filter(|value| *value > 0)
+        .ok_or_else(|| {
+            ParseError::StreamDecodeError(format!(
+                "predictor {name} must be a positive representable integer"
+            ))
+        })
+}
+
+/// Byte-only APIs cannot report recovery, so predictor failures always propagate.
+fn apply_declared_predictor(data: Vec<u8>, params: Option<&PdfDictionary>) -> ParseResult<Vec<u8>> {
+    let Some(params) = params else {
+        return Ok(data);
+    };
+    let predictor = predictor_integer(params, "Predictor", 1)?;
+    if predictor == 1 {
+        return Ok(data);
+    }
+    apply_predictor(&data, predictor, params)
+}
+
+/// Apply a supported predictor; TIFF (2) and unknown values are explicit errors.
+fn apply_predictor(data: &[u8], predictor: i64, params: &PdfDictionary) -> ParseResult<Vec<u8>> {
     match predictor {
-        1 => {
-            // No prediction
-            Ok(data.to_vec())
-        }
-        10..=15 => {
-            // PNG predictor functions
-            apply_png_predictor_advanced(data, predictor, params)
-        }
-        _ => {
-            // Unknown predictor - return data as-is with warning
-            #[cfg(debug_assertions)]
-            tracing::debug!("Warning: Unknown predictor {predictor}, returning data as-is");
-            Ok(data.to_vec())
-        }
+        1 => Ok(data.to_vec()),
+        10..=15 => apply_png_predictor_advanced(data, predictor as u32, params),
+        _ => Err(ParseError::StreamDecodeError(format!(
+            "unsupported predictor {predictor}"
+        ))),
     }
 }
 
@@ -1826,26 +1841,21 @@ fn apply_png_predictor_advanced(
     _predictor: u32,
     params: &PdfDictionary,
 ) -> ParseResult<Vec<u8>> {
-    // Get columns (width of a row in bytes)
-    let columns = params
-        .get("Columns")
-        .and_then(|obj| obj.as_integer())
-        .unwrap_or(1) as usize;
-
-    // Get BitsPerComponent (defaults to 8)
-    let bpc = params
-        .get("BitsPerComponent")
-        .and_then(|obj| obj.as_integer())
-        .unwrap_or(8) as usize;
-
-    // Get Colors (number of color components, defaults to 1)
-    let colors = params
-        .get("Colors")
-        .and_then(|obj| obj.as_integer())
-        .unwrap_or(1) as usize;
-
-    // Calculate bytes per pixel
-    let bytes_per_pixel = (bpc * colors).div_ceil(8);
+    // Validate signed values and types before converting or allocating rows.
+    let columns = predictor_dimension(params, "Columns")?;
+    let colors = predictor_dimension(params, "Colors")?;
+    let bpc = predictor_integer(params, "BitsPerComponent", 8)?;
+    if !matches!(bpc, 1 | 2 | 4 | 8 | 16) {
+        return Err(ParseError::StreamDecodeError(format!(
+            "PNG predictor: unsupported BitsPerComponent {bpc}"
+        )));
+    }
+    let bpc = bpc as usize;
+    let bytes_per_pixel = colors
+        .checked_mul(bpc)
+        .and_then(|bits| bits.checked_add(7))
+        .map(|bits| bits / 8)
+        .ok_or_else(|| ParseError::StreamDecodeError("PNG predictor pixel size overflow".into()))?;
 
     // Each PNG row contains the full sample payload plus one filter byte.
     // `/Columns` counts pixels, not bytes, for multi-component images.
