@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Reject unsupported certificate-based recipient encryption and decryption
+  explicitly instead of returning simulated success, including every public-key
+  security-handler cryptographic entry point. Permission checks deny access;
+  dictionary helpers remain metadata-only. See the migration boundary in
+  `docs/recipient-encryption.md` (#640).
+
 - Write valid outline sibling links when preceding siblings have descendants,
   including nested branches (#633).
 - Apply the requested document metadata policy during reconstructive extraction

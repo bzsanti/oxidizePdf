@@ -1,5 +1,28 @@
 # Seguimiento diario
 
+## Contención #640 — 2026-09-28
+
+- Issue: #640 — fix(encryption): fail closed for simulated public-key security handler operations — https://github.com/bzsanti/oxidizePdf/issues/640
+- Estado: `[-]` implementación y QR local completados; PR pendiente. Prioridad: P1. Responsable: Codex.
+- Activación: GitHub confirma OPEN y alcance de contención; base develop
+  `089a92776dc52c6091767edd03caf3668f9a4cd6`. Cambios locales previos preservados.
+- Criterio de cierre: operaciones simuladas rechazadas explícitamente, sin
+  generar/devolver semillas como supuesto cifrado, todas las entradas SecurityHandler cubiertas,
+  documentación pública veraz, RED/GREEN y revisión de calidad/seguridad.
+- Alcance: API de cifrado por destinatarios; sin implementación de #642,
+  sin PAdES avanzado ni cambios en criptografía por contraseña o firmas.
+- Última validación: RED 13 fallos/1 control; GREEN 16 regresiones por API
+  pública con y sin signatures. 18 pruebas CMS/certificados y siete de apariencia
+  pasan. Clippy all-targets -D warnings, formato y build pasan. Biblioteca:
+  6780 pasan/3 omitidos (11 tests de simulación sustituidos por nuevas regresiones).
+  Diferenciales de fusión/orden pasan 34/38. Workspace: 9829 pasan/73 omitidos,
+  incluidos 217 doctests aprobados. T0–T6 pasan. QR del autor cerrado antes de PR.
+  Kripteia 96/100 (16 nuevos) y 100/100 (3 retenidos); security sin hallazgos.
+- Evidencia: docs/reports/2026-09-28-issue-640-{quality-review.md,validation.json}.
+- Siguiente acción: publicar PR hacia develop y comprobar CI multiplataforma.
+  Sin release ni integración todavía; #640 permanece abierta.
+
+
 ## Corrección #633 y #634 — 2026-09-27
 
 - Issue: #633 — Outline writer creates invalid sibling links when preceding items have children (5.1.5) — https://github.com/bzsanti/oxidizePdf/issues/633
