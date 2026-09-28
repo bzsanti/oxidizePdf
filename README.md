@@ -176,6 +176,11 @@ for section in graph.top_level_sections() {
 
 Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (3,000–4,000 pages/sec), encryption (RC4-40/128, AES-128, AES-256 R5/R6 — read and write), digital signatures (detection, PKCS#7 verification, certificate validation and incremental-signature preparation), PDF/A validation (8 conformance levels), JBIG2 image decoding (pure-Rust ITU-T T.88), invoice extraction (ES/EN/DE/IT), and split/merge/rotate operations. One dependency for the full pipeline.
 
+Certificate-based **recipient encryption is unsupported**. The legacy
+`PublicKeySecurityHandler` returns explicit errors for cryptographic operations;
+certificate verification for signatures is separate. See the
+[support and migration boundary](docs/recipient-encryption.md).
+
 See [`oxidize-pdf-core/examples/`](https://github.com/bzsanti/oxidizePdf/tree/main/oxidize-pdf-core/examples) for working samples (133 examples) and [docs.rs](https://docs.rs/oxidize-pdf) for the API surface.
 
 ## Full Feature Set

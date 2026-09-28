@@ -1,7 +1,9 @@
-//! Public Key Security Handler for PDF encryption
+//! Compatibility types for unsupported certificate-based recipient encryption.
 //!
-//! This module implements the Public Key Security Handler according to ISO 32000-1:2008 §7.6.4.
-//! It supports X.509 certificates and various SubFilter types for recipient-based encryption.
+//! No cryptographic operation in this module is supported. The former simulation
+//! has been removed: it did not protect seeds or authenticate private keys.
+//! Dictionary helpers only copy caller-supplied metadata; they do not implement
+//! ISO 32000 public-key encryption. Signature certificate verification is separate.
 
 use crate::encryption::{CryptFilterMethod, EncryptionKey, Permissions, SecurityHandler};
 use crate::error::{PdfError, Result};
@@ -47,18 +49,29 @@ impl SubFilter {
     }
 }
 
-/// Recipient information for public key encryption
+/// Unvalidated recipient metadata retained for source compatibility.
+///
+/// Constructing this value does not encrypt a seed or validate a certificate.
 #[derive(Debug, Clone)]
 pub struct Recipient {
-    /// Certificate (X.509 DER encoded)
+    /// Caller-supplied certificate bytes, not validated as X.509 DER.
     pub certificate: Vec<u8>,
-    /// Permissions granted to this recipient
+    /// Caller-supplied permission bits; these do not grant access.
     pub permissions: Permissions,
-    /// Encrypted seed value for this recipient
+    /// Caller-supplied recipient bytes; no encryption or validation is performed.
     pub encrypted_seed: Vec<u8>,
 }
 
-/// Public Key Security Handler
+/// Compatibility shell for **unsupported** certificate-based recipient encryption.
+///
+/// All cryptographic methods return [`PdfError::EncryptionError`] regardless of
+/// inputs or public field values. Permission checks always deny access. No seed,
+/// file-encryption key or IV is generated. Constructors and dictionary helpers
+/// retain their signatures but do not establish cryptographic protection.
+///
+/// Use the password-based [`crate::encryption::StandardSecurityHandler`] only
+/// when password encryption meets the application's requirements. Certificate
+/// verification for signatures does not enable recipient encryption.
 pub struct PublicKeySecurityHandler {
     /// SubFilter type
     pub subfilter: SubFilter,
@@ -71,7 +84,7 @@ pub struct PublicKeySecurityHandler {
 }
 
 impl PublicKeySecurityHandler {
-    /// Create a new public key security handler with SHA-1
+    /// Create unsupported legacy SHA-1 configuration metadata.
     pub fn new_sha1() -> Self {
         Self {
             subfilter: SubFilter::AdbePkcs7S3,
@@ -81,7 +94,7 @@ impl PublicKeySecurityHandler {
         }
     }
 
-    /// Create a new public key security handler with SHA-256
+    /// Create unsupported legacy SHA-256 configuration metadata.
     pub fn new_sha256() -> Self {
         Self {
             subfilter: SubFilter::AdbePkcs7S4,
@@ -91,90 +104,31 @@ impl PublicKeySecurityHandler {
         }
     }
 
-    /// Add a recipient
-    pub fn add_recipient(&mut self, certificate: Vec<u8>, permissions: Permissions) -> Result<()> {
-        // Generate random seed
-        let seed = self.generate_seed()?;
-
-        // Encrypt seed with recipient's public key
-        let encrypted_seed = self.encrypt_seed_for_recipient(&seed, &certificate)?;
-
-        self.recipients.push(Recipient {
-            certificate,
-            permissions,
-            encrypted_seed,
-        });
-
-        Ok(())
+    /// Reject unsupported recipient encryption without modifying the recipient list.
+    ///
+    /// # Errors
+    /// Always returns [`PdfError::EncryptionError`], including for valid certificates.
+    pub fn add_recipient(
+        &mut self,
+        _certificate: Vec<u8>,
+        _permissions: Permissions,
+    ) -> Result<()> {
+        Err(unsupported_recipient_encryption())
     }
 
-    /// Generate random seed value
-    fn generate_seed(&self) -> Result<Vec<u8>> {
-        // In production, use a cryptographically secure RNG
-        // For now, we'll use a simple approach with timestamp
-        use std::time::{SystemTime, UNIX_EPOCH};
-
-        let mut seed = vec![0u8; self.seed_length];
-
-        // Get current timestamp for pseudo-randomness
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos() as u64;
-
-        // Fill with pseudo-random data based on timestamp
-        for (i, byte) in seed.iter_mut().enumerate() {
-            *byte = ((timestamp
-                .wrapping_mul(i as u64 + 1)
-                .wrapping_add(i as u64 * 7 + 13))
-                % 256) as u8;
-        }
-
-        Ok(seed)
+    /// Reject unsupported recipient decryption without releasing seed bytes.
+    ///
+    /// # Errors
+    /// Always returns [`PdfError::EncryptionError`], regardless of the key or data.
+    pub fn decrypt_seed(&self, _encrypted_seed: &[u8], _private_key: &[u8]) -> Result<Vec<u8>> {
+        Err(unsupported_recipient_encryption())
     }
 
-    /// Encrypt seed for a specific recipient
-    fn encrypt_seed_for_recipient(&self, seed: &[u8], certificate: &[u8]) -> Result<Vec<u8>> {
-        // In a real implementation, this would:
-        // 1. Parse the X.509 certificate
-        // 2. Extract the public key
-        // 3. Encrypt the seed using RSA or ECDSA
-        // For now, we'll simulate this
-
-        // Validate certificate length
-        if certificate.len() < 100 {
-            return Err(PdfError::EncryptionError("Invalid certificate".to_string()));
-        }
-
-        // Simulate RSA encryption (in production, use a crypto library)
-        let mut encrypted = seed.to_vec();
-        encrypted.extend_from_slice(&certificate[0..4]); // Add certificate fingerprint
-
-        Ok(encrypted)
-    }
-
-    /// Decrypt seed value using private key
-    pub fn decrypt_seed(&self, encrypted_seed: &[u8], private_key: &[u8]) -> Result<Vec<u8>> {
-        // In a real implementation, this would use the private key to decrypt
-        // For now, we'll simulate this
-
-        if private_key.is_empty() {
-            return Err(PdfError::EncryptionError(
-                "Private key required".to_string(),
-            ));
-        }
-
-        // Return the seed portion (simulation)
-        if encrypted_seed.len() >= self.seed_length {
-            Ok(encrypted_seed[0..self.seed_length].to_vec())
-        } else {
-            Err(PdfError::EncryptionError(
-                "Invalid encrypted seed".to_string(),
-            ))
-        }
-    }
-
-    /// Build recipients dictionary for PDF
+    /// Copy unvalidated caller-supplied metadata into a dictionary.
+    ///
+    /// This compatibility helper does not encrypt seeds, validate certificates,
+    /// or create a supported PDF encryption dictionary. Its return value must not
+    /// be used as evidence that any document or recipient data is protected.
     pub fn build_recipients_dict(&self) -> Dictionary {
         let mut dict = Dictionary::new();
 
@@ -207,204 +161,99 @@ impl PublicKeySecurityHandler {
         dict
     }
 
-    /// Verify recipient has permission
-    pub fn verify_permission(&self, recipient_index: usize, permission: Permissions) -> bool {
-        if let Some(recipient) = self.recipients.get(recipient_index) {
-            recipient.permissions.contains(permission)
-        } else {
-            false
-        }
+    /// Always deny access: recipient metadata cannot authenticate a caller.
+    pub fn verify_permission(&self, _recipient_index: usize, _permission: Permissions) -> bool {
+        false
     }
+}
+
+fn unsupported_recipient_encryption() -> PdfError {
+    PdfError::EncryptionError("Certificate-based recipient encryption is not supported".to_string())
 }
 
 impl SecurityHandler for PublicKeySecurityHandler {
     fn encrypt_string(
         &self,
-        data: &[u8],
-        encryption_key: &EncryptionKey,
-        obj_id: &ObjectId,
+        _data: &[u8],
+        _encryption_key: &EncryptionKey,
+        _obj_id: &ObjectId,
     ) -> Result<Vec<u8>> {
-        // Use the appropriate encryption based on method
-        match self.method {
-            CryptFilterMethod::V2 => {
-                // RC4 encryption
-                use crate::encryption::{Rc4, Rc4Key};
-                let mut key = encryption_key.as_bytes().to_vec();
-                key.extend_from_slice(&obj_id.number().to_le_bytes()[0..3]);
-                key.extend_from_slice(&obj_id.generation().to_le_bytes()[0..2]);
-
-                let rc4_key = Rc4Key::from_slice(&key);
-                let mut cipher = Rc4::new(&rc4_key);
-                Ok(cipher.process(data))
-            }
-            CryptFilterMethod::AESV2 | CryptFilterMethod::AESV3 => {
-                // AES encryption
-                use crate::encryption::{Aes, AesKey};
-                let aes_key = AesKey::new_128(encryption_key.as_bytes().to_vec())
-                    .map_err(|e| PdfError::EncryptionError(e.to_string()))?;
-                let aes = Aes::new(aes_key);
-
-                // Generate deterministic IV based on object ID
-                let mut iv = vec![0u8; 16];
-                let obj_bytes = obj_id.number().to_le_bytes();
-                let gen_bytes = obj_id.generation().to_le_bytes();
-                iv[..4].copy_from_slice(&obj_bytes);
-                iv[4..(2 + 4)].copy_from_slice(&gen_bytes);
-                // Fill rest with pattern
-                for (i, item) in iv.iter_mut().enumerate().take(16).skip(6) {
-                    *item = ((i * 13 + 7) % 256) as u8;
-                }
-
-                aes.encrypt_cbc(data, &iv)
-                    .map_err(|e| PdfError::EncryptionError(e.to_string()))
-            }
-            _ => Err(PdfError::EncryptionError(format!(
-                "Unsupported encryption method: {:?}",
-                self.method
-            ))),
-        }
+        Err(unsupported_recipient_encryption())
     }
 
     fn decrypt_string(
         &self,
-        data: &[u8],
-        encryption_key: &EncryptionKey,
-        obj_id: &ObjectId,
+        _data: &[u8],
+        _encryption_key: &EncryptionKey,
+        _obj_id: &ObjectId,
     ) -> Result<Vec<u8>> {
-        // Use the appropriate decryption based on method
-        match self.method {
-            CryptFilterMethod::V2 => {
-                // RC4 decryption (same as encryption)
-                self.encrypt_string(data, encryption_key, obj_id)
-            }
-            CryptFilterMethod::AESV2 | CryptFilterMethod::AESV3 => {
-                // AES decryption
-                use crate::encryption::{Aes, AesKey};
-                let aes_key = AesKey::new_128(encryption_key.as_bytes().to_vec())
-                    .map_err(|e| PdfError::EncryptionError(e.to_string()))?;
-                let aes = Aes::new(aes_key);
-
-                // Generate deterministic IV based on object ID
-                let mut iv = vec![0u8; 16];
-                let obj_bytes = obj_id.number().to_le_bytes();
-                let gen_bytes = obj_id.generation().to_le_bytes();
-                iv[..4].copy_from_slice(&obj_bytes);
-                iv[4..(2 + 4)].copy_from_slice(&gen_bytes);
-                // Fill rest with pattern
-                for (i, item) in iv.iter_mut().enumerate().take(16).skip(6) {
-                    *item = ((i * 13 + 7) % 256) as u8;
-                }
-
-                aes.decrypt_cbc(data, &iv)
-                    .map_err(|e| PdfError::EncryptionError(e.to_string()))
-            }
-            _ => Err(PdfError::EncryptionError(format!(
-                "Unsupported decryption method: {:?}",
-                self.method
-            ))),
-        }
+        Err(unsupported_recipient_encryption())
     }
 
     fn encrypt_stream(
         &self,
-        data: &[u8],
-        encryption_key: &EncryptionKey,
-        obj_id: &ObjectId,
+        _data: &[u8],
+        _encryption_key: &EncryptionKey,
+        _obj_id: &ObjectId,
     ) -> Result<Vec<u8>> {
-        // Streams use the same encryption as strings
-        self.encrypt_string(data, encryption_key, obj_id)
+        Err(unsupported_recipient_encryption())
     }
 
     fn decrypt_stream(
         &self,
-        data: &[u8],
-        encryption_key: &EncryptionKey,
-        obj_id: &ObjectId,
+        _data: &[u8],
+        _encryption_key: &EncryptionKey,
+        _obj_id: &ObjectId,
     ) -> Result<Vec<u8>> {
-        // Streams use the same decryption as strings
-        self.decrypt_string(data, encryption_key, obj_id)
+        Err(unsupported_recipient_encryption())
     }
 
     fn encrypt_string_aes(
         &self,
-        data: &[u8],
-        encryption_key: &EncryptionKey,
+        _data: &[u8],
+        _encryption_key: &EncryptionKey,
         _obj_id: &ObjectId,
-        bits: u32,
+        _bits: u32,
     ) -> Result<Vec<u8>> {
-        use crate::encryption::{Aes, AesKey};
-
-        let aes_key = if bits == 256 {
-            AesKey::new_256(encryption_key.as_bytes().to_vec())
-        } else {
-            AesKey::new_128(encryption_key.as_bytes().to_vec())
-        }
-        .map_err(|e| PdfError::EncryptionError(e.to_string()))?;
-
-        let aes = Aes::new(aes_key);
-
-        // Generate deterministic IV based on object ID (unused for AES methods)
-        let mut iv = vec![0u8; 16];
-        for (i, item) in iv.iter_mut().enumerate().take(16) {
-            *item = ((i * 13 + 7) % 256) as u8;
-        }
-
-        aes.encrypt_cbc(data, &iv)
-            .map_err(|e| PdfError::EncryptionError(e.to_string()))
+        Err(unsupported_recipient_encryption())
     }
 
     fn decrypt_string_aes(
         &self,
-        data: &[u8],
-        encryption_key: &EncryptionKey,
+        _data: &[u8],
+        _encryption_key: &EncryptionKey,
         _obj_id: &ObjectId,
-        bits: u32,
+        _bits: u32,
     ) -> Result<Vec<u8>> {
-        use crate::encryption::{Aes, AesKey};
-
-        let aes_key = if bits == 256 {
-            AesKey::new_256(encryption_key.as_bytes().to_vec())
-        } else {
-            AesKey::new_128(encryption_key.as_bytes().to_vec())
-        }
-        .map_err(|e| PdfError::EncryptionError(e.to_string()))?;
-
-        let aes = Aes::new(aes_key);
-
-        // Generate deterministic IV based on object ID (unused for AES methods)
-        let mut iv = vec![0u8; 16];
-        for (i, item) in iv.iter_mut().enumerate().take(16) {
-            *item = ((i * 13 + 7) % 256) as u8;
-        }
-
-        aes.decrypt_cbc(data, &iv)
-            .map_err(|e| PdfError::EncryptionError(e.to_string()))
+        Err(unsupported_recipient_encryption())
     }
 
     fn encrypt_stream_aes(
         &self,
-        data: &[u8],
-        encryption_key: &EncryptionKey,
-        obj_id: &ObjectId,
-        bits: u32,
+        _data: &[u8],
+        _encryption_key: &EncryptionKey,
+        _obj_id: &ObjectId,
+        _bits: u32,
     ) -> Result<Vec<u8>> {
-        // Streams use the same AES encryption as strings
-        self.encrypt_string_aes(data, encryption_key, obj_id, bits)
+        Err(unsupported_recipient_encryption())
     }
 
     fn decrypt_stream_aes(
         &self,
-        data: &[u8],
-        encryption_key: &EncryptionKey,
-        obj_id: &ObjectId,
-        bits: u32,
+        _data: &[u8],
+        _encryption_key: &EncryptionKey,
+        _obj_id: &ObjectId,
+        _bits: u32,
     ) -> Result<Vec<u8>> {
-        // Streams use the same AES decryption as strings
-        self.decrypt_string_aes(data, encryption_key, obj_id, bits)
+        Err(unsupported_recipient_encryption())
     }
 }
 
-/// Public Key Encryption Dictionary
+/// Raw legacy public-key dictionary metadata, **not** a supported encryption profile.
+///
+/// These fields and serializers are retained for source compatibility. No
+/// certificate validation, seed encryption or file-key derivation is performed.
+/// Serializing this value does not establish recipient protection.
 #[derive(Debug, Clone)]
 pub struct PublicKeyEncryptionDict {
     /// Filter (must be "Adobe.PubSec")
@@ -428,7 +277,7 @@ pub struct PublicKeyEncryptionDict {
 }
 
 impl PublicKeyEncryptionDict {
-    /// Create a new public key encryption dictionary
+    /// Copy handler metadata without validating it or performing encryption.
     pub fn new(handler: &PublicKeySecurityHandler) -> Self {
         Self {
             filter: "Adobe.PubSec".to_string(),
@@ -467,7 +316,7 @@ impl PublicKeyEncryptionDict {
         }
     }
 
-    /// Convert to PDF dictionary
+    /// Serialize raw metadata; this does not produce a validated encryption dictionary.
     pub fn to_dict(&self) -> Dictionary {
         let mut dict = Dictionary::new();
 
@@ -559,219 +408,5 @@ mod tests {
         assert_eq!(handler_sha256.subfilter, SubFilter::AdbePkcs7S4);
         assert_eq!(handler_sha256.seed_length, 32);
         assert_eq!(handler_sha256.method, CryptFilterMethod::AESV2);
-    }
-
-    #[test]
-    fn test_add_recipient() {
-        let mut handler = PublicKeySecurityHandler::new_sha1();
-
-        // Create a mock certificate (at least 100 bytes)
-        let certificate = vec![0x30; 200]; // DER-like data
-        let permissions = Permissions::new()
-            .set_print(true)
-            .set_modify_contents(true)
-            .clone();
-
-        let result = handler.add_recipient(certificate.clone(), permissions);
-        assert!(result.is_ok());
-
-        assert_eq!(handler.recipients.len(), 1);
-        assert_eq!(handler.recipients[0].certificate, certificate);
-        assert_eq!(handler.recipients[0].permissions.bits(), permissions.bits());
-        assert!(!handler.recipients[0].encrypted_seed.is_empty());
-    }
-
-    #[test]
-    fn test_add_recipient_invalid_cert() {
-        let mut handler = PublicKeySecurityHandler::new_sha1();
-
-        // Certificate too short
-        let certificate = vec![0x30; 50];
-        let permissions = Permissions::all();
-
-        let result = handler.add_recipient(certificate, permissions);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_generate_seed() {
-        let handler = PublicKeySecurityHandler::new_sha256();
-        let seed1 = handler.generate_seed().unwrap();
-        // Add a small delay to ensure different timestamps on fast systems
-        std::thread::sleep(std::time::Duration::from_millis(2));
-        let seed2 = handler.generate_seed().unwrap();
-
-        assert_eq!(seed1.len(), 32);
-        assert_eq!(seed2.len(), 32);
-        // On fast systems, seeds might occasionally be the same, so we test the function works correctly
-        assert!(seed1.len() == 32 && seed2.len() == 32);
-    }
-
-    #[test]
-    fn test_encrypt_decrypt_seed() {
-        let handler = PublicKeySecurityHandler::new_sha1();
-        let seed = vec![0xAA; 20];
-        let certificate = vec![0x30; 200];
-
-        let encrypted = handler
-            .encrypt_seed_for_recipient(&seed, &certificate)
-            .unwrap();
-        assert!(!encrypted.is_empty());
-        assert_ne!(encrypted, seed);
-
-        // Simulate decryption with private key
-        let private_key = vec![0xFF; 32];
-        let decrypted = handler.decrypt_seed(&encrypted, &private_key).unwrap();
-        assert_eq!(decrypted.len(), 20);
-    }
-
-    #[test]
-    fn test_build_recipients_dict() {
-        let mut handler = PublicKeySecurityHandler::new_sha1();
-
-        let cert1 = vec![0x30; 200];
-        let perms1 = Permissions::new().set_print(true).clone();
-        handler.add_recipient(cert1, perms1).unwrap();
-
-        let cert2 = vec![0x31; 200];
-        let perms2 = Permissions::all();
-        handler.add_recipient(cert2, perms2).unwrap();
-
-        let dict = handler.build_recipients_dict();
-
-        if let Some(Object::Array(recipients)) = dict.get("Recipients") {
-            assert_eq!(recipients.len(), 2);
-
-            // Check first recipient
-            if let Object::Dictionary(r1) = &recipients[0] {
-                assert!(r1.contains_key("Cert"));
-                assert!(r1.contains_key("P"));
-                assert!(r1.contains_key("Recipients"));
-            }
-        } else {
-            panic!("Expected Recipients array");
-        }
-    }
-
-    #[test]
-    fn test_verify_permission() {
-        let mut handler = PublicKeySecurityHandler::new_sha1();
-
-        let certificate = vec![0x30; 200];
-        let permissions = Permissions::new().set_print(true).set_copy(true).clone();
-        handler.add_recipient(certificate, permissions).unwrap();
-
-        assert!(handler.verify_permission(0, Permissions::new().set_print(true).clone()));
-        assert!(handler.verify_permission(0, Permissions::new().set_copy(true).clone()));
-        assert!(!handler.verify_permission(0, Permissions::new().set_modify_contents(true).clone()));
-        assert!(!handler.verify_permission(1, Permissions::new().set_print(true).clone()));
-        // Invalid index
-    }
-
-    #[test]
-    fn test_encrypt_string_rc4() {
-        let handler = PublicKeySecurityHandler::new_sha1();
-        let key = EncryptionKey::new(vec![0x01; 16]);
-        let obj_id = ObjectId::new(1, 0);
-        let data = b"Test data";
-
-        let encrypted = handler.encrypt_string(data, &key, &obj_id).unwrap();
-        assert_ne!(encrypted, data);
-
-        // RC4 is symmetric
-        let decrypted = handler.decrypt_string(&encrypted, &key, &obj_id).unwrap();
-        assert_eq!(decrypted, data);
-    }
-
-    #[test]
-    fn test_encrypt_string_aes() {
-        let mut handler = PublicKeySecurityHandler::new_sha256();
-        handler.method = CryptFilterMethod::AESV2;
-
-        let key = EncryptionKey::new(vec![0x01; 16]);
-        let obj_id = ObjectId::new(1, 0);
-        let data = b"Test data for AES";
-
-        let encrypted = handler.encrypt_string(data, &key, &obj_id).unwrap();
-        assert_ne!(encrypted, data);
-        assert!(encrypted.len() >= data.len());
-        assert_eq!(encrypted.len() % 16, 0); // Should be multiple of block size
-
-        // Note: The simplified AES implementation might not perfectly reverse encrypt
-        // Just verify decryption doesn't panic
-        let _ = handler.decrypt_string(&encrypted, &key, &obj_id);
-    }
-
-    #[test]
-    fn test_encrypt_stream() {
-        let handler = PublicKeySecurityHandler::new_sha1();
-        let key = EncryptionKey::new(vec![0x01; 16]);
-        let obj_id = ObjectId::new(5, 0);
-        let _dict = Dictionary::new();
-        let data = b"Stream content data";
-
-        let encrypted = handler.encrypt_stream(data, &key, &obj_id).unwrap();
-        assert_ne!(encrypted, data);
-
-        let decrypted = handler.decrypt_stream(&encrypted, &key, &obj_id).unwrap();
-        assert_eq!(decrypted, data);
-    }
-
-    #[test]
-    fn test_public_key_encryption_dict() {
-        let mut handler = PublicKeySecurityHandler::new_sha256();
-
-        let certificate = vec![0x30; 200];
-        let permissions = Permissions::all();
-        handler.add_recipient(certificate, permissions).unwrap();
-
-        let enc_dict = PublicKeyEncryptionDict::new(&handler);
-
-        assert_eq!(enc_dict.filter, "Adobe.PubSec");
-        assert_eq!(enc_dict.subfilter, SubFilter::AdbePkcs7S4);
-        assert_eq!(enc_dict.v, 4);
-        assert_eq!(enc_dict.length, Some(256));
-        assert_eq!(enc_dict.recipients.len(), 1);
-
-        let pdf_dict = enc_dict.to_dict();
-        assert_eq!(
-            pdf_dict.get("Filter"),
-            Some(&Object::Name("Adobe.PubSec".to_string()))
-        );
-        assert_eq!(
-            pdf_dict.get("SubFilter"),
-            Some(&Object::Name("adbe.pkcs7.s4".to_string()))
-        );
-    }
-
-    #[test]
-    fn test_multiple_recipients() {
-        let mut handler = PublicKeySecurityHandler::new_sha256();
-
-        // Add three recipients with different permissions
-        let certs_and_perms = vec![
-            (vec![0x30; 200], Permissions::new().set_print(true).clone()),
-            (
-                vec![0x31; 200],
-                Permissions::new().set_print(true).set_copy(true).clone(),
-            ),
-            (vec![0x32; 200], Permissions::all()),
-        ];
-
-        for (cert, perms) in certs_and_perms {
-            handler.add_recipient(cert, perms).unwrap();
-        }
-
-        assert_eq!(handler.recipients.len(), 3);
-
-        // Verify each recipient's permissions
-        assert!(handler.verify_permission(0, Permissions::new().set_print(true).clone()));
-        assert!(!handler.verify_permission(0, Permissions::new().set_copy(true).clone()));
-
-        assert!(handler.verify_permission(1, Permissions::new().set_print(true).clone()));
-        assert!(handler.verify_permission(1, Permissions::new().set_copy(true).clone()));
-        assert!(!handler.verify_permission(1, Permissions::new().set_modify_contents(true).clone()));
-
-        assert!(handler.verify_permission(2, Permissions::all()));
     }
 }

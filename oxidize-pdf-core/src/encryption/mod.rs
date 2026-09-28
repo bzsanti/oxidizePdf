@@ -1,8 +1,20 @@
 //! PDF encryption support according to ISO 32000-1 Chapter 7.6
 //!
 //! This module provides encryption using RC4 40-bit and 128-bit algorithms,
-//! AES-128 and AES-256 encryption, supporting Standard Security Handler
-//! (Revision 2, 3, 4, 5, and 6) and Public Key Security Handler.
+//! AES-128 and AES-256 primitives and the password-based Standard Security
+//! Handler (Revision 2, 3, 4, 5, and 6). Document read/write support depends on
+//! the selected revision and API; these primitives do not imply every writer profile.
+//!
+//! Certificate-based recipient encryption is **not supported**.
+//! [`PublicKeySecurityHandler`] is retained for source compatibility, but all
+//! its cryptographic operations return an explicit error and permission checks
+//! deny access. Its dictionary helpers only represent caller-supplied metadata;
+//! they do not produce or validate a protected document.
+//!
+//! Certificate validation for digital signatures is a separate capability in
+//! the `signatures` module (with the `signatures` feature). It does not enable
+//! recipient encryption. [`SecurityHandler`] is a low-level extension interface
+//! for crypt filters, not a certificate-aware document reader/writer integration.
 
 mod aes;
 mod crypt_filters;
