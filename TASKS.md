@@ -1,3 +1,24 @@
+# Seguimiento #603 y #641 — 2026-09-28
+
+- Issue: #603 — docs(adoption): reconcile public claims and establish audited adoption monitoring — https://github.com/bzsanti/oxidizePdf/issues/603
+- Issue: #641 — docs(signatures): delimit basic support and PAdES extension points — https://github.com/bzsanti/oxidizePdf/issues/641
+- Estado: en curso. Prioridad: P2. Responsable: Codex.
+- Criterio de cierre: documentación publicada coherente, inventario con evidencia
+  y límites, ejemplo ejecutable y guard documental; aceptación de monitorización
+  registrada sin presentar datos sintéticos como adopción real.
+- Base de integración: develop b76f738; inventario y medición de release 5.1.5.
+  PR #644 corregida a develop; cambios de #640 y demás correcciones preservados.
+- Última validación: 35 tests de firmas, dos guards y cinco doctests pasan;
+  revisión final y Kripteia tests/security completados (log/informe adjuntos).
+- Instrucción vigente del usuario: PAdES queda como extensión para quien quiera
+  implementarlo; se retiran las referencias comerciales de esta propuesta.
+- Rendimiento: el usuario solicita medir; stats incorpora pdf-generation-v1,
+  comparativa ampliada a cinco motores (pdf_oxide 0.3.78) y panel separado. README usa resultados
+  observados, incluidos los desfavorables; artefactos reproducibles adjuntos al informe.
+- Publicación aprobada por el usuario el 2026-09-28.
+- Siguiente acción: publicar PR, verificar CI e integración, desplegar stats y
+  comprobar aceptación antes de cerrar #603. Batir a pdf_oxide no es un objetivo.
+
 # Seguimiento diario
 
 ## Contención #640 — 2026-09-28

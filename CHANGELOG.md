@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Documentation
+
+- Reconcile public adoption claims, remove unsupported comparisons, and record
+  versioned limitations and evidence (#603). Define basic signature operations,
+  external CMS responsibilities and the PAdES extension interfaces (#641).
+
 ### Fixed
 
 - Reject unsupported certificate-based recipient encryption and decryption

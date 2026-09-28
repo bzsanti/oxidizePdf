@@ -60,7 +60,9 @@ Most PDF libraries give you a wall of text. oxidize-pdf gives you **structured, 
 | `chunk.token_estimate` | Right-size chunks for your model's context window |
 | `chunk.heading_context` | Section awareness without post-processing |
 
-**Performance**: Pure Rust, 3,000-4,000 pages/sec generation, 85ms full-text extraction for a 930KB PDF.
+**Measured generation**: 6,311 one-page documents/sec and 732 ten-page reports/sec
+(medians, oxidize-pdf 5.1.5, synthetic text-only workloads on an Intel i7-3770).
+See the [protocol, environment and comparison](docs/reports/2026-09-28-generation-performance.md).
 
 ## Quick Start
 
@@ -174,7 +176,18 @@ for section in graph.top_level_sections() {
 
 ## Also in the box
 
-Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (3,000–4,000 pages/sec), encryption (RC4-40/128, AES-128, AES-256 R5/R6 — read and write), digital signatures (detection, PKCS#7 verification, certificate validation and incremental-signature preparation), PDF/A validation (8 conformance levels), JBIG2 image decoding (pure-Rust ITU-T T.88), invoice extraction (ES/EN/DE/IT), and split/merge/rotate operations. One dependency for the full pipeline.
+Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (see the measured workloads below), encryption (RC4-40/128, AES-128, AES-256 R5 — read and write; AES-256 R6 — read), digital signatures (detection, PKCS#7 verification, certificate validation and incremental-signature preparation), PDF/A validation (8 conformance levels), JBIG2 image decoding (pure-Rust ITU-T T.88), invoice extraction (ES/EN/DE/IT), and split/merge/rotate operations. One dependency for the full pipeline.
+
+Signature preparation is not a completed cryptographic signature: an external
+signer produces CMS and finalization embeds it. PAdES is left as an extension
+for anyone who wants to implement it using the existing external-signing
+interfaces. The core does not provide a complete PAdES implementation. See the
+[operation-level signature contract](docs/signatures.md).
+
+Known 5.1.5 limits include simulated success in the unsupported certificate-based
+recipient-encryption handler, malformed Flate/predictor error handling, and a
+non-optional writer build marker. See the [versioned inventory](docs/CLAIMS.md)
+for evidence and follow-up issues before selecting these workflows.
 
 Certificate-based **recipient encryption is unsupported**. The legacy
 `PublicKeySecurityHandler` returns explicit errors for cryptographic operations;
@@ -197,7 +210,7 @@ See [`oxidize-pdf-core/examples/`](https://github.com/bzsanti/oxidizePdf/tree/ma
 ### PDF Processing
 - Parse PDF 1.0-1.7 with 99.3% success rate (9,000+ PDFs tested)
 - Generate multi-page documents with text, graphics, images
-- Encryption: RC4-40/128, AES-128, AES-256 (R5/R6) -- read and write
+- Encryption: RC4-40/128, AES-128, AES-256 R5 -- read and write; AES-256 R6 -- read
 - Digital signatures: detection, PKCS#7 verification, certificate validation,
   incremental-signature preparation
 - PDF/A validation: 8 conformance levels (1a/b, 2a/b/u, 3a/b/u)
@@ -209,14 +222,24 @@ See [`oxidize-pdf-core/examples/`](https://github.com/bzsanti/oxidizePdf/tree/ma
 
 ## Performance
 
-| Operation | Speed |
-|---|---|
-| PDF generation | 3,000-4,000 pages/sec |
-| Full text extraction (930KB) | 85 ms |
-| Page text extraction | 546 us |
-| File loading | 738 us |
+Measured with oxidize-stats `pdf-generation-v1` on 2026-09-28: oxidize-pdf 5.1.5,
+Intel Core i7-3770 @ 3.40 GHz, Linux x86_64, Rust 1.96.0 release build. Twenty
+samples per workload; construction and serialization to memory, without file IO.
 
-Benchmarked with Criterion. Baseline: `v2.0.0-profiling`.
+| Synthetic text-only workload | Documents per sample | Median documents/sec | p95 batch-average ms/document | Maximum process RSS |
+|---|---:|---:|---:|---:|
+| One-page invoice-like document | 1,000 | 6,311 | 0.197 | 5.0 MiB |
+| Ten-page report | 100 | 732 | 1.587 | 5.4 MiB |
+
+The p95 describes batch averages, not individual-request tail latency. RSS includes
+runtime and warmup, not just PDF allocation. Each sample's representative PDF was
+checked independently for structure, page count and exact text. This shared-host
+measurement does not establish performance for images, embedded fonts or arbitrary
+real-world documents. The comparison now includes pdf_oxide 0.3.78 alongside lopdf, pdf-writer and
+printpdf. All four have higher median throughput in these workloads, but the
+one-page uncertainty intervals of oxidize-pdf and pdf_oxide overlap. Serialization
+defaults and output sizes differ. See the
+[full comparison and reproducible protocol](docs/reports/2026-09-28-generation-performance.md).
 
 ## Testing
 
