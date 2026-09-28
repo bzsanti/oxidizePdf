@@ -174,7 +174,18 @@ for section in graph.top_level_sections() {
 
 ## Also in the box
 
-Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (3,000–4,000 pages/sec), encryption (RC4-40/128, AES-128, AES-256 R5/R6 — read and write), digital signatures (detection, PKCS#7 verification, certificate validation and incremental-signature preparation), PDF/A validation (8 conformance levels), JBIG2 image decoding (pure-Rust ITU-T T.88), invoice extraction (ES/EN/DE/IT), and split/merge/rotate operations. One dependency for the full pipeline.
+Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (3,000–4,000 pages/sec), encryption (RC4-40/128, AES-128, AES-256 R5 — read and write; AES-256 R6 — read), digital signatures (detection, PKCS#7 verification, certificate validation and incremental-signature preparation), PDF/A validation (8 conformance levels), JBIG2 image decoding (pure-Rust ITU-T T.88), invoice extraction (ES/EN/DE/IT), and split/merge/rotate operations. One dependency for the full pipeline.
+
+Signature preparation is not a completed cryptographic signature: an external
+signer produces CMS and finalization embeds it. Advanced PAdES is outside the
+open-source core scope and reserved for commercial extensions; no commercial
+implementation or complete profile compliance is asserted here. See the
+[operation-level signature contract](docs/signatures.md).
+
+Known 5.1.5 limits include simulated success in the unsupported certificate-based
+recipient-encryption handler, malformed Flate/predictor error handling, and a
+non-optional writer build marker. See the [versioned inventory](docs/CLAIMS.md)
+for evidence and follow-up issues before selecting these workflows.
 
 Certificate-based **recipient encryption is unsupported**. The legacy
 `PublicKeySecurityHandler` returns explicit errors for cryptographic operations;
@@ -197,7 +208,7 @@ See [`oxidize-pdf-core/examples/`](https://github.com/bzsanti/oxidizePdf/tree/ma
 ### PDF Processing
 - Parse PDF 1.0-1.7 with 99.3% success rate (9,000+ PDFs tested)
 - Generate multi-page documents with text, graphics, images
-- Encryption: RC4-40/128, AES-128, AES-256 (R5/R6) -- read and write
+- Encryption: RC4-40/128, AES-128, AES-256 R5 -- read and write; AES-256 R6 -- read
 - Digital signatures: detection, PKCS#7 verification, certificate validation,
   incremental-signature preparation
 - PDF/A validation: 8 conformance levels (1a/b, 2a/b/u, 3a/b/u)

@@ -1,3 +1,17 @@
+# Seguimiento #603 y #641 — 2026-09-28
+
+- Issue: #603 — docs(adoption): reconcile public claims and establish audited adoption monitoring — https://github.com/bzsanti/oxidizePdf/issues/603
+- Issue: #641 — docs(signatures): delimit basic support, external extension points and commercial PAdES scope — https://github.com/bzsanti/oxidizePdf/issues/641
+- Estado: en curso. Prioridad: P2. Responsable: Codex.
+- Criterio de cierre: documentación publicada coherente, inventario con evidencia
+  y límites, ejemplo ejecutable y guard documental; aceptación de monitorización
+  registrada sin presentar datos sintéticos como adopción real.
+- Base: main/v5.1.5 fb4042fd; clon aislado. Cambios en curso de #640 preservados.
+- Última validación: 35 tests de firmas, dos guards y cinco doctests pasan;
+  revisión final y Kripteia tests/security completados (log/informe adjuntos).
+- Siguiente acción: publicar PR documental a main, verificar CI e integración;
+  cierre de issues solo después de contrastar el contenido publicado.
+
 # Seguimiento diario
 
 ## Contención #640 — 2026-09-28

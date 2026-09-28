@@ -38,3 +38,30 @@ fn public_claims_preserve_supported_capabilities_and_their_limits() {
     assert!(claims.contains("No claim of PDF/A authoring, remediation or certification."));
     assert!(claims.contains("No managed keys, certificate issuance, hosted signing service"));
 }
+
+#[test]
+fn public_claims_do_not_restore_unsupported_comparisons_or_profiles() {
+    let module = include_str!("../src/signatures/mod.rs");
+    let contract = include_str!("../../docs/signatures.md");
+    for document in [README, IDEAL_USE_CASES, CLAIMS, module, contract] {
+        let normalized = document.split_whitespace().collect::<Vec<_>>().join(" ");
+        assert!(normalized.contains("Advanced PAdES is outside the open-source core scope"));
+        assert!(!normalized.contains("according to ISO 32000 and PAdES standards"));
+    }
+    for unsupported in [
+        "2x faster than PDFSharp",
+        "Zero memory leaks guaranteed",
+        "## 📈 ROI Calculator",
+        "### Test: Memory Safety (Fuzzing)",
+        "AES-256 (R5/R6) -- read and write",
+        "AES-256 R5/R6 — read and write",
+    ] {
+        assert!(!README.contains(unsupported));
+        assert!(!IDEAL_USE_CASES.contains(unsupported));
+    }
+    assert!(contract.contains("not an already-computed digest"));
+    assert!(contract.contains("does not parse/validate CMS SignedData"));
+    for issue in ["#637", "#638", "#639", "#640", "#642"] {
+        assert!(CLAIMS.contains(issue), "missing limitation: {issue}");
+    }
+}

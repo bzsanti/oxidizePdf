@@ -7,7 +7,7 @@
 //! ## Features
 //!
 //! - **PDF Generation**: Create multi-page documents with text, graphics, and images
-//! - **PDF Parsing**: Complete parser supporting rendering and content extraction
+//! - **PDF Parsing**: PDF parsing and content extraction; page rasterization requires an external renderer
 //! - **PDF Operations**: Split, merge, rotate, and extract pages
 //! - **Text Extraction**: Extract text with position and formatting information
 //! - **Image Extraction**: Extract images in JPEG, PNG, and TIFF formats
@@ -16,7 +16,7 @@
 //! - **OCR Integration**: Pluggable OCR support with Tesseract for processing scanned documents (v0.1.3+)
 //! - **Resource Access**: Work with fonts, images, and other PDF resources
 //! - **Pure Rust**: No C dependencies or external libraries
-//! - **100% Native**: Complete PDF implementation from scratch
+//! - **Signatures**: Basic inspection/verification and external CMS preparation/embedding; see [`signatures`] for limits
 //!
 //! ## Quick Start
 //!
