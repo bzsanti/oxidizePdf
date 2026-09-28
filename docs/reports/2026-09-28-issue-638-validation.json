@@ -1,0 +1,110 @@
+{
+  "issue": 638,
+  "url": "https://github.com/bzsanti/oxidizePdf/issues/638",
+  "date": "2026-09-28",
+  "base_commit": "b76f7382186a704f74c1beb7c48037523ebee715",
+  "branch": "fix/issue-638-predictor-errors",
+  "checkout": "/tmp/oxidize-issue-638",
+  "status": "local validation complete; author quality review closed; PR and CI pending",
+  "source_sha256": {
+    "oxidize-pdf-core/src/parser/filters.rs": "3ccf296817d9d29f81c05264bab4fe2f7637668cfc02017ddbcf27c648c62e30",
+    "oxidize-pdf-core/tests/issue_638_predictor_errors_test.rs": "bb08331ee6cf35759abb343c7cda6e2125d3f28c3658ac518c46e9dbd88daee6",
+    "docs/predictor-decoding.md": "60c15dfe173d905d656935884de92da775450fd94773acbdae4a485a6335f9a2",
+    "CHANGELOG.md": "b2ab6b42a7f8a2b0a8a1768aa0ba3ac46391bb6816626c54ced1f4c4d75ac918"
+  },
+  "checks": [
+    {
+      "name": "RED exact baseline",
+      "exit_code": 101,
+      "log": "/tmp/issue-638-red-exact-final.log",
+      "sha256": "02bf28f6821cea2f74176c443e3d0bffce8ff00d2e15028e2fa33aecc0c8ad3a",
+      "totals": {
+        "passed": 7,
+        "failed": 11,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "GREEN targeted",
+      "exit_code": 0,
+      "log": "/tmp/issue-638-green-final.log",
+      "sha256": "d428f3c7ac93c92deace7e27f375046e20b13b8a10a6d27e51489a2043c8ed3b",
+      "totals": {
+        "passed": 24,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "name": "Clippy all targets",
+      "exit_code": 0,
+      "log": "/tmp/issue-638-clippy-final.log",
+      "sha256": "c52d98942c405e3456f3ec3ee92a807a26a3e20ca8b3762e7e9b273270e17484"
+    },
+    {
+      "name": "Formatting",
+      "exit_code": 0,
+      "log": "/tmp/issue-638-format-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "Standalone consumer",
+      "exit_code": 0,
+      "log": "/tmp/issue-638-consumer-final.log",
+      "sha256": "82a25c23e3b9c4829693ca7e16aac5fdea2a6cc3f2231cde03d2a923c12d7c85"
+    },
+    {
+      "name": "Kripteia filters",
+      "exit_code": 0,
+      "log": "/tmp/issue-638-kripteia-filters-final.log",
+      "sha256": "ae607617fffb5169e3f7b82a628259c685520913f631125697935ec7f4990425",
+      "score": 91,
+      "detected_tests": 77,
+      "security_clean": true
+    },
+    {
+      "name": "Kripteia public regressions",
+      "exit_code": 0,
+      "log": "/tmp/issue-638-kripteia-tests-final.log",
+      "sha256": "f9dc5c920035698e8c296ea662f73ad2916fa45e1acf72bf2320d3033548c59b",
+      "score": 98,
+      "detected_tests": 18,
+      "security_clean": true
+    }
+  ],
+  "workspace_command": "OXIDIZE_DIFF_REQUIRE_CORPUS=1 CARGO_TARGET_DIR=/tmp/oxidize-627-release-target cargo test --locked --offline --workspace --no-fail-fast",
+  "workspace_log": "/tmp/issue-638-workspace-final.log",
+  "workspace_exit_code": 0,
+  "corpus_pdf_counts": {
+    "t0-regression": 13,
+    "t1-spec": 3554,
+    "t2-realworld": 484,
+    "t3-stress": 1802,
+    "t4-ai-target": 130,
+    "t5-quality": 2907,
+    "t6-adversarial": 161
+  },
+  "baselines_modified": false,
+  "pr": null,
+  "qr_regressions_fixed": [
+    "Additional parameter-container rejection dropped HELLO from a valid Form: withdrew that expansion, preserved regression test.",
+    "Null dictionary values must use PDF defaults: added RED/GREEN and corrected malformed-type oracles."
+  ],
+  "limitations": [
+    "No claim to fix Flate recovery (#637).",
+    "32-bit checked conversions inspected, not run.",
+    "Preliminary interrupted runs do not count as final workspace/corpus validation."
+  ],
+  "workspace_totals": {
+    "passed": 9847,
+    "failed": 0,
+    "ignored": 73
+  },
+  "workspace_log_sha256": "4c959ee7a07d6fa205768fa044c3fdd276f22c6b66173b910c16519501252245",
+  "t3_coverage": {
+    "text_extracted": 1613,
+    "parsed": 1761,
+    "ratio": 0.9159568427030097,
+    "minimum": 0.9
+  }
+}

@@ -1,5 +1,28 @@
 # Seguimiento diario
 
+## Corrección #638 — 2026-09-28
+
+- Issue: #638 — fix(parser): propagate invalid predictor errors in strict stream decoding — https://github.com/bzsanti/oxidizePdf/issues/638
+- Estado: `[-]` en curso. Prioridad: P1. Responsable: Codex.
+- Activación: OPEN confirmada en GitHub; clon aislado /tmp/oxidize-issue-638,
+  rama fix/issue-638-predictor-errors desde develop b76f738.
+- Criterio de cierre: predictores inválidos/unsupported producen error explícito;
+  dimensiones/arithmetic validadas; muestras PNG válidas exactas en ambas APIs
+  y DecodeParms directos/indirectos; RED/GREEN, QR y validación proporcional.
+- Alcance: predictores Flate/LZW. #637 permanece intacta en el checkout original;
+  sin recalibración de métricas ni recuperación implícita de predictores.
+- Última validación: RED de la suite final exacta sobre base inalterada:
+  11 fallos/7 controles. GREEN final: 18 regresiones #638 y 6 de #514.
+  QR corrigió pérdida de texto en Form por una ampliación de DecodeParms
+  (retirada) y preservó defaults null según la especificación, con RED/GREEN.
+  Consumidor externo compression-only pasa. Clippy all-targets y formato pasan.
+  Kripteia 91/100 filtros y 98/100 nuevos tests; security sin hallazgos.
+  Workspace final: 9847 pasan, cero fallos, 73 omitidos; exit 0.
+  Corpus T0–T6 y diferenciales pasan; T3 1613/1761 (91,6%).
+  QR del autor cerrado. Baselines y umbrales intactos.
+- Siguiente acción: commit y PR independiente contra develop; validar CI
+  antes de integrar. PR #644 pertenece a otra sesión y no se modifica aquí.
+
 ## Contención #640 — 2026-09-28
 
 - Issue: #640 — fix(encryption): fail closed for simulated public-key security handler operations — https://github.com/bzsanti/oxidizePdf/issues/640
