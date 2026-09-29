@@ -15,4 +15,3 @@ test public_writer_encrypts_text_image_and_strings_for_two_recipients ... ok
 test independent_pyhanko_fixtures_and_both_recipients ... ok
 
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.47s
-
