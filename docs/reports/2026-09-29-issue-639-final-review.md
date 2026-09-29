@@ -31,6 +31,7 @@ Comandos principales:
 - `cargo test -p oxidize-pdf --test issue_639_build_identification_test`: árbol
   final, 15 pasan. También 15 pasan con `--features internal-testing,unstable-spi,semantic`
   y 15 con `--no-default-features --features compression`.
+- `cargo test -p oxidize-pdf --doc` en el árbol final: 220 pasan, 24 omitidos.
 - `cargo clippy -p oxidize-pdf --lib --tests -- -D warnings`, formato y diff check pasan.
 - Probe público independiente: 42 intentos incrementales, 30 éxitos y 12 rechazos
   (cifrado/IDs agotados) sin salida; cuatro configuraciones de generación.
@@ -103,4 +104,4 @@ El análisis estático no demuestra ausencia global de vulnerabilidades.
 - Archivos de producto modificados por la fase final de revisión: 0; correcciones
   anteriores autorizadas y verificadas antes de esta reconciliación.
 - Verificaciones locales pendientes: ninguna dentro del alcance indicado.
-- CI remota e integración: pendientes al escribir este informe.
+- CI remota e integración: pendientes; PR https://github.com/bzsanti/oxidizePdf/pull/656.

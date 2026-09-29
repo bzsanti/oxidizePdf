@@ -1,12 +1,14 @@
 ## Validación final #639/#653/#654/#655 — 2026-09-29
 
 - Issues abiertas confirmadas en GitHub: #639 (identificación), #653 (árbol de páginas), #654 (entrada cifrada), #655 (filtro xref). Enlaces y criterios individuales debajo.
-- Estado: `[-]` implementación y revisión local terminadas; publicación/CI/integración pendientes. Prioridad P1. Responsable Codex.
+- Estado: `[-]` implementación y revisión local terminadas; PR #656 publicado, CI/integración pendientes. Prioridad P1. Responsable Codex.
 - Última validación: workspace 9931 pasan/0 fallos/71 omitidos antes del endurecimiento final de nombres PDF; árbol final 15 regresiones en tres configuraciones (default, internal-testing+unstable-spi+semantic y compression-only). Clippy biblioteca/tests y formato pasan. RED/GREEN y mutación #655 discriminantes.
 - Verificación independiente final: 30 salidas incrementales y 4 configuraciones nuevas; qpdf/Poppler pasan; 40 PDFs incluyendo fixtures sin advertencias. Info, XMP, claves escapadas, metadatos de página/catálogo, recursos heredados, contenido, Parent y prefijo verificados.
 - QR calidad/seguridad completado: sin hallazgos abiertos dentro del alcance; limitaciones explícitas en docs/reports/2026-09-29-issue-639-final-review.md. Checksums del producto en evidencia contigua.
 - Criterio de cierre restante: PR revisable, CI del HEAD publicado aprobada, integración verificada.
-- Siguiente acción: publicar rama fix/issue-639-completion y abrir PR contra develop para las cuatro issues.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/656. Producto validado en 5a4e3b0; este seguimiento no cambia el código.
+- Última validación adicional: 220 doctests del árbol final pasan, 24 omitidos.
+- Siguiente acción: verificar CI del HEAD publicado de #656, resolver fallos y confirmar integración.
 
 ## Dependencia de validación #655
 
