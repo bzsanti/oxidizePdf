@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- Clarify that PAdES is outside the library scope and can be implemented by anyone
+  as an independent external extension; document basic signature operations (#641).
+
 - Reconcile public adoption claims, remove unsupported comparisons, and record
   versioned limitations and evidence (#603). Define basic signature operations,
   external CMS responsibilities and the PAdES extension interfaces (#641).

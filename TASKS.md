@@ -1,3 +1,18 @@
+## Resolución #641 y desarrollo #642 — 2026-09-29
+
+- Issue: #641 — docs(signatures): clarify basic support and keep PAdES outside library scope — https://github.com/bzsanti/oxidizePdf/issues/641
+- Estado: `[-]` en curso. Prioridad P2. Responsable Codex.
+- Criterio de cierre: README, rustdoc, CLAIMS y casos de uso describen firmas básicas, flujo externo y PAdES fuera de alcance; guard documental y ejemplo ejecutable validados; PR integrado.
+- Última validación: contrato y ejemplo ya presentes en develop c4e08c7; se precisa exclusión de PAdES y se actualiza referencia a contención #640.
+- Última validación final #641: dos guards documentales y cinco doctests pasan (dos omitidos); Clippy focalizado y revisión calidad/seguridad pasan.
+- Siguiente acción: publicar PR #641, verificar CI e integrar; #642 continúa por separado.
+- Issue: #642 — feat(encryption): implement interoperable certificate-based PDF recipient encryption — https://github.com/bzsanti/oxidizePdf/issues/642
+- Estado: `[-]` análisis de perfil e interoperabilidad. Prioridad P2. Responsable Codex.
+- Criterio de cierre: writer/reader públicos con cifrado real por certificados, múltiples destinatarios, rechazos, aleatoriedad, interoperabilidad bidireccional, no-C y revisión de seguridad.
+- Última validación: #640 mantiene shell legacy no soportado; #642 confirmada OPEN. Implementación autorizada expresamente por el usuario.
+- Siguiente acción: fijar perfil soportado y construir fixtures con implementación independiente antes de integrar la criptografía.
+- Restricciones: PAdES fuera de la librería; extensiones externas disponibles a cualquiera. Sin PKI gestionada ni ampliación implícita de R6 por contraseña.
+
 ## Validación final #639/#653/#654/#655 — 2026-09-29
 
 - Issues abiertas confirmadas en GitHub: #639 (identificación), #653 (árbol de páginas), #654 (entrada cifrada), #655 (filtro xref). Enlaces y criterios individuales debajo.

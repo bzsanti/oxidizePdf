@@ -7,9 +7,10 @@
 //! [`PreparedSignature::finalize`]. Finalization checks the outer DER SEQUENCE envelope and
 //! capacity; it does not validate CMS SignedData, cryptographic validity or trust.
 //!
-//! PAdES is left as an extension for anyone who wants to implement it using the
-//! existing external-signing interfaces. The core does not provide a complete
-//! PAdES implementation; preparing/embedding CMS does not establish profile compliance.
+//! PAdES is outside the scope of oxidize-pdf. Anyone can implement it as an
+//! independent external extension using the existing signing interfaces,
+//! without incorporating it into this library. The extension author is responsible
+//! for profile implementation and validation; embedding CMS does not establish compliance.
 //!
 //! Inspect hash/signature/certificate results, errors, warnings and later
 //! modifications. An `Ok` result alone does not mean a signature is valid.
