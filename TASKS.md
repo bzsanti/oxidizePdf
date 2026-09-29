@@ -1,3 +1,13 @@
+## Publicación #637 — PR #652
+
+- Issue: #637 — fix(parser): reject exhausted FlateDecode recovery instead of reporting empty success — https://github.com/bzsanti/oxidizePdf/issues/637
+- Estado: `[-]` PR abierto contra develop; integración pendiente. Prioridad P1. Responsable Codex.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/652
+- Implementación validada: 8a93b20770bba1bfe8728c18ac9f6c60ce13f631.
+- Última validación: workspace 9890 pasan/0 fallos/72 omitidos; gates T3 y orden pasan sin rebajar umbrales; QR cerrado, Clippy y formato pasan.
+- Criterio de cierre: revisión y CI remotos aprobados, integración verificada.
+- Siguiente acción: revisar checks del PR #652 y atender fallos; merge no ejecutado.
+
 ## Recuperación explícita #637 — 2026-09-29
 
 - Issue: #637 — fix(parser): reject exhausted FlateDecode recovery instead of reporting empty success — https://github.com/bzsanti/oxidizePdf/issues/637
