@@ -1,0 +1,14 @@
+    Finished `test` profile [unoptimized] target(s) in 0.16s
+   Doc-tests oxidize_pdf
+
+running 7 tests
+test oxidize-pdf-core/src/signatures/mod.rs - signatures::FullSignatureValidationResult (line 105) ... ignored
+test oxidize-pdf-core/src/signatures/verification.rs - signatures::verification::compute_pdf_hash (line 80) ... ignored
+test oxidize-pdf-core/src/parser/reader.rs - parser::reader::PdfReader<R>::verify_signatures_with_trust_store (line 3093) - compile ... ok
+test oxidize-pdf-core/src/parser/reader.rs - parser::reader::PdfReader<R>::signatures (line 3018) - compile ... ok
+test oxidize-pdf-core/src/parser/reader.rs - parser::reader::PdfReader<R>::verify_signatures (line 3059) - compile ... ok
+test oxidize-pdf-core/src/signatures/signing.rs - signatures::signing::SignatureAppearance::layout (line 86) ... ok
+test oxidize-pdf-core/src/signatures/mod.rs - signatures (line 22) ... ok
+
+test result: ok. 5 passed; 0 failed; 2 ignored; 0 measured; 237 filtered out; finished in 0.39s
+

@@ -46,17 +46,17 @@ failure cases; its interoperability tests use an external test signer.
 
 ## PAdES extension
 
-PAdES is left as an extension for anyone who wants to implement it using the
-existing external-signing interfaces. The core does not provide a complete PAdES
-implementation. Anyone building an extension can use the neutral byte/CMS
-interfaces and is responsible for implementing and validating the chosen profile,
-including any required timestamps and long-term validation data. Preparing or
-embedding CMS alone does not establish profile compliance or certification.
+PAdES is outside the scope of oxidize-pdf. Anyone can implement it as an
+independent external extension using the existing signing interfaces,
+without incorporating it into this library. The extension author is responsible
+for implementing and validating the chosen profile, including timestamps and
+long-term validation data where required. Embedding CMS alone does not establish
+profile compliance or certification.
 
 Certificate-based **recipient encryption** is different from signing and
-certificate verification. In 5.1.5 its legacy handler simulates success and must
-not be used to protect documents. Containment is tracked in #640 and actual
-recipient encryption in #642.
+certificate verification. The legacy handler now rejects
+cryptographic operations explicitly (#640); it does not protect documents.
+Actual recipient encryption is tracked separately in #642.
 
 ## Participant signature slots (next release, #646)
 

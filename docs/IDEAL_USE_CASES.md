@@ -23,9 +23,12 @@ API are available. With caller-supplied CMS, finalization embeds that container
 in the prepared revision. The [signature contract](signatures.md) documents
 trust anchors, revocation results, failure states and configuration hooks.
 
-PAdES is left as an extension for anyone who wants to implement it using the
-existing external-signing interfaces. The core does not provide a complete PAdES
-implementation; preparing/embedding CMS alone does not satisfy a complete profile.
+PAdES is outside the scope of oxidize-pdf. Anyone can implement it as an
+independent external extension using the existing signing interfaces,
+without incorporating it into this library. The extension author is responsible
+for implementing and validating the chosen profile, including timestamps and
+long-term validation data where required. Embedding CMS alone does not establish
+profile compliance or certification.
 
 Managed-key, certificate-issuing or signing-service workflows are not provided.
 Neither are PDF/UA compliance, archival certification or managed enterprise

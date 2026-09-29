@@ -179,9 +179,12 @@ for section in graph.top_level_sections() {
 Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (see the measured workloads below), encryption (RC4-40/128, AES-128, AES-256 R5 — read and write; AES-256 R6 — read), digital signatures (detection, PKCS#7 verification, certificate validation and incremental-signature preparation), PDF/A validation (8 conformance levels), JBIG2 image decoding (pure-Rust ITU-T T.88), invoice extraction (ES/EN/DE/IT), and split/merge/rotate operations. One dependency for the full pipeline.
 
 Signature preparation is not a completed cryptographic signature: an external
-signer produces CMS and finalization embeds it. PAdES is left as an extension
-for anyone who wants to implement it using the existing external-signing
-interfaces. The core does not provide a complete PAdES implementation. See the
+signer produces CMS and finalization embeds it. PAdES is outside the scope of oxidize-pdf. Anyone can implement it as an
+independent external extension using the existing signing interfaces,
+without incorporating it into this library. The extension author is responsible
+for implementing and validating the chosen profile, including timestamps and
+long-term validation data where required. Embedding CMS alone does not establish
+profile compliance or certification. See the
 [operation-level signature contract](docs/signatures.md).
 
 Known 5.1.5 limits include simulated success in the unsupported certificate-based
