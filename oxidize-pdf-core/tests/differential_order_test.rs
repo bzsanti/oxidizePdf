@@ -1,5 +1,10 @@
 //! Differential reading-ORDER gate (the half the fusion gate cannot see).
 //!
+//! Damaged-corpus protocol: explicitly recover Flate content and report every
+//! recovery/omission. The historical baseline used implicit recovery; its numeric
+//! limits are unchanged. This measures recovered reading order, not integrity.
+//! Strict extraction coverage is reported separately by T3 (issue #637).
+//!
 //! `differential_fusion_test.rs` counts word pairs poppler splits and we glue.
 //! It is structurally blind to ORDER: interleaved columns, a table read down
 //! instead of across, or blocks emitted out of order all score ZERO fusions.
@@ -56,9 +61,19 @@ fn ours(path: &Path, reading_order: bool) -> Option<String> {
         TextExtractor::with_options(ExtractionOptions::default()).with_reading_order(reading_order);
     let mut out = String::new();
     for i in 0..doc.page_count().unwrap_or(0) {
-        if let Ok(p) = ex.extract_from_page(&doc, i) {
-            out.push_str(&p.text);
-            out.push('\n');
+        match ex.extract_from_page_with_recovery(&doc, i, 256 * 1024 * 1024) {
+            Ok(p) => {
+                if !p.diagnostics.is_empty() {
+                    eprintln!(
+                        "ORDER_RECOVERY {} page={i} diagnostics={:?}",
+                        path.display(),
+                        p.diagnostics
+                    );
+                }
+                out.push_str(&p.text.text);
+                out.push('\n');
+            }
+            Err(error) => eprintln!("ORDER_PAGE_ERROR {} page={i}: {error}", path.display()),
         }
     }
     Some(out)

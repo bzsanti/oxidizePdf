@@ -1,0 +1,63 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 18 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_637_flate_errors_test.rs            18     97
+
+--- Worst Offenders ---
+  bounded_corrupt_flate_is_an_error (oxidize-pdf-core/tests/issue_637_flate_errors_test.rs:64) - Score: 90
+    - Test 'bounded_corrupt_flate_is_an_error' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  predictor_parameters_cannot_bypass_failed_decompression (oxidize-pdf-core/tests/issue_637_flate_errors_test.rs:108) - Score: 90
+    - Test 'predictor_parameters_cannot_bypass_failed_decompression' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  filter_arrays_propagate_failure_at_the_flate_stage (oxidize-pdf-core/tests/issue_637_flate_errors_test.rs:203) - Score: 90
+    - Test 'filter_arrays_propagate_failure_at_the_flate_stage' has low assert-to-setup ratio (19%): 4 asserts vs 17 setup lines
+  caller_limit_cannot_raise_the_absolute_flate_cap (oxidize-pdf-core/tests/issue_637_flate_errors_test.rs:298) - Score: 90
+    - Test 'caller_limit_cannot_raise_the_absolute_flate_cap' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'caller_limit_cannot_raise_the_absolute_flate_cap' has multiple assertions without diagnostic messages
+    i Test 'caller_limit_cannot_raise_the_absolute_flate_cap' uses .unwrap() which silently discards error information
+  form_xobject_flate_failure_is_not_an_empty_successful_page (oxidize-pdf-core/tests/issue_637_flate_errors_test.rs:361) - Score: 90
+    i Test 'form_xobject_flate_failure_is_not_an_empty_successful_page' uses .unwrap() which silently discards error information
+    - Test 'form_xobject_flate_failure_is_not_an_empty_successful_page' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+
+--- Details ---
+oxidize-pdf-core/tests/issue_637_flate_errors_test.rs:
+  bounded_corrupt_flate_is_an_error (line 64) - Score: 90
+    - Test 'bounded_corrupt_flate_is_an_error' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  checksum_corruption_is_not_recovered_as_raw_deflate (line 98) - Score: 100
+    i Test 'checksum_corruption_is_not_recovered_as_raw_deflate' uses .unwrap() which silently discards error information
+  predictor_parameters_cannot_bypass_failed_decompression (line 108) - Score: 90
+    - Test 'predictor_parameters_cannot_bypass_failed_decompression' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  non_zlib_recovery_is_not_silently_reported_as_complete (line 120) - Score: 100
+    i Test 'non_zlib_recovery_is_not_silently_reported_as_complete' uses .unwrap() which silently discards error information
+  complete_empty_and_nonempty_streams_preserve_exact_bytes (line 136) - Score: 100
+    i Test 'complete_empty_and_nonempty_streams_preserve_exact_bytes' has multiple assertions without diagnostic messages
+  bounded_limit_is_distinct_from_corruption_and_never_returns_a_prefix (line 152) - Score: 100
+    i Test 'bounded_limit_is_distinct_from_corruption_and_never_returns_a_prefix' has multiple assertions without diagnostic messages
+  large_ratio_limit_is_not_swallowed_by_fallbacks (line 181) - Score: 100
+    i Test 'large_ratio_limit_is_not_swallowed_by_fallbacks' has multiple assertions without diagnostic messages
+    i Test 'large_ratio_limit_is_not_swallowed_by_fallbacks' uses .unwrap() which silently discards error information
+  filter_arrays_propagate_failure_at_the_flate_stage (line 203) - Score: 90
+    - Test 'filter_arrays_propagate_failure_at_the_flate_stage' has low assert-to-setup ratio (19%): 4 asserts vs 17 setup lines
+  pdf_extraction_propagates_corrupt_or_truncated_content_errors (line 246) - Score: 100
+    i Test 'pdf_extraction_propagates_corrupt_or_truncated_content_errors' uses .unwrap() which silently discards error information
+  pdf_extraction_distinguishes_valid_empty_and_nonempty_content (line 270) - Score: 100
+    i Test 'pdf_extraction_distinguishes_valid_empty_and_nonempty_content' has multiple assertions without diagnostic messages
+    i Test 'pdf_extraction_distinguishes_valid_empty_and_nonempty_content' uses .unwrap() which silently discards error information
+  caller_limit_cannot_raise_the_absolute_flate_cap (line 298) - Score: 90
+    - Test 'caller_limit_cannot_raise_the_absolute_flate_cap' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'caller_limit_cannot_raise_the_absolute_flate_cap' has multiple assertions without diagnostic messages
+    i Test 'caller_limit_cannot_raise_the_absolute_flate_cap' uses .unwrap() which silently discards error information
+  form_xobject_flate_failure_is_not_an_empty_successful_page (line 361) - Score: 90
+    i Test 'form_xobject_flate_failure_is_not_an_empty_successful_page' uses .unwrap() which silently discards error information
+    - Test 'form_xobject_flate_failure_is_not_an_empty_successful_page' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

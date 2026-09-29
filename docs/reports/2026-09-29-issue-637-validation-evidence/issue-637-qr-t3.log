@@ -1,0 +1,45 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 81 | Tests: 4 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/t3_stress.rs                               4     81
+
+--- Worst Offenders ---
+  t3_text_extraction_coverage (oxidize-pdf-core/tests/t3_stress.rs:194) - Score: 70
+    - Test 't3_text_extraction_coverage' has a match arm with empty body, ignoring potential error cases
+    - Test 't3_text_extraction_coverage' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 't3_text_extraction_coverage' asserts against a hardcoded constant instead of a computed expected value
+    i Test 't3_text_extraction_coverage' uses .unwrap() which silently discards error information
+    - Test 't3_text_extraction_coverage' has low assert-to-setup ratio (19%): 9 asserts vs 38 setup lines
+  t3_error_recovery_rate (oxidize-pdf-core/tests/t3_stress.rs:147) - Score: 75
+    - Test 't3_error_recovery_rate' executes production code without asserting on its behaviour
+  t3_zero_panics_on_stress_corpus (oxidize-pdf-core/tests/t3_stress.rs:98) - Score: 90
+    - Test 't3_zero_panics_on_stress_corpus' has low assert-to-setup ratio (11%): 2 asserts vs 16 setup lines
+  t3_error_context_quality (oxidize-pdf-core/tests/t3_stress.rs:280) - Score: 90
+    - Test 't3_error_context_quality' has low assert-to-setup ratio (3%): 1 asserts vs 33 setup lines
+
+--- Details ---
+oxidize-pdf-core/tests/t3_stress.rs:
+  t3_zero_panics_on_stress_corpus (line 98) - Score: 90
+    - Test 't3_zero_panics_on_stress_corpus' has low assert-to-setup ratio (11%): 2 asserts vs 16 setup lines
+  t3_error_recovery_rate (line 147) - Score: 75
+    - Test 't3_error_recovery_rate' executes production code without asserting on its behaviour
+  t3_text_extraction_coverage (line 194) - Score: 70
+    - Test 't3_text_extraction_coverage' has a match arm with empty body, ignoring potential error cases
+    - Test 't3_text_extraction_coverage' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 't3_text_extraction_coverage' asserts against a hardcoded constant instead of a computed expected value
+    i Test 't3_text_extraction_coverage' uses .unwrap() which silently discards error information
+    - Test 't3_text_extraction_coverage' has low assert-to-setup ratio (19%): 9 asserts vs 38 setup lines
+  t3_error_context_quality (line 280) - Score: 90
+    - Test 't3_error_context_quality' has low assert-to-setup ratio (3%): 1 asserts vs 33 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

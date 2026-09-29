@@ -1,0 +1,366 @@
+{
+  "base": [
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    }
+  ],
+  "candidate": [
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "error": "Syntax error at position 0: Contents must be a stream or array of streams",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    },
+    {
+      "extracted": true,
+      "pages": 0,
+      "parsed": true,
+      "text_bytes": 0
+    }
+  ]
+}
