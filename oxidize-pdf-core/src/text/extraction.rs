@@ -3,6 +3,9 @@
 //! This module provides functionality to extract text from PDF pages,
 //! handling text positioning, transformations, and basic encodings.
 
+mod recovery;
+pub use recovery::{RecoveredText, RecoveryLocation, TextRecoveryAction, TextRecoveryDiagnostic};
+
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -677,6 +680,7 @@ fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_thres
 
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
+    recovery: Option<recovery::RecoveryContext>,
     options: ExtractionOptions,
     /// Emit figure text decoded only through a custom `/Differences` table.
     /// Disabled by default because such text lacks an authoritative Unicode
@@ -720,6 +724,7 @@ impl TextExtractor {
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
+            recovery: None,
         }
     }
 
@@ -734,6 +739,7 @@ impl TextExtractor {
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
+            recovery: None,
         }
     }
 
@@ -1254,6 +1260,15 @@ impl TextExtractor {
         document: &PdfDocument<R>,
         page_index: u32,
     ) -> ParseResult<ExtractedText> {
+        self.recovery = None;
+        self.extract_page_impl(document, page_index)
+    }
+
+    fn extract_page_impl<R: Read + Seek>(
+        &mut self,
+        document: &PdfDocument<R>,
+        page_index: u32,
+    ) -> ParseResult<ExtractedText> {
         // Get the page
         let page = document.get_page(page_index)?;
         // Tagged-PDF metadata is advisory: malformed mappings fall back to
@@ -1267,9 +1282,13 @@ impl TextExtractor {
         }
 
         // Get content streams
-        let streams = {
+        let stream_groups = {
             let _span = tracing::info_span!("stream_decompress").entered();
-            page.content_streams_with_document(document)?
+            if self.recovery.is_some() {
+                self.recovery_content_groups(document, &page)?
+            } else {
+                vec![page.content_streams_with_document(document)?]
+            }
         };
 
         let extracted_text = String::new();
@@ -1310,7 +1329,7 @@ impl TextExtractor {
         // in the array were concatenated, in order, to form a single stream, with
         // whitespace inserted between streams. This preserves operands and operators
         // split across stream boundaries (issue #613).
-        if !streams.is_empty() {
+        for streams in stream_groups {
             let operations = match {
                 let _span = tracing::info_span!("content_parse").entered();
                 ContentParser::parse_content_streams(&streams)
@@ -1838,9 +1857,42 @@ impl TextExtractor {
                                         // accurate as the font widths, so a
                                         // producer that draws one word as several
                                         // positioned runs must not be split.
+                                        //
+                                        // When the baseline shifts perpendicular
+                                        // to text advance across text runs (e.g.
+                                        // adjacent table cells or offset columns),
+                                        // the pen was explicitly repositioned
+                                        // rather than kerned within a single word
+                                        // (issue #648). For same-baseline runs
+                                        // (or sub-point vertical jitter from text-
+                                        // matrix arithmetic, bounded by
+                                        // `0.1 * font_size`), retain the
+                                        // conservative 0.7em boundary threshold
+                                        // (#458) or 0.3em on font change (#602).
+                                        // When the baseline shifts past the
+                                        // vertical jitter guard, use the same
+                                        // `flat_space_gap_threshold` as `Tj`.
                                         let font_changed = last_shown_font_name.as_deref()
                                             != state.font_name.as_deref();
-                                        let boundary_threshold = if font_changed {
+                                        // Match pen_delta's perpendicular projection. The
+                                        // full Y-vector norm includes shear along the
+                                        // baseline and would inflate the jitter guard.
+                                        let m = multiply_matrix(&state.text_matrix, &state.ctm);
+                                        let baseline = m[0].hypot(m[1]);
+                                        let y_scale = (m[0] * m[3] - m[1] * m[2]).abs() / baseline;
+                                        let y_scale =
+                                            if y_scale.is_finite() && y_scale > f64::EPSILON {
+                                                y_scale
+                                            } else {
+                                                1.0
+                                            };
+                                        let vertical_shift_guard =
+                                            (0.1 * state.font_size.abs() * y_scale)
+                                                .max(SAME_LINE_EPS);
+                                        let baseline_shifted = dy > vertical_shift_guard;
+                                        let boundary_threshold = if baseline_shifted {
+                                            self.flat_space_gap_threshold(&state)
+                                        } else if font_changed {
                                             self.tj_font_change_space_gap_threshold(&state)
                                         } else {
                                             self.tj_boundary_space_gap_threshold(&state)
@@ -2499,7 +2551,7 @@ impl TextExtractor {
                     const MAX_XOBJECT_DEPTH: u8 = 12;
                     if depth < MAX_XOBJECT_DEPTH {
                         if let Some((xobj_ops, xobj_res, matrix, xobj_dict)) =
-                            self.load_form_xobject(resources, &name, document)
+                            self.load_form_xobject(resources, &name, document)?
                         {
                             let mut form_structure_actual_text =
                                 resolve_structure_actual_text(&xobj_dict, document);
@@ -2556,7 +2608,7 @@ impl TextExtractor {
                                 line_groups,
                                 cur_group,
                             };
-                            let mut out = self.process_operations(
+                            let out = self.process_operations(
                                 xobj_ops,
                                 document,
                                 xobj_res.as_ref(),
@@ -2564,11 +2616,13 @@ impl TextExtractor {
                                 sub,
                                 page_index,
                                 depth + 1,
-                            )?;
+                            );
+                            // Restore shared font state even when a nested form fails.
+                            self.font_cache = saved_fonts;
+                            let mut out = out?;
 
                             outer.restore_into(&mut out.state);
                             out.state.saved_states = outer_stack;
-                            self.font_cache = saved_fonts;
 
                             state = out.state;
                             at_text_object_start = out.at_text_object_start;
@@ -2605,42 +2659,64 @@ impl TextExtractor {
     }
 
     /// Load a Form XObject by name: parsed operations, resolved /Resources,
-    /// and optional /Matrix. None for image XObjects or anything unparseable.
+    /// and optional /Matrix. Non-forms or unresolvable resources return None;
+    /// decoding errors propagate so corrupt form content cannot become empty text.
     fn load_form_xobject<R: Read + Seek>(
-        &self,
+        &mut self,
         resources: Option<&crate::parser::objects::PdfDictionary>,
         name: &str,
         document: &PdfDocument<R>,
-    ) -> Option<(
-        Vec<ContentOperation>,
-        Option<crate::parser::objects::PdfDictionary>,
-        Option<[f64; 6]>,
-        crate::parser::objects::PdfDictionary,
-    )> {
+    ) -> ParseResult<
+        Option<(
+            Vec<ContentOperation>,
+            Option<crate::parser::objects::PdfDictionary>,
+            Option<[f64; 6]>,
+            crate::parser::objects::PdfDictionary,
+        )>,
+    > {
         use crate::parser::objects::PdfObject;
-        let res = resources?;
-        let xobjects = match res.get("XObject")? {
-            PdfObject::Dictionary(d) => d.clone(),
-            PdfObject::Reference(n, g) => match document.get_object(*n, *g).ok()? {
-                PdfObject::Dictionary(d) => d,
+        let stream = (|| {
+            let res = resources?;
+            let xobjects = match res.get("XObject")? {
+                PdfObject::Dictionary(d) => d.clone(),
+                PdfObject::Reference(n, g) => match document.get_object(*n, *g).ok()? {
+                    PdfObject::Dictionary(d) => d,
+                    _ => return None,
+                },
                 _ => return None,
-            },
-            _ => return None,
+            };
+            let (n, g) = xobjects.get(name)?.as_reference()?;
+            let PdfObject::Stream(stream) = document.get_object(n, g).ok()? else {
+                return None;
+            };
+            if stream
+                .dict
+                .get("Subtype")
+                .and_then(|o| o.as_name())
+                .map(|nm| nm.0.as_str())
+                != Some("Form")
+            {
+                return None;
+            }
+            Some((stream, (n, g)))
+        })();
+        let Some((stream, object)) = stream else {
+            return Ok(None);
         };
-        let (n, g) = xobjects.get(name)?.as_reference()?;
-        let obj = document.get_object(n, g).ok()?;
-        let stream = obj.as_stream()?;
-        if stream
-            .dict
-            .get("Subtype")
-            .and_then(|o| o.as_name())
-            .map(|nm| nm.0.as_str())
-            != Some("Form")
-        {
-            return None;
-        }
-        let data = stream.decode(&Default::default()).ok()?;
-        let ops = ContentParser::parse_content(&data).ok()?;
+        let Some(data) = self.decode_content_for_recovery(
+            document,
+            &stream,
+            RecoveryLocation::FormXObject {
+                name: name.to_owned(),
+                object,
+            },
+        )?
+        else {
+            return Ok(None);
+        };
+        let Ok(ops) = ContentParser::parse_content(&data) else {
+            return Ok(None);
+        };
         let xobj_res = match stream.dict.get("Resources") {
             Some(PdfObject::Dictionary(d)) => Some(d.clone()),
             Some(PdfObject::Reference(rn, rg)) => document
@@ -2666,7 +2742,7 @@ impl TextExtractor {
                     None
                 }
             });
-        Some((ops, xobj_res, matrix, stream.dict.clone()))
+        Ok(Some((ops, xobj_res, matrix, stream.dict)))
     }
 
     /// Fuse a hyphen-ended fragment with its line-wrap continuation while

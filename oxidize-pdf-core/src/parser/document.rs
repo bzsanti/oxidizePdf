@@ -1029,6 +1029,19 @@ impl<R: Read + Seek> PdfDocument<R> {
         super::filters::decode_stream_with_limit(&stream.data, &dict, &self.options(), max_bytes)
     }
 
+    /// Explicit bounded Flate recovery with resolved DecodeParms and diagnostics.
+    /// Unlike byte-only decoding, returned content may be incomplete/unverified.
+    pub fn decode_stream_with_recovery(
+        &self,
+        stream: &PdfStream,
+        max_bytes: usize,
+    ) -> Result<super::filters::RecoveredStream, super::filters::StreamRecoveryError> {
+        let dict = self
+            .stream_dict_with_resolved_decode_parms(&stream.dict)
+            .map_err(super::filters::StreamRecoveryError::other)?;
+        super::filters::decode_stream_with_recovery(&stream.data, &dict, &self.options(), max_bytes)
+    }
+
     fn stream_dict_with_resolved_decode_parms(
         &self,
         dict: &PdfDictionary,
@@ -1232,6 +1245,22 @@ impl<R: Read + Seek> PdfDocument<R> {
     pub fn extract_text(&self) -> ParseResult<Vec<crate::text::ExtractedText>> {
         let mut extractor = crate::text::TextExtractor::new();
         extractor.extract_from_document(self)
+    }
+
+    /// Extract all pages using explicit, bounded Flate recovery.
+    ///
+    /// Inspect each page's diagnostics: recovered/omitted streams must not be
+    /// treated as an intact document. Other parsing errors and resource limits
+    /// still fail the operation. Use TextExtractor's per-page recovery method
+    /// to retain results from other pages when one page fails.
+    pub fn extract_text_with_recovery(
+        &self,
+        max_stream_bytes: usize,
+    ) -> ParseResult<Vec<crate::text::RecoveredText>> {
+        let mut extractor = crate::text::TextExtractor::new();
+        (0..self.page_count()?)
+            .map(|index| extractor.extract_from_page_with_recovery(self, index, max_stream_bytes))
+            .collect()
     }
 
     /// Extract text from a specific page.

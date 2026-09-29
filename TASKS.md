@@ -1,10 +1,57 @@
 ## Corrección de revisión #649 / PR #651
 
 - Issue: #649 — bug(text): TJ negative kerning (adjustment > 0.2 em) injects spurious spaces when glyph advance widths are encoded as kerning — https://github.com/bzsanti/oxidizePdf/issues/649
-- Estado: `[-]` rediseño local validado; publicación/CI pendientes. Prioridad P1. Responsable Codex.
+- Estado: `[-]` rediseño publicado; actualizado con #637/#648, integración autorizada. Prioridad P1. Responsable Codex.
 - Criterio de cierre: métricas cero verificadas, Type1/Type0/CID cubiertos, huecos reales preservados, revisión/corpus/CI aprobados.
 - Última validación: RED 6 fallos/7 controles; GREEN 32 regresiones, 6780 biblioteca (3 omitidos), 72 diferenciales; Clippy y QR pasan. Incluye Type0/CMap/CID y controles de fuentes normales. Informe: docs/reports/2026-09-29-pr-651-correction-review.md.
-- Siguiente acción: validar detección basada en métricas, actualizar PR y verificar CI.
+- Siguiente acción: validar conjunto #637/#648/#649 y fusionar #651.
+
+## Corrección de revisión #648 / PR #650
+
+- Issue: #648 — bug(text): ShowTextArray boundary space threshold (0.7 em) suppresses word separator when baseline shifts across text runs — https://github.com/bzsanti/oxidizePdf/issues/648
+- Estado: `[-]` integrada en develop mediante #650 (00c4b73), issue #648 cerrada. Prioridad P1. Responsable Codex.
+- Criterio de cierre: distancia y guard vertical en la misma proyección; regresiones, corpus, revisión y CI aprobados.
+- Última validación: RED cizallamiento sobre fa4f944; GREEN 27 regresiones, 6780 biblioteca (3 omitidos), 72 diferenciales; Clippy, formato y QR pasan. Evidencia: docs/reports/2026-09-29-pr-650-correction-review.md.
+- Siguiente acción: validar combinación #637/#648 y fusionar #650; después integrar #651.
+
+## Publicación #637 — PR #652
+
+- Issue: #637 — fix(parser): reject exhausted FlateDecode recovery instead of reporting empty success — https://github.com/bzsanti/oxidizePdf/issues/637
+- Estado: `[-]` PR abierto contra develop; integración pendiente. Prioridad P1. Responsable Codex.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/652
+- Implementación validada: 8a93b20770bba1bfe8728c18ac9f6c60ce13f631.
+- Última validación: workspace 9890 pasan/0 fallos/72 omitidos; gates T3 y orden pasan sin rebajar umbrales; QR cerrado, Clippy y formato pasan.
+- Criterio de cierre: revisión y CI remotos aprobados, integración verificada.
+- Siguiente acción: revisar checks del PR #652 y atender fallos; merge no ejecutado.
+
+## Recuperación explícita #637 — 2026-09-29
+
+- Issue: #637 — fix(parser): reject exhausted FlateDecode recovery instead of reporting empty success — https://github.com/bzsanti/oxidizePdf/issues/637
+- Estado: `[-]` implementación validada; bloqueo técnico resuelto, integración pendiente. Prioridad P1. Responsable Codex.
+- Autorización: diagnóstico por documento y recuperación explícita aprobada
+  tras confirmar daño en los PDFs de entrada con qpdf/zlib independiente.
+- Base: develop 0fb6444; rama fix/issue-637-explicit-recovery, clon aislado
+  /tmp/oxidize-issue-637-recovery-20260929. Checkout original y #639 preservados.
+- Alcance: APIs estrictas conservan rechazo; APIs nuevas devuelven contenido
+  con diagnóstico de recuperación/incompletitud/omisión. Límites y predictores
+  siguen siendo errores. Los gates distinguen recuperación e integridad;
+  umbrales y baselines numéricos intactos.
+- Criterio de cierre: RED/GREEN público, límites y diagnósticos verificables,
+  T3 y diferenciales aprobados bajo protocolo explícito, QR y árbol final validados.
+- Última validación: RED 10 fallos/1 control; GREEN 72 focalizadas; T3 1613/1761
+  (91,6%), 54 recuperados con 136 diagnósticos. Orden plano 0,202859 y lectura
+  0,178390, ambos pasan los límites previos. Clippy all-targets pasa.
+  Consumidor externo compression-only pasa; mutación de diagnósticos/errores
+  produce siete fallos previstos. Seguridad automática sin hallazgos.
+- Diagnóstico: docs/reports/2026-09-29-issue-637-diagnosis.md y evidencia
+  contigua. El caso previo no determinista qpdf_issue-99 requiere issue propia,
+  responsabilidad mantenimiento/bzsanti; no se corrige ni recalibra aquí.
+- Validación final: workspace aislado 9890 pasan/0 fallos/72 omitidos; features
+  52 pasan. QR cerrado y Clippy del arnés final aprobado. Evidencia y manifiestos
+  en docs/reports/2026-09-29-issue-637-validation-evidence/.
+- Publicación de rama y PR autorizada expresamente el 2026-09-29.
+- Siguiente acción: abrir PR contra develop y verificar su HEAD y checks remotos.
+  Integración pendiente; issue continúa abierta.
 
 ## Integración signature-preparation #646 — 2026-09-28
 

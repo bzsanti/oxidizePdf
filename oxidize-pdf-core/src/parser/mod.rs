@@ -210,20 +210,18 @@ pub type ParseResult<T> = Result<T, ParseError>;
 pub struct ParseOptions {
     /// Strict mode enforces PDF specification compliance (default: true)
     pub strict_mode: bool,
-    /// Attempt to recover from stream decoding errors (default: false)
+    /// Legacy stream-recovery preference (default: false).
     ///
-    /// When enabled, the parser will try multiple strategies to decode
-    /// corrupted streams, including:
-    /// - Raw deflate without zlib wrapper
-    /// - Decompression with checksum validation disabled
-    /// - Skipping corrupted header bytes
+    /// The byte-only Flate decoding APIs require a complete, checksum-verified
+    /// zlib stream regardless of this flag. They do not silently return repaired
+    /// or partial output; structural stream-length recovery is configured separately.
     pub recover_from_stream_errors: bool,
-    /// Skip corrupted streams instead of failing (default: false)
+    /// Legacy preference to skip corrupted streams (default: false).
     ///
-    /// When enabled, corrupted streams will return empty data instead
-    /// of causing parsing to fail entirely.
+    /// This does not suppress Flate decoding errors or fabricate empty content.
     pub ignore_corrupt_streams: bool,
-    /// Allow partial content when full parsing fails (default: false)
+    /// Legacy partial-content preference (default: false).
+    /// Does not permit incomplete Flate output from the byte-only decoding APIs.
     pub partial_content_allowed: bool,
     /// Maximum number of recovery attempts for corrupted data (default: 3)
     pub max_recovery_attempts: usize,
@@ -283,7 +281,8 @@ impl ParseOptions {
         }
     }
 
-    /// Create options for tolerant parsing that attempts recovery
+    /// Create options for tolerant structural parsing.
+    /// Flate decompression still requires a complete, checksum-verified stream.
     pub fn tolerant() -> Self {
         Self {
             strict_mode: false,
@@ -306,7 +305,8 @@ impl ParseOptions {
         Self::tolerant()
     }
 
-    /// Create options that skip corrupted content
+    /// Create legacy skip-error options for structural parsing.
+    /// Flate decompression errors are still returned to the caller.
     pub fn skip_errors() -> Self {
         Self {
             strict_mode: false,

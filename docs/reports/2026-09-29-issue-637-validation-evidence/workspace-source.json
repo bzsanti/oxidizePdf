@@ -1,0 +1,15 @@
+{
+  "CHANGELOG.md": "f1cad012ef09425527e0bd9ba8c46df4c07c4fbf6577a059c338bc337c64d5b7",
+  "docs/flate-decoding.md": "cecdf308716493b82595c57848a9dcc6279ef4be360c01a14a934ec3f75d7ee3",
+  "oxidize-pdf-core/src/parser/filters.rs": "a069649a670b5cd315512b2f5c5d42258c878a581278f69741289a02eb7e9281",
+  "oxidize-pdf-core/src/parser/filters/recovery.rs": "5667e97f3350a0bb3e8a1f40819fae26e6b5987918392c597f993beef8ce1a18",
+  "oxidize-pdf-core/src/parser/mod.rs": "42bd735faaecbe73279aff7fdd99c5f89aa613b30aaaa940d361a6588d60a669",
+  "oxidize-pdf-core/src/parser/document.rs": "1a3f3b14bd6c387099bb378524c7444d06d096f72ebb20babb200168e453af52",
+  "oxidize-pdf-core/src/text/extraction.rs": "edeca19377d3df07503918c8e6f9cbe8c478ca95b6c5e2237bf5cf26d131552d",
+  "oxidize-pdf-core/src/text/extraction/recovery.rs": "818931028065851939d5aa6add17b2dfe28f5b5bbe9005ceafde201ef29ee7be",
+  "oxidize-pdf-core/src/text/mod.rs": "70885c032ba8ebe662156100f821f3c9c06692ddb92fb7fb61e3106ced562969",
+  "oxidize-pdf-core/tests/issue_637_flate_errors_test.rs": "2cedd80092c506084456af8283d83e594d51adf70c0da04a679ca57c3181aecb",
+  "oxidize-pdf-core/tests/issue_637_recovery_test.rs": "6f4857733c91f63dbd638a5ebfa4c5677e37d8ceabbf48bbdc677e898ebd6c3c",
+  "oxidize-pdf-core/tests/t3_stress.rs": "69a9c9262150f7244b1b3439c3eda77188b1962a0d9c93229f726656d7bbbbb8",
+  "oxidize-pdf-core/tests/differential_order_test.rs": "7990a000a8a6fc006700492ef16b25b1f5479dc1ced85289cd9a1688dc7b0121"
+}

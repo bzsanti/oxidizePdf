@@ -1,0 +1,7 @@
+    Finished `test` profile [unoptimized] target(s) in 56.61s
+test result: ok. 6780 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 9.41s
+differential fusion gate [t3-stress]: compared=1695 skipped=107 fusions=284 candidates=211815 rate=0.001341 content_coverage=0.9918
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 89.77s
+differential order gate [t3-stress]: compared=1058 skipped=744 pop_words=594837 common=581321 misplaced=120698 misplaced_rate=0.202909 transposed=107182 transposed_rate=0.184377 fidelity_micro=0.8156 median=1.0000 p10=0.8182 docs_below_0.95=214 alignment_coverage=0.9773 content_coverage=0.9948
+differential order gate [t3-stress-reading-order]: compared=1058 skipped=744 pop_words=594837 common=581321 misplaced=106275 misplaced_rate=0.178662 transposed=92759 transposed_rate=0.159566 fidelity_micro=0.8404 median=1.0000 p10=0.8654 docs_below_0.95=199 alignment_coverage=0.9773 content_coverage=0.9948
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 88.32s
