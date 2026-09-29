@@ -18,7 +18,8 @@
 - Criterio de desbloqueo: proveedor puro Rust adecuado o revisión independiente concluyente del camino privado exacto, más CI Linux/Windows/macOS.
 - Restricciones: no fusionar ni declarar soporte mientras siga abierto este hallazgo; no exponer el candidato como servicio de descifrado.
 - Regresión local: 9779 pasan, 0 fallos, 47 omitidos; Clippy final, formato y consumidor externo pasan.
-- Siguiente acción: publicar PR borrador con informe/evidencia y comprobar CI; mantener #642 abierta.
+- PR borrador: https://github.com/bzsanti/oxidizePdf/pull/658; implementación c8eeb5d y normalización de logs f3fb570.
+- Siguiente acción: comprobar CI remota y resolver el hallazgo del proveedor RSA; mantener #642 abierta y #658 en borrador.
 - Restricciones: PAdES fuera de la librería; extensiones externas disponibles a cualquiera. Sin PKI gestionada ni ampliación implícita de R6 por contraseña.
 
 ## Validación final #639/#653/#654/#655 — 2026-09-29
