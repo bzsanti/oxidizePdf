@@ -1,0 +1,97 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 16 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_637_recovery_test.rs                16     98
+
+--- Worst Offenders ---
+  checksum_recovery_returns_original_bytes_and_observable_unverified_status (oxidize-pdf-core/tests/issue_637_recovery_test.rs:55) - Score: 90
+    - Test 'checksum_recovery_returns_original_bytes_and_observable_unverified_status' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'checksum_recovery_returns_original_bytes_and_observable_unverified_status' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'checksum_recovery_returns_original_bytes_and_observable_unverified_status' has multiple assertions without diagnostic messages
+    i Test 'checksum_recovery_returns_original_bytes_and_observable_unverified_status' uses .unwrap() which silently discards error information
+  truncated_deflate_returns_only_the_prefix_with_incomplete_status (oxidize-pdf-core/tests/issue_637_recovery_test.rs:67) - Score: 90
+    - Test 'truncated_deflate_returns_only_the_prefix_with_incomplete_status' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'truncated_deflate_returns_only_the_prefix_with_incomplete_status' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'truncated_deflate_returns_only_the_prefix_with_incomplete_status' has multiple assertions without diagnostic messages
+    i Test 'truncated_deflate_returns_only_the_prefix_with_incomplete_status' uses .unwrap() which silently discards error information
+  raw_deflate_is_recovered_only_through_the_explicit_api (oxidize-pdf-core/tests/issue_637_recovery_test.rs:261) - Score: 90
+    - Test 'raw_deflate_is_recovered_only_through_the_explicit_api' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'raw_deflate_is_recovered_only_through_the_explicit_api' has multiple assertions without diagnostic messages
+    i Test 'raw_deflate_is_recovered_only_through_the_explicit_api' uses .unwrap() which silently discards error information
+  valid_bytes_and_legitimate_empty_have_no_recovery_diagnostics (oxidize-pdf-core/tests/issue_637_recovery_test.rs:46) - Score: 100
+    i Test 'valid_bytes_and_legitimate_empty_have_no_recovery_diagnostics' has multiple assertions without diagnostic messages
+    i Test 'valid_bytes_and_legitimate_empty_have_no_recovery_diagnostics' uses .unwrap() which silently discards error information
+  no_decodable_bytes_are_an_error_including_zero_length_flate (oxidize-pdf-core/tests/issue_637_recovery_test.rs:76) - Score: 100
+    i Test 'no_decodable_bytes_are_an_error_including_zero_length_flate' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/tests/issue_637_recovery_test.rs:
+  valid_bytes_and_legitimate_empty_have_no_recovery_diagnostics (line 46) - Score: 100
+    i Test 'valid_bytes_and_legitimate_empty_have_no_recovery_diagnostics' has multiple assertions without diagnostic messages
+    i Test 'valid_bytes_and_legitimate_empty_have_no_recovery_diagnostics' uses .unwrap() which silently discards error information
+  checksum_recovery_returns_original_bytes_and_observable_unverified_status (line 55) - Score: 90
+    - Test 'checksum_recovery_returns_original_bytes_and_observable_unverified_status' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'checksum_recovery_returns_original_bytes_and_observable_unverified_status' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'checksum_recovery_returns_original_bytes_and_observable_unverified_status' has multiple assertions without diagnostic messages
+    i Test 'checksum_recovery_returns_original_bytes_and_observable_unverified_status' uses .unwrap() which silently discards error information
+  truncated_deflate_returns_only_the_prefix_with_incomplete_status (line 67) - Score: 90
+    - Test 'truncated_deflate_returns_only_the_prefix_with_incomplete_status' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'truncated_deflate_returns_only_the_prefix_with_incomplete_status' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'truncated_deflate_returns_only_the_prefix_with_incomplete_status' has multiple assertions without diagnostic messages
+    i Test 'truncated_deflate_returns_only_the_prefix_with_incomplete_status' uses .unwrap() which silently discards error information
+  no_decodable_bytes_are_an_error_including_zero_length_flate (line 76) - Score: 100
+    i Test 'no_decodable_bytes_are_an_error_including_zero_length_flate' has multiple assertions without diagnostic messages
+  resource_limits_never_become_recovered_prefixes (line 84) - Score: 100
+    i Test 'resource_limits_never_become_recovered_prefixes' has multiple assertions without diagnostic messages
+  filter_chain_reports_the_actual_filter_index_and_applies_predictor (line 93) - Score: 100
+    i Test 'filter_chain_reports_the_actual_filter_index_and_applies_predictor' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'filter_chain_reports_the_actual_filter_index_and_applies_predictor' has multiple assertions without diagnostic messages
+    i Test 'filter_chain_reports_the_actual_filter_index_and_applies_predictor' uses .unwrap() which silently discards error information
+  invalid_predictors_remain_errors_after_flate_recovery (line 123) - Score: 100
+    i Test 'invalid_predictors_remain_errors_after_flate_recovery' has multiple assertions without diagnostic messages
+  exhausted_page_stream_is_omitted_explicitly_while_good_content_survives (line 139) - Score: 100
+    i Test 'exhausted_page_stream_is_omitted_explicitly_while_good_content_survives' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'exhausted_page_stream_is_omitted_explicitly_while_good_content_survives' has multiple assertions without diagnostic messages
+    i Test 'exhausted_page_stream_is_omitted_explicitly_while_good_content_survives' uses .unwrap() which silently discards error information
+  empty_form_does_not_hide_healthy_page_content_and_is_reported (line 159) - Score: 100
+    i Test 'empty_form_does_not_hide_healthy_page_content_and_is_reported' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'empty_form_does_not_hide_healthy_page_content_and_is_reported' has multiple assertions without diagnostic messages
+    i Test 'empty_form_does_not_hide_healthy_page_content_and_is_reported' uses .unwrap() which silently discards error information
+  recovered_form_text_is_kept_with_its_diagnostic (line 181) - Score: 100
+    i Test 'recovered_form_text_is_kept_with_its_diagnostic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'recovered_form_text_is_kept_with_its_diagnostic' has multiple assertions without diagnostic messages
+    i Test 'recovered_form_text_is_kept_with_its_diagnostic' uses .unwrap() which silently discards error information
+  extraction_does_not_skip_streams_that_exceed_resource_limits (line 200) - Score: 100
+    i Test 'extraction_does_not_skip_streams_that_exceed_resource_limits' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'extraction_does_not_skip_streams_that_exceed_resource_limits' has multiple assertions without diagnostic messages
+    i Test 'extraction_does_not_skip_streams_that_exceed_resource_limits' uses .unwrap() which silently discards error information
+  recovery_preserves_operands_across_adjacent_verified_streams (line 227) - Score: 100
+    i Test 'recovery_preserves_operands_across_adjacent_verified_streams' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'recovery_preserves_operands_across_adjacent_verified_streams' has multiple assertions without diagnostic messages
+    i Test 'recovery_preserves_operands_across_adjacent_verified_streams' uses .unwrap() which silently discards error information
+  omitted_content_cannot_splice_healthy_operands_into_invented_text (line 241) - Score: 100
+    i Test 'omitted_content_cannot_splice_healthy_operands_into_invented_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'omitted_content_cannot_splice_healthy_operands_into_invented_text' has multiple assertions without diagnostic messages
+    i Test 'omitted_content_cannot_splice_healthy_operands_into_invented_text' uses .unwrap() which silently discards error information
+  raw_deflate_is_recovered_only_through_the_explicit_api (line 261) - Score: 90
+    - Test 'raw_deflate_is_recovered_only_through_the_explicit_api' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'raw_deflate_is_recovered_only_through_the_explicit_api' has multiple assertions without diagnostic messages
+    i Test 'raw_deflate_is_recovered_only_through_the_explicit_api' uses .unwrap() which silently discards error information
+  corruption_with_only_a_lost_checksum_is_not_labelled_verified (line 271) - Score: 100
+    i Test 'corruption_with_only_a_lost_checksum_is_not_labelled_verified' has multiple assertions without diagnostic messages
+    i Test 'corruption_with_only_a_lost_checksum_is_not_labelled_verified' uses .unwrap() which silently discards error information
+  compression_ratio_guard_cannot_be_bypassed_by_recovery (line 279) - Score: 100
+    i Test 'compression_ratio_guard_cannot_be_bypassed_by_recovery' has multiple assertions without diagnostic messages
+    i Test 'compression_ratio_guard_cannot_be_bypassed_by_recovery' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -1,0 +1,155 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 47 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/parser/document.rs                          47     98
+
+--- Worst Offenders ---
+  test_pdf_document_is_send (oxidize-pdf-core/src/parser/document.rs:2113) - Score: 65
+    - Test 'test_pdf_document_is_send' does not call any production code
+    - Test 'test_pdf_document_is_send' executes production code without asserting on its behaviour
+  test_metadata (oxidize-pdf-core/src/parser/document.rs:2259) - Score: 90
+    - Test 'test_metadata' has identical neighborhood to 'test_metadata_caching'
+    i Test 'test_metadata' has multiple assertions without diagnostic messages
+    i Test 'test_metadata' uses .unwrap() which silently discards error information
+  test_invalid_pdf_data (oxidize-pdf-core/src/parser/document.rs:2388) - Score: 90
+    - Test 'test_invalid_pdf_data' only exercises the happy path — no None, Err, or edge-case inputs
+  test_metadata_caching (oxidize-pdf-core/src/parser/document.rs:2598) - Score: 90
+    - Test 'test_metadata_caching' has identical neighborhood to 'test_metadata'
+    i Test 'test_metadata_caching' has multiple assertions without diagnostic messages
+    i Test 'test_metadata_caching' uses .unwrap() which silently discards error information
+  test_version_different_pdf_versions (oxidize-pdf-core/src/parser/document.rs:2710) - Score: 90
+    i Test 'test_version_different_pdf_versions' uses .unwrap() which silently discards error information
+    - Test 'test_version_different_pdf_versions' has low assert-to-setup ratio (8%): 3 asserts vs 37 setup lines
+
+--- Details ---
+oxidize-pdf-core/src/parser/document.rs:
+  test_pdf_document_is_send (line 2113) - Score: 65
+    - Test 'test_pdf_document_is_send' does not call any production code
+    - Test 'test_pdf_document_is_send' executes production code without asserting on its behaviour
+  test_resource_cache_roundtrip_after_owned_field (line 2122) - Score: 100
+    i Test 'test_resource_cache_roundtrip_after_owned_field' has multiple assertions without diagnostic messages
+  test_pdf_document_new (line 2225) - Score: 100
+    i Test 'test_pdf_document_new' has multiple assertions without diagnostic messages
+    i Test 'test_pdf_document_new' uses .unwrap() which silently discards error information
+  test_version (line 2237) - Score: 100
+    i Test 'test_version' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_version' uses .unwrap() which silently discards error information
+  test_page_count (line 2248) - Score: 100
+    i Test 'test_page_count' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_count' uses .unwrap() which silently discards error information
+  test_metadata (line 2259) - Score: 90
+    - Test 'test_metadata' has identical neighborhood to 'test_metadata_caching'
+    i Test 'test_metadata' has multiple assertions without diagnostic messages
+    i Test 'test_metadata' uses .unwrap() which silently discards error information
+  test_get_page (line 2276) - Score: 100
+    i Test 'test_get_page' has multiple assertions without diagnostic messages
+    i Test 'test_get_page' uses .unwrap() which silently discards error information
+  test_get_page_out_of_bounds (line 2292) - Score: 100
+    i Test 'test_get_page_out_of_bounds' uses .unwrap() which silently discards error information
+  test_resource_manager_caching (line 2310) - Score: 100
+    i Test 'test_resource_manager_caching' has multiple assertions without diagnostic messages
+    i Test 'test_resource_manager_caching' uses .unwrap() which silently discards error information
+  test_get_object (line 2330) - Score: 100
+    i Test 'test_get_object' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_object' uses .unwrap() which silently discards error information
+  test_resolve_reference (line 2350) - Score: 100
+    i Test 'test_resolve_reference' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_resolve_reference' uses .unwrap() which silently discards error information
+  test_resolve_non_reference (line 2373) - Score: 100
+    i Test 'test_resolve_non_reference' uses .unwrap() which silently discards error information
+  test_invalid_pdf_data (line 2388) - Score: 90
+    - Test 'test_invalid_pdf_data' only exercises the happy path — no None, Err, or edge-case inputs
+  test_empty_page_tree (line 2397) - Score: 100
+    i Test 'test_empty_page_tree' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_empty_page_tree' has multiple assertions without diagnostic messages
+    i Test 'test_empty_page_tree' uses .unwrap() which silently discards error information
+  test_extract_text_empty_document (line 2413) - Score: 100
+    i Test 'test_extract_text_empty_document' uses .unwrap() which silently discards error information
+  test_concurrent_access (line 2424) - Score: 100
+    i Test 'test_concurrent_access' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_concurrent_access' uses .unwrap() which silently discards error information
+  test_resource_manager_multiple_objects (line 2451) - Score: 100
+    i Test 'test_resource_manager_multiple_objects' has multiple assertions without diagnostic messages
+  test_resource_manager_object_overwrite (line 2475) - Score: 100
+    i Test 'test_resource_manager_object_overwrite' has multiple assertions without diagnostic messages
+  test_get_object_caching (line 2488) - Score: 100
+    i Test 'test_get_object_caching' has multiple assertions without diagnostic messages
+    i Test 'test_get_object_caching' uses .unwrap() which silently discards error information
+  test_get_object_different_generations (line 2508) - Score: 100
+    i Test 'test_get_object_different_generations' has multiple assertions without diagnostic messages
+    i Test 'test_get_object_different_generations' uses .unwrap() which silently discards error information
+  test_get_object_nonexistent (line 2526) - Score: 100
+    i Test 'test_get_object_nonexistent' uses .unwrap() which silently discards error information
+  test_resolve_nested_references (line 2538) - Score: 100
+    i Test 'test_resolve_nested_references' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_resolve_nested_references' uses .unwrap() which silently discards error information
+  test_resolve_various_object_types (line 2557) - Score: 100
+    i Test 'test_resolve_various_object_types' uses .unwrap() which silently discards error information
+  test_get_page_cached (line 2579) - Score: 100
+    i Test 'test_get_page_cached' has multiple assertions without diagnostic messages
+    i Test 'test_get_page_cached' uses .unwrap() which silently discards error information
+  test_metadata_caching (line 2598) - Score: 90
+    - Test 'test_metadata_caching' has identical neighborhood to 'test_metadata'
+    i Test 'test_metadata_caching' has multiple assertions without diagnostic messages
+    i Test 'test_metadata_caching' uses .unwrap() which silently discards error information
+  test_page_tree_initialization (line 2618) - Score: 100
+    i Test 'test_page_tree_initialization' uses .unwrap() which silently discards error information
+  test_get_page_resources (line 2635) - Score: 100
+    i Test 'test_get_page_resources' uses .unwrap() which silently discards error information
+  test_get_page_content_streams_empty (line 2649) - Score: 100
+    i Test 'test_get_page_content_streams_empty' uses .unwrap() which silently discards error information
+  test_extract_text_from_page (line 2663) - Score: 100
+    i Test 'test_extract_text_from_page' uses .unwrap() which silently discards error information
+  test_extract_text_from_page_out_of_bounds (line 2675) - Score: 100
+    i Test 'test_extract_text_from_page_out_of_bounds' uses .unwrap() which silently discards error information
+  test_extract_text_with_options (line 2692) - Score: 100
+    i Test 'test_extract_text_with_options' uses .unwrap() which silently discards error information
+  test_version_different_pdf_versions (line 2710) - Score: 90
+    i Test 'test_version_different_pdf_versions' uses .unwrap() which silently discards error information
+    - Test 'test_version_different_pdf_versions' has low assert-to-setup ratio (8%): 3 asserts vs 37 setup lines
+  test_page_count_zero (line 2757) - Score: 100
+    i Test 'test_page_count_zero' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_count_zero' uses .unwrap() which silently discards error information
+  test_multiple_object_access (line 2768) - Score: 100
+    i Test 'test_multiple_object_access' has multiple assertions without diagnostic messages
+    i Test 'test_multiple_object_access' uses .unwrap() which silently discards error information
+  test_error_handling_invalid_object_reference (line 2786) - Score: 100
+    i Test 'test_error_handling_invalid_object_reference' uses .unwrap() which silently discards error information
+  test_concurrent_metadata_access (line 2799) - Score: 100
+    i Test 'test_concurrent_metadata_access' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_concurrent_metadata_access' uses .unwrap() which silently discards error information
+  test_page_properties_comprehensive (line 2816) - Score: 100
+    i Test 'test_page_properties_comprehensive' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_properties_comprehensive' has multiple assertions without diagnostic messages
+    i Test 'test_page_properties_comprehensive' uses .unwrap() which silently discards error information
+  test_memory_usage_efficiency (line 2836) - Score: 100
+    i Test 'test_memory_usage_efficiency' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_memory_usage_efficiency' uses .unwrap() which silently discards error information
+  test_reader_borrow_safety (line 2853) - Score: 100
+    i Test 'test_reader_borrow_safety' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_reader_borrow_safety' uses .unwrap() which silently discards error information
+  test_cache_consistency (line 2870) - Score: 100
+    i Test 'test_cache_consistency' has multiple assertions without diagnostic messages
+    i Test 'test_cache_consistency' uses .unwrap() which silently discards error information
+  test_resource_manager_cache_and_get (line 2898) - Score: 100
+    i Test 'test_resource_manager_cache_and_get' has multiple assertions without diagnostic messages
+  test_resource_manager_clear_cache (line 2915) - Score: 100
+    i Test 'test_resource_manager_clear_cache' has multiple assertions without diagnostic messages
+  test_resource_manager_overwrite_cached (line 2938) - Score: 100
+    i Test 'test_resource_manager_overwrite_cached' has multiple assertions without diagnostic messages
+  test_resource_manager_multiple_generations (line 2957) - Score: 100
+    i Test 'test_resource_manager_multiple_generations' has multiple assertions without diagnostic messages
+  test_resource_manager_cache_complex_objects (line 2981) - Score: 100
+    i Test 'test_resource_manager_cache_complex_objects' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

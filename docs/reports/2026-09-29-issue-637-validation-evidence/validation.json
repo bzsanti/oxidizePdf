@@ -1,0 +1,36 @@
+{
+  "issue": 637,
+  "state": "local implementation validated; integration pending",
+  "base": "0fb6444adb05d0a57945198bc0976917f2201df3",
+  "branch": "fix/issue-637-explicit-recovery",
+  "workspace": {
+    "exit_code": 0,
+    "passed": 9890,
+    "failed": 0,
+    "ignored": 72,
+    "command": "CARGO_TARGET_DIR=/tmp/issue-637-final-validation-target cargo test --locked --offline --workspace --no-fail-fast",
+    "source_manifest": "workspace-source.json"
+  },
+  "final_source_manifest": "source.json",
+  "post_workspace_change": "T3 evidence-directory failure now fails test; final harness Clippy exit 0; product unchanged",
+  "focused_passed": 72,
+  "features_passed": 52,
+  "t3_focal": {
+    "recovered_success": 1613,
+    "parsed": 1761,
+    "recovered_documents": 54,
+    "diagnostics": 136
+  },
+  "order_rates": {
+    "flat": 0.202859,
+    "reading": 0.17839
+  },
+  "numeric_baselines_changed": false,
+  "mutation": {
+    "expected_failures": 7,
+    "controls_passed": 9
+  },
+  "discarded_run": "workspace-discarded-mutated-cache.log reused mutation binary; not accepted validation",
+  "commit": null,
+  "pull_request": null
+}

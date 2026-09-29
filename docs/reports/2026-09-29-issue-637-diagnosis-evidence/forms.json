@@ -1,0 +1,3335 @@
+[
+  {
+    "pdf": "pdfium/pdfium_FRC_10_8.2.2__T8.3_original_file.pdf",
+    "forms": [
+      {
+        "object": "obj:49 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:50 0 R",
+        "length": 92,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 92,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "51 0 R",
+              "/F1": "52 0 R",
+              "/F2": "53 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:51 0 R",
+        "length": 450,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 450,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "23 0 R",
+              "/FXF1": "27 0 R",
+              "/FXF3": "39 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:52 0 R",
+        "length": 48,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 48,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:53 0 R",
+        "length": 48,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 48,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "48 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "49 0 R",
+              "/FFT0": "50 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_11_8.2.2__T8.3_first_last_exchange.pdf",
+    "forms": [
+      {
+        "object": "obj:37 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:38 0 R",
+        "length": 97,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 97,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "39 0 R",
+              "/F1": "40 0 R",
+              "/F2": "41 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:39 0 R",
+        "length": 470,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 470,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "24 0 R",
+              "/FXF1": "23 0 R",
+              "/FXF3": "26 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:40 0 R",
+        "length": 48,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 48,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:41 0 R",
+        "length": 48,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 48,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "36 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "37 0 R",
+              "/FFT0": "38 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_12_8.2.2__T8.3_first_outline_obj_ID.pdf",
+    "forms": [
+      {
+        "object": "obj:31 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:32 0 R",
+        "length": 52,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 52,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "33 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:33 0 R",
+        "length": 481,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 481,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "24 0 R",
+              "/FXF1": "23 0 R",
+              "/FXF3": "26 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "30 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "31 0 R",
+              "/FFT0": "32 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_13_8.2.2__T8.3_Count_edit300.pdf",
+    "forms": [
+      {
+        "object": "obj:35 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:36 0 R",
+        "length": 55,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 55,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "37 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:37 0 R",
+        "length": 485,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 485,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "29 0 R",
+              "/FXF1": "25 0 R",
+              "/FXF2": "27 0 R",
+              "/FXF4": "27 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "34 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "35 0 R",
+              "/FFT0": "36 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_14_8.2.2__T8.3_Count_edit0.pdf",
+    "forms": [
+      {
+        "object": "obj:33 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:34 0 R",
+        "length": 43,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 43,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "35 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:35 0 R",
+        "length": 482,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 482,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "23 0 R",
+              "/FXF1": "22 0 R",
+              "/FXF2": "23 0 R",
+              "/FXF3": "20 0 R",
+              "/FXF4": "26 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "32 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "33 0 R",
+              "/FFT0": "34 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_15_8.2.2__T8.3_Count_edit1.pdf",
+    "forms": [
+      {
+        "object": "obj:33 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:34 0 R",
+        "length": 51,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 51,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "35 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:35 0 R",
+        "length": 482,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 482,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "23 0 R",
+              "/FXF1": "22 0 R",
+              "/FXF2": "23 0 R",
+              "/FXF3": "20 0 R",
+              "/FXF4": "26 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:37 0 R",
+        "length": 38,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 38,
+          "/Resources": {
+            "/XObject": {
+              "/F": "33 0 R",
+              "/FFT0": "34 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "36 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "37 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_16_8.2.2__T8.3_Count_edit_1.pdf",
+    "forms": [
+      {
+        "object": "obj:37 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:38 0 R",
+        "length": 43,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 43,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "39 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:39 0 R",
+        "length": 483,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 483,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "27 0 R",
+              "/FXF1": "24 0 R",
+              "/FXF2": "26 0 R",
+              "/FXF3": "24 0 R",
+              "/FXF4": "30 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "36 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "37 0 R",
+              "/FFT0": "38 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_1_8.2.2__T8.3_First_empty.pdf",
+    "forms": [
+      {
+        "object": "obj:50 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:51 0 R",
+        "length": 76,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 76,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "52 0 R",
+              "/F1": "53 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:52 0 R",
+        "length": 495,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 495,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "23 0 R",
+              "/FXF1": "42 0 R",
+              "/FXF2": "29 0 R",
+              "/FXF5": "29 0 R",
+              "/FXF6": "45 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:53 0 R",
+        "length": 48,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 48,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "49 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "50 0 R",
+              "/FFT0": "51 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_2_8.2.2__T8.3_Last_empty.pdf",
+    "forms": [
+      {
+        "object": "obj:43 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:44 0 R",
+        "length": 45,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 45,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "45 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:45 0 R",
+        "length": 483,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 483,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "29 0 R",
+              "/FXF1": "35 0 R",
+              "/FXF4": "23 0 R",
+              "/FXF5": "38 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "42 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "43 0 R",
+              "/FFT0": "44 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_3_8.2.2_Type_empty.pdf",
+    "forms": [
+      {
+        "object": "obj:31 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:32 0 R",
+        "length": 52,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 52,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "33 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:33 0 R",
+        "length": 479,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 479,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "27 0 R",
+              "/FXF1": "23 0 R",
+              "/FXF2": "25 0 R",
+              "/FXF4": "25 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "30 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "31 0 R",
+              "/FFT0": "32 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_4_8.2.2__T8.3_Count_empty.pdf",
+    "forms": [
+      {
+        "object": "obj:37 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:38 0 R",
+        "length": 42,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 42,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "39 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:39 0 R",
+        "length": 487,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 487,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "23 0 R",
+              "/FXF1": "25 0 R",
+              "/FXF2": "27 0 R",
+              "/FXF3": "27 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "36 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "37 0 R",
+              "/FFT0": "38 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_5_8.2.2__T8.3_First_remove.pdf",
+    "forms": [
+      {
+        "object": "obj:40 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:41 0 R",
+        "length": 56,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 56,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "42 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:42 0 R",
+        "length": 481,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 481,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "27 0 R",
+              "/FXF1": "25 0 R",
+              "/FXF2": "27 0 R",
+              "/FXF3": "23 0 R",
+              "/FXF4": "35 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:44 0 R",
+        "length": 38,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 38,
+          "/Resources": {
+            "/XObject": {
+              "/F": "40 0 R",
+              "/FFT0": "41 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "43 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "44 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_6_8.2.2__T8.3_Last_remove.pdf",
+    "forms": [
+      {
+        "object": "obj:41 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:42 0 R",
+        "length": 52,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 52,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "43 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:43 0 R",
+        "length": 481,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 481,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "24 0 R",
+              "/FXF1": "24 0 R",
+              "/FXF2": "26 0 R",
+              "/FXF3": "26 0 R",
+              "/FXF4": "23 0 R",
+              "/FXF5": "36 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "40 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "41 0 R",
+              "/FFT0": "42 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_7_8.2.2_Type_remove.pdf",
+    "forms": [
+      {
+        "object": "obj:41 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:42 0 R",
+        "length": 45,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 45,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "43 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:43 0 R",
+        "length": 479,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 479,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "24 0 R",
+              "/FXF1": "24 0 R",
+              "/FXF2": "26 0 R",
+              "/FXF3": "26 0 R",
+              "/FXF4": "23 0 R",
+              "/FXF5": "36 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "40 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "41 0 R",
+              "/FFT0": "42 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_8_8.2.2__T8.3_Count_remove.pdf",
+    "forms": [
+      {
+        "object": "obj:38 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:39 0 R",
+        "length": 44,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 44,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "40 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:40 0 R",
+        "length": 478,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 478,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "27 0 R",
+              "/FXF1": "25 0 R",
+              "/FXF2": "27 0 R",
+              "/FXF3": "23 0 R",
+              "/FXF4": "33 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "37 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "38 0 R",
+              "/FFT0": "39 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_9_8.2.2__T8.3_remove_first_item.pdf",
+    "forms": [
+      {
+        "object": "obj:42 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:43 0 R",
+        "length": 97,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 97,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "44 0 R",
+              "/F1": "45 0 R",
+              "/F2": "46 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:44 0 R",
+        "length": 48,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 48,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:45 0 R",
+        "length": 565,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 565,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/Font": {
+              "/FXF0": "26 0 R",
+              "/FXF1": "25 0 R",
+              "/FXF2": "31 0 R",
+              "/FXF3": "28 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:46 0 R",
+        "length": 48,
+        "dict": {
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 48,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Contents": "41 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "42 0 R",
+              "/FFT0": "43 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_new_pdfsign1.pdf",
+    "forms": [
+      {
+        "object": "obj:6 0 R",
+        "length": 18,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            495.75,
+            309
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 18,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F": "9 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:9 0 R",
+        "length": 38,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            495.75,
+            309
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 38,
+          "/Resources": {
+            "/XObject": {
+              "/FXX1": "8 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:10 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            495.75,
+            309
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "12 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "11 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:11 0 R",
+        "length": 17,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            495.75,
+            309
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Group": {
+            "/S": "/Transparency",
+            "/Type": "/Group"
+          },
+          "/Length": 17,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/XObject": {
+              "/Form": "6 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:16 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:17 0 R",
+        "length": 62,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 62,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "18 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:18 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            495.75,
+            309
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "12 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "11 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Annots": "14 0 R",
+          "/Contents": "15 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "16 0 R",
+              "/FFT0": "17 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_new_pdfsign2.pdf",
+    "forms": [
+      {
+        "object": "obj:6 0 R",
+        "length": 18,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            58.5,
+            78.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 18,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F": "9 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:9 0 R",
+        "length": 37,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            58.5,
+            78.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 37,
+          "/Resources": {
+            "/XObject": {
+              "/FXX1": "8 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:10 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            58.5,
+            78.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "12 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "11 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:11 0 R",
+        "length": 17,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            58.5,
+            78.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Group": {
+            "/S": "/Transparency",
+            "/Type": "/Group"
+          },
+          "/Length": 17,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/XObject": {
+              "/Form": "6 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:16 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:17 0 R",
+        "length": 62,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 62,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "18 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:18 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            58.5,
+            78.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "12 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "11 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Annots": "14 0 R",
+          "/Contents": "15 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "16 0 R",
+              "/FFT0": "17 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_new_pdfsign3.pdf",
+    "forms": [
+      {
+        "object": "obj:6 0 R",
+        "length": 18,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 18,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F": "9 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:9 0 R",
+        "length": 38,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 38,
+          "/Resources": {
+            "/XObject": {
+              "/FXX1": "8 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:10 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "12 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "11 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:11 0 R",
+        "length": 17,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Group": {
+            "/S": "/Transparency",
+            "/Type": "/Group"
+          },
+          "/Length": 17,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/XObject": {
+              "/Form": "6 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:16 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:17 0 R",
+        "length": 63,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 63,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "18 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:18 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "12 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "11 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Annots": "14 0 R",
+          "/Contents": "15 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "16 0 R",
+              "/FFT0": "17 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "pdfium/pdfium_new_pdfsign4.pdf",
+    "forms": [
+      {
+        "object": "obj:6 0 R",
+        "length": 18,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 18,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F": "16 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:7 0 R",
+        "length": 8,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 8,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:10 0 R",
+        "length": 1734,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            100,
+            30
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 1734,
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "8 0 R"
+            },
+            "/Properties": {
+              "/MC0": "9 0 R"
+            },
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:11 0 R",
+        "length": 18,
+        "dict": {
+          "/BBox": [
+            0.000488,
+            0,
+            100,
+            30
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 18,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            -0.000488,
+            0
+          ],
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F": "10 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:12 0 R",
+        "length": 17,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            100,
+            30
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Group": {
+            "/S": "/Transparency",
+            "/Type": "/Group"
+          },
+          "/Length": 17,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/XObject": {
+              "/Form": "11 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:14 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            100,
+            30
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "13 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "12 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:15 0 R",
+        "length": 59,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 59,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "14 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:16 0 R",
+        "length": 38,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 38,
+          "/Resources": {
+            "/XObject": {
+              "/F": "7 0 R",
+              "/FFT0": "15 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:17 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "19 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "18 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:18 0 R",
+        "length": 17,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Group": {
+            "/S": "/Transparency",
+            "/Type": "/Group"
+          },
+          "/Length": 17,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/XObject": {
+              "/Form": "6 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:22 0 R",
+        "length": 18,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 18,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F": "25 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:25 0 R",
+        "length": 38,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 38,
+          "/Resources": {
+            "/XObject": {
+              "/FXX1": "24 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:26 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "28 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "27 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:27 0 R",
+        "length": 17,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Group": {
+            "/S": "/Transparency",
+            "/Type": "/Group"
+          },
+          "/Length": 17,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/XObject": {
+              "/Form": "22 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:33 0 R",
+        "length": 18,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 18,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F": "36 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:36 0 R",
+        "length": 38,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 38,
+          "/Resources": {
+            "/XObject": {
+              "/FXX1": "35 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:37 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "39 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "38 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:38 0 R",
+        "length": 17,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Group": {
+            "/S": "/Transparency",
+            "/Type": "/Group"
+          },
+          "/Length": 17,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/XObject": {
+              "/Form": "33 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:43 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 0,
+          "/Resources": {
+            "/XObject": {}
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:44 0 R",
+        "length": 62,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 62,
+          "/Name": "/FRM",
+          "/Resources": {
+            "/XObject": {
+              "/F0": "45 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      },
+      {
+        "object": "obj:45 0 R",
+        "length": 29,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            89.25,
+            87.75
+          ],
+          "/Filter": "/FlateDecode",
+          "/FormType": 1,
+          "/Length": 29,
+          "/Matrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "/Resources": {
+            "/ExtGState": {
+              "/GS0": "39 0 R"
+            },
+            "/XObject": {
+              "/MWFOForm": "38 0 R"
+            }
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:4 0 R": {
+        "value": {
+          "/Annots": "41 0 R",
+          "/Contents": "42 0 R",
+          "/CropBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/F": "43 0 R",
+              "/FFT0": "44 0 R"
+            }
+          },
+          "/Rotate": 0,
+          "/Type": "/Page"
+        }
+      }
+    }
+  },
+  {
+    "pdf": "qpdf/qpdf_overlay-no-resources.pdf",
+    "forms": [
+      {
+        "object": "obj:5 0 R",
+        "length": 0,
+        "dict": {
+          "/BBox": [
+            0.0,
+            0.0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/Length": 0,
+          "/Resources": {},
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": "incomplete"
+      },
+      {
+        "object": "obj:6 0 R",
+        "length": 48,
+        "dict": {
+          "/BBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Filter": "/FlateDecode",
+          "/Length": 48,
+          "/Resources": {
+            "/Font": {
+              "/F1": "7 0 R"
+            },
+            "/ProcSet": "8 0 R"
+          },
+          "/Subtype": "/Form",
+          "/Type": "/XObject"
+        },
+        "error": null
+      }
+    ],
+    "page_objects": {
+      "obj:3 0 R": {
+        "value": {
+          "/Contents": "4 0 R",
+          "/MediaBox": [
+            0.0,
+            0.0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": {
+            "/XObject": {
+              "/Fx0": "5 0 R",
+              "/Fx1": "6 0 R"
+            }
+          },
+          "/Type": "/Page"
+        }
+      }
+    }
+  }
+]

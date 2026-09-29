@@ -1,0 +1,51 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/differential_order_test.rs                 7     93
+
+--- Worst Offenders ---
+  permuted_text_is_misplaced (oxidize-pdf-core/tests/differential_order_test.rs:197) - Score: 90
+    - Test 'permuted_text_is_misplaced' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'permuted_text_is_misplaced' asserts against a hardcoded constant instead of a computed expected value
+  dropping_words_counts_against_us_instead_of_flattering_the_rate (oxidize-pdf-core/tests/differential_order_test.rs:212) - Score: 90
+    - Test 'dropping_words_counts_against_us_instead_of_flattering_the_rate' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'dropping_words_counts_against_us_instead_of_flattering_the_rate' asserts against a hardcoded constant instead of a computed expected value
+  the_committed_baseline_is_loadable (oxidize-pdf-core/tests/differential_order_test.rs:292) - Score: 90
+    - Test 'the_committed_baseline_is_loadable' has a match arm with empty body, ignoring potential error cases
+  flat_extraction_does_not_transpose_more_words_than_poppler (oxidize-pdf-core/tests/differential_order_test.rs:312) - Score: 90
+    - Test 'flat_extraction_does_not_transpose_more_words_than_poppler' does not call any production code
+  reading_order_option_does_not_transpose_more_words_than_poppler (oxidize-pdf-core/tests/differential_order_test.rs:322) - Score: 90
+    - Test 'reading_order_option_does_not_transpose_more_words_than_poppler' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/differential_order_test.rs:
+  identical_text_has_no_misplaced_words (line 189) - Score: 100
+    i Test 'identical_text_has_no_misplaced_words' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'identical_text_has_no_misplaced_words' has multiple assertions without diagnostic messages
+  permuted_text_is_misplaced (line 197) - Score: 90
+    - Test 'permuted_text_is_misplaced' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'permuted_text_is_misplaced' asserts against a hardcoded constant instead of a computed expected value
+  dropping_words_counts_against_us_instead_of_flattering_the_rate (line 212) - Score: 90
+    - Test 'dropping_words_counts_against_us_instead_of_flattering_the_rate' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'dropping_words_counts_against_us_instead_of_flattering_the_rate' asserts against a hardcoded constant instead of a computed expected value
+  extra_words_of_ours_do_not_change_the_denominator (line 231) - Score: 100
+    i Test 'extra_words_of_ours_do_not_change_the_denominator' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'extra_words_of_ours_do_not_change_the_denominator' has multiple assertions without diagnostic messages
+  the_committed_baseline_is_loadable (line 292) - Score: 90
+    - Test 'the_committed_baseline_is_loadable' has a match arm with empty body, ignoring potential error cases
+  flat_extraction_does_not_transpose_more_words_than_poppler (line 312) - Score: 90
+    - Test 'flat_extraction_does_not_transpose_more_words_than_poppler' does not call any production code
+  reading_order_option_does_not_transpose_more_words_than_poppler (line 322) - Score: 90
+    - Test 'reading_order_option_does_not_transpose_more_words_than_poppler' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

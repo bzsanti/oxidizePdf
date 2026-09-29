@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Explicit bounded Flate recovery APIs return recovered bytes/text with per-filter,
+  page-content and Form diagnostics. Unverified, incomplete and omitted content
+  remain distinguishable; resource limits and predictor failures still propagate
+  (#637).
+
 - Prepare participant signature fields through incremental create/list/read/remove
   APIs, render handwritten strokes and optional certificate labels, and pass the
   prepared appearance to existing detached signing APIs. Handwritten completion
@@ -23,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   external CMS responsibilities and the PAdES extension interfaces (#641).
 
 ### Fixed
+
+- Flate byte-only decoding now requires a complete checksum-verified zlib stream
+  in every parse mode. Exhausted recovery no longer fabricates empty success;
+  content and Form errors propagate to strict extraction. Damaged-corpus gates
+  use explicit recovery with separate diagnostics and unchanged numerical limits
+  (#637). See `docs/flate-decoding.md` for migration and limitations.
 
 - Propagate invalid Flate/LZW predictor errors instead of returning untransformed
   samples. Validate predictor values, PNG dimensions, component depth and checked

@@ -1,0 +1,1593 @@
+[
+  {
+    "pdf": "format-corpus/preserve_020747.pdf",
+    "pdf_sha256": "43c1918b7ec768777b671fdfcc50ea42771d853bed6cef79392ca3e0a50550ef",
+    "base": {
+      "path": "format-corpus/preserve_020747.pdf",
+      "seconds": 0.354,
+      "extracted": true,
+      "pages": 12,
+      "parsed": true,
+      "text_bytes": 47586,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_020747.pdf",
+      "seconds": 0.032,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 12,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 7,
+    "base_failed_page_bytes": 17266,
+    "base_failed_page_words": 1446,
+    "poppler_common_words": 1435,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 1,
+      "checksum": 6
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_020806.pdf",
+    "pdf_sha256": "bdf810f5ed632bbccce85b3a7b07e5db2b29d5bfa79c2d57044f8a534006cf17",
+    "base": {
+      "path": "format-corpus/preserve_020806.pdf",
+      "seconds": 0.245,
+      "extracted": true,
+      "pages": 6,
+      "parsed": true,
+      "text_bytes": 8337,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_020806.pdf",
+      "seconds": 0.075,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 6,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 2,
+    "base_failed_page_bytes": 79,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {
+      "checksum": 2
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_027613.pdf",
+    "pdf_sha256": "68b2c6ce8b10bbdf33ccf700976d8731e2561dc588674f57a9a196a3ae683f55",
+    "base": {
+      "path": "format-corpus/preserve_027613.pdf",
+      "seconds": 1.478,
+      "extracted": true,
+      "pages": 429,
+      "parsed": true,
+      "text_bytes": 639244,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_027613.pdf",
+      "seconds": 0.18,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 429,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 11,
+    "base_failed_page_bytes": 7495,
+    "base_failed_page_words": 658,
+    "poppler_common_words": 658,
+    "content_stream_categories": {
+      "checksum": 9,
+      "invalid_deflate_or_header": 2
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_033689.pdf",
+    "pdf_sha256": "c4cdad752b3ee8e6bc65c384793d74f4db64ef27eb52bf9944e83d86e501306f",
+    "base": {
+      "path": "format-corpus/preserve_033689.pdf",
+      "seconds": 0.024,
+      "extracted": true,
+      "pages": 3,
+      "parsed": true,
+      "text_bytes": 686,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_033689.pdf",
+      "seconds": 0.011,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 3,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 0,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 1,
+      "checksum": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_040669.pdf",
+    "pdf_sha256": "01057c30d1c0a752557e40399981618b0a0b61d34655649a8178f412d372b360",
+    "base": {
+      "path": "format-corpus/preserve_040669.pdf",
+      "seconds": 0.076,
+      "extracted": true,
+      "pages": 26,
+      "parsed": true,
+      "text_bytes": 29460,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_040669.pdf",
+      "seconds": 0.063,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 26,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 2,
+    "base_failed_page_bytes": 3414,
+    "base_failed_page_words": 124,
+    "poppler_common_words": 94,
+    "content_stream_categories": {
+      "checksum": 2
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_050734.pdf",
+    "pdf_sha256": "9fef171cf6484f8bce98e3a1b78ff658057c28712ce5b54f411fbeee8669fdf8",
+    "base": {
+      "path": "format-corpus/preserve_050734.pdf",
+      "seconds": 0.195,
+      "extracted": true,
+      "pages": 22,
+      "parsed": true,
+      "text_bytes": 41508,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_050734.pdf",
+      "seconds": 0.119,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 22,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 3,
+    "base_failed_page_bytes": 2287,
+    "base_failed_page_words": 191,
+    "poppler_common_words": 191,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 1,
+      "checksum": 2
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_073439.pdf",
+    "pdf_sha256": "867439f8c3ce263b0953f8680554434e3ef9249988ddf9fa127645cd2cda5d70",
+    "base": {
+      "path": "format-corpus/preserve_073439.pdf",
+      "seconds": 0.042,
+      "extracted": true,
+      "pages": 18,
+      "parsed": true,
+      "text_bytes": 28505,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_073439.pdf",
+      "seconds": 0.012,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 18,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 1109,
+    "base_failed_page_words": 53,
+    "poppler_common_words": 50,
+    "content_stream_categories": {
+      "checksum": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_150277.pdf",
+    "pdf_sha256": "6af4b6134eb2624e8a3ac72ae5e32f23c9c6797e609c0c4485f0086e354b4031",
+    "base": {
+      "path": "format-corpus/preserve_150277.pdf",
+      "seconds": 1.261,
+      "extracted": true,
+      "pages": 138,
+      "parsed": true,
+      "text_bytes": 289676,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_150277.pdf",
+      "seconds": 0.571,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 138,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 9,
+    "base_failed_page_bytes": 8461,
+    "base_failed_page_words": 679,
+    "poppler_common_words": 641,
+    "content_stream_categories": {
+      "checksum": 8,
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_178360.pdf",
+    "pdf_sha256": "1dc4caea98dd644e81027dc5514b8e85671c072d4419272dd7c671e526f52c7d",
+    "base": {
+      "path": "format-corpus/preserve_178360.pdf",
+      "seconds": 0.224,
+      "extracted": true,
+      "pages": 24,
+      "parsed": true,
+      "text_bytes": 67312,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_178360.pdf",
+      "seconds": 0.185,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 24,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 1036,
+    "base_failed_page_words": 99,
+    "poppler_common_words": 0,
+    "content_stream_categories": {
+      "checksum": 1,
+      "invalid_deflate_or_header": 3,
+      "incomplete": 2
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_189478.pdf",
+    "pdf_sha256": "b21dde0e782f38155329e99c6aa9b72e678a28c8353f0efa3e646ae8a34cfb53",
+    "base": {
+      "path": "format-corpus/preserve_189478.pdf",
+      "seconds": 0.056,
+      "extracted": true,
+      "pages": 18,
+      "parsed": true,
+      "text_bytes": 51592,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_189478.pdf",
+      "seconds": 0.017,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 18,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 3,
+    "base_failed_page_bytes": 3343,
+    "base_failed_page_words": 297,
+    "poppler_common_words": 265,
+    "content_stream_categories": {
+      "checksum": 2,
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_219789.pdf",
+    "pdf_sha256": "d4216fee033c42a71d9909a31d6eb5c97b8d6e4a379d9b60123ed0b094a02476",
+    "base": {
+      "path": "format-corpus/preserve_219789.pdf",
+      "seconds": 0.379,
+      "extracted": true,
+      "pages": 54,
+      "parsed": true,
+      "text_bytes": 109161,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_219789.pdf",
+      "seconds": 0.031,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 54,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 23,
+    "base_failed_page_bytes": 28100,
+    "base_failed_page_words": 2109,
+    "poppler_common_words": 2015,
+    "content_stream_categories": {
+      "checksum": 20,
+      "invalid_deflate_or_header": 3
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_226387.pdf",
+    "pdf_sha256": "99bbd2970fd189348585be77b7fd28d48d73fd3d6cdd314f4790b589fb6b5c98",
+    "base": {
+      "path": "format-corpus/preserve_226387.pdf",
+      "seconds": 0.056,
+      "extracted": true,
+      "pages": 11,
+      "parsed": true,
+      "text_bytes": 21563,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_226387.pdf",
+      "seconds": 0.041,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 11,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 2175,
+    "base_failed_page_words": 133,
+    "poppler_common_words": 133,
+    "content_stream_categories": {
+      "checksum": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_268346.pdf",
+    "pdf_sha256": "e86d1d7f2b0dff805b6a7c7cd38e06ede2180e4b86fe682f2b6c6dfbd8209982",
+    "base": {
+      "path": "format-corpus/preserve_268346.pdf",
+      "seconds": 0.286,
+      "extracted": true,
+      "pages": 20,
+      "parsed": true,
+      "text_bytes": 89636,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_268346.pdf",
+      "seconds": 0.153,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 20,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 3600,
+    "base_failed_page_words": 153,
+    "poppler_common_words": 142,
+    "content_stream_categories": {
+      "checksum": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_303226.pdf",
+    "pdf_sha256": "da14d24dd22effebec987312abf0312750bdbbaf93f54c9aef3b9ec7041e40ba",
+    "base": {
+      "path": "format-corpus/preserve_303226.pdf",
+      "seconds": 0.132,
+      "extracted": true,
+      "pages": 19,
+      "parsed": true,
+      "text_bytes": 88488,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_303226.pdf",
+      "seconds": 0.014,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 19,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 3,
+    "base_failed_page_bytes": 5646,
+    "base_failed_page_words": 458,
+    "poppler_common_words": 444,
+    "content_stream_categories": {
+      "checksum": 3
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_367594.pdf",
+    "pdf_sha256": "fd11de09d913ab2c1e95166edbd3f91d46228d0df9a3963dc95c499395308bbf",
+    "base": {
+      "path": "format-corpus/preserve_367594.pdf",
+      "seconds": 0.065,
+      "extracted": true,
+      "pages": 9,
+      "parsed": true,
+      "text_bytes": 45587,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_367594.pdf",
+      "seconds": 0.04,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 9,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 4727,
+    "base_failed_page_words": 418,
+    "poppler_common_words": 394,
+    "content_stream_categories": {
+      "checksum": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_379049.pdf",
+    "pdf_sha256": "42c03ce71ecafd0ec78eba3511ae7ddbf919d583e43a6627f4de50097526392f",
+    "base": {
+      "path": "format-corpus/preserve_379049.pdf",
+      "seconds": 2.29,
+      "extracted": true,
+      "pages": 179,
+      "parsed": true,
+      "text_bytes": 707030,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_379049.pdf",
+      "seconds": 1.174,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 179,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 95,
+    "base_failed_page_words": 10,
+    "poppler_common_words": 0,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_392154.pdf",
+    "pdf_sha256": "55da4f4dfdbfde4e6a31a299032da3e08f1213dbb99882701d851ae000e80fed",
+    "base": {
+      "path": "format-corpus/preserve_392154.pdf",
+      "seconds": 0.152,
+      "extracted": true,
+      "pages": 90,
+      "parsed": true,
+      "text_bytes": 74209,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_392154.pdf",
+      "seconds": 0.032,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 90,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 1785,
+    "base_failed_page_words": 80,
+    "poppler_common_words": 29,
+    "content_stream_categories": {
+      "checksum": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_427669.pdf",
+    "pdf_sha256": "32a58f34855dfad5ed78467a47a7eab537d5f036364aeab8f1f617405ad14dd6",
+    "base": {
+      "path": "format-corpus/preserve_427669.pdf",
+      "seconds": 0.354,
+      "extracted": true,
+      "pages": 24,
+      "parsed": true,
+      "text_bytes": 45495,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_427669.pdf",
+      "seconds": 0.088,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 24,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 2,
+    "base_failed_page_bytes": 4592,
+    "base_failed_page_words": 294,
+    "poppler_common_words": 29,
+    "content_stream_categories": {
+      "checksum": 2,
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_435321.pdf",
+    "pdf_sha256": "fdca9a7bd662b1ad6fab349b2b5012f36c5409a653ca3dae6c818fce92430543",
+    "base": {
+      "path": "format-corpus/preserve_435321.pdf",
+      "seconds": 0.106,
+      "extracted": true,
+      "pages": 19,
+      "parsed": true,
+      "text_bytes": 47940,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_435321.pdf",
+      "seconds": 0.025,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 19,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 3,
+    "base_failed_page_bytes": 3375,
+    "base_failed_page_words": 314,
+    "poppler_common_words": 314,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 3
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_443752.pdf",
+    "pdf_sha256": "027b774a7f97afde1d3cd22639f10a028dc6f52bdb52c6dc042100e1eea6ad81",
+    "base": {
+      "path": "format-corpus/preserve_443752.pdf",
+      "seconds": 0.847,
+      "extracted": true,
+      "pages": 80,
+      "parsed": true,
+      "text_bytes": 136370,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_443752.pdf",
+      "seconds": 0.33,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 80,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 40,
+    "base_failed_page_words": 3,
+    "poppler_common_words": 3,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_455746.pdf",
+    "pdf_sha256": "9e34378057acdc97cd80c3f2e0090597e77d84f5a932f9283235d9f8457df91d",
+    "base": {
+      "path": "format-corpus/preserve_455746.pdf",
+      "seconds": 0.447,
+      "extracted": true,
+      "pages": 86,
+      "parsed": true,
+      "text_bytes": 170864,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_455746.pdf",
+      "seconds": 0.032,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 86,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 6,
+    "base_failed_page_bytes": 3724,
+    "base_failed_page_words": 244,
+    "poppler_common_words": 233,
+    "content_stream_categories": {
+      "checksum": 5,
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_477139.pdf",
+    "pdf_sha256": "246a2072cabd9b8851ad1ac48fb584cbcfb4c2b2b2667274f23200aef03c1d53",
+    "base": {
+      "path": "format-corpus/preserve_477139.pdf",
+      "seconds": 0.087,
+      "extracted": true,
+      "pages": 29,
+      "parsed": true,
+      "text_bytes": 73895,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_477139.pdf",
+      "seconds": 0.026,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 29,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 545,
+    "base_failed_page_words": 51,
+    "poppler_common_words": 49,
+    "content_stream_categories": {
+      "checksum": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_492484.pdf",
+    "pdf_sha256": "bd680a5ccd0c882964444c1850d1ae53edda8923f8cf85e91b805b9b2100c81a",
+    "base": {
+      "path": "format-corpus/preserve_492484.pdf",
+      "seconds": 0.614,
+      "extracted": true,
+      "pages": 32,
+      "parsed": true,
+      "text_bytes": 15776,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_492484.pdf",
+      "seconds": 0.059,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 32,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 4,
+    "base_failed_page_bytes": 613,
+    "base_failed_page_words": 57,
+    "poppler_common_words": 57,
+    "content_stream_categories": {
+      "checksum": 4
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_498264.pdf",
+    "pdf_sha256": "72e804b6e4c2c196b80126dfa97e5f4ad877da5db97fb791d5fcaf71f83b041d",
+    "base": {
+      "path": "format-corpus/preserve_498264.pdf",
+      "seconds": 0.055,
+      "extracted": true,
+      "pages": 3,
+      "parsed": true,
+      "text_bytes": 1618,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_498264.pdf",
+      "seconds": 0.046,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 3,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 3,
+    "base_failed_page_bytes": 1618,
+    "base_failed_page_words": 122,
+    "poppler_common_words": 6,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 3
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_504076.pdf",
+    "pdf_sha256": "587b59c35a2be903c87ba97ac9ac425643a1eff40f19198e2e6ea4b0f82a7a4b",
+    "base": {
+      "path": "format-corpus/preserve_504076.pdf",
+      "seconds": 0.32,
+      "extracted": true,
+      "pages": 33,
+      "parsed": true,
+      "text_bytes": 106128,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_504076.pdf",
+      "seconds": 0.065,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 33,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 3,
+    "base_failed_page_bytes": 7746,
+    "base_failed_page_words": 544,
+    "poppler_common_words": 522,
+    "content_stream_categories": {
+      "checksum": 3
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_507618.pdf",
+    "pdf_sha256": "a856b85b3cdb3d9b74f86c517dd0b1b94842e2e5964b343200ebb86212f541d1",
+    "base": {
+      "path": "format-corpus/preserve_507618.pdf",
+      "seconds": 0.06,
+      "extracted": true,
+      "pages": 23,
+      "parsed": true,
+      "text_bytes": 42489,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_507618.pdf",
+      "seconds": 0.048,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 23,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 991,
+    "base_failed_page_words": 93,
+    "poppler_common_words": 86,
+    "content_stream_categories": {
+      "checksum": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_507676.pdf",
+    "pdf_sha256": "5d7e87a6511a8c6e16ee4c78691c1746b676bfa5fffb6cc8478389be0b2f45d7",
+    "base": {
+      "path": "format-corpus/preserve_507676.pdf",
+      "seconds": 0.346,
+      "extracted": true,
+      "pages": 10,
+      "parsed": true,
+      "text_bytes": 40125,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_507676.pdf",
+      "seconds": 0.05,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 10,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 3,
+    "base_failed_page_bytes": 12596,
+    "base_failed_page_words": 766,
+    "poppler_common_words": 441,
+    "content_stream_categories": {
+      "checksum": 3
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "format-corpus/preserve_509284.pdf",
+    "pdf_sha256": "35d80b59e402d800d6db6033a7a5aa07c6b870ece7b56246038adacdc501b23e",
+    "base": {
+      "path": "format-corpus/preserve_509284.pdf",
+      "seconds": 0.052,
+      "extracted": true,
+      "pages": 20,
+      "parsed": true,
+      "text_bytes": 27009,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "format-corpus/preserve_509284.pdf",
+      "seconds": 0.01,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 20,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 5,
+    "base_failed_page_bytes": 4545,
+    "base_failed_page_words": 212,
+    "poppler_common_words": 197,
+    "content_stream_categories": {
+      "checksum": 3,
+      "incomplete": 1,
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_10_8.2.2__T8.3_original_file.pdf",
+    "pdf_sha256": "271942e9699edf4cc6ac1f271435a5db40246e8e0b25aa7c2e1b9877dd316794",
+    "base": {
+      "path": "pdfium/pdfium_FRC_10_8.2.2__T8.3_original_file.pdf",
+      "seconds": 0.039,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 406,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_10_8.2.2__T8.3_original_file.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 406,
+    "base_failed_page_words": 45,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_11_8.2.2__T8.3_first_last_exchange.pdf",
+    "pdf_sha256": "6e250f30547f21504e29ba2079a532f25e0a42bcd4b0b96eac38c5b022c01a90",
+    "base": {
+      "path": "pdfium/pdfium_FRC_11_8.2.2__T8.3_first_last_exchange.pdf",
+      "seconds": 0.033,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 509,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_11_8.2.2__T8.3_first_last_exchange.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 509,
+    "base_failed_page_words": 55,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_12_8.2.2__T8.3_first_outline_obj_ID.pdf",
+    "pdf_sha256": "5c1eb8da667b73418a3366f225285d3e2f40c2e2f5d3ff74cdeaceefd13ac6cb",
+    "base": {
+      "path": "pdfium/pdfium_FRC_12_8.2.2__T8.3_first_outline_obj_ID.pdf",
+      "seconds": 0.036,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 504,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_12_8.2.2__T8.3_first_outline_obj_ID.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 504,
+    "base_failed_page_words": 52,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_13_8.2.2__T8.3_Count_edit300.pdf",
+    "pdf_sha256": "0c13eca421b77c9c51b5032e972dcb1a62720b35dbe6b9a33a5e5c939aeb7cd8",
+    "base": {
+      "path": "pdfium/pdfium_FRC_13_8.2.2__T8.3_Count_edit300.pdf",
+      "seconds": 0.022,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 496,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_13_8.2.2__T8.3_Count_edit300.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 496,
+    "base_failed_page_words": 52,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_14_8.2.2__T8.3_Count_edit0.pdf",
+    "pdf_sha256": "e4600f24da73266006f7fa33c17ccc5e52fc55f4029d696626b06b9eb153ef58",
+    "base": {
+      "path": "pdfium/pdfium_FRC_14_8.2.2__T8.3_Count_edit0.pdf",
+      "seconds": 0.022,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 492,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_14_8.2.2__T8.3_Count_edit0.pdf",
+      "seconds": 0.004,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 492,
+    "base_failed_page_words": 52,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_15_8.2.2__T8.3_Count_edit1.pdf",
+    "pdf_sha256": "efd561188f2a97acb5bc730e0f42b93b7f5ab1519bc33d12f50f779d1674b716",
+    "base": {
+      "path": "pdfium/pdfium_FRC_15_8.2.2__T8.3_Count_edit1.pdf",
+      "seconds": 0.043,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 492,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_15_8.2.2__T8.3_Count_edit1.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 492,
+    "base_failed_page_words": 52,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_16_8.2.2__T8.3_Count_edit_1.pdf",
+    "pdf_sha256": "f9152b745004e0003373ae4a427239785555513f220b36d47bcd6ff25e39f784",
+    "base": {
+      "path": "pdfium/pdfium_FRC_16_8.2.2__T8.3_Count_edit_1.pdf",
+      "seconds": 0.022,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 493,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_16_8.2.2__T8.3_Count_edit_1.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 493,
+    "base_failed_page_words": 52,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_1_8.2.2__T8.3_First_empty.pdf",
+    "pdf_sha256": "83745a86f1daaca36679676f9c73907af82acf5613daf85e61dc58b9770fdcdb",
+    "base": {
+      "path": "pdfium/pdfium_FRC_1_8.2.2__T8.3_First_empty.pdf",
+      "seconds": 0.038,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 480,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_1_8.2.2__T8.3_First_empty.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 480,
+    "base_failed_page_words": 51,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_2_8.2.2__T8.3_Last_empty.pdf",
+    "pdf_sha256": "4f5d78980bf58d5ccd945443f706518b09aa37073501eea89838364f902b3614",
+    "base": {
+      "path": "pdfium/pdfium_FRC_2_8.2.2__T8.3_Last_empty.pdf",
+      "seconds": 0.026,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 486,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_2_8.2.2__T8.3_Last_empty.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 486,
+    "base_failed_page_words": 52,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_3_8.2.2_Type_empty.pdf",
+    "pdf_sha256": "f3a939fde7ffaaa0d931f4506402e51f19547edb76a24f77fcc88e1fc99538d0",
+    "base": {
+      "path": "pdfium/pdfium_FRC_3_8.2.2_Type_empty.pdf",
+      "seconds": 0.021,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 474,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_3_8.2.2_Type_empty.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 474,
+    "base_failed_page_words": 50,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_4_8.2.2__T8.3_Count_empty.pdf",
+    "pdf_sha256": "65738fef444831310f8e9e1048beb0685c9cd69a2ff2c165ee9bc95c6fca67d3",
+    "base": {
+      "path": "pdfium/pdfium_FRC_4_8.2.2__T8.3_Count_empty.pdf",
+      "seconds": 0.02,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 494,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_4_8.2.2__T8.3_Count_empty.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 494,
+    "base_failed_page_words": 52,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_5_8.2.2__T8.3_First_remove.pdf",
+    "pdf_sha256": "971f07a373bafe7698071b9fd089f762197902132c99461991c58d95af722b57",
+    "base": {
+      "path": "pdfium/pdfium_FRC_5_8.2.2__T8.3_First_remove.pdf",
+      "seconds": 0.035,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 465,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_5_8.2.2__T8.3_First_remove.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 465,
+    "base_failed_page_words": 50,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_6_8.2.2__T8.3_Last_remove.pdf",
+    "pdf_sha256": "3b86b65f484fc5d7356cf87c39d3edcca867f1a2c473a231f9297de421d1e660",
+    "base": {
+      "path": "pdfium/pdfium_FRC_6_8.2.2__T8.3_Last_remove.pdf",
+      "seconds": 0.04,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 475,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_6_8.2.2__T8.3_Last_remove.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 475,
+    "base_failed_page_words": 51,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_7_8.2.2_Type_remove.pdf",
+    "pdf_sha256": "2e8ed3076b0d14a78a882eca5f60982a4b017b4969e1539a1ff8229d25754a49",
+    "base": {
+      "path": "pdfium/pdfium_FRC_7_8.2.2_Type_remove.pdf",
+      "seconds": 0.023,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 472,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_7_8.2.2_Type_remove.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 472,
+    "base_failed_page_words": 50,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_8.5_PO_GoToE_T_R&N.pdf",
+    "pdf_sha256": "a1372ea2be3325430026870f210fc69656b7b50d6015983a5581078fc22068b7",
+    "base": {
+      "path": "pdfium/pdfium_FRC_8.5_PO_GoToE_T_R&N.pdf",
+      "seconds": 0.004,
+      "extracted": true,
+      "pages": 2,
+      "parsed": true,
+      "text_bytes": 70,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_8.5_PO_GoToE_T_R&N.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 2,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 0,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {
+      "zero_bytes": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_8_8.2.2__T8.3_Count_remove.pdf",
+    "pdf_sha256": "d9bc285c2591214674ccbbb24c7826f4ee05f43cd2495a77522a5af2eb11d340",
+    "base": {
+      "path": "pdfium/pdfium_FRC_8_8.2.2__T8.3_Count_remove.pdf",
+      "seconds": 0.022,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 482,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_8_8.2.2__T8.3_Count_remove.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 482,
+    "base_failed_page_words": 51,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_FRC_9_8.2.2__T8.3_remove_first_item.pdf",
+    "pdf_sha256": "24ba8fa9a31ced007340bfebdcfa7d5dcd4a7dc8d082cec5730d30d06ac94ed3",
+    "base": {
+      "path": "pdfium/pdfium_FRC_9_8.2.2__T8.3_remove_first_item.pdf",
+      "seconds": 0.023,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 630,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_FRC_9_8.2.2__T8.3_remove_first_item.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 630,
+    "base_failed_page_words": 60,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_new_pdfsign1.pdf",
+    "pdf_sha256": "5714a8929edf98fd1781e2e8a60c04c7d9cffc000d14c79dc982485b2b7eab9d",
+    "base": {
+      "path": "pdfium/pdfium_new_pdfsign1.pdf",
+      "seconds": 0.005,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 0,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_new_pdfsign1.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 0,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_new_pdfsign2.pdf",
+    "pdf_sha256": "78be2ae7303c62d4e4fc352c7f05db49c33fe233893d45ac0a5851bc2c57c853",
+    "base": {
+      "path": "pdfium/pdfium_new_pdfsign2.pdf",
+      "seconds": 0.004,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 0,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_new_pdfsign2.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 0,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_new_pdfsign3.pdf",
+    "pdf_sha256": "7b25f4fb47fe9978841726e6008422fc46afb553d664b1c97de93483d7e0d13c",
+    "base": {
+      "path": "pdfium/pdfium_new_pdfsign3.pdf",
+      "seconds": 0.006,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 0,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_new_pdfsign3.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 0,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "pdfium/pdfium_new_pdfsign4.pdf",
+    "pdf_sha256": "06724f60607936acdfd23b407c6d488f1510e5e06510c3121d9a76220d34f505",
+    "base": {
+      "path": "pdfium/pdfium_new_pdfsign4.pdf",
+      "seconds": 0.006,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 0,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "pdfium/pdfium_new_pdfsign4.pdf",
+      "seconds": 0.004,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 0,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "qpdf/qpdf_empty-stream-compressed.pdf",
+    "pdf_sha256": "48eb0b28e4e2266564fbe58f3a2413bc6cc440815fca118a942f5210a80c572b",
+    "base": {
+      "path": "qpdf/qpdf_empty-stream-compressed.pdf",
+      "seconds": 0.003,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 0,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "qpdf/qpdf_empty-stream-compressed.pdf",
+      "seconds": 0.002,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 0,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {
+      "zero_bytes": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "qpdf/qpdf_overlay-no-resources.pdf",
+    "pdf_sha256": "524c83c9a66bf499e46a098422ea0ad892ee591f480fc161c99feecb6c38082d",
+    "base": {
+      "path": "qpdf/qpdf_overlay-no-resources.pdf",
+      "seconds": 0.003,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 6,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "qpdf/qpdf_overlay-no-resources.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 6,
+    "base_failed_page_words": 1,
+    "poppler_common_words": 1,
+    "content_stream_categories": {},
+    "has_empty_flate_form": true
+  },
+  {
+    "pdf": "qpdf/qpdf_shared-images-errors-2-out.pdf",
+    "pdf_sha256": "01b562f0e7d62d52f4f4227a427af2eddf14ed65f17d5a1bc13fdb7ecc1e2a9a",
+    "base": {
+      "path": "qpdf/qpdf_shared-images-errors-2-out.pdf",
+      "seconds": 0.006,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 0,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "qpdf/qpdf_shared-images-errors-2-out.pdf",
+      "seconds": 0.003,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 0,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "qpdf/qpdf_shared-images-errors.pdf",
+    "pdf_sha256": "5083a28f9a71cbc45350d1a1666403c0d56c9aacaebda3885caf0dd012cc3e79",
+    "base": {
+      "path": "qpdf/qpdf_shared-images-errors.pdf",
+      "seconds": 0.021,
+      "extracted": true,
+      "pages": 10,
+      "parsed": true,
+      "text_bytes": 55,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "qpdf/qpdf_shared-images-errors.pdf",
+      "seconds": 0.005,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 10,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 0,
+    "base_failed_page_words": 0,
+    "poppler_common_words": 0,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  },
+  {
+    "pdf": "qpdf/qpdf_start.pdf",
+    "pdf_sha256": "7b3657dbc80f97b2ae097fd12b9b66df5ab56f56f5a10e173f7fa22f29bfd5a6",
+    "base": {
+      "path": "qpdf/qpdf_start.pdf",
+      "seconds": 0.005,
+      "extracted": true,
+      "pages": 1,
+      "parsed": true,
+      "text_bytes": 6,
+      "exit": 0
+    },
+    "candidate": {
+      "path": "qpdf/qpdf_start.pdf",
+      "seconds": 0.002,
+      "error": "Stream decode error: FlateDecode failed: deflate decompression error",
+      "extracted": false,
+      "pages": 1,
+      "parsed": true,
+      "exit": 0
+    },
+    "failed_pages": 1,
+    "base_failed_page_bytes": 6,
+    "base_failed_page_words": 1,
+    "poppler_common_words": 1,
+    "content_stream_categories": {
+      "invalid_deflate_or_header": 1
+    },
+    "has_empty_flate_form": false
+  }
+]

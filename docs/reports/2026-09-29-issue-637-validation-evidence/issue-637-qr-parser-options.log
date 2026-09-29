@@ -1,0 +1,86 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 17 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/parser/mod.rs                               17     91
+
+--- Worst Offenders ---
+  test_module_exports (oxidize-pdf-core/src/parser/mod.rs:499) - Score: 75
+    - Test 'test_module_exports' executes production code without asserting on its behaviour
+  test_pdf_object_creation (oxidize-pdf-core/src/parser/mod.rs:680) - Score: 75
+    i Test 'test_pdf_object_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_object_creation' has multiple assertions without diagnostic messages
+    - Test 'test_pdf_object_creation' has low assert-to-setup ratio (17%): 3 asserts vs 15 setup lines
+    - Test 'test_pdf_object_creation' line 696: assert!(true) is always passing
+  test_parse_error_messages (oxidize-pdf-core/src/parser/mod.rs:531) - Score: 80
+    - Test 'test_parse_error_messages' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'test_parse_error_messages' does not call any production code
+  test_parse_error_variants (oxidize-pdf-core/src/parser/mod.rs:637) - Score: 80
+    - Test 'test_parse_error_variants' has low assert-to-setup ratio (3%): 1 asserts vs 34 setup lines
+    - Test 'test_parse_error_variants' does not call any production code
+  test_parse_error_conversion (oxidize-pdf-core/src/parser/mod.rs:519) - Score: 85
+    - Test 'test_parse_error_conversion' line 525: assert!(true) is always passing
+
+--- Details ---
+oxidize-pdf-core/src/parser/mod.rs:
+  test_module_exports (line 499) - Score: 75
+    - Test 'test_module_exports' executes production code without asserting on its behaviour
+  test_parse_error_conversion (line 519) - Score: 85
+    - Test 'test_parse_error_conversion' line 525: assert!(true) is always passing
+  test_parse_error_messages (line 531) - Score: 80
+    - Test 'test_parse_error_messages' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'test_parse_error_messages' does not call any production code
+  test_parse_options_default (line 550) - Score: 100
+    i Test 'test_parse_options_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_options_default' has multiple assertions without diagnostic messages
+  test_parse_options_strict (line 567) - Score: 100
+    i Test 'test_parse_options_strict' has multiple assertions without diagnostic messages
+  test_parse_options_tolerant (line 580) - Score: 100
+    i Test 'test_parse_options_tolerant' has multiple assertions without diagnostic messages
+  test_parse_options_lenient (line 593) - Score: 100
+    i Test 'test_parse_options_lenient' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_options_lenient' has multiple assertions without diagnostic messages
+  test_parse_options_skip_errors (line 608) - Score: 100
+    i Test 'test_parse_options_skip_errors' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_options_skip_errors' has multiple assertions without diagnostic messages
+  test_parse_options_builder (line 623) - Score: 90
+    i Test 'test_parse_options_builder' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_options_builder' has multiple assertions without diagnostic messages
+    - Test 'test_parse_options_builder' does not call any production code
+  test_parse_error_variants (line 637) - Score: 80
+    - Test 'test_parse_error_variants' has low assert-to-setup ratio (3%): 1 asserts vs 34 setup lines
+    - Test 'test_parse_error_variants' does not call any production code
+  test_pdf_object_creation (line 680) - Score: 75
+    i Test 'test_pdf_object_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_object_creation' has multiple assertions without diagnostic messages
+    - Test 'test_pdf_object_creation' has low assert-to-setup ratio (17%): 3 asserts vs 15 setup lines
+    - Test 'test_pdf_object_creation' line 696: assert!(true) is always passing
+  test_pdf_dictionary_operations (line 712) - Score: 100
+    i Test 'test_pdf_dictionary_operations' has multiple assertions without diagnostic messages
+  test_pdf_array_operations (line 737) - Score: 90
+    - Test 'test_pdf_array_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_pdf_array_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_array_operations' has multiple assertions without diagnostic messages
+  test_pdf_name_operations (line 766) - Score: 90
+    i Test 'test_pdf_name_operations' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pdf_name_operations' does not call any production code
+  test_pdf_string_operations (line 780) - Score: 100
+    i Test 'test_pdf_string_operations' has multiple assertions without diagnostic messages
+  test_parse_options_modifications (line 794) - Score: 90
+    i Test 'test_parse_options_modifications' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_options_modifications' has multiple assertions without diagnostic messages
+    - Test 'test_parse_options_modifications' does not call any production code
+  test_resource_types (line 817) - Score: 90
+    i Test 'test_resource_types' has multiple assertions without diagnostic messages
+    - Test 'test_resource_types' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

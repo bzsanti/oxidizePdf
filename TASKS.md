@@ -1,3 +1,32 @@
+## Recuperación explícita #637 — 2026-09-29
+
+- Issue: #637 — fix(parser): reject exhausted FlateDecode recovery instead of reporting empty success — https://github.com/bzsanti/oxidizePdf/issues/637
+- Estado: `[-]` implementación validada; bloqueo técnico resuelto, integración pendiente. Prioridad P1. Responsable Codex.
+- Autorización: diagnóstico por documento y recuperación explícita aprobada
+  tras confirmar daño en los PDFs de entrada con qpdf/zlib independiente.
+- Base: develop 0fb6444; rama fix/issue-637-explicit-recovery, clon aislado
+  /tmp/oxidize-issue-637-recovery-20260929. Checkout original y #639 preservados.
+- Alcance: APIs estrictas conservan rechazo; APIs nuevas devuelven contenido
+  con diagnóstico de recuperación/incompletitud/omisión. Límites y predictores
+  siguen siendo errores. Los gates distinguen recuperación e integridad;
+  umbrales y baselines numéricos intactos.
+- Criterio de cierre: RED/GREEN público, límites y diagnósticos verificables,
+  T3 y diferenciales aprobados bajo protocolo explícito, QR y árbol final validados.
+- Última validación: RED 10 fallos/1 control; GREEN 72 focalizadas; T3 1613/1761
+  (91,6%), 54 recuperados con 136 diagnósticos. Orden plano 0,202859 y lectura
+  0,178390, ambos pasan los límites previos. Clippy all-targets pasa.
+  Consumidor externo compression-only pasa; mutación de diagnósticos/errores
+  produce siete fallos previstos. Seguridad automática sin hallazgos.
+- Diagnóstico: docs/reports/2026-09-29-issue-637-diagnosis.md y evidencia
+  contigua. El caso previo no determinista qpdf_issue-99 requiere issue propia,
+  responsabilidad mantenimiento/bzsanti; no se corrige ni recalibra aquí.
+- Validación final: workspace aislado 9890 pasan/0 fallos/72 omitidos; features
+  52 pasan. QR cerrado y Clippy del arnés final aprobado. Evidencia y manifiestos
+  en docs/reports/2026-09-29-issue-637-validation-evidence/.
+- Publicación de rama y PR autorizada expresamente el 2026-09-29.
+- Siguiente acción: abrir PR contra develop y verificar su HEAD y checks remotos.
+  Integración pendiente; issue continúa abierta.
+
 ## Integración signature-preparation #646 — 2026-09-28
 
 - Issue: #646 — feat(signatures): integrate participant signature preparation for next release — https://github.com/bzsanti/oxidizePdf/issues/646
