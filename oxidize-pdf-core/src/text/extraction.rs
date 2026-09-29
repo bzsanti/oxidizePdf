@@ -1007,6 +1007,92 @@ impl TextExtractor {
         self.tj_space_gap_threshold(state, TJ_BOUNDARY_SPACE_EM)
     }
 
+    /// Detect whether a `TJ` array represents uniform per-glyph tracking where
+    /// horizontal advance between glyphs is encoded via negative kerning adjustments
+    /// rather than standard font advances (issue #649).
+    ///
+    /// Some PDF producers emit text with zero-advance glyphs in the font and use uniform
+    /// negative kerns (e.g. `[ (T) -1000 (e) -1000 (s) -1000 (t) ] TJ`) to position every
+    /// character. When the array contains explicit space characters (from literal `\x20`
+    /// or font-decoded space glyphs), word breaks are explicitly demarcated, and treating
+    /// the negative tracking kerns as word separators would inject spurious spaces between
+    /// every character (`T e s t` or `( 1 1 )   3 0 3 0`).
+    ///
+    /// Returns `Some(tracking_baseline_em)` when all four conditions hold:
+    /// 1. Array contains explicit space characters decoded by the font.
+    /// 2. String elements are largely single-glyph strings (average glyph count <= 1.5).
+    /// 3. At least 2/3 of the kerns between strings exceed `tj_space_threshold`.
+    /// 4. At least 90% of those wide kerns cluster tightly within 0.05 em of their median.
+    fn detect_tj_uniform_tracking(&self, array: &[TextElement], state: &TextState) -> Option<f64> {
+        let mut total_glyphs: usize = 0;
+        let mut string_count: usize = 0;
+        let mut has_explicit_space = false;
+        let mut kern_ems: Vec<f64> = Vec::with_capacity(array.len());
+
+        for item in array {
+            match item {
+                TextElement::Text(bytes) => {
+                    let decoded = self.decode_text(bytes, state).unwrap_or_default();
+                    if decoded.contains(' ') {
+                        has_explicit_space = true;
+                    }
+                    total_glyphs += decoded.chars().count();
+                    string_count += 1;
+                }
+                TextElement::Spacing(adj) => {
+                    // Convert kern adjustment to ems: PDF kerning is in thousandths of an em,
+                    // with negative values shifting the pen forward (rightward).
+                    let kern_em = -(*adj as f64) / 1000.0;
+                    kern_ems.push(kern_em);
+                }
+            }
+        }
+
+        // Condition 1: Must contain explicit space characters decoded by the font
+        if !has_explicit_space {
+            return None;
+        }
+
+        // Condition 2: String elements largely single-glyph strings (average <= 1.5)
+        if string_count == 0 {
+            return None;
+        }
+        let avg_glyphs = total_glyphs as f64 / string_count as f64;
+        if avg_glyphs > 1.5 {
+            return None;
+        }
+
+        if kern_ems.is_empty() {
+            return None;
+        }
+
+        // Condition 3: At least 2/3 of kerns wider than tj_space_threshold
+        let total_kerns = kern_ems.len();
+        let mut wide_kerns: Vec<f64> = kern_ems
+            .into_iter()
+            .filter(|&k| k > self.options.tj_space_threshold)
+            .collect();
+
+        if wide_kerns.len() * 3 < total_kerns * 2 {
+            return None;
+        }
+
+        // Condition 4: At least 90% of wide kerns cluster tightly within 0.05 em of their median
+        wide_kerns.sort_by(f64::total_cmp);
+        let median_kern = wide_kerns[wide_kerns.len() / 2];
+
+        let cluster_count = wide_kerns
+            .iter()
+            .filter(|&&k| (k - median_kern).abs() <= 0.05)
+            .count();
+
+        if cluster_count * 10 < wide_kerns.len() * 9 {
+            return None;
+        }
+
+        Some(median_kern)
+    }
+
     /// A font switch between adjacent show-text operators is evidence that a
     /// short gap separates an inline styled token from prose, rather than
     /// splitting one word. Keep this below the ordinary boundary threshold so
@@ -1688,6 +1774,13 @@ impl TextExtractor {
 
                 ContentOperation::ShowTextArray(array) => {
                     if in_text_object {
+                        // Detect whether the TJ array represents uniform per-glyph tracking
+                        // (issue #649), where zero-advance glyphs have their horizontal advance
+                        // encoded via uniform negative kern numbers in TJ.
+                        let tracking_baseline_em = self
+                            .detect_tj_uniform_tracking(&array, &state)
+                            .unwrap_or(0.0);
+
                         // True until this `TJ` array draws its first glyph. Only
                         // on that first text element can a forward pen jump come
                         // from the operator boundary (a `Tm`, or the previous
@@ -1911,12 +2004,16 @@ impl TextExtractor {
                                     // we treat the kern as an implicit `U+0020` (issue #272):
                                     // many PDFs encode word breaks purely as wide negative
                                     // kerns and never emit a literal space byte.
+                                    // When uniform per-glyph tracking is detected (issue #649),
+                                    // only the excess gap beyond the tracking baseline is tested.
                                     let tx = -(adjustment as f64) / 1000.0 * state.font_size;
+                                    let gap_tx = tx - tracking_baseline_em * state.font_size;
 
                                     let skip_tj_space =
                                         skip_artifact_text(&state, self.options.include_artifacts);
                                     if !skip_tj_space
-                                        && tx > self.options.tj_space_threshold * state.font_size
+                                        && gap_tx
+                                            > self.options.tj_space_threshold * state.font_size
                                         && !extracted_text.is_empty()
                                         && !extracted_text.ends_with(' ')
                                     {
