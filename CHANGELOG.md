@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Document::set_build_identification(BuildIdentification::Disabled)` omits the
+  generated build, edition and feature Info fields. Default output remains
+  enabled; Producer and Creator have their own setters (#639).
+- Legacy incremental writers preserve source Info by default; explicitly select
+  `IncrementalInfoPolicy::Replace` to replace it with document metadata (#639).
+
 - Explicit bounded Flate recovery APIs return recovered bytes/text with per-filter,
   page-content and Form diagnostics. Unverified, incomplete and omitted content
   remain distinguishable; resource limits and predictor failures still propagate
@@ -28,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   external CMS responsibilities and the PAdES extension interfaces (#641).
 
 ### Fixed
+
+- Legacy incremental append, replacement and overlay retain catalog/page metadata,
+  leaf pages, inherited resources and stable page references; encrypted inputs are
+  rejected before any output (#639, #653, #654).
+- Build feature metadata reflects effective writer settings; uncompressed xref
+  streams no longer advertise a FlateDecode filter (#639, #655).
 
 - Recover repeated TJ glyph advances only for verified zero-width source glyphs,
   preserving ordinary word separators and larger word gaps, including Type0 CID

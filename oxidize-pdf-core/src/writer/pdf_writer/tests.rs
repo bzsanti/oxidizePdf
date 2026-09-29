@@ -40,9 +40,21 @@ fn test_write_catalog() {
 
     let mut document = Document::new();
     // Set required IDs before calling write_catalog
-    writer.catalog_id = Some(writer.allocate_object_id());
-    writer.pages_id = Some(writer.allocate_object_id());
-    writer.info_id = Some(writer.allocate_object_id());
+    writer.catalog_id = Some(
+        writer
+            .allocate_object_id()
+            .expect("test object ID allocation"),
+    );
+    writer.pages_id = Some(
+        writer
+            .allocate_object_id()
+            .expect("test object ID allocation"),
+    );
+    writer.info_id = Some(
+        writer
+            .allocate_object_id()
+            .expect("test object ID allocation"),
+    );
     writer.write_catalog(&mut document).unwrap();
 
     let catalog_id = writer.catalog_id.unwrap();
@@ -104,7 +116,11 @@ fn test_write_info() {
     {
         let mut writer = PdfWriter::new_with_writer(&mut buffer);
         // Set required info_id before calling write_info
-        writer.info_id = Some(writer.allocate_object_id());
+        writer.info_id = Some(
+            writer
+                .allocate_object_id()
+                .expect("test object ID allocation"),
+        );
         writer.write_info(&document).unwrap();
         let info_id = writer.info_id.unwrap();
         assert!(info_id.number() > 0);
@@ -140,7 +156,11 @@ fn test_write_info_with_dates() {
     {
         let mut writer = PdfWriter::new_with_writer(&mut buffer);
         // Set required info_id before calling write_info
-        writer.info_id = Some(writer.allocate_object_id());
+        writer.info_id = Some(
+            writer
+                .allocate_object_id()
+                .expect("test object ID allocation"),
+        );
         writer.write_info(&document).unwrap();
     }
 
@@ -2547,13 +2567,13 @@ mod comprehensive_tests {
         let buffer = Vec::new();
         let mut writer = PdfWriter::new_with_writer(buffer);
 
-        let id1 = writer.allocate_object_id();
+        let id1 = writer.allocate_object_id().expect("test object ID allocation");
         assert_eq!(id1, ObjectId::new(1, 0));
 
-        let id2 = writer.allocate_object_id();
+        let id2 = writer.allocate_object_id().expect("test object ID allocation");
         assert_eq!(id2, ObjectId::new(2, 0));
 
-        let id3 = writer.allocate_object_id();
+        let id3 = writer.allocate_object_id().expect("test object ID allocation");
         assert_eq!(id3, ObjectId::new(3, 0));
 
         assert_eq!(writer.next_object_id, 4);
@@ -2983,7 +3003,7 @@ mod comprehensive_tests {
             let mut writer = PdfWriter::new_with_writer(&mut buffer);
 
             // Allocate many object IDs to test cleanup
-            let ids: Vec<_> = (0..100).map(|_| writer.allocate_object_id()).collect();
+            let ids: Vec<_> = (0..100).map(|_| writer.allocate_object_id().expect("test object ID allocation")).collect();
 
             // Verify all IDs are unique and sequential
             for (i, &id) in ids.iter().enumerate() {
@@ -2991,7 +3011,7 @@ mod comprehensive_tests {
             }
 
             // Test that we can still allocate after cleanup
-            let next_id = writer.allocate_object_id();
+            let next_id = writer.allocate_object_id().expect("test object ID allocation");
             assert_eq!(next_id, 101);
         }
         // Writer should be properly dropped here
@@ -3011,7 +3031,7 @@ mod comprehensive_tests {
 
             // Simulate concurrent operations
             for i in 0..10 {
-                let id = writer.allocate_object_id();
+                let id = writer.allocate_object_id().expect("test object ID allocation");
                 assert_eq!(id, (i + 1) as u32);
             }
 
@@ -3153,9 +3173,9 @@ mod comprehensive_tests {
         let mut writer = PdfWriter::new_with_writer(&mut buffer);
 
         // Test sequential allocation
-        let id1 = writer.allocate_object_id();
-        let id2 = writer.allocate_object_id();
-        let id3 = writer.allocate_object_id();
+        let id1 = writer.allocate_object_id().expect("test object ID allocation");
+        let id2 = writer.allocate_object_id().expect("test object ID allocation");
+        let id3 = writer.allocate_object_id().expect("test object ID allocation");
 
         assert_eq!(id1.number(), 1);
         assert_eq!(id2.number(), 2);
@@ -3789,9 +3809,9 @@ mod comprehensive_tests {
         let mut writer = PdfWriter::new_with_writer(&mut buffer);
 
         // Test that required IDs are properly allocated
-        writer.catalog_id = Some(writer.allocate_object_id());
-        writer.pages_id = Some(writer.allocate_object_id());
-        writer.info_id = Some(writer.allocate_object_id());
+        writer.catalog_id = Some(writer.allocate_object_id().expect("test object ID allocation"));
+        writer.pages_id = Some(writer.allocate_object_id().expect("test object ID allocation"));
+        writer.info_id = Some(writer.allocate_object_id().expect("test object ID allocation"));
 
         assert!(writer.catalog_id.is_some());
         assert!(writer.pages_id.is_some());

@@ -1,3 +1,40 @@
+## Validación final #639/#653/#654/#655 — 2026-09-29
+
+- Issues abiertas confirmadas en GitHub: #639 (identificación), #653 (árbol de páginas), #654 (entrada cifrada), #655 (filtro xref). Enlaces y criterios individuales debajo.
+- Estado: `[-]` implementación y revisión local terminadas; PR #656 publicado, CI/integración pendientes. Prioridad P1. Responsable Codex.
+- Última validación: workspace 9931 pasan/0 fallos/71 omitidos antes del endurecimiento final de nombres PDF; árbol final 15 regresiones en tres configuraciones (default, internal-testing+unstable-spi+semantic y compression-only). Clippy biblioteca/tests y formato pasan. RED/GREEN y mutación #655 discriminantes.
+- Verificación independiente final: 30 salidas incrementales y 4 configuraciones nuevas; qpdf/Poppler pasan; 40 PDFs incluyendo fixtures sin advertencias. Info, XMP, claves escapadas, metadatos de página/catálogo, recursos heredados, contenido, Parent y prefijo verificados.
+- QR calidad/seguridad completado: sin hallazgos abiertos dentro del alcance; limitaciones explícitas en docs/reports/2026-09-29-issue-639-final-review.md. Checksums del producto en evidencia contigua.
+- Criterio de cierre restante: PR revisable, CI del HEAD publicado aprobada, integración verificada.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/656. Producto validado en 5a4e3b0; este seguimiento no cambia el código.
+- Última validación adicional: 220 doctests del árbol final pasan, 24 omitidos.
+- Siguiente acción: verificar CI del HEAD publicado de #656, resolver fallos y confirmar integración.
+
+## Dependencia de validación #655
+
+- Issue: #655 — fix(writer): omit FlateDecode when xref stream compression is disabled — https://github.com/bzsanti/oxidizePdf/issues/655
+- Estado: `[-]` en curso. Prioridad P1. Responsable Codex.
+- Criterio de cierre: xref sin compresión no anuncia FlateDecode; Info legible y qpdf limpio.
+- Última validación: prueba de configuración efectiva #639 falla leyendo Info; filtro incondicional confirmado.
+- Siguiente acción: retirar filtro cuando no se comprime, repetir matriz y qpdf.
+
+## Finalización #639 y dependencias — 2026-09-29
+
+- Issue: #639 — fix(writer): allow callers to suppress generated build and feature fingerprints — https://github.com/bzsanti/oxidizePdf/issues/639
+- Estado: `[-]` en curso. Prioridad P1. Responsable Codex.
+- Criterio de cierre: opt-out público, metadatos preservados por defecto, identificación efectiva, regresiones y revisión aprobadas, PR integrado.
+- Última validación: WIP recuperado sobre develop 8c3c7fa; revisión anterior identifica defectos pendientes.
+- Siguiente acción: reproducir y corregir pérdida de metadatos y dependencias #653/#654; validar con qpdf/Poppler.
+- Issue: #653 — fix(writer): preserve inherited resources and leaf pages in legacy incremental updates — https://github.com/bzsanti/oxidizePdf/issues/653
+- Estado: `[-]` en curso. Prioridad P1. Responsable Codex.
+- Criterio de cierre: append/reemplazo parcial conservan hojas, recursos y cajas heredadas; qpdf y contenido verificables.
+- Siguiente acción: regresiones con árboles planos y anidados y corrección compartida de escritura incremental.
+- Issue: #654 — fix(writer): reject encrypted input before legacy incremental writes — https://github.com/bzsanti/oxidizePdf/issues/654
+- Estado: `[-]` en curso. Prioridad P1. Responsable Codex.
+- Criterio de cierre: las tres APIs y ambas políticas rechazan cifrado sin escribir bytes.
+- Siguiente acción: prueba con fixture AES-256 y rechazo antes de copiar.
+- #650/#651 fusionados en develop (00c4b73/8c3c7fa); issues #648/#649 cerradas. Validación conjunta: 77 regresiones pasan.
+
 ## Corrección de revisión #649 / PR #651
 
 - Issue: #649 — bug(text): TJ negative kerning (adjustment > 0.2 em) injects spurious spaces when glyph advance widths are encoded as kerning — https://github.com/bzsanti/oxidizePdf/issues/649

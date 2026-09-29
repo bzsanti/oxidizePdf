@@ -1,0 +1,10 @@
+{
+  "oxidize-pdf-core/src/document.rs": "c799579e474038cf89d52c31b644cd45a1dbcdc09f09ac74c842ffc1bec8097b",
+  "oxidize-pdf-core/src/lib.rs": "d09a94e29ade544fa38aabcda7c319f87489626703e9c57d13bb00bbf64d98cb",
+  "oxidize-pdf-core/src/writer/mod.rs": "f1e5057210b51255301fe6694eb96f1d4f9f696225fa0ae03313a333ac536a39",
+  "oxidize-pdf-core/src/writer/pdf_writer/mod.rs": "81c616a0fe721558fb1b32e14beff14e4f0e1afa31421a6c857bf37ecbf6e673",
+  "oxidize-pdf-core/src/writer/pdf_writer/rigorous_tests.rs": "f13cd467f32063d1ceab2e51585a32faa8257a11386e3fa5a996eda2d0e93b40",
+  "oxidize-pdf-core/src/writer/pdf_writer/tests.rs": "a39b2316251fdd2558dc9410439bacfcdc06ff71e723403566cd846f91540bfe",
+  "oxidize-pdf-core/src/writer/build_identification.rs": "e8924e86bb5e699395731220e8764cd2c93442b44a0db1308833285486433af8",
+  "oxidize-pdf-core/tests/issue_639_build_identification_test.rs": "6f2b191435dba862816d25ffe23dd448fe9980af9cd07cb4fe747c8c32fa1fb1"
+}

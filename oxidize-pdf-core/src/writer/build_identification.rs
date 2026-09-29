@@ -1,14 +1,10 @@
-//! PDF signature and fingerprinting system
+//! Optional build, edition and feature metadata for generated PDFs.
 //!
-//! This module provides a multi-layer identification system for PDFs generated with oxidize-pdf:
-//!
-//! 1. **Build signature**: A cryptographic hash that uniquely identifies the version and build
-//! 2. **Feature fingerprinting**: Automatic detection of features used in the document
-//! 3. **Edition tagging**: Identifies Community, PRO, or Enterprise edition
-//!
-//! These fields are written to the PDF's Info Dictionary and are NOT exposed in the public API,
-//! making them resistant to spoofing while remaining non-intrusive to legitimate users.
+//! These source-derived identifiers are ordinary Info entries, not digital
+//! signatures, proof of origin, secrets or a licensing enforcement mechanism.
+//! Document::set_build_identification controls whether the writer emits them.
 
+use super::WriterConfig;
 use crate::document::Document;
 use crate::objects::{Dictionary, Object};
 use sha2::{Digest, Sha256};
@@ -29,39 +25,39 @@ impl Edition {
     }
 }
 
-/// PDF signature containing build information and feature fingerprint
-pub struct PdfSignature {
+/// Source-derived build information and feature metadata
+pub struct PdfBuildIdentification {
     /// Version of oxidize-pdf (e.g., "1.2.5")
     #[allow(dead_code)]
     version: String,
     /// Edition used to generate the PDF
     edition: Edition,
-    /// Cryptographic hash of build (version + edition + build timestamp)
+    /// Truncated SHA-256 identifier derived from version, edition and build timestamp.
     build_hash: String,
     /// Bit flags representing features used in the document
     features_fingerprint: u16,
 }
 
-impl PdfSignature {
-    /// Create a new PDF signature for a document
+impl PdfBuildIdentification {
+    /// Collect descriptive build and feature metadata for a document
     ///
     /// # Arguments
     ///
-    /// * `document` - The PDF document to sign
+    /// * `document` - The PDF document being generated
     /// * `edition` - The edition of oxidize-pdf being used
-    pub fn new(document: &Document, edition: Edition) -> Self {
+    pub fn new(document: &Document, edition: Edition, config: &WriterConfig) -> Self {
         Self {
             version: env!("CARGO_PKG_VERSION").to_string(),
             edition,
             build_hash: Self::generate_build_hash(edition),
-            features_fingerprint: Self::compute_features(document),
+            features_fingerprint: Self::compute_features(document, config),
         }
     }
 
-    /// Generate a cryptographic build hash
+    /// Generate the compatibility identifier from public build metadata.
     ///
-    /// This hash uniquely identifies the version, edition, and build of oxidize-pdf.
-    /// It cannot be easily spoofed without access to the source code.
+    /// The inputs are public version/edition/build values, not a secret or proof
+    /// of origin. The truncated hash is not guaranteed to uniquely identify a build.
     fn generate_build_hash(edition: Edition) -> String {
         let mut hasher = Sha256::new();
 
@@ -72,24 +68,25 @@ impl PdfSignature {
         hasher.update(edition.as_str().as_bytes());
 
         // Hash build timestamp (if available) or use a constant
-        // In production, this would be set during build with a build script
+        // Without BUILD_TIMESTAMP, builds with the same version and edition share
+        // this input. Neither source code nor binary contents enter the hash.
         let build_time = option_env!("BUILD_TIMESTAMP").unwrap_or("2024-10-05");
         hasher.update(build_time.as_bytes());
 
-        // Hash a secret salt (makes it harder to reverse engineer)
+        // Public domain-separation constant; not a secret salt.
         hasher.update(b"oxidize-pdf-signature-v1");
 
         let hash = hasher.finalize();
 
-        // Use first 8 bytes (16 hex chars) for the signature
+        // Keep the existing 8-byte (16 hex digit) identifier format.
         format!("oxpdf-{}", hex_encode(&hash[..8]))
     }
 
     /// Compute feature fingerprint from document
     ///
     /// Uses bit flags to represent which features are present in the document.
-    /// This helps identify advanced feature usage for licensing purposes.
-    fn compute_features(document: &Document) -> u16 {
+    /// This is descriptive metadata, not a licensing or authenticity check.
+    fn compute_features(document: &Document, config: &WriterConfig) -> u16 {
         let mut features = 0u16;
 
         // Bit 0: Encryption
@@ -138,12 +135,12 @@ impl PdfSignature {
         }
 
         // Bit 9: Compressed streams
-        if document.compress {
+        if config.compress_streams {
             features |= 0x0200;
         }
 
         // Bit 10: XRef streams (PDF 1.5+)
-        if document.use_xref_streams {
+        if config.use_xref_streams {
             features |= 0x0400;
         }
 
@@ -152,12 +149,11 @@ impl PdfSignature {
         features
     }
 
-    /// Write signature fields to the PDF Info Dictionary
+    /// Write descriptive identification fields to the PDF Info Dictionary
     ///
-    /// These fields are NOT exposed in the public API and cannot be overridden by users.
-    /// They provide a technical fingerprint for anti-spoofing and licensing purposes.
+    /// The caller decides whether to emit these optional, source-derived fields.
     pub fn write_to_info_dict(&self, info_dict: &mut Dictionary) {
-        // Build signature (cryptographic hash)
+        // Descriptive build identifier; not an authenticity check.
         info_dict.set("oxidize-pdf-build", Object::String(self.build_hash.clone()));
 
         // Feature fingerprint (hex encoded bit flags)
@@ -206,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_build_hash_format() {
-        let hash = PdfSignature::generate_build_hash(Edition::OpenSource);
+        let hash = PdfBuildIdentification::generate_build_hash(Edition::OpenSource);
         assert!(hash.starts_with("oxpdf-"));
         assert_eq!(hash.len(), 22); // "oxpdf-" + 16 hex chars
     }
@@ -214,7 +210,7 @@ mod tests {
     #[test]
     fn test_compute_features_empty() {
         let doc = Document::new();
-        let features = PdfSignature::compute_features(&doc);
+        let features = PdfBuildIdentification::compute_features(&doc, &WriterConfig::default());
 
         // Should have compression enabled by default (bit 9)
         assert!(features & 0x0200 != 0, "Compression should be enabled");
@@ -234,30 +230,32 @@ mod tests {
         );
         doc.set_encryption(encryption);
 
-        let features = PdfSignature::compute_features(&doc);
+        let features = PdfBuildIdentification::compute_features(&doc, &WriterConfig::default());
 
         // Should have encryption bit set (bit 0)
         assert!(features & 0x0001 != 0, "Encryption bit should be set");
     }
 
     #[test]
-    fn test_pdf_signature_creation() {
+    fn test_build_identification_creation() {
         let doc = Document::new();
-        let signature = PdfSignature::new(&doc, Edition::OpenSource);
+        let identification =
+            PdfBuildIdentification::new(&doc, Edition::OpenSource, &WriterConfig::default());
 
-        assert_eq!(signature.version, env!("CARGO_PKG_VERSION"));
-        assert_eq!(signature.edition, Edition::OpenSource);
-        assert!(signature.build_hash.starts_with("oxpdf-"));
-        assert!(signature.features_fingerprint > 0); // At least compression should be set
+        assert_eq!(identification.version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(identification.edition, Edition::OpenSource);
+        assert!(identification.build_hash.starts_with("oxpdf-"));
+        assert!(identification.features_fingerprint > 0); // At least compression should be set
     }
 
     #[test]
     fn test_write_to_info_dict() {
         let doc = Document::new();
-        let signature = PdfSignature::new(&doc, Edition::OpenSource);
+        let identification =
+            PdfBuildIdentification::new(&doc, Edition::OpenSource, &WriterConfig::default());
         let mut dict = Dictionary::new();
 
-        signature.write_to_info_dict(&mut dict);
+        identification.write_to_info_dict(&mut dict);
 
         // Should have build hash
         assert!(dict.get("oxidize-pdf-build").is_some());
@@ -269,10 +267,11 @@ mod tests {
     #[test]
     fn test_features_fingerprint_format() {
         let doc = Document::new();
-        let signature = PdfSignature::new(&doc, Edition::OpenSource);
+        let identification =
+            PdfBuildIdentification::new(&doc, Edition::OpenSource, &WriterConfig::default());
         let mut dict = Dictionary::new();
 
-        signature.write_to_info_dict(&mut dict);
+        identification.write_to_info_dict(&mut dict);
 
         let features = dict.get("oxidize-pdf-features").unwrap();
         if let Object::String(features_str) = features {

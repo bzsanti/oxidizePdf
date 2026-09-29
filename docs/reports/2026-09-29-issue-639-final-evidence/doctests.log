@@ -1,0 +1,251 @@
+    Finished `test` profile [unoptimized] target(s) in 0.17s
+   Doc-tests oxidize_pdf
+
+running 244 tests
+test oxidize-pdf-core/src/ai/chunking.rs - ai::chunking::DocumentChunker (line 139) - compile ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats (line 8) - compile ... ok
+test oxidize-pdf-core/src/ai/chunking.rs - ai::chunking::DocumentChunker::chunk_document (line 245) - compile ... ok
+test oxidize-pdf-core/src/ai/chunking.rs - ai::chunking (line 9) - compile ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::ContextualFormat (line 682) ... ok
+test oxidize-pdf-core/src/advanced_tables/mod.rs - advanced_tables (line 15) ... ok
+test oxidize-pdf-core/src/ai/chunking.rs - ai::chunking::DocumentChunker::new (line 167) ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::MarkdownExporter (line 79) - compile ... ok
+test oxidize-pdf-core/src/ai/chunking.rs - ai::chunking::DocumentChunker::chunk_text (line 287) ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::ContextualFormat::export_with_metadata (line 739) ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::ContextualFormat::export_simple (line 708) ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::ContextualFormat::export_with_metadata_and_pages (line 832) ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::ContextualFormat::export_with_pages (line 794) ... ok
+test oxidize-pdf-core/src/ai/mod.rs - ai (line 9) - compile ... ok
+test oxidize-pdf-core/src/ai/mod.rs - ai::export_to_markdown (line 62) - compile ... ok
+test oxidize-pdf-core/src/ai/mod.rs - ai::export_to_contextual (line 119) - compile ... ok
+test oxidize-pdf-core/src/batch/mod.rs - batch (line 17) - compile ... ok
+test oxidize-pdf-core/src/dashboard/mod.rs - dashboard (line 30) ... ignored
+test oxidize-pdf-core/src/dashboard/mod.rs - dashboard (line 72) ... ignored
+test oxidize-pdf-core/src/dashboard/mod.rs - dashboard (line 81) ... ignored
+test oxidize-pdf-core/src/dashboard/mod.rs - dashboard (line 90) ... ignored
+test oxidize-pdf-core/src/dashboard/templates.rs - dashboard::templates (line 9) ... ignored
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::MarkdownExporter::export_with_metadata (line 187) ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::MarkdownExporter::export_with_metadata_and_pages (line 299) ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::MarkdownExporter::export_text (line 155) ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::add_font (line 512) - compile ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::MarkdownExporter::new (line 102) ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::add_font_from_bytes (line 557) - compile ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::get_or_create_struct_tree (line 348) - compile ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::MarkdownExporter::export_with_pages (line 254) ... ok
+test oxidize-pdf-core/src/ai/formats.rs - ai::formats::TokenEfficientExporter (line 929) ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::set_struct_tree (line 310) - compile ... ok
+test oxidize-pdf-core/src/charts/mod.rs - charts (line 17) ... ok
+test oxidize-pdf-core/src/document.rs - document::Document (line 38) ... ok
+test oxidize-pdf-core/src/fonts/type0_parsing.rs - fonts::type0_parsing (line 26) ... ignored
+test oxidize-pdf-core/src/fonts/type0_parsing.rs - fonts::type0_parsing::detect_type0_font (line 75) ... ignored
+test oxidize-pdf-core/src/fonts/type0_parsing.rs - fonts::type0_parsing::resolve_type0_hierarchy (line 337) ... ignored
+test oxidize-pdf-core/src/document.rs - document::Document::mark_entity (line 1245) ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::enable_xref_streams (line 1110) ... ok
+test oxidize-pdf-core/src/graphics/pdf_image.rs - graphics::pdf_image::Image::from_file (line 174) - compile ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::set_default_font_encoding (line 493) ... ok
+test oxidize-pdf-core/src/layout/document_builder.rs - layout::document_builder::DocumentBuilder (line 15) - compile ... ok
+test oxidize-pdf-core/src/graphics/extraction.rs - graphics::extraction (line 30) - compile ... ok
+test oxidize-pdf-core/src/layout/flow.rs - layout::flow::FlowLayout (line 169) - compile ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::set_build_identification (line 442) ... ok
+test oxidize-pdf-core/src/lib.rs - (line 112) - compile ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::set_compress (line 1081) ... ok
+test oxidize-pdf-core/src/lib.rs - (line 147) - compile ... ok
+test oxidize-pdf-core/src/lib.rs - pdf_version (line 409) - compile ... ok
+test oxidize-pdf-core/src/lib.rs - (line 55) - compile ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::to_bytes (line 1145) ... ok
+test oxidize-pdf-core/src/lib.rs - pdf_version (line 445) - compile ... ok
+test oxidize-pdf-core/src/memory/mod.rs - memory (line 16) - compile ... ok
+test oxidize-pdf-core/src/operations/page_analysis.rs - operations::page_analysis (line 13) - compile ... ok
+test oxidize-pdf-core/src/operations/overlay.rs - operations::overlay::overlay_pdf (line 386) - compile ... ok
+test oxidize-pdf-core/src/operations/page_analysis.rs - operations::page_analysis::PageContentAnalyzer::analyze_document (line 310) - compile ... ok
+test oxidize-pdf-core/src/operations/page_analysis.rs - operations::page_analysis::PageContentAnalyzer::analyze_page (line 240) - compile ... ok
+test oxidize-pdf-core/src/document.rs - document::Document::to_bytes_with_config (line 1199) ... ok
+test oxidize-pdf-core/src/operations/page_analysis.rs - operations::page_analysis::PageContentAnalyzer::extract_text_from_scanned_page (line 427) - compile ... ok
+test oxidize-pdf-core/src/operations/page_analysis.rs - operations::page_analysis::PageContentAnalyzer::is_scanned_page (line 372) - compile ... ok
+test oxidize-pdf-core/src/operations/page_analysis.rs - operations::page_analysis::PageContentAnalyzer::process_scanned_pages_parallel (line 545) - compile ... ok
+test oxidize-pdf-core/src/operations/page_analysis.rs - operations::page_analysis::PageContentAnalyzer::new (line 179) - compile ... ok
+test oxidize-pdf-core/src/operations/pdf_ocr_converter.rs - operations::pdf_ocr_converter (line 21) - compile ... ok
+test oxidize-pdf-core/src/layout/image_utils.rs - layout::image_utils::fit_image_dimensions (line 19) ... ok
+test oxidize-pdf-core/src/operations/page_analysis.rs - operations::page_analysis::PageContentAnalyzer::process_scanned_pages_with_ocr (line 489) - compile ... ok
+test oxidize-pdf-core/src/layout/rich_text.rs - layout::rich_text::RichText (line 39) ... ok
+test oxidize-pdf-core/src/page.rs - page::Page::add_form_widget (line 1621) - compile ... ok
+test oxidize-pdf-core/src/operations/semantic_preservation.rs - operations::semantic_preservation::ExistingDocumentPolicy (line 263) - compile fail ... ok
+test oxidize-pdf-core/src/page.rs - page::Page::from_parsed (line 218) - compile ... ok
+test oxidize-pdf-core/src/page.rs - page::Page::begin_marked_content (line 1995) - compile ... ok
+test oxidize-pdf-core/src/lib.rs - (line 23) ... ok
+test oxidize-pdf-core/src/page.rs - page::Page::from_parsed_with_content (line 279) - compile ... ok
+test oxidize-pdf-core/src/operations/page_analysis.rs - operations::page_analysis::ContentAnalysis::is_scanned (line 99) ... ok
+test oxidize-pdf-core/src/metadata/xmp.rs - metadata::xmp (line 51) ... ok
+test oxidize-pdf-core/src/parser/content.rs - parser::content (line 24) - compile ... ok
+test oxidize-pdf-core/src/page.rs - page::Page::add_form_xobject (line 1308) ... ok
+test oxidize-pdf-core/src/page.rs - page::Page::add_table (line 1549) ... ok
+test oxidize-pdf-core/src/page.rs - page::Page::set_footer (line 1718) ... ok
+test oxidize-pdf-core/src/page.rs - page::Page::set_header (line 1703) ... ok
+test oxidize-pdf-core/src/page_tables.rs - page_tables::TableStyle::with_header_bold (line 118) ... ok
+test oxidize-pdf-core/src/parser/content.rs - parser::content::ContentOperation (line 128) ... ok
+test oxidize-pdf-core/src/page.rs - page::validate_pdf_resource_name (line 42) ... ok
+test oxidize-pdf-core/src/page_tables.rs - page_tables::TableStyle::with_header_font (line 105) ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document (line 25) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<File>::open (line 2092) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument (line 193) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::extract_text (line 1230) - compile ... ok
+test oxidize-pdf-core/src/parser/content.rs - parser::content::ContentParser (line 898) ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::extract_text_from_page (line 1278) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::extract_text_from_page_with_options (line 1319) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::extract_text_with_options (line 1360) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::get_all_annotations (line 1469) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::get_object (line 922) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::get_page_annotations (line 1409) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::get_page (line 429) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::get_page_resources (line 1155) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::get_page_resources (line 1123) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::page_count (line 315) - compile ... ok
+test oxidize-pdf-core/src/parser/content.rs - parser::content::ContentParser::parse (line 948) ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::metadata (line 351) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::partition_graph (line 2057) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::rag_chunks_with (line 1565) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::rag_chunks (line 1542) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::rag_chunks_with_profile (line 1847) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::rag_chunks_with_source_and_config (line 1649) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::resolve (line 977) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::rag_chunks_with_source (line 1622) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::rag_chunks_with_profile_config (line 1873) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::ResourceManager (line 79) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::ResourceManager::clear_cache (line 155) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::PdfDocument<R>::version (line 279) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::ResourceManager::cache_object (line 139) - compile ... ok
+test oxidize-pdf-core/src/parser/document.rs - parser::document::ResourceManager::get_cached (line 119) - compile ... ok
+test oxidize-pdf-core/src/parser/mod.rs - parser (line 17) - compile ... ok
+test oxidize-pdf-core/src/parser/mod.rs - parser::ParseError (line 391) - compile ... ok
+test oxidize-pdf-core/src/parser/mod.rs - parser (line 87) - compile ... ok
+test oxidize-pdf-core/src/parser/content.rs - parser::content::TextElement (line 394) ... ok
+test oxidize-pdf-core/src/parser/mod.rs - parser::ParseError (line 372) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfArray (line 104) ... ok
+test oxidize-pdf-core/src/parser/mod.rs - parser::ParseOptions (line 185) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfDictionary::get (line 1054) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects (line 23) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfDictionary (line 133) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfArray::get (line 1144) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfDictionary::get_type (line 1096) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfDictionary::new (line 1032) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfObject::parse (line 344) - compile ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfStream::decode (line 219) - compile ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfName (line 53) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfObject::as_bool (line 901) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfObject::is_null (line 883) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfObject (line 282) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfObject::as_real (line 936) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfStream (line 168) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfObject::as_reference (line 1002) ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree (line 16) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage (line 63) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage::clone_with_resources (line 945) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage::content_streams (line 732) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage::get_annotations (line 982) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage::content_streams_with_document (line 841) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage::get_contents (line 902) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage::get_referenced_objects (line 1046) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage::has_annotations (line 1007) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage::height (line 688) - compile ... ok
+test oxidize-pdf-core/src/parser/page_tree.rs - parser::page_tree::ParsedPage::width (line 657) - compile ... ok
+test oxidize-pdf-core/src/parser/reader.rs - parser::reader::PdfReader<R>::signatures (line 3018) - compile ... ok
+test oxidize-pdf-core/src/pdfa/mod.rs - pdfa (line 14) ... ignored
+test oxidize-pdf-core/src/pdfa/validator.rs - pdfa::validator::PdfAValidator (line 29) ... ignored
+test oxidize-pdf-core/src/parser/reader.rs - parser::reader::PdfReader<R>::unlock (line 253) - compile ... ok
+test oxidize-pdf-core/src/parser/reader.rs - parser::reader::PdfReader<R>::verify_signatures_with_trust_store (line 3093) - compile ... ok
+test oxidize-pdf-core/src/parser/reader.rs - parser::reader::PdfReader<R>::verify_signatures (line 3059) - compile ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfStream::raw_data (line 251) ... ok
+test oxidize-pdf-core/src/pipeline/graph.rs - pipeline::graph::ElementGraph (line 13) - compile ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfString (line 76) ... ok
+test oxidize-pdf-core/src/pipeline/hybrid_chunking.rs - pipeline::hybrid_chunking::HybridChunker (line 218) - compile ... ok
+test oxidize-pdf-core/src/pipeline/profile.rs - pipeline::profile::ExtractionProfile (line 14) - compile ... ok
+test oxidize-pdf-core/src/signatures/mod.rs - signatures::FullSignatureValidationResult (line 104) ... ignored
+test oxidize-pdf-core/src/pipeline/rag.rs - pipeline::rag::RagChunk (line 40) - compile ... ok
+test oxidize-pdf-core/src/signatures/verification.rs - signatures::verification::compute_pdf_hash (line 80) ... ignored
+test oxidize-pdf-core/src/recovery/mod.rs - recovery (line 17) - compile ... ok
+test oxidize-pdf-core/src/streaming/mod.rs - streaming (line 18) - compile ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfString::as_str (line 1182) ... ok
+test oxidize-pdf-core/src/parser/objects.rs - parser::objects::PdfString::to_text (line 1213) ... ok
+test oxidize-pdf-core/src/pipeline/hybrid_chunking.rs - pipeline::hybrid_chunking::HybridChunkConfig (line 40) ... ok
+test oxidize-pdf-core/src/pipeline/hybrid_chunking.rs - pipeline::hybrid_chunking::MergePolicy (line 18) ... ok
+test oxidize-pdf-core/src/signatures/signing.rs - signatures::signing::SignatureAppearance::layout (line 86) ... ok
+test oxidize-pdf-core/src/structure/marked_content.rs - structure::marked_content::MarkedContent::begin (line 177) ... ok
+test oxidize-pdf-core/src/structure/marked_content.rs - structure::marked_content (line 20) ... ok
+test oxidize-pdf-core/src/structure/marked_content.rs - structure::marked_content::MarkedContent::begin_with_mcid (line 209) ... ok
+test oxidize-pdf-core/src/signatures/mod.rs - signatures (line 21) ... ok
+test oxidize-pdf-core/src/structure/marked_content.rs - structure::marked_content::MarkedContent::begin_with_properties (line 291) ... ok
+test oxidize-pdf-core/src/structure/tagged.rs - structure::tagged (line 41) - compile ... ok
+test oxidize-pdf-core/src/structure/marked_content.rs - structure::marked_content::MarkedContent::begin_with_typed_properties (line 243) ... ok
+test oxidize-pdf-core/src/templates/mod.rs - templates (line 9) ... ok
+test oxidize-pdf-core/src/structure/marked_content.rs - structure::marked_content::MarkedContent::end (line 334) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor (line 22) ... ignored
+test oxidize-pdf-core/src/structure/marked_content.rs - structure::marked_content::MarkedContent::finish (line 379) ... ok
+test oxidize-pdf-core/src/structure/marked_content.rs - structure::marked_content::PdfError (line 20) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractor::calculate_confidence (line 384) ... ignored
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractor::extract (line 149) ... ignored
+test oxidize-pdf-core/src/structure/marked_content.rs - structure::marked_content::Result (line 20) ... ok
+test oxidize-pdf-core/src/text/extraction.rs - text::extraction::parse_font_style (line 606) ... ok
+test oxidize-pdf-core/src/text/extraction.rs - text::extraction::sanitize_extracted_text (line 4650) ... ok
+test oxidize-pdf-core/src/text/header_footer.rs - text::header_footer::HeaderFooter::new_footer (line 82) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractor (line 71) ... ok
+test oxidize-pdf-core/src/text/header_footer.rs - text::header_footer::HeaderFooter::new_header (line 65) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractor::builder (line 111) ... ok
+test oxidize-pdf-core/src/text/invoice/mod.rs - text::invoice (line 31) ... ignored
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractorBuilder (line 605) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractorBuilder::confidence_threshold (line 673) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractorBuilder::use_kerning (line 704) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractor::extract_from_text (line 255) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractorBuilder::with_custom_patterns (line 750) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractorBuilder::with_language (line 649) ... ok
+test oxidize-pdf-core/src/text/invoice/extractor.rs - text::invoice::extractor::InvoiceExtractorBuilder::with_custom_patterns (line 728) ... ok
+test oxidize-pdf-core/src/text/invoice/patterns.rs - text::invoice::patterns::PatternLibrary::default_english (line 140) ... ok
+test oxidize-pdf-core/src/text/invoice/patterns.rs - text::invoice::patterns::PatternLibrary::default_spanish (line 114) ... ok
+test oxidize-pdf-core/src/text/invoice/patterns.rs - text::invoice::patterns::PatternLibrary::default_german (line 155) ... ok
+test oxidize-pdf-core/src/text/invoice/patterns.rs - text::invoice::patterns::PatternLibrary::default_italian (line 170) ... ok
+test oxidize-pdf-core/src/text/invoice/patterns.rs - text::invoice::patterns::PatternLibrary::merge (line 186) ... ok
+test oxidize-pdf-core/src/text/invoice/types.rs - text::invoice::types::InvoiceField (line 176) ... ok
+test oxidize-pdf-core/src/text/invoice/types.rs - text::invoice::types::BoundingBox (line 115) ... ok
+test oxidize-pdf-core/src/text/invoice/types.rs - text::invoice::types (line 16) ... ok
+test oxidize-pdf-core/src/text/ocr/mod.rs - text::ocr (line 47) - compile ... ok
+test oxidize-pdf-core/src/text/invoice/types.rs - text::invoice::types::Language::from_code (line 68) ... ok
+test oxidize-pdf-core/src/text/invoice/validators.rs - text::invoice::validators::validate_amount (line 128) ... ok
+test oxidize-pdf-core/src/text/plaintext/extractor.rs - text::plaintext::extractor::PlainTextExtractor (line 109) - compile ... ok
+test oxidize-pdf-core/src/text/plaintext/extractor.rs - text::plaintext::extractor::PlainTextExtractor (line 126) - compile ... ok
+test oxidize-pdf-core/src/text/ocr/mod.rs - text::ocr::OcrProvider (line 1004) ... ok
+test oxidize-pdf-core/src/text/invoice/validators.rs - text::invoice::validators::validate_date (line 32) ... ok
+test oxidize-pdf-core/src/text/plaintext/extractor.rs - text::plaintext::extractor::PlainTextExtractor::extract (line 207) - compile ... ok
+test oxidize-pdf-core/src/text/invoice/validators.rs - text::invoice::validators::validate_invoice_number (line 189) ... ok
+test oxidize-pdf-core/src/text/plaintext/mod.rs - text::plaintext (line 31) ... ignored
+test oxidize-pdf-core/src/text/plaintext/mod.rs - text::plaintext (line 55) ... ignored
+test oxidize-pdf-core/src/text/plaintext/mod.rs - text::plaintext (line 70) ... ignored
+test oxidize-pdf-core/src/text/plaintext/extractor.rs - text::plaintext::extractor::PlainTextExtractor::extract_lines (line 481) - compile ... ok
+test oxidize-pdf-core/src/text/invoice/validators.rs - text::invoice::validators::validate_vat_number (line 234) ... ok
+test oxidize-pdf-core/src/text/ocr/mod.rs - text::ocr (line 20) ... ok
+test oxidize-pdf-core/src/text/ocr/mod.rs - text::ocr::MockOcrProvider (line 1226) ... ok
+test oxidize-pdf-core/src/text/plaintext/extractor.rs - text::plaintext::extractor::PlainTextExtractor::config (line 704) ... ok
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::LineBreakMode (line 191) ... ok
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::PlainTextResult (line 233) ... ignored
+test oxidize-pdf-core/src/text/plaintext/extractor.rs - text::plaintext::extractor::PlainTextExtractor::new (line 164) ... ok
+test oxidize-pdf-core/src/text/plaintext/extractor.rs - text::plaintext::extractor::PlainTextExtractor::with_config (line 180) ... ok
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::PlainTextConfig::dense (line 120) ... ok
+test oxidize-pdf-core/src/text/structured/detector.rs - text::structured::detector::StructuredDataDetector (line 18) - compile ... ok
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::PlainTextConfig (line 14) ... ok
+test oxidize-pdf-core/src/text/structured/mod.rs - text::structured (line 26) - compile ... ok
+test oxidize-pdf-core/src/text/table_detection.rs - text::table_detection (line 18) - compile ... ok
+test oxidize-pdf-core/src/writer/content_stream_utils.rs - writer::content_stream_utils::extract_font_references (line 19) ... ignored
+test oxidize-pdf-core/src/writer/content_stream_utils.rs - writer::content_stream_utils::has_embedded_font_data (line 445) ... ignored
+test oxidize-pdf-core/src/writer/content_stream_utils.rs - writer::content_stream_utils::rename_preserved_fonts (line 74) ... ignored
+test oxidize-pdf-core/src/writer/content_stream_utils.rs - writer::content_stream_utils::rewrite_font_references (line 120) ... ignored
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::PlainTextConfig::loose (line 143) ... ok
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::PlainTextConfig::new (line 104) ... ok
+test oxidize-pdf-core/src/writer/pdf_writer/mod.rs - writer::pdf_writer::PdfWriter<W>::write_incremental_update (line 318) - compile ... ok
+test oxidize-pdf-core/src/writer/pdf_writer/mod.rs - writer::pdf_writer::PdfWriter<W>::write_incremental_with_overlay (line 424) - compile ... ok
+test oxidize-pdf-core/src/writer/pdf_writer/mod.rs - writer::pdf_writer::PdfWriter<W>::write_incremental_with_page_replacement (line 357) - compile ... ok
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::PlainTextConfig::preserve_layout (line 166) ... ok
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::PlainTextResult::is_empty (line 319) ... ok
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::PlainTextResult::empty (line 299) ... ok
+test oxidize-pdf-core/src/text/plaintext/types.rs - text::plaintext::types::PlainTextResult::new (line 278) ... ok
+test oxidize-pdf-core/src/text/text_block.rs - text::text_block::measure_text_block (line 94) ... ok
+
+test result: ok. 220 passed; 0 failed; 24 ignored; 0 measured; 0 filtered out; finished in 10.81s
+

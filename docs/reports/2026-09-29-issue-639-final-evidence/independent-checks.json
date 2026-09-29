@@ -1,0 +1,1201 @@
+[
+  {
+    "file": "compressed-0-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "13 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "13 0 R",
+      "13 0 R",
+      "13 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "compressed-0-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "14 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163904+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163904+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "14 0 R",
+      "14 0 R",
+      "14 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "compressed-1-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "13 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "13 0 R",
+      "13 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "compressed-1-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "14 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163904+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163904+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "14 0 R",
+      "14 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "compressed-2-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "13 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "13 0 R",
+      "13 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "compressed-2-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "15 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163904+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163904+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/oxidize-pdf-build": "u:oxpdf-5f8091ad00e34cbf",
+      "/oxidize-pdf-edition": "u:OpenSource",
+      "/oxidize-pdf-features": "u:0200"
+    },
+    "page_parents": [
+      "15 0 R",
+      "15 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "compressed.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "3 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "3 0 R",
+      "3 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "config-false-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "",
+    "text_stderr": "",
+    "pages": 1,
+    "catalog": {
+      "/Metadata": "6 0 R",
+      "/Pages": "2 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163905+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163905+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/oxidize-pdf-build": "u:oxpdf-5f8091ad00e34cbf",
+      "/oxidize-pdf-edition": "u:OpenSource",
+      "/oxidize-pdf-features": "u:0000"
+    },
+    "page_parents": [
+      "2 0 R"
+    ],
+    "page_metadata": [
+      null
+    ]
+  },
+  {
+    "file": "config-false-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "",
+    "text_stderr": "",
+    "pages": 1,
+    "catalog": {
+      "/Metadata": "6 0 R",
+      "/Pages": "2 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163905+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163905+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/oxidize-pdf-build": "u:oxpdf-5f8091ad00e34cbf",
+      "/oxidize-pdf-edition": "u:OpenSource",
+      "/oxidize-pdf-features": "u:0400"
+    },
+    "page_parents": [
+      "2 0 R"
+    ],
+    "page_metadata": [
+      null
+    ]
+  },
+  {
+    "file": "config-true-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "",
+    "text_stderr": "",
+    "pages": 1,
+    "catalog": {
+      "/Metadata": "6 0 R",
+      "/Pages": "2 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163905+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163905+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/oxidize-pdf-build": "u:oxpdf-5f8091ad00e34cbf",
+      "/oxidize-pdf-edition": "u:OpenSource",
+      "/oxidize-pdf-features": "u:0200"
+    },
+    "page_parents": [
+      "2 0 R"
+    ],
+    "page_metadata": [
+      null
+    ]
+  },
+  {
+    "file": "config-true-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "",
+    "text_stderr": "",
+    "pages": 1,
+    "catalog": {
+      "/Metadata": "6 0 R",
+      "/Pages": "2 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163905+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163905+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/oxidize-pdf-build": "u:oxpdf-5f8091ad00e34cbf",
+      "/oxidize-pdf-edition": "u:OpenSource",
+      "/oxidize-pdf-features": "u:0600"
+    },
+    "page_parents": [
+      "2 0 R"
+    ],
+    "page_metadata": [
+      null
+    ]
+  },
+  {
+    "file": "encrypted.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Extensions": {
+        "/ADBE": {
+          "/BaseVersion": "/1.7",
+          "/ExtensionLevel": 8
+        }
+      },
+      "/Lang": "u:es-ES",
+      "/Metadata": "3 0 R",
+      "/Pages": "4 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "4 0 R",
+      "4 0 R"
+    ],
+    "page_metadata": [
+      "3 0 R",
+      "3 0 R"
+    ]
+  },
+  {
+    "file": "flat-0-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "11 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "11 0 R",
+      "11 0 R",
+      "11 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "flat-0-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "12 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163903+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163903+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "12 0 R",
+      "12 0 R",
+      "12 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "flat-1-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "11 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "11 0 R",
+      "11 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "flat-1-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "12 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163903+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163903+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "12 0 R",
+      "12 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "flat-2-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "11 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "11 0 R",
+      "11 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "flat-2-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "13 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163903+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163903+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/oxidize-pdf-build": "u:oxpdf-5f8091ad00e34cbf",
+      "/oxidize-pdf-edition": "u:OpenSource",
+      "/oxidize-pdf-features": "u:0200"
+    },
+    "page_parents": [
+      "13 0 R",
+      "13 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "flat.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "2 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "2 0 R",
+      "2 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "generation-0-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "11 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "11 0 R",
+      "11 0 R",
+      "11 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "generation-0-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "12 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163904+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163904+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "12 0 R",
+      "12 0 R",
+      "12 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "generation-1-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "11 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "11 0 R",
+      "11 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "generation-1-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "12 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163904+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163904+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "12 0 R",
+      "12 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "generation-2-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "11 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "11 0 R",
+      "11 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "generation-2-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "13 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163904+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163904+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/oxidize-pdf-build": "u:oxpdf-5f8091ad00e34cbf",
+      "/oxidize-pdf-edition": "u:OpenSource",
+      "/oxidize-pdf-features": "u:0200"
+    },
+    "page_parents": [
+      "13 0 R",
+      "13 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "generation.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "2 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "2 0 R",
+      "2 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "nested-0-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "12 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "12 0 R",
+      "12 0 R",
+      "12 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "nested-0-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "13 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163903+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163903+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "13 0 R",
+      "13 0 R",
+      "13 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "nested-1-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "12 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "12 0 R",
+      "12 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "nested-1-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "13 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163903+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163903+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "13 0 R",
+      "13 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "nested-2-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "12 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "12 0 R",
+      "12 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "nested-2-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "14 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163903+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163903+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/oxidize-pdf-build": "u:oxpdf-5f8091ad00e34cbf",
+      "/oxidize-pdf-edition": "u:OpenSource",
+      "/oxidize-pdf-features": "u:0200"
+    },
+    "page_parents": [
+      "14 0 R",
+      "14 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "nested.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/Pages": "2 0 R",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "10 0 R",
+      "10 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "rich-0-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Customer Field": "/Value#name",
+      "/CustomerCatalog": "u:Es",
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/OpenAction": [
+        "3 0 R",
+        "/Fit"
+      ],
+      "/Pages": "14 0 R",
+      "n:/Raw#ff": "n:/N#ff",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "14 0 R",
+      "14 0 R",
+      "14 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "rich-0-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo\n\n\fReplacement",
+    "text_stderr": "",
+    "pages": 3,
+    "catalog": {
+      "/Customer Field": "/Value#name",
+      "/CustomerCatalog": "u:Es",
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/OpenAction": [
+        "3 0 R",
+        "/Fit"
+      ],
+      "/Pages": "15 0 R",
+      "n:/Raw#ff": "n:/N#ff",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163905+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163905+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "15 0 R",
+      "15 0 R",
+      "15 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R",
+      null
+    ]
+  },
+  {
+    "file": "rich-1-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Customer Field": "/Value#name",
+      "/CustomerCatalog": "u:Es",
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/OpenAction": [
+        "3 0 R",
+        "/Fit"
+      ],
+      "/Pages": "14 0 R",
+      "n:/Raw#ff": "n:/N#ff",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "14 0 R",
+      "14 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "rich-1-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "Replacement\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Customer Field": "/Value#name",
+      "/CustomerCatalog": "u:Es",
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/OpenAction": [
+        "3 0 R",
+        "/Fit"
+      ],
+      "/Pages": "15 0 R",
+      "n:/Raw#ff": "n:/N#ff",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163905+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163905+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/Title": "u:Replacement title"
+    },
+    "page_parents": [
+      "15 0 R",
+      "15 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "rich-2-false.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Customer Field": "/Value#name",
+      "/CustomerCatalog": "u:Es",
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/OpenAction": [
+        "3 0 R",
+        "/Fit"
+      ],
+      "/Pages": "14 0 R",
+      "n:/Raw#ff": "n:/N#ff",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "14 0 R",
+      "14 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "rich-2-true.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\nOverlay\n\n\fOriginalTwo\n\nOverlay",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Customer Field": "/Value#name",
+      "/CustomerCatalog": "u:Es",
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/OpenAction": [
+        "3 0 R",
+        "/Fit"
+      ],
+      "/Pages": "16 0 R",
+      "n:/Raw#ff": "n:/N#ff",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/CreationDate": "u:D:20260929163905+00'00",
+      "/Creator": "u:oxidize_pdf",
+      "/ModDate": "u:D:20260929163905+00'00",
+      "/Producer": "u:oxidize_pdf v5.1.3 (MIT)",
+      "/oxidize-pdf-build": "u:oxpdf-5f8091ad00e34cbf",
+      "/oxidize-pdf-edition": "u:OpenSource",
+      "/oxidize-pdf-features": "u:0200"
+    },
+    "page_parents": [
+      "16 0 R",
+      "16 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  },
+  {
+    "file": "rich.pdf",
+    "qpdf_exit": 0,
+    "qpdf_message": "",
+    "text": "OriginalOne\n\n\fOriginalTwo",
+    "text_stderr": "",
+    "pages": 2,
+    "catalog": {
+      "/Customer Field": "/Value#name",
+      "/CustomerCatalog": "u:Es",
+      "/Lang": "u:es-ES",
+      "/Metadata": "8 0 R",
+      "/OpenAction": [
+        "3 0 R",
+        "/Fit"
+      ],
+      "/Pages": "2 0 R",
+      "n:/Raw#ff": "n:/N#ff",
+      "/Type": "/Catalog"
+    },
+    "info": {
+      "/Author": "u:Original author",
+      "/CustomCustomerField": "u:Keep this value",
+      "/Title": "u:Original title"
+    },
+    "page_parents": [
+      "2 0 R",
+      "2 0 R"
+    ],
+    "page_metadata": [
+      "8 0 R",
+      "8 0 R"
+    ]
+  }
+]
