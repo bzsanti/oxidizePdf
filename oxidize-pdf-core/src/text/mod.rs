@@ -35,7 +35,8 @@ pub mod tesseract_provider;
 pub use encoding::{escape_pdf_string_literal, TextEncoding};
 pub use extraction::{
     sanitize_extracted_text, sanitize_extracted_text_with_policy, CarriageReturnHandling,
-    ExtractedText, ExtractionOptions, TextExtractor, TextFragment,
+    ExtractedText, ExtractionOptions, RecoveredText, RecoveryLocation, TextExtractor, TextFragment,
+    TextRecoveryAction, TextRecoveryDiagnostic,
 };
 pub use extraction_cmap::{glyph_name_to_unicode, glyph_name_to_unicode_sequence};
 pub use flow::{TextAlign, TextFlowContext};

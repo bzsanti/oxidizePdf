@@ -1,0 +1,45 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 11 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...core/tests/issue_648_tj_boundary_baseline_shift_test.rs       11    100
+
+--- Worst Offenders ---
+  issue_648_baseline_shift_emits_space_at_moderate_gap (oxidize-pdf-core/tests/issue_648_tj_boundary_baseline_shift_test.rs:57) - Score: 100
+  issue_648_baseline_shift_via_td_operator (oxidize-pdf-core/tests/issue_648_tj_boundary_baseline_shift_test.rs:69) - Score: 100
+  issue_648_table_cells_with_shifted_baselines_are_not_fused (oxidize-pdf-core/tests/issue_648_tj_boundary_baseline_shift_test.rs:89) - Score: 100
+    i Test 'issue_648_table_cells_with_shifted_baselines_are_not_fused' has multiple assertions without diagnostic messages
+  issue_648_subpixel_vertical_jitter_leaves_same_baseline_runs_welded (oxidize-pdf-core/tests/issue_648_tj_boundary_baseline_shift_test.rs:110) - Score: 100
+  issue_648_superscript_with_baseline_shift_does_not_insert_artificial_space (oxidize-pdf-core/tests/issue_648_tj_boundary_baseline_shift_test.rs:122) - Score: 100
+    i Test 'issue_648_superscript_with_baseline_shift_does_not_insert_artificial_space' asserts against a hardcoded constant instead of a computed expected value
+
+--- Details ---
+oxidize-pdf-core/tests/issue_648_tj_boundary_baseline_shift_test.rs:
+  issue_648_table_cells_with_shifted_baselines_are_not_fused (line 89) - Score: 100
+    i Test 'issue_648_table_cells_with_shifted_baselines_are_not_fused' has multiple assertions without diagnostic messages
+  issue_648_superscript_with_baseline_shift_does_not_insert_artificial_space (line 122) - Score: 100
+    i Test 'issue_648_superscript_with_baseline_shift_does_not_insert_artificial_space' asserts against a hardcoded constant instead of a computed expected value
+  issue_648_superscript_citation_following_word_stays_attached (line 140) - Score: 100
+    i Test 'issue_648_superscript_citation_following_word_stays_attached' asserts against a hardcoded constant instead of a computed expected value
+  issue_648_same_baseline_runs_retain_conservative_threshold (line 158) - Score: 100
+    i Test 'issue_648_same_baseline_runs_retain_conservative_threshold' has multiple assertions without diagnostic messages
+  issue_648_large_vertical_shift_still_emits_newline (line 174) - Score: 100
+    i Test 'issue_648_large_vertical_shift_still_emits_newline' asserts against a hardcoded constant instead of a computed expected value
+  shear_keeps_perpendicular_baseline_threshold (line 185) - Score: 100
+    i Test 'shear_keeps_perpendicular_baseline_threshold' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'shear_keeps_perpendicular_baseline_threshold' has multiple assertions without diagnostic messages
+  rotation_preserves_baseline_shift (line 195) - Score: 100
+    i Test 'rotation_preserves_baseline_shift' asserts against a hardcoded constant instead of a computed expected value
+  vertical_scale_preserves_baseline_shift (line 200) - Score: 100
+    i Test 'vertical_scale_preserves_baseline_shift' asserts against a hardcoded constant instead of a computed expected value
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -1,5 +1,275 @@
+## Preparación del release 5.2.0 — 2026-09-29
+
+- Issue: #659 — release: prepare oxidize-pdf 5.2.0 — https://github.com/bzsanti/oxidizePdf/issues/659
+- Estado: `[-]` preparación en curso. Prioridad P1. Responsable Codex.
+- Autorización: usuario solicita iniciar release tras CI #658 y selecciona 5.2.0.
+- Base: develop 48d8b8f; historial main/v5.1.5 se conserva mediante merge.
+- Criterio de cierre de preparación: versiones/notas coherentes, validación proporcional y PR de promoción a main revisable.
+- Última validación: workspace 9934 pasan/0 fallos/71 omitidas; firmas 43 pasan/0 fallos/3 omitidas; Clippy, empaquetado y compilación de ejemplos pasan. Runtime RAG omitido por falta de corpus. #658 permanece borrador por RSA y se excluye del release.
+- Siguiente acción: publicar PR a main y verificar su CI. Tag/publicación requieren CI verde y merge verificado conforme al proceso.
+- Restricciones: preservar WIP original; sin #642, sin PAdES y sin cambios a métricas/baselines.
+
+## Resolución #641 y desarrollo #642 — 2026-09-29
+
+- Issue: #641 — docs(signatures): clarify basic support and keep PAdES outside library scope — https://github.com/bzsanti/oxidizePdf/issues/641
+- Estado: `[-]` en curso. Prioridad P2. Responsable Codex.
+- Criterio de cierre: README, rustdoc, CLAIMS y casos de uso describen firmas básicas, flujo externo y PAdES fuera de alcance; guard documental y ejemplo ejecutable validados; PR integrado.
+- Última validación: contrato y ejemplo ya presentes en develop c4e08c7; se precisa exclusión de PAdES y se actualiza referencia a contención #640.
+- Última validación final #641: dos guards documentales y cinco doctests pasan (dos omitidos); Clippy focalizado y revisión calidad/seguridad pasan.
+- Siguiente acción: publicar PR #641, verificar CI e integrar; #642 continúa por separado.
+- Issue: #642 — feat(encryption): implement interoperable certificate-based PDF recipient encryption — https://github.com/bzsanti/oxidizePdf/issues/642
+- Estado: `[-]` análisis de perfil e interoperabilidad. Prioridad P2. Responsable Codex.
+- Criterio de cierre: writer/reader públicos con cifrado real por certificados, múltiples destinatarios, rechazos, aleatoriedad, interoperabilidad bidireccional, no-C y revisión de seguridad.
+- Última validación: #640 mantiene shell legacy no soportado; #642 confirmada OPEN. Implementación autorizada expresamente por el usuario.
+- Siguiente acción: fijar perfil soportado y construir fixtures con implementación independiente antes de integrar la criptografía.
+- Restricciones: PAdES fuera de la librería; extensiones externas disponibles a cualquiera. Sin PKI gestionada ni ampliación implícita de R6 por contraseña.
+
+## Validación final #639/#653/#654/#655 — 2026-09-29
+
+- Issues abiertas confirmadas en GitHub: #639 (identificación), #653 (árbol de páginas), #654 (entrada cifrada), #655 (filtro xref). Enlaces y criterios individuales debajo.
+- Estado: `[-]` implementación y revisión local terminadas; PR #656 publicado, CI/integración pendientes. Prioridad P1. Responsable Codex.
+- Última validación: workspace 9931 pasan/0 fallos/71 omitidos antes del endurecimiento final de nombres PDF; árbol final 15 regresiones en tres configuraciones (default, internal-testing+unstable-spi+semantic y compression-only). Clippy biblioteca/tests y formato pasan. RED/GREEN y mutación #655 discriminantes.
+- Verificación independiente final: 30 salidas incrementales y 4 configuraciones nuevas; qpdf/Poppler pasan; 40 PDFs incluyendo fixtures sin advertencias. Info, XMP, claves escapadas, metadatos de página/catálogo, recursos heredados, contenido, Parent y prefijo verificados.
+- QR calidad/seguridad completado: sin hallazgos abiertos dentro del alcance; limitaciones explícitas en docs/reports/2026-09-29-issue-639-final-review.md. Checksums del producto en evidencia contigua.
+- Criterio de cierre restante: PR revisable, CI del HEAD publicado aprobada, integración verificada.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/656. Producto validado en 5a4e3b0; este seguimiento no cambia el código.
+- Última validación adicional: 220 doctests del árbol final pasan, 24 omitidos.
+- Siguiente acción: verificar CI del HEAD publicado de #656, resolver fallos y confirmar integración.
+
+## Dependencia de validación #655
+
+- Issue: #655 — fix(writer): omit FlateDecode when xref stream compression is disabled — https://github.com/bzsanti/oxidizePdf/issues/655
+- Estado: `[-]` en curso. Prioridad P1. Responsable Codex.
+- Criterio de cierre: xref sin compresión no anuncia FlateDecode; Info legible y qpdf limpio.
+- Última validación: prueba de configuración efectiva #639 falla leyendo Info; filtro incondicional confirmado.
+- Siguiente acción: retirar filtro cuando no se comprime, repetir matriz y qpdf.
+
+## Finalización #639 y dependencias — 2026-09-29
+
+- Issue: #639 — fix(writer): allow callers to suppress generated build and feature fingerprints — https://github.com/bzsanti/oxidizePdf/issues/639
+- Estado: `[-]` en curso. Prioridad P1. Responsable Codex.
+- Criterio de cierre: opt-out público, metadatos preservados por defecto, identificación efectiva, regresiones y revisión aprobadas, PR integrado.
+- Última validación: WIP recuperado sobre develop 8c3c7fa; revisión anterior identifica defectos pendientes.
+- Siguiente acción: reproducir y corregir pérdida de metadatos y dependencias #653/#654; validar con qpdf/Poppler.
+- Issue: #653 — fix(writer): preserve inherited resources and leaf pages in legacy incremental updates — https://github.com/bzsanti/oxidizePdf/issues/653
+- Estado: `[-]` en curso. Prioridad P1. Responsable Codex.
+- Criterio de cierre: append/reemplazo parcial conservan hojas, recursos y cajas heredadas; qpdf y contenido verificables.
+- Siguiente acción: regresiones con árboles planos y anidados y corrección compartida de escritura incremental.
+- Issue: #654 — fix(writer): reject encrypted input before legacy incremental writes — https://github.com/bzsanti/oxidizePdf/issues/654
+- Estado: `[-]` en curso. Prioridad P1. Responsable Codex.
+- Criterio de cierre: las tres APIs y ambas políticas rechazan cifrado sin escribir bytes.
+- Siguiente acción: prueba con fixture AES-256 y rechazo antes de copiar.
+- #650/#651 fusionados en develop (00c4b73/8c3c7fa); issues #648/#649 cerradas. Validación conjunta: 77 regresiones pasan.
+
+## Corrección de revisión #649 / PR #651
+
+- Issue: #649 — bug(text): TJ negative kerning (adjustment > 0.2 em) injects spurious spaces when glyph advance widths are encoded as kerning — https://github.com/bzsanti/oxidizePdf/issues/649
+- Estado: `[-]` rediseño publicado; actualizado con #637/#648, integración autorizada. Prioridad P1. Responsable Codex.
+- Criterio de cierre: métricas cero verificadas, Type1/Type0/CID cubiertos, huecos reales preservados, revisión/corpus/CI aprobados.
+- Última validación: RED 6 fallos/7 controles; GREEN 32 regresiones, 6780 biblioteca (3 omitidos), 72 diferenciales; Clippy y QR pasan. Incluye Type0/CMap/CID y controles de fuentes normales. Informe: docs/reports/2026-09-29-pr-651-correction-review.md.
+- Siguiente acción: validar conjunto #637/#648/#649 y fusionar #651.
+
+## Corrección de revisión #648 / PR #650
+
+- Issue: #648 — bug(text): ShowTextArray boundary space threshold (0.7 em) suppresses word separator when baseline shifts across text runs — https://github.com/bzsanti/oxidizePdf/issues/648
+- Estado: `[-]` integrada en develop mediante #650 (00c4b73), issue #648 cerrada. Prioridad P1. Responsable Codex.
+- Criterio de cierre: distancia y guard vertical en la misma proyección; regresiones, corpus, revisión y CI aprobados.
+- Última validación: RED cizallamiento sobre fa4f944; GREEN 27 regresiones, 6780 biblioteca (3 omitidos), 72 diferenciales; Clippy, formato y QR pasan. Evidencia: docs/reports/2026-09-29-pr-650-correction-review.md.
+- Siguiente acción: validar combinación #637/#648 y fusionar #650; después integrar #651.
+
+## Publicación #637 — PR #652
+
+- Issue: #637 — fix(parser): reject exhausted FlateDecode recovery instead of reporting empty success — https://github.com/bzsanti/oxidizePdf/issues/637
+- Estado: `[-]` PR abierto contra develop; integración pendiente. Prioridad P1. Responsable Codex.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/652
+- Implementación validada: 8a93b20770bba1bfe8728c18ac9f6c60ce13f631.
+- Última validación: workspace 9890 pasan/0 fallos/72 omitidos; gates T3 y orden pasan sin rebajar umbrales; QR cerrado, Clippy y formato pasan.
+- Criterio de cierre: revisión y CI remotos aprobados, integración verificada.
+- Siguiente acción: revisar checks del PR #652 y atender fallos; merge no ejecutado.
+
+## Recuperación explícita #637 — 2026-09-29
+
+- Issue: #637 — fix(parser): reject exhausted FlateDecode recovery instead of reporting empty success — https://github.com/bzsanti/oxidizePdf/issues/637
+- Estado: `[-]` implementación validada; bloqueo técnico resuelto, integración pendiente. Prioridad P1. Responsable Codex.
+- Autorización: diagnóstico por documento y recuperación explícita aprobada
+  tras confirmar daño en los PDFs de entrada con qpdf/zlib independiente.
+- Base: develop 0fb6444; rama fix/issue-637-explicit-recovery, clon aislado
+  /tmp/oxidize-issue-637-recovery-20260929. Checkout original y #639 preservados.
+- Alcance: APIs estrictas conservan rechazo; APIs nuevas devuelven contenido
+  con diagnóstico de recuperación/incompletitud/omisión. Límites y predictores
+  siguen siendo errores. Los gates distinguen recuperación e integridad;
+  umbrales y baselines numéricos intactos.
+- Criterio de cierre: RED/GREEN público, límites y diagnósticos verificables,
+  T3 y diferenciales aprobados bajo protocolo explícito, QR y árbol final validados.
+- Última validación: RED 10 fallos/1 control; GREEN 72 focalizadas; T3 1613/1761
+  (91,6%), 54 recuperados con 136 diagnósticos. Orden plano 0,202859 y lectura
+  0,178390, ambos pasan los límites previos. Clippy all-targets pasa.
+  Consumidor externo compression-only pasa; mutación de diagnósticos/errores
+  produce siete fallos previstos. Seguridad automática sin hallazgos.
+- Diagnóstico: docs/reports/2026-09-29-issue-637-diagnosis.md y evidencia
+  contigua. El caso previo no determinista qpdf_issue-99 requiere issue propia,
+  responsabilidad mantenimiento/bzsanti; no se corrige ni recalibra aquí.
+- Validación final: workspace aislado 9890 pasan/0 fallos/72 omitidos; features
+  52 pasan. QR cerrado y Clippy del arnés final aprobado. Evidencia y manifiestos
+  en docs/reports/2026-09-29-issue-637-validation-evidence/.
+- Publicación de rama y PR autorizada expresamente el 2026-09-29.
+- Siguiente acción: abrir PR contra develop y verificar su HEAD y checks remotos.
+  Integración pendiente; issue continúa abierta.
+
+## Integración signature-preparation #646 — 2026-09-28
+
+- Issue: #646 — feat(signatures): integrate participant signature preparation for next release — https://github.com/bzsanti/oxidizePdf/issues/646
+- Estado: `[x]` integrada en develop; issue cerrada. Prioridad: P1. Responsable: Codex.
+- Petición expresa: integrar feature/signature-preparation contra develop y
+  disponer de sus APIs en la próxima release. Requisito en PR y Unreleased.
+- Criterio de cierre: rama actualizada, regresiones de preparación/firma/permisos,
+  QR completo, PR contra develop y nota Unreleased. Integración completada; publicación de release pendiente.
+- Última validación: develop 93e6796 integrado sin conflictos de código;
+  TASKS combina ambos historiales. QR corrigió cuatro hallazgos con RED/GREEN.
+  Workspace final: 9895 pasan, cero fallos, 72 omitidos; corpus T0–T6
+  y diferenciales pasan. Focalizadas 46; default 10; interop externa 3 pasan.
+  Consumidor compression-only pasa. Clippy/formato pasan; Kripteia 91/99/96,
+  seguridad sin hallazgos. Mutaciones de DocMDP/FieldMDP detectadas por los tests.
+- Evidencia: docs/reports/2026-09-28-issue-646-{quality-review.md,validation.json,consumer.rs}.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/647 — MERGED contra develop.
+  Merge 32e380324062c20606c83089d4f6c5c9bf61c8d0, 2026-09-28T20:59:41Z.
+  Head revisado d502249f1733c3d25d0565a36b31c62c53c0fc4d.
+- CI final: 17 SUCCESS / 0 FAILED / 2 SKIPPED (corpus programado,
+  validado localmente). Issue #646 cerrada tras verificar el merge.
+- Siguiente acción: incluir esta integración en la próxima release;
+  la publicación de la release sigue pendiente.
+
+# Seguimiento #603 y #641 — 2026-09-28
+
+- Issue: #603 — docs(adoption): reconcile public claims and establish audited adoption monitoring — https://github.com/bzsanti/oxidizePdf/issues/603
+- Issue: #641 — docs(signatures): delimit basic support and PAdES extension points — https://github.com/bzsanti/oxidizePdf/issues/641
+- Estado: en curso. Prioridad: P2. Responsable: Codex.
+- Criterio de cierre: documentación publicada coherente, inventario con evidencia
+  y límites, ejemplo ejecutable y guard documental; aceptación de monitorización
+  registrada sin presentar datos sintéticos como adopción real.
+- Base de integración: develop b76f738; inventario y medición de release 5.1.5.
+  PR #644 corregida a develop; cambios de #640 y demás correcciones preservados.
+- Última validación: 35 tests de firmas, dos guards y cinco doctests pasan;
+  revisión final y Kripteia tests/security completados (log/informe adjuntos).
+- Instrucción vigente del usuario: PAdES queda como extensión para quien quiera
+  implementarlo; se retiran las referencias comerciales de esta propuesta.
+- Rendimiento: el usuario solicita medir; stats incorpora pdf-generation-v1,
+  comparativa ampliada a cinco motores (pdf_oxide 0.3.78) y panel separado. README usa resultados
+  observados, incluidos los desfavorables; artefactos reproducibles adjuntos al informe.
+- Publicación aprobada por el usuario el 2026-09-28.
+- Siguiente acción: publicar PR, verificar CI e integración, desplegar stats y
+  comprobar aceptación antes de cerrar #603. Batir a pdf_oxide no es un objetivo.
+
 # Seguimiento diario
 
+## Corrección #638 — 2026-09-28
+
+- Issue: #638 — fix(parser): propagate invalid predictor errors in strict stream decoding — https://github.com/bzsanti/oxidizePdf/issues/638
+- Estado: `[-]` PR #645 abierto; corrección de CI validada localmente. Prioridad: P1. Responsable: Codex.
+- Activación: OPEN confirmada en GitHub; clon aislado /tmp/oxidize-issue-638,
+  rama fix/issue-638-predictor-errors desde develop b76f738.
+- Criterio de cierre: predictores inválidos/unsupported producen error explícito;
+  dimensiones/arithmetic validadas; muestras PNG válidas exactas en ambas APIs
+  y DecodeParms directos/indirectos; RED/GREEN, QR y validación proporcional.
+- Alcance: predictores Flate/LZW. #637 permanece intacta en el checkout original;
+  sin recalibración de métricas ni recuperación implícita de predictores.
+- Última validación: RED de la suite final exacta sobre base inalterada:
+  11 fallos/7 controles. GREEN final: 18 regresiones #638 y 6 de #514.
+  QR corrigió pérdida de texto en Form por una ampliación de DecodeParms
+  (retirada) y preservó defaults null según la especificación, con RED/GREEN.
+  Consumidor externo compression-only pasa. Clippy all-targets y formato pasan.
+  Kripteia 91/100 filtros y 98/100 nuevos tests; security sin hallazgos.
+  Workspace final: 9847 pasan, cero fallos, 73 omitidos; exit 0.
+  Corpus T0–T6 y diferenciales pasan; T3 1613/1761 (91,6%).
+  QR del autor cerrado. Baselines y umbrales intactos.
+- PR: https://github.com/bzsanti/oxidizePdf/pull/645 — base develop.
+- Revisión de CI: run 36471334187 falla al compilar dos comparaciones con []
+  con internal-testing,unstable-spi,semantic (E0282/E0283). Sustituidas por
+  is_empty() sin cambios del parser; GREEN 18 regresiones #638 + 6 de #514.
+  Kripteia 98/100 y Security sin hallazgos nuevos. Issue OPEN reconfirmada.
+- Integración: develop 32e3803 incorporado; único conflicto en TASKS resuelto
+  conservando ambos historiales. Código fusionado automáticamente.
+- Siguiente acción: comprobar CI completa del PR actualizado;
+  integración pendiente. #647 ya integrada en develop en tarea separada.
+
+## Integración local de upstream para Studio — 2026-09-24
+
+- Estado: `[x]` integración local validada.
+- Prioridad: `P1`.
+- Responsable: Codex.
+- Solicitud: actualizar upstream y renderizador y corregir la firma de Studio.
+- Criterio de cierre: conservar la preparación de firmas por participantes e incorporar 5.1.3 y #606; suite completa y Clippy sin warnings.
+- Resultado: origin/develop 7115feee integrado en feature/signature-preparation mediante c0ba713d; se conservan los cuatro documentos locales anteriores.
+- Validación: 9.630 tests correctos, 47 ignorados por la configuración existente y 119 ejecutables de ejemplos completados; firma y previsualización verificadas en Studio, con OpenSSL y comprobación visual de los artefactos.
+- Análisis estático: Clippy completo correcto con -D warnings; registro target/signature-update-clippy.log.
+- Autorización: el usuario confirma commit y push de las ramas del motor y renderizador el 2026-09-24.
+- Siguiente acción: publicar esta rama y fijar su revisión Git en Studio y el renderizador.
+
+## Contención #640 — 2026-09-28
+
+- Issue: #640 — fix(encryption): fail closed for simulated public-key security handler operations — https://github.com/bzsanti/oxidizePdf/issues/640
+- Estado: `[-]` implementación y QR local completados; PR pendiente. Prioridad: P1. Responsable: Codex.
+- Activación: GitHub confirma OPEN y alcance de contención; base develop
+  `089a92776dc52c6091767edd03caf3668f9a4cd6`. Cambios locales previos preservados.
+- Criterio de cierre: operaciones simuladas rechazadas explícitamente, sin
+  generar/devolver semillas como supuesto cifrado, todas las entradas SecurityHandler cubiertas,
+  documentación pública veraz, RED/GREEN y revisión de calidad/seguridad.
+- Alcance: API de cifrado por destinatarios; sin implementación de #642,
+  sin PAdES avanzado ni cambios en criptografía por contraseña o firmas.
+- Última validación: RED 13 fallos/1 control; GREEN 16 regresiones por API
+  pública con y sin signatures. 18 pruebas CMS/certificados y siete de apariencia
+  pasan. Clippy all-targets -D warnings, formato y build pasan. Biblioteca:
+  6780 pasan/3 omitidos (11 tests de simulación sustituidos por nuevas regresiones).
+  Diferenciales de fusión/orden pasan 34/38. Workspace: 9829 pasan/73 omitidos,
+  incluidos 217 doctests aprobados. T0–T6 pasan. QR del autor cerrado antes de PR.
+  Kripteia 96/100 (16 nuevos) y 100/100 (3 retenidos); security sin hallazgos.
+- Evidencia: docs/reports/2026-09-28-issue-640-{quality-review.md,validation.json}.
+- Siguiente acción: publicar PR hacia develop y comprobar CI multiplataforma.
+  Sin release ni integración todavía; #640 permanece abierta.
+
+
+## Corrección #633 y #634 — 2026-09-27
+
+- Issue: #633 — Outline writer creates invalid sibling links when preceding items have children (5.1.5) — https://github.com/bzsanti/oxidizePdf/issues/633
+- Issue: #634 — Reconstructive extract/split retain metadata while reporting DocumentInfo Discarded (5.1.5) — https://github.com/bzsanti/oxidizePdf/issues/634
+- Estado: implementación y QR locales completados; integración/CI pendientes.
+  Prioridad: P1. Responsable: Codex.
+- Alcance: core, rama fix/issues-633-634 desde develop ff263dba en este checkout.
+  Reservar IDs por lista de hermanos; propagar ReconstructMetadataPolicy al
+  extractor compartido por extract/split. Sin cambios en Python ni release.
+- Criterio de cierre: round-trip de jerarquías raíz/anidadas con destinos y
+  estilos; extract/split Discard y FirstInputWins concuerdan con metadata real
+  e informe en cada parte; RED/GREEN, QR y CI multiplataforma antes de integración.
+- Última validación: RED 4 fallos/3 controles; GREEN 9 tests nuevos y 37 tests
+  existentes (#539, #548, #621), 46 en total. Kripteia 98/100 sobre 141 tests;
+  security sin hallazgos. Biblioteca: 6791 pasan/3 omitidos; Clippy all-targets
+  -D warnings, formato y diff check pasan. QR cerrado antes de crear PR.
+- Seguimiento previo: docs/reports/2026-09-27-issues-633-634-review.md.
+- Preparación: retirada release/v5.1.3-606 local/remota tras comprobar PR #608
+  integrado sin commits pendientes; archivos locales preservados byte por byte,
+  copia /tmp/oxidize-checkout-cleanup-20260927 y stash checkout cleanup.
+- Siguiente acción: terminar QR/validaciones, crear PR hacia develop y verificar
+  Linux/Windows/macOS antes de integrar y cerrar ambas issues.
+
+## Corrección #621 — 2026-09-27
+
+- Issue: #621 — Split fails on reachable zero-offset catalog references; tagged structure needs per-part preservation — https://github.com/bzsanti/oxidizePdf/issues/621
+- Estado: `[-]` en curso por petición del usuario. Prioridad: P1. Responsable: Codex.
+- Alcance: core exclusivamente, clon persistente ../oxidize-pdf-621,
+  rama fix/issue-621-tagged-split desde develop f9132e16. Sin cambios en Studio,
+  Python, estadísticas ni otras issues.
+- Criterio de cierre: fixture sintético 12 páginas dividido 1–3/4–6/7–12,
+  contenido/orden/etiquetas y ParentTree/IDTree coherentes, diagnóstico de
+  referencias malformadas, fuente y permisos preservados, publicación atómica;
+  tests RED/GREEN, regresiones y QR antes de PR.
+- Última validación: RED 4 fallos/1 control; GREEN 14 regresiones nuevas,
+  37 pruebas existentes de operaciones/etiquetas y 6791 unitarias (3 omitidas).
+  Seis partes verificadas con qpdf exit 0; Clippy all-targets sin avisos.
+  Proyección incremental de K/ParentTree/IDTree, diagnóstico de objeto offset0,
+  rechazo de alias/ciclos/índices corruptos y permisos/atomicidad conservados.
+  QR completado antes de PR; Kripteia 94/100 en 117 tests, security sin hallazgos.
+- Siguiente acción: registrar QR sobre fuente final, crear PR y validar CI
+  multiplataforma antes de integrar. Sin publicación de release bajo esta tarea.
 ## Release 5.1.5 para #627 — 2026-09-26
 
 - Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627

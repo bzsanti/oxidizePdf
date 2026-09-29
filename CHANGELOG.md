@@ -8,6 +8,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.2.0] - 2026-09-29
+
+### Added
+
+- `Document::set_build_identification(BuildIdentification::Disabled)` omits the
+  generated build, edition and feature Info fields. Default output remains
+  enabled; Producer and Creator have their own setters (#639).
+- Legacy incremental writers preserve source Info by default; explicitly select
+  `IncrementalInfoPolicy::Replace` to replace it with document metadata (#639).
+
+- Explicit bounded Flate recovery APIs return recovered bytes/text with per-filter,
+  page-content and Form diagnostics. Unverified, incomplete and omitted content
+  remain distinguishable; resource limits and predictor failures still propagate
+  (#637).
+
+- Prepare participant signature fields through incremental create/list/read/remove
+  APIs, render handwritten strokes and optional certificate labels, and pass the
+  prepared appearance to existing detached signing APIs. Handwritten completion
+  remains distinct from a cryptographic signature; DocMDP/FieldMDP restrictions
+  apply. Available in 5.2.0 (#646).
+
+### Documentation
+
+- Clarify that PAdES is outside the library scope and can be implemented by anyone
+  as an independent external extension; document basic signature operations (#641).
+
+- Reconcile public adoption claims, remove unsupported comparisons, and record
+  versioned limitations and evidence (#603). Define basic signature operations,
+  external CMS responsibilities and the PAdES extension interfaces (#641).
+
+### Fixed
+
+- Legacy incremental append, replacement and overlay retain catalog/page metadata,
+  leaf pages, inherited resources and stable page references; encrypted inputs are
+  rejected before any output (#639, #653, #654).
+- Build feature metadata reflects effective writer settings; uncompressed xref
+  streams no longer advertise a FlateDecode filter (#639, #655).
+
+- Recover repeated TJ glyph advances only for verified zero-width source glyphs,
+  preserving ordinary word separators and larger word gaps, including Type0 CID
+  metrics. Ambiguous advances retain the ordinary spacing rule (#649).
+
+- Preserve word separation across shifted TJ baselines, including sheared, rotated
+  and scaled text, while retaining the same-baseline jitter guard (#648).
+
+- Flate byte-only decoding now requires a complete checksum-verified zlib stream
+  in every parse mode. Exhausted recovery no longer fabricates empty success;
+  content and Form errors propagate to strict extraction. Damaged-corpus gates
+  use explicit recovery with separate diagnostics and unchanged numerical limits
+  (#637). See `docs/flate-decoding.md` for migration and limitations.
+
+- Propagate invalid Flate/LZW predictor errors instead of returning untransformed
+  samples. Validate predictor values, PNG dimensions, component depth and checked
+  arithmetic consistently on ordinary/bounded APIs. TIFF predictor 2 is
+  explicitly unsupported. See
+  `docs/predictor-decoding.md` (#638).
+
+- Reject unsupported certificate-based recipient encryption and decryption
+  explicitly instead of returning simulated success, including every public-key
+  security-handler cryptographic entry point. Permission checks deny access;
+  dictionary helpers remain metadata-only. See the migration boundary in
+  `docs/recipient-encryption.md` (#640).
+
+- Write valid outline sibling links when preceding siblings have descendants,
+  including nested branches (#633).
+- Apply the requested document metadata policy during reconstructive extraction
+  and splitting so outputs agree with their preservation reports (#634).
+
+- Preserve per-part tagged structure and rebuild recoverable parent/ID indexes
+  when splitting tagged PDFs; identify reachable zero-offset references and
+  reject unsafe repairs without publishing partial outputs (#621).
+
 ## [5.1.5] - 2026-09-26
 
 ### Fixed

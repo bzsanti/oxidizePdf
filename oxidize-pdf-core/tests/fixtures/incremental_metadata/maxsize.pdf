@@ -1,0 +1,63 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /Metadata 8 0 R /Lang (es-ES) >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 /MediaBox [0 0 600 800] /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /Contents 6 0 R /Metadata 8 0 R >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /Contents 7 0 R /Metadata 8 0 R >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Length 42  >>
+stream
+BT /F1 12 Tf 50 700 Td (OriginalOne) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Length 42  >>
+stream
+BT /F1 12 Tf 50 700 Td (OriginalTwo) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Length 250 /Type /Metadata /Subtype /XML >>
+stream
+<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/" dc:title="Original title"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>
+endstream
+endobj
+9 0 obj
+<< /Title (Original title) /Author (Original author) /CustomCustomerField (Keep this value) >>
+endobj
+xref
+0 1
+0000000000 65535 f 
+1 1
+0000000009 00000 n 
+2 1
+0000000088 00000 n 
+3 1
+0000000214 00000 n 
+4 1
+0000000293 00000 n 
+5 1
+0000000372 00000 n 
+6 1
+0000000442 00000 n 
+7 1
+0000000535 00000 n 
+8 1
+0000000628 00000 n 
+9 1
+0000000959 00000 n 
+trailer
+<< /Size 4294967295 /Root 1 0 R /Info 9 0 R >>
+startxref
+1069
+%%EOF

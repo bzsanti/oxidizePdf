@@ -1,0 +1,1500 @@
+[
+  {
+    "bytes": 10293,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(10293), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(3, 0)",
+    "page_zero_based": 1,
+    "pdf": "t3-stress/format-corpus/preserve_020747.pdf",
+    "raw_file": "0.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 26547
+    },
+    "base_sha256": "77da661d4b1c12b5d625640d762bb82a74ac5e5d5220a435dad8638e48b23488",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/0.bin"
+  },
+  {
+    "bytes": 63208,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(63208), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(9, 0)",
+    "page_zero_based": 3,
+    "pdf": "t3-stress/format-corpus/preserve_020747.pdf",
+    "raw_file": "1.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 224841
+    },
+    "base_sha256": "c298de524d3303eac6c22fa822f2886458f0831d1ed2b845cb71c1cbd3e0ddb6",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/1.bin"
+  },
+  {
+    "bytes": 180721,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(180721)})",
+    "object": "Reference(20, 0)",
+    "page_zero_based": 6,
+    "pdf": "t3-stress/format-corpus/preserve_020747.pdf",
+    "raw_file": "2.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 643869
+    },
+    "base_sha256": "f8b72253a66e68f6e2c75ed68d6583936bbe62068e6ee339e67f99d7eb4166ca",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/2.bin"
+  },
+  {
+    "bytes": 97459,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(97459), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(24, 0)",
+    "page_zero_based": 7,
+    "pdf": "t3-stress/format-corpus/preserve_020747.pdf",
+    "raw_file": "3.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 318410
+    },
+    "base_sha256": "46d809a8fbf64cc6d8dcb86f4c676176fc397bd9d5fd423c6744fe576c92e38c",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/3.bin"
+  },
+  {
+    "bytes": 191535,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(191535), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(29, 0)",
+    "page_zero_based": 8,
+    "pdf": "t3-stress/format-corpus/preserve_020747.pdf",
+    "raw_file": "4.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 642558
+    },
+    "base_sha256": "037ca24ecf3ad3256680ac57b6a69a85dcf407b21dea35f051ad7d8bfa593d3f",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/4.bin"
+  },
+  {
+    "bytes": 137167,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(137167)})",
+    "object": "Reference(33, 0)",
+    "page_zero_based": 9,
+    "pdf": "t3-stress/format-corpus/preserve_020747.pdf",
+    "raw_file": "5.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 611285
+    },
+    "base_sha256": "1d6722bc65d0daf631d1c1b68b66bf2d5b9b8b89c6fc51bcb5858a5a98a32f78",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/5.bin"
+  },
+  {
+    "bytes": 11029,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(11029), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(37, 0)",
+    "page_zero_based": 10,
+    "pdf": "t3-stress/format-corpus/preserve_020747.pdf",
+    "raw_file": "6.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 27488
+    },
+    "base_sha256": "d6ce9971e94c1a68fb9e4ea00216ccca7a0f09bad1134952af1d6a35da3b45a0",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/6.bin"
+  },
+  {
+    "bytes": 115760,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(115266), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(93, 0)",
+    "page_zero_based": 6,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "7.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 335509
+    },
+    "base_sha256": "2f7babd6b142bc933fe3c17c04553a3c30c730f92d3c95562980afaca7f5f4d5",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/7.bin"
+  },
+  {
+    "bytes": 70745,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(69064)})",
+    "object": "Reference(169, 0)",
+    "page_zero_based": 24,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "8.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 205453
+    },
+    "base_sha256": "26733d81f71c444bd83d070dbe6d5815c2b0677c9caee4fdaef095e7025ab1a2",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/8.bin"
+  },
+  {
+    "bytes": 3139,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1396), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(203, 0)",
+    "page_zero_based": 32,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "9.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 3763
+    },
+    "base_sha256": "eedd6a500afc3fe4e16967247471b54722fcc01e48ab127980357c875c3b4c5b",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/9.bin"
+  },
+  {
+    "bytes": 3252,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1518), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(334, 0)",
+    "page_zero_based": 64,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "10.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 4295
+    },
+    "base_sha256": "5a655faf86f4f02f975897a39d52a800f556a3f5ab0a9be4e4c332925f13959d",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/10.bin"
+  },
+  {
+    "bytes": 3495,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1518), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(367, 0)",
+    "page_zero_based": 73,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "11.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 5808
+    },
+    "base_sha256": "d1b6137c5f12988260849ffa52dd0cd90d8f0b8df32ea9a918ee9e57611d04cd",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/11.bin"
+  },
+  {
+    "bytes": 3140,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1315), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(561, 0)",
+    "page_zero_based": 123,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "12.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 4522
+    },
+    "base_sha256": "b10e87cc27b9dbde396fdb0a03b2e16ceaa12fac8e23dba8f5bbf23bb1e42a71",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/12.bin"
+  },
+  {
+    "bytes": 3528,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1360), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(680, 0)",
+    "page_zero_based": 158,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "13.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 3773
+    },
+    "base_sha256": "40ea9b99a2257355a89f323d9a0e2a1e517256616ca4fb6824c37d52c66cfeee",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/13.bin"
+  },
+  {
+    "bytes": 3860,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1581), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(750, 0)",
+    "page_zero_based": 177,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "14.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 5082
+    },
+    "base_sha256": "13b9348fb65d81eb79fc501cdce299875a3fd7dbe8c3272ef21402cd7df93f3f",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/14.bin"
+  },
+  {
+    "bytes": 2086,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1523), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(780, 0)",
+    "page_zero_based": 186,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "15.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 4212
+    },
+    "base_sha256": "bad30db77fcd48b193130445a3eeea05e5381ad24d5f4b90aa7b61d3bc96c80b",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/15.bin"
+  },
+  {
+    "bytes": 4252,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1719), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(1379, 0)",
+    "page_zero_based": 336,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "16.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 5097
+    },
+    "base_sha256": "8a2b658be21e414586cf22f24524b4a20a751e2ba6e6ca5aa8b08827ad42ce58",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/16.bin"
+  },
+  {
+    "bytes": 3317,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1517), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(1412, 0)",
+    "page_zero_based": 347,
+    "pdf": "t3-stress/format-corpus/preserve_027613.pdf",
+    "raw_file": "17.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 4475
+    },
+    "base_sha256": "bc85f3c6719bb49b2e8cf02c9ed62b5b9747f3347b2890b7b9dc4c07ff442a2b",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/17.bin"
+  },
+  {
+    "bytes": 6373,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Reference(96, 0)})",
+    "object": "Reference(95, 0)",
+    "page_zero_based": 24,
+    "pdf": "t3-stress/format-corpus/preserve_040669.pdf",
+    "raw_file": "18.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 13188
+    },
+    "base_sha256": "a0b31c6ba30c02bf190520670ea356faa39bef2e6e553eebc1261d9ec22ef312",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/18.bin"
+  },
+  {
+    "bytes": 3427,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3427), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(98, 0)",
+    "page_zero_based": 25,
+    "pdf": "t3-stress/format-corpus/preserve_040669.pdf",
+    "raw_file": "19.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 17908
+    },
+    "base_sha256": "46be393df8dcaf2968f55676c2f87d9d32cdfc369269f198ee5ceb83bbb52426",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/19.bin"
+  },
+  {
+    "bytes": 2743,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(2743), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(21, 0)",
+    "page_zero_based": 7,
+    "pdf": "t3-stress/format-corpus/preserve_050734.pdf",
+    "raw_file": "20.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 7787
+    },
+    "base_sha256": "c1bad93f051dbaf917c912f57fa9358001269a24d3192f1ca9dd668699760652",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/20.bin"
+  },
+  {
+    "bytes": 3403,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(3403)})",
+    "object": "Reference(55, 0)",
+    "page_zero_based": 18,
+    "pdf": "t3-stress/format-corpus/preserve_050734.pdf",
+    "raw_file": "21.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 9147
+    },
+    "base_sha256": "48a5b12b55458a675354445abc5bfcba718f307ca2f90908469b62ad5be8a5fc",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/21.bin"
+  },
+  {
+    "bytes": 3227,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3227), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(61, 0)",
+    "page_zero_based": 20,
+    "pdf": "t3-stress/format-corpus/preserve_050734.pdf",
+    "raw_file": "22.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 8974
+    },
+    "base_sha256": "03f2f0d95a8058b90f0b35baec7fbe6f50d09b4d9fdb9c66906a0936f909f131",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/22.bin"
+  },
+  {
+    "bytes": 6415,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3156), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(9, 0)",
+    "page_zero_based": 3,
+    "pdf": "t3-stress/format-corpus/preserve_073439.pdf",
+    "raw_file": "23.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 11780
+    },
+    "base_sha256": "35655899eeb13837302f08bd4eb3bea104e71e0a609ef19949687fb5044b9dd9",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/23.bin"
+  },
+  {
+    "bytes": 59,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(59), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(400, 0)",
+    "page_zero_based": 15,
+    "pdf": "t3-stress/format-corpus/preserve_150277.pdf",
+    "raw_file": "24.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 50
+    },
+    "base_sha256": "f9c72456d98824cf53bca5f5c39d7261fad112e90371c495c96fef3852d602d3",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/24.bin"
+  },
+  {
+    "bytes": 2022,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(2022), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(629, 0)",
+    "page_zero_based": 24,
+    "pdf": "t3-stress/format-corpus/preserve_150277.pdf",
+    "raw_file": "25.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 4983
+    },
+    "base_sha256": "0553c07141fae7aa4a9fc691023977b85ee6ab327a2262982be47b4b8f9e6cf3",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/25.bin"
+  },
+  {
+    "bytes": 2386,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(2386), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(783, 0)",
+    "page_zero_based": 38,
+    "pdf": "t3-stress/format-corpus/preserve_150277.pdf",
+    "raw_file": "26.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 6127
+    },
+    "base_sha256": "2b9a35c2dd9c76349d83cfc3b1521f5f6fe28440cc33da409ce9e38e43366c89",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/26.bin"
+  },
+  {
+    "bytes": 111376,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(107146), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(909, 0)",
+    "page_zero_based": 56,
+    "pdf": "t3-stress/format-corpus/preserve_150277.pdf",
+    "raw_file": "27.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 690733
+    },
+    "base_sha256": "7ce70e972c3e60ee7e290c3f0e9ca58bb2a9c69f30d3c3b07cfd6317f12090dc",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/27.bin"
+  },
+  {
+    "bytes": 60913,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(60913), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(1037, 0)",
+    "page_zero_based": 98,
+    "pdf": "t3-stress/format-corpus/preserve_150277.pdf",
+    "raw_file": "28.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 248709
+    },
+    "base_sha256": "5334091b24585eee903acd8cacfe6f98508567292403179c2c7020f7a84a1b85",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/28.bin"
+  },
+  {
+    "bytes": 3549,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(3549)})",
+    "object": "Reference(1055, 0)",
+    "page_zero_based": 104,
+    "pdf": "t3-stress/format-corpus/preserve_150277.pdf",
+    "raw_file": "29.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 12549
+    },
+    "base_sha256": "554cc5f58c20a66294c8e53c2e59c87c55953ecdccb56fed784786c776e7a4ec",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/29.bin"
+  },
+  {
+    "bytes": 35924,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(35924)})",
+    "object": "Reference(1058, 0)",
+    "page_zero_based": 105,
+    "pdf": "t3-stress/format-corpus/preserve_150277.pdf",
+    "raw_file": "30.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 148305
+    },
+    "base_sha256": "123a16b2a0a32e4b804200efde34cac8848db0324600dc53e1bd3f627bca1df6",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/30.bin"
+  },
+  {
+    "bytes": 22787,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(22787)})",
+    "object": "Reference(1064, 0)",
+    "page_zero_based": 107,
+    "pdf": "t3-stress/format-corpus/preserve_150277.pdf",
+    "raw_file": "31.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 110658
+    },
+    "base_sha256": "6aad95800415f97666a6e2b0f88f2e6f2b3e67061349bb8df251bc6ef534657d",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/31.bin"
+  },
+  {
+    "bytes": 182414,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(179457), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(1091, 0)",
+    "page_zero_based": 116,
+    "pdf": "t3-stress/format-corpus/preserve_150277.pdf",
+    "raw_file": "32.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 798265
+    },
+    "base_sha256": "f7014abde8c9f5ca1cf96fb2e4ff2257acad9bc5d8dbd3db8ebe0ffefc3e6a6e",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/32.bin"
+  },
+  {
+    "bytes": 406,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(406), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(953, 0)",
+    "page_zero_based": 23,
+    "pdf": "t3-stress/format-corpus/preserve_178360.pdf",
+    "raw_file": "33.bin",
+    "rust_error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+    "base_result": {
+      "bytes": 1379
+    },
+    "base_sha256": "21e3acf82d7104eeb4c887f810df3639c91d0952203e6354311f11316d3c8270",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/33.bin"
+  },
+  {
+    "bytes": 732,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(732)})",
+    "object": "Reference(964, 0)",
+    "page_zero_based": 23,
+    "pdf": "t3-stress/format-corpus/preserve_178360.pdf",
+    "raw_file": "34.bin",
+    "rust_error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+    "base_result": {
+      "bytes": 1401
+    },
+    "base_sha256": "ea2a941e7fdfc417c2adba2cfd1b1ae96483c506083e110ab88f1d672377f259",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/34.bin"
+  },
+  {
+    "bytes": 656,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(656), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(967, 0)",
+    "page_zero_based": 23,
+    "pdf": "t3-stress/format-corpus/preserve_178360.pdf",
+    "raw_file": "35.bin",
+    "rust_error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+    "base_result": {
+      "bytes": 1416
+    },
+    "base_sha256": "6eb354dc653125e2d3025e27227e97e4b85421c6253ec4b9f8c9a541254d7983",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/35.bin"
+  },
+  {
+    "bytes": 805,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(805)})",
+    "object": "Reference(972, 0)",
+    "page_zero_based": 23,
+    "pdf": "t3-stress/format-corpus/preserve_178360.pdf",
+    "raw_file": "36.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 1389
+    },
+    "base_sha256": "0b859d6a3cfab1e55ec80a3dae1f1e4aff5d3b4746eae70436327e9b8e8064f2",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/36.bin"
+  },
+  {
+    "bytes": 746,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(746)})",
+    "object": "Reference(978, 0)",
+    "page_zero_based": 23,
+    "pdf": "t3-stress/format-corpus/preserve_178360.pdf",
+    "raw_file": "37.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 1420
+    },
+    "base_sha256": "60f9c9d693e9f1628531f2de43f1a46823bec474018c02a427f60b59f286403e",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/37.bin"
+  },
+  {
+    "bytes": 614,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(614), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(979, 0)",
+    "page_zero_based": 23,
+    "pdf": "t3-stress/format-corpus/preserve_178360.pdf",
+    "raw_file": "38.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 1272
+    },
+    "base_sha256": "1f8ea4306cdbd5d7a63ecb763d563f5b32192830a7f28e82afe5808618cdb71f",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/38.bin"
+  },
+  {
+    "bytes": 5466,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(30, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(29, 0)",
+    "page_zero_based": 5,
+    "pdf": "t3-stress/format-corpus/preserve_189478.pdf",
+    "raw_file": "39.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 6937
+    },
+    "base_sha256": "e403fe10386089ef6d6565e322ce8e826a3ccceb7b26a7313c41c1c6959cbad4",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/39.bin"
+  },
+  {
+    "bytes": 5310,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(52, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(51, 0)",
+    "page_zero_based": 10,
+    "pdf": "t3-stress/format-corpus/preserve_189478.pdf",
+    "raw_file": "40.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 6504
+    },
+    "base_sha256": "8fb7ed7e6878f6166d5dc1a0489fcf5c155751729b1e5a9e54913aa4ec7f85bb",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/40.bin"
+  },
+  {
+    "bytes": 5374,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(55, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(54, 0)",
+    "page_zero_based": 11,
+    "pdf": "t3-stress/format-corpus/preserve_189478.pdf",
+    "raw_file": "41.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 7456
+    },
+    "base_sha256": "e272364f54f00132cf947e2d10ceb49d002833d785e18861fecb15e8e16a7050",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/41.bin"
+  },
+  {
+    "bytes": 3813,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(3813)})",
+    "object": "Reference(8, 0)",
+    "page_zero_based": 2,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "42.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 10293
+    },
+    "base_sha256": "ee606aa6d0c4e7c95796a0e4e8af3df0de94d291e9331ae79926fe8b5e4ff258",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/42.bin"
+  },
+  {
+    "bytes": 4104,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(4104)})",
+    "object": "Reference(12, 0)",
+    "page_zero_based": 3,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "43.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 10806
+    },
+    "base_sha256": "cb78342fa5915a80a5e5cc577cc2507bd31fb97d66319606768ef2577845e817",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/43.bin"
+  },
+  {
+    "bytes": 97141,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(97141), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(33, 0)",
+    "page_zero_based": 8,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "44.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 408456
+    },
+    "base_sha256": "894dd08e3d20ae785a81a06e353260e4806a93b4662082da4f1dfed2b98a0892",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/44.bin"
+  },
+  {
+    "bytes": 3558,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(3558)})",
+    "object": "Reference(43, 0)",
+    "page_zero_based": 10,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "45.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 9524
+    },
+    "base_sha256": "2ea12f81616f61c502db3a722d698e06ad7183da1f2de37e1e9a3d255adec80f",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/45.bin"
+  },
+  {
+    "bytes": 4215,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(4215)})",
+    "object": "Reference(48, 0)",
+    "page_zero_based": 11,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "46.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 10887
+    },
+    "base_sha256": "aebe191f62c43d54ed7f04a8ed64cc88c88a70495ad902c5ec4b9d3ce454a9e4",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/46.bin"
+  },
+  {
+    "bytes": 7676,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(7676)})",
+    "object": "Reference(52, 0)",
+    "page_zero_based": 12,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "47.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 48388
+    },
+    "base_sha256": "ad2678389c0ff6d56f4d6b75b7c62320b8235be2c2bc68c096db25e0079f2d57",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/47.bin"
+  },
+  {
+    "bytes": 3076,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(3076)})",
+    "object": "Reference(116, 0)",
+    "page_zero_based": 16,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "48.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 9245
+    },
+    "base_sha256": "9b655169db578fe8427fc17d8b1ca1053de7c33df8702555ec90e7d73bc9ae5f",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/48.bin"
+  },
+  {
+    "bytes": 4209,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(4209), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(123, 0)",
+    "page_zero_based": 17,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "49.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 11593
+    },
+    "base_sha256": "f2cb09315bf2237a9127bd62b929d3f29846262948708c17e6dc409e5f373eb4",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/49.bin"
+  },
+  {
+    "bytes": 3581,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(3581)})",
+    "object": "Reference(129, 0)",
+    "page_zero_based": 18,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "50.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 10887
+    },
+    "base_sha256": "a5e340327fc3acc13d0fe8ca753efb51eb7b924bd64d018d9aeacae81637f439",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/50.bin"
+  },
+  {
+    "bytes": 4135,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(4135), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(139, 0)",
+    "page_zero_based": 20,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "51.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 11082
+    },
+    "base_sha256": "d805095e8226302aa4dae8ffccccd676193fe2d7b37f65a443b9700dcd40f289",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/51.bin"
+  },
+  {
+    "bytes": 3546,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3546), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(152, 0)",
+    "page_zero_based": 22,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "52.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 8996
+    },
+    "base_sha256": "6f135d5cfc19de6428b13322568750da56df6bee0fff68c4f1075b8f88725ac0",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/52.bin"
+  },
+  {
+    "bytes": 58225,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(58225)})",
+    "object": "Reference(155, 0)",
+    "page_zero_based": 23,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "53.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 0
+    },
+    "base_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/53.bin"
+  },
+  {
+    "bytes": 41791,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(41791), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(158, 0)",
+    "page_zero_based": 24,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "54.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 280348
+    },
+    "base_sha256": "f9eab6ff377b0bee040a2e6e56cca4c11465a6460becbbe729367e05585d1746",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/54.bin"
+  },
+  {
+    "bytes": 4218,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(4218)})",
+    "object": "Reference(179, 0)",
+    "page_zero_based": 29,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "55.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 11982
+    },
+    "base_sha256": "07489ad5ef350ff6fe2cd36946c81b86f64f8d20949f3dfd2b5c307e991fa0ab",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/55.bin"
+  },
+  {
+    "bytes": 4679,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(4679), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(189, 0)",
+    "page_zero_based": 31,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "56.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 19055
+    },
+    "base_sha256": "4f3eef2f02901a4569d7db07cec4f58769b469843cf4b7a7ac1670baee6d46ed",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/56.bin"
+  },
+  {
+    "bytes": 5784,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(5784), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(208, 0)",
+    "page_zero_based": 35,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "57.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 19126
+    },
+    "base_sha256": "85365455d462d9ab740cff41b6e6d2fa76c923946d6f4a8f6722a654606de026",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/57.bin"
+  },
+  {
+    "bytes": 4585,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(4585), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(214, 0)",
+    "page_zero_based": 36,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "58.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 12235
+    },
+    "base_sha256": "808a22fa4517dc586f6aeac7e07807ff5a1602ac0629dcf4bab286e50c9cc7ce",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/58.bin"
+  },
+  {
+    "bytes": 7201,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(7201), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(249, 0)",
+    "page_zero_based": 46,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "59.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 43088
+    },
+    "base_sha256": "84e29639d88b61fbb4f0311bf8c0d2c880c2f4abe69ddaf688558c52abe8d87b",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/59.bin"
+  },
+  {
+    "bytes": 7706,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(7706), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(251, 0)",
+    "page_zero_based": 47,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "60.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 49883
+    },
+    "base_sha256": "ca9e754a06d7c9245e6ce24dcf3fe63d269be30aea381dc6b859faa53aea808d",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/60.bin"
+  },
+  {
+    "bytes": 10953,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(10953), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(253, 0)",
+    "page_zero_based": 48,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "61.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 116476
+    },
+    "base_sha256": "f9f45a72c6dca4917da75a56cbc13df246da6af0bb39ff622e7b71238708af13",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/61.bin"
+  },
+  {
+    "bytes": 5309,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(5309)})",
+    "object": "Reference(258, 0)",
+    "page_zero_based": 50,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "62.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 27675
+    },
+    "base_sha256": "70ed2172ae2c8151e0d66a07d142e634faa42e875498efce9abad8277ee43341",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/62.bin"
+  },
+  {
+    "bytes": 9110,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(9110)})",
+    "object": "Reference(260, 0)",
+    "page_zero_based": 51,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "63.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 109636
+    },
+    "base_sha256": "648872379ebc88cd0da08b5c30ed0cff838c0e3394becf9d8a27de6f7a24cf3b",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/63.bin"
+  },
+  {
+    "bytes": 2192,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(2192), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(262, 0)",
+    "page_zero_based": 52,
+    "pdf": "t3-stress/format-corpus/preserve_219789.pdf",
+    "raw_file": "64.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 9852
+    },
+    "base_sha256": "a1c1ec5925d6981b7350e7a9c284fcafb4ab4f01b4f10b3587981c87ecfecb9c",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/64.bin"
+  },
+  {
+    "bytes": 5890,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(3893)})",
+    "object": "Reference(15, 0)",
+    "page_zero_based": 5,
+    "pdf": "t3-stress/format-corpus/preserve_226387.pdf",
+    "raw_file": "65.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 11414
+    },
+    "base_sha256": "dbfd276393f14eec2557a17699aa61c2b668443e93e6a397a79873a426ea79b7",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/65.bin"
+  },
+  {
+    "bytes": 6074,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(6074), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(59, 0)",
+    "page_zero_based": 19,
+    "pdf": "t3-stress/format-corpus/preserve_268346.pdf",
+    "raw_file": "66.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 19088
+    },
+    "base_sha256": "3da517fa685cdfa6543bf0886f10079dc4341bf1e4b8a2ed755d0ddc8f38fb9c",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/66.bin"
+  },
+  {
+    "bytes": 6430,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3168), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(84, 0)",
+    "page_zero_based": 1,
+    "pdf": "t3-stress/format-corpus/preserve_303226.pdf",
+    "raw_file": "67.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 10146
+    },
+    "base_sha256": "2dfdf5d2c396492796e581a49383ead6995e548a215d523f61a7a17ed75b5321",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/67.bin"
+  },
+  {
+    "bytes": 5978,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3038), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(46, 0)",
+    "page_zero_based": 11,
+    "pdf": "t3-stress/format-corpus/preserve_303226.pdf",
+    "raw_file": "68.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 7926
+    },
+    "base_sha256": "c2fda48e6a3f1db3aadac66083da0ace7c05e848ae78f91395f8573102f212e4",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/68.bin"
+  },
+  {
+    "bytes": 6210,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(2877), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(43, 0)",
+    "page_zero_based": 12,
+    "pdf": "t3-stress/format-corpus/preserve_303226.pdf",
+    "raw_file": "69.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 7835
+    },
+    "base_sha256": "45d69def9e4777423ef6f03deca1d4f5614524868b4f717cfbdf81aab86d2f90",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/69.bin"
+  },
+  {
+    "bytes": 5819,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(5819)})",
+    "object": "Reference(20, 0)",
+    "page_zero_based": 6,
+    "pdf": "t3-stress/format-corpus/preserve_367594.pdf",
+    "raw_file": "70.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 18910
+    },
+    "base_sha256": "ab9144ac5777c26d89173905256679e85f7e2c345e86d7fc1b9d09e2ac381f2b",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/70.bin"
+  },
+  {
+    "bytes": 2992,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(2992), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(310, 0)",
+    "page_zero_based": 100,
+    "pdf": "t3-stress/format-corpus/preserve_379049.pdf",
+    "raw_file": "71.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 12908
+    },
+    "base_sha256": "48538bd48849dbc59971f7638926a20ebd2ef9db1a2fdcb42ee98dfe87d5e372",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/71.bin"
+  },
+  {
+    "bytes": 3177,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(43, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(42, 0)",
+    "page_zero_based": 19,
+    "pdf": "t3-stress/format-corpus/preserve_392154.pdf",
+    "raw_file": "72.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 5654
+    },
+    "base_sha256": "c6fdc57d0def794f7c222b9421b0cc28bc4a61280278a70a389c7924aeb2e938",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/72.bin"
+  },
+  {
+    "bytes": 3557,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(189, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(188, 0)",
+    "page_zero_based": 16,
+    "pdf": "t3-stress/format-corpus/preserve_427669.pdf",
+    "raw_file": "73.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 12572
+    },
+    "base_sha256": "7d47be6a60fb0c6f53edab535d29b1d5325e184b674c8d612b921bce3584bee5",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/73.bin"
+  },
+  {
+    "bytes": 2687,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(212, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(211, 0)",
+    "page_zero_based": 17,
+    "pdf": "t3-stress/format-corpus/preserve_427669.pdf",
+    "raw_file": "74.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 12447
+    },
+    "base_sha256": "fbfdb42e6577a0e96f9836b91e2126d1d75529758ad22d96e67bc505fd1cdc4f",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/74.bin"
+  },
+  {
+    "bytes": 3493,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Reference(210, 0)})",
+    "object": "Reference(209, 0)",
+    "page_zero_based": 17,
+    "pdf": "t3-stress/format-corpus/preserve_427669.pdf",
+    "raw_file": "75.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 12428
+    },
+    "base_sha256": "9bad08ac20afbe42e7e46eb054c87ae233001e6752750b5c6631c8f25c458f4a",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/75.bin"
+  },
+  {
+    "bytes": 6187,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(2787)})",
+    "object": "Reference(15, 0)",
+    "page_zero_based": 5,
+    "pdf": "t3-stress/format-corpus/preserve_435321.pdf",
+    "raw_file": "76.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 9013
+    },
+    "base_sha256": "c145e17f8c195ca29c18895ed926b1da2a3f5fc950f50af3161a2518220e5d30",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/76.bin"
+  },
+  {
+    "bytes": 7327,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3532), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(38, 0)",
+    "page_zero_based": 12,
+    "pdf": "t3-stress/format-corpus/preserve_435321.pdf",
+    "raw_file": "77.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 10637
+    },
+    "base_sha256": "8c317ec22a763786acdc6a3fdefa13c3b0f566129a2ca51bb4839cedc06727b2",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/77.bin"
+  },
+  {
+    "bytes": 6303,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(2900)})",
+    "object": "Reference(50, 0)",
+    "page_zero_based": 16,
+    "pdf": "t3-stress/format-corpus/preserve_435321.pdf",
+    "raw_file": "78.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 7108
+    },
+    "base_sha256": "1faca402c0f1f48b45cc7d1d6afff3463bb20c1ee93f312734970850f12828a0",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/78.bin"
+  },
+  {
+    "bytes": 4993,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(4993)})",
+    "object": "Reference(140, 0)",
+    "page_zero_based": 26,
+    "pdf": "t3-stress/format-corpus/preserve_443752.pdf",
+    "raw_file": "79.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 13703
+    },
+    "base_sha256": "0f1fb54e55951b74c86479c34148f5ef52499268733d84e9d9c62a50bd424615",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/79.bin"
+  },
+  {
+    "bytes": 6297,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(6297), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(12, 0)",
+    "page_zero_based": 4,
+    "pdf": "t3-stress/format-corpus/preserve_455746.pdf",
+    "raw_file": "80.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 30644
+    },
+    "base_sha256": "9575f9d441751496d5c3e80892918a094d9dc4e61e4d190c8aa91b5b27438e62",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/80.bin"
+  },
+  {
+    "bytes": 2158,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(2158), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(54, 0)",
+    "page_zero_based": 18,
+    "pdf": "t3-stress/format-corpus/preserve_455746.pdf",
+    "raw_file": "81.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 5981
+    },
+    "base_sha256": "5ba4d93a5e6f231d1ca4d65aaace83fdbf2296e484c284c1407f61c7626071c9",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/81.bin"
+  },
+  {
+    "bytes": 3026,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3026), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(66, 0)",
+    "page_zero_based": 22,
+    "pdf": "t3-stress/format-corpus/preserve_455746.pdf",
+    "raw_file": "82.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 11174
+    },
+    "base_sha256": "dbb52807fc27d785fe226fca8879fb1807d156973f750d72b522f7ffa440dbc1",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/82.bin"
+  },
+  {
+    "bytes": 2632,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(2632)})",
+    "object": "Reference(219, 0)",
+    "page_zero_based": 71,
+    "pdf": "t3-stress/format-corpus/preserve_455746.pdf",
+    "raw_file": "83.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 8191
+    },
+    "base_sha256": "98eb9b4ceb4863cbbf8f663fb8cd258f195b530a7450c5c711e4e42e058b03b8",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/83.bin"
+  },
+  {
+    "bytes": 3067,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3067), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(237, 0)",
+    "page_zero_based": 77,
+    "pdf": "t3-stress/format-corpus/preserve_455746.pdf",
+    "raw_file": "84.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 9337
+    },
+    "base_sha256": "640417f42d51a60635a0dc0ad920517dec57e36048c6ac90a61cd60c17726762",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/84.bin"
+  },
+  {
+    "bytes": 3963,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(3963), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(246, 0)",
+    "page_zero_based": 80,
+    "pdf": "t3-stress/format-corpus/preserve_455746.pdf",
+    "raw_file": "85.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 14324
+    },
+    "base_sha256": "58ea90f3b3398bc79b4037a13b7057acd15982d29f5500f3cb7a761e1f7fc7a1",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/85.bin"
+  },
+  {
+    "bytes": 4813,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(2299), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(30, 0)",
+    "page_zero_based": 10,
+    "pdf": "t3-stress/format-corpus/preserve_477139.pdf",
+    "raw_file": "86.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 6298
+    },
+    "base_sha256": "635f1808c14563132dd1c12176a33bf3ee68d13d4b233e0f666a1368be273d96",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/86.bin"
+  },
+  {
+    "bytes": 15116,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Reference(22, 0)})",
+    "object": "Reference(21, 0)",
+    "page_zero_based": 1,
+    "pdf": "t3-stress/format-corpus/preserve_492484.pdf",
+    "raw_file": "87.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 120424
+    },
+    "base_sha256": "ea7124852788cde55f5fe0c0e95b0dd8014af0b5e43693df292cce688324e05f",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/87.bin"
+  },
+  {
+    "bytes": 15298,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(83, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(82, 0)",
+    "page_zero_based": 7,
+    "pdf": "t3-stress/format-corpus/preserve_492484.pdf",
+    "raw_file": "88.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 120274
+    },
+    "base_sha256": "ec76ea8253188517936ef18089366bb861c1bed9cbde8688c67beb46f041a897",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/88.bin"
+  },
+  {
+    "bytes": 24605,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(145, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(144, 0)",
+    "page_zero_based": 13,
+    "pdf": "t3-stress/format-corpus/preserve_492484.pdf",
+    "raw_file": "89.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 241096
+    },
+    "base_sha256": "7c3b97ce0ffbf6cb177410b1877e4fd4cf583e8fb8da271450c05a2d07264e14",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/89.bin"
+  },
+  {
+    "bytes": 21657,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(321, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(320, 0)",
+    "page_zero_based": 30,
+    "pdf": "t3-stress/format-corpus/preserve_492484.pdf",
+    "raw_file": "90.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 142689
+    },
+    "base_sha256": "11a423eda684da064fd5936641026d50e6a2f12a80c05abe73e1e0265b8363c6",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/90.bin"
+  },
+  {
+    "bytes": 8204,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(8204), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(9, 0)",
+    "page_zero_based": 3,
+    "pdf": "t3-stress/format-corpus/preserve_504076.pdf",
+    "raw_file": "91.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 55452
+    },
+    "base_sha256": "6af5a5af6aafdbb07202162136a96e2c9b5f99db6d6c2cec06936fd750716118",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/91.bin"
+  },
+  {
+    "bytes": 6071,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(6071), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(25, 0)",
+    "page_zero_based": 11,
+    "pdf": "t3-stress/format-corpus/preserve_504076.pdf",
+    "raw_file": "92.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 37506
+    },
+    "base_sha256": "e75a9fd2eb8c9667a0b0fbff457a38a064ed74ff3736e32ce386a622818df88e",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/92.bin"
+  },
+  {
+    "bytes": 6861,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(6861), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(65, 0)",
+    "page_zero_based": 31,
+    "pdf": "t3-stress/format-corpus/preserve_504076.pdf",
+    "raw_file": "93.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 43313
+    },
+    "base_sha256": "26c6a19e6ffa14c493710279ab81b64abfd3bdd2ad4bc0f77beb0b616c4e1cbf",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/93.bin"
+  },
+  {
+    "bytes": 3910,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(2284), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(63, 0)",
+    "page_zero_based": 21,
+    "pdf": "t3-stress/format-corpus/preserve_507618.pdf",
+    "raw_file": "94.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 5597
+    },
+    "base_sha256": "0757ba17610abdd667804ebf3533bf317942e882be1552064749a586eb4f280a",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/94.bin"
+  },
+  {
+    "bytes": 22216,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Reference(6, 0)})",
+    "object": "Reference(5, 0)",
+    "page_zero_based": 0,
+    "pdf": "t3-stress/format-corpus/preserve_507676.pdf",
+    "raw_file": "95.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 67923
+    },
+    "base_sha256": "5b8b833b58ef38406a428e911f83f6db93b2c7d285e69d25cc304517cf55a001",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/95.bin"
+  },
+  {
+    "bytes": 110217,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(52, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(51, 0)",
+    "page_zero_based": 2,
+    "pdf": "t3-stress/format-corpus/preserve_507676.pdf",
+    "raw_file": "96.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 86196
+    },
+    "base_sha256": "256ede9a2e7e8a6ad77ed47ab77891f43125a19767a89f0b60772ca1ad4725dc",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/96.bin"
+  },
+  {
+    "bytes": 112619,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Reference(69, 0)})",
+    "object": "Reference(68, 0)",
+    "page_zero_based": 3,
+    "pdf": "t3-stress/format-corpus/preserve_507676.pdf",
+    "raw_file": "97.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 268776
+    },
+    "base_sha256": "4dafec3f40b03e3c3401f53e71fb7a84f0ced83c4b346eb4826d941160609608",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/97.bin"
+  },
+  {
+    "bytes": 4475,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Integer(2827)})",
+    "object": "Reference(3, 0)",
+    "page_zero_based": 1,
+    "pdf": "t3-stress/format-corpus/preserve_509284.pdf",
+    "raw_file": "98.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 11661
+    },
+    "base_sha256": "609dc46b757a9c6ce487214b77e8f8838429809d87c0c38a30e188d1c4c07b27",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/98.bin"
+  },
+  {
+    "bytes": 7051,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(4506), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(9, 0)",
+    "page_zero_based": 3,
+    "pdf": "t3-stress/format-corpus/preserve_509284.pdf",
+    "raw_file": "99.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 19328
+    },
+    "base_sha256": "ea5c1b8dd611bbe38fad83aa88a2ba96dda093edbaa40249e9e8d90b5aa760c7",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/99.bin"
+  },
+  {
+    "bytes": 1211,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1211), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(24, 0)",
+    "page_zero_based": 8,
+    "pdf": "t3-stress/format-corpus/preserve_509284.pdf",
+    "raw_file": "100.bin",
+    "rust_error": "Stream decode error: FlateDecode incomplete or truncated zlib stream",
+    "base_result": {
+      "bytes": 3947
+    },
+    "base_sha256": "f2b54a0f93c30b240712f33c1f92d80795981a209f6bbd1581d24929c1b53f11",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/100.bin"
+  },
+  {
+    "bytes": 7830,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(4593), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(39, 0)",
+    "page_zero_based": 13,
+    "pdf": "t3-stress/format-corpus/preserve_509284.pdf",
+    "raw_file": "101.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 19692
+    },
+    "base_sha256": "507ccf8377165cd095e9bde8e1da2f3cd68dac71e53c44a9efde5a331991379c",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/101.bin"
+  },
+  {
+    "bytes": 5165,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(1151), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(51, 0)",
+    "page_zero_based": 17,
+    "pdf": "t3-stress/format-corpus/preserve_509284.pdf",
+    "raw_file": "102.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 4442
+    },
+    "base_sha256": "d93fc12edb61bd8ef76afed295d0ea4c0258e92e6f2ca01618cf15fe221525f3",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/102.bin"
+  },
+  {
+    "bytes": 5835,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Reference(466, 0)})",
+    "object": "Reference(467, 0)",
+    "page_zero_based": 0,
+    "pdf": "t3-stress/format-corpus/preserve_498264.pdf",
+    "raw_file": "103.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 8874
+    },
+    "base_sha256": "338eb058eab6df6452596f44f210e98473a8b0522ee960d248c7132c14236ff1",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/103.bin"
+  },
+  {
+    "bytes": 4263,
+    "dict": "PdfDictionary({PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\")), PdfName(\"Length\"): Reference(468, 0)})",
+    "object": "Reference(469, 0)",
+    "page_zero_based": 1,
+    "pdf": "t3-stress/format-corpus/preserve_498264.pdf",
+    "raw_file": "104.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 10260
+    },
+    "base_sha256": "34772db14aa35b8e0131ee20a41ca3a3e83e63fd5219b897e8519c5bc3be9ff5",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/104.bin"
+  },
+  {
+    "bytes": 4328,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Reference(470, 0), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(471, 0)",
+    "page_zero_based": 2,
+    "pdf": "t3-stress/format-corpus/preserve_498264.pdf",
+    "raw_file": "105.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 2623
+    },
+    "base_sha256": "7ff1b444e47cff7919006b087e3219a0a566d1d5f8a4ffbf94816937be6b4891",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/105.bin"
+  },
+  {
+    "bytes": 78,
+    "dict": "PdfDictionary({PdfName(\"Length\"): Integer(48), PdfName(\"Filter\"): Name(PdfName(\"FlateDecode\"))})",
+    "object": "Reference(4, 0)",
+    "page_zero_based": 0,
+    "pdf": "t3-stress/qpdf/qpdf_start.pdf",
+    "raw_file": "106.bin",
+    "rust_error": "Stream decode error: FlateDecode failed: deflate decompression error",
+    "base_result": {
+      "bytes": 0
+    },
+    "base_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "base_output_file": "/tmp/issue-637-base-streams-20260929/106.bin"
+  }
+]

@@ -8,12 +8,14 @@
 //! decompression bombs (a 10KB compressed stream expanding to gigabytes).
 //! This is a security-critical limit per OWASP guidelines.
 
+mod recovery;
+pub use recovery::{
+    decode_stream_with_recovery, FilterRecovery, FlateRecoveryKind, RecoveredStream,
+    StreamRecoveryError, StreamRecoveryErrorKind,
+};
+
 use super::objects::{PdfDictionary, PdfObject};
 use super::{ParseError, ParseOptions, ParseResult};
-
-#[cfg(feature = "compression")]
-use flate2::read::ZlibDecoder;
-use std::io::Read;
 
 // ─── Decompression Limits ──────────────────────────────────────────────────
 
@@ -47,38 +49,6 @@ const MAX_COMPRESSION_RATIO: usize = 1000;
 /// guard remains in force for large expansions, where a bomb would actually be
 /// dangerous, and the 256 MB absolute cap bounds everything regardless.
 const RATIO_GUARD_MIN_OUTPUT: usize = 64 * 1024 * 1024;
-
-/// Read from a decoder into a Vec with a size limit.
-///
-/// Returns `Err` if the decompressed output exceeds `max_bytes`.
-/// This is the central guard against decompression bombs.
-fn read_to_end_limited<R: Read>(reader: &mut R, max_bytes: usize) -> std::io::Result<Vec<u8>> {
-    let mut result = Vec::new();
-    let mut buffer = [0u8; 16384];
-
-    loop {
-        match reader.read(&mut buffer) {
-            Ok(0) => break,
-            Ok(n) => {
-                if result.len() + n > max_bytes {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!(
-                            "Decompressed size exceeds limit of {} bytes ({} MB). \
-                             Possible decompression bomb.",
-                            max_bytes,
-                            max_bytes / (1024 * 1024)
-                        ),
-                    ));
-                }
-                result.extend_from_slice(&buffer[..n]);
-            }
-            Err(e) => return Err(e),
-        }
-    }
-
-    Ok(result)
-}
 
 /// Check compression ratio and reject suspicious streams.
 ///
@@ -169,7 +139,19 @@ impl Filter {
     }
 }
 
-/// Decode stream data according to specified filters
+/// Decode stream data according to specified filters.
+///
+/// Flate/LZW predictor failures return [`ParseError::StreamDecodeError`] in all
+/// parse modes. Supported predictors are identity (1) and PNG (10–15); TIFF (2)
+/// and other values are explicit errors. Use `PdfDocument::decode_stream` when
+/// DecodeParms contains indirect references.
+/// FlateDecode requires a complete zlib stream, including its checksum, in all
+/// parse modes. Corrupt or truncated input returns [`ParseError::StreamDecodeError`];
+/// an empty result is successful only for genuinely empty decoded content.
+/// Implicit raw-deflate/gzip/header/partial recovery is not supported by this
+/// byte-only API, even when legacy recovery flags are set in `ParseOptions`.
+/// Bytes following the first verified zlib stream are ignored, as with the
+/// previous zlib decoder. Predictor postprocessing has its own error policy.
 pub fn decode_stream(
     data: &[u8],
     dict: &PdfDictionary,
@@ -229,6 +211,9 @@ pub fn decode_stream(
 /// Unfiltered data is copied only when it fits. Expanding filters enforce the
 /// bound while producing output; filters without a bounded implementation are
 /// rejected rather than allocating an unchecked intermediate buffer.
+/// FlateDecode uses the same completion/checksum and compression-ratio policy
+/// as [`decode_stream`], with the smaller of `max_bytes` and the 256 MiB hard cap.
+/// Reaching a byte limit never converts incomplete Flate data into success.
 pub fn decode_stream_with_limit(
     data: &[u8],
     dict: &PdfDictionary,
@@ -271,11 +256,7 @@ pub fn decode_stream_with_limit(
             }
         };
         if applies_predictor {
-            if let Some(params) = params {
-                if let Some(predictor) = params.get("Predictor").and_then(PdfObject::as_integer) {
-                    decoded = apply_predictor(&decoded, predictor as u32, params)?;
-                }
-            }
+            decoded = apply_declared_predictor(decoded, params)?;
         }
         if decoded.len() > max_bytes {
             return Err(ParseError::StreamDecodeError(format!(
@@ -322,270 +303,87 @@ pub(crate) fn apply_filter(data: &[u8], filter: Filter) -> ParseResult<Vec<u8>> 
     }
 }
 
-/// Decode FlateDecode (zlib/deflate) compressed data with fallback strategies
-#[cfg(feature = "compression")]
+/// Decode one complete zlib stream. There is no implicit repair/partial mode:
+/// a Vec-only result cannot communicate that recovered bytes are incomplete.
 fn decode_flate(data: &[u8]) -> ParseResult<Vec<u8>> {
-    // Strategy 1: Standard zlib decoder
-    if let Ok(result) = try_standard_zlib_decode(data) {
-        return Ok(result);
-    }
-
-    // Strategy 2: Raw deflate decoder (without zlib wrapper)
-    if let Ok(result) = try_raw_deflate_decode(data) {
-        return Ok(result);
-    }
-
-    // Strategy 3: Try skipping potential header corruption
-    if data.len() > 10 {
-        for skip_bytes in 1..=5 {
-            if let Ok(result) = try_standard_zlib_decode(&data[skip_bytes..]) {
-                return Ok(result);
-            }
-            if let Ok(result) = try_raw_deflate_decode(&data[skip_bytes..]) {
-                return Ok(result);
-            }
-        }
-    }
-
-    // Strategy 4: Try truncating potential footer corruption
-    if data.len() > 20 {
-        for truncate_bytes in 1..=10 {
-            let truncated = &data[..data.len() - truncate_bytes];
-            if let Ok(result) = try_standard_zlib_decode(truncated) {
-                return Ok(result);
-            }
-            if let Ok(result) = try_raw_deflate_decode(truncated) {
-                return Ok(result);
-            }
-        }
-    }
-
-    // Strategy 5: Try with gzip decoder (some PDFs incorrectly use gzip)
-    if let Ok(result) = try_gzip_decode(data) {
-        return Ok(result);
-    }
-
-    // Strategy 6: Try partial decompression for corrupted streams
-    if let Ok(partial) = try_partial_flate_decode(data) {
-        tracing::debug!(
-            "Warning: Using partial FlateDecode recovery, {} bytes recovered",
-            partial.len()
-        );
-        return Ok(partial);
-    }
-
-    // Strategy 7: Try different predictors with raw zlib
-    if data.len() > 20 {
-        for predictor in [10, 11, 12, 13, 14, 15] {
-            if let Ok(result) = try_flate_decode_with_predictor(data, predictor) {
-                tracing::debug!(
-                    "Warning: FlateDecode succeeded with predictor {}",
-                    predictor
-                );
-                return Ok(result);
-            }
-        }
-    }
-
-    // Strategy 8: Last resort - return empty data instead of garbage
-    tracing::debug!("Warning: All FlateDecode strategies failed, returning empty data");
-    Ok(Vec::new())
+    decode_flate_with_limit(data, MAX_DECOMPRESSED_SIZE)
 }
 
 #[cfg(feature = "compression")]
 fn decode_flate_with_limit(data: &[u8], max_bytes: usize) -> ParseResult<Vec<u8>> {
-    let mut decoder = ZlibDecoder::new(data);
-    read_to_end_limited(&mut decoder, max_bytes).map_err(|error| {
-        ParseError::StreamDecodeError(format!("bounded FlateDecode failed: {error}"))
-    })
+    inflate_bounded(data, max_bytes, true).map_err(|failure| failure.error)
+}
+
+#[cfg(feature = "compression")]
+struct FlateFailure {
+    error: ParseError,
+    partial: Vec<u8>,
+    resource_limit: bool,
+}
+
+/// Both strict and explicit recovery use the same incremental resource guards.
+#[cfg(feature = "compression")]
+fn inflate_bounded(data: &[u8], max_bytes: usize, zlib: bool) -> Result<Vec<u8>, FlateFailure> {
+    use flate2::{Decompress, FlushDecompress, Status};
+    let max_bytes = max_bytes.min(MAX_DECOMPRESSED_SIZE);
+    let mut decoder = Decompress::new(zlib);
+    let mut result = Vec::new();
+    let mut buffer = [0u8; 16384];
+    loop {
+        let input_before = decoder.total_in();
+        let output_before = decoder.total_out();
+        let status = decoder.decompress(
+            &data[input_before as usize..],
+            &mut buffer,
+            FlushDecompress::None,
+        );
+        // The decoder may produce bytes on the call that reports corruption.
+        // Check limits BEFORE considering these bytes eligible for recovery.
+        let written = (decoder.total_out() - output_before) as usize;
+        if written > max_bytes.saturating_sub(result.len()) {
+            return Err(FlateFailure {
+                error: ParseError::StreamDecodeError(format!(
+                    "FlateDecode decompressed size exceeds limit of {max_bytes} bytes"
+                )),
+                partial: Vec::new(),
+                resource_limit: true,
+            });
+        }
+        if let Err(error) = check_compression_ratio(data.len(), result.len() + written) {
+            return Err(FlateFailure {
+                error: ParseError::StreamDecodeError(format!("FlateDecode failed: {error}")),
+                partial: Vec::new(),
+                resource_limit: true,
+            });
+        }
+        result.extend_from_slice(&buffer[..written]);
+        match status {
+            Ok(Status::StreamEnd) => return Ok(result),
+            Err(error) => {
+                return Err(FlateFailure {
+                    error: ParseError::StreamDecodeError(format!("FlateDecode failed: {error}")),
+                    partial: result,
+                    resource_limit: false,
+                })
+            }
+            _ => (),
+        }
+        if decoder.total_in() == input_before && written == 0 {
+            return Err(FlateFailure {
+                error: ParseError::StreamDecodeError(
+                    "FlateDecode incomplete or truncated zlib stream".into(),
+                ),
+                partial: result,
+                resource_limit: false,
+            });
+        }
+    }
 }
 
 #[cfg(not(feature = "compression"))]
 fn decode_flate_with_limit(_data: &[u8], _max_bytes: usize) -> ParseResult<Vec<u8>> {
     Err(ParseError::StreamDecodeError(
         "FlateDecode requires the compression feature".to_string(),
-    ))
-}
-
-#[cfg(feature = "compression")]
-fn try_standard_zlib_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    let mut decoder = ZlibDecoder::new(data);
-    let result = read_to_end_limited(&mut decoder, MAX_DECOMPRESSED_SIZE)?;
-    check_compression_ratio(data.len(), result.len())?;
-    Ok(result)
-}
-
-#[cfg(feature = "compression")]
-fn try_raw_deflate_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    use flate2::read::DeflateDecoder;
-    let mut decoder = DeflateDecoder::new(data);
-    let result = read_to_end_limited(&mut decoder, MAX_DECOMPRESSED_SIZE)?;
-    check_compression_ratio(data.len(), result.len())?;
-    Ok(result)
-}
-
-#[cfg(feature = "compression")]
-fn try_gzip_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    use flate2::read::GzDecoder;
-    let mut decoder = GzDecoder::new(data);
-    let result = read_to_end_limited(&mut decoder, MAX_DECOMPRESSED_SIZE)?;
-    check_compression_ratio(data.len(), result.len())?;
-    Ok(result)
-}
-
-#[cfg(feature = "compression")]
-fn try_partial_flate_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    use flate2::read::ZlibDecoder;
-    use std::io::ErrorKind;
-
-    // Try to decode as much as possible, ignoring final errors
-    let mut decoder = ZlibDecoder::new(data);
-    let mut result = Vec::new();
-    let mut buffer = [0; 8192];
-
-    loop {
-        match decoder.read(&mut buffer) {
-            Ok(0) => break, // EOF
-            Ok(n) => {
-                if result.len() + n > MAX_DECOMPRESSED_SIZE {
-                    return Err(std::io::Error::new(
-                        ErrorKind::Other,
-                        format!(
-                            "Partial decompression exceeds {} MB limit",
-                            MAX_DECOMPRESSED_SIZE / (1024 * 1024)
-                        ),
-                    ));
-                }
-                result.extend_from_slice(&buffer[..n]);
-            }
-            Err(e) if e.kind() == ErrorKind::UnexpectedEof => {
-                // Partial data is better than nothing
-                if !result.is_empty() {
-                    check_compression_ratio(data.len(), result.len())?;
-                    return Ok(result);
-                }
-                return Err(e);
-            }
-            Err(e) => return Err(e),
-        }
-    }
-
-    if result.is_empty() {
-        Err(std::io::Error::new(
-            ErrorKind::InvalidData,
-            "No data decoded",
-        ))
-    } else {
-        check_compression_ratio(data.len(), result.len())?;
-        Ok(result)
-    }
-}
-
-#[cfg(feature = "compression")]
-fn try_flate_decode_with_predictor(data: &[u8], predictor: u8) -> Result<Vec<u8>, std::io::Error> {
-    use flate2::read::ZlibDecoder;
-
-    // First try standard decode with size limit
-    let mut decoder = ZlibDecoder::new(data);
-    let raw_data = read_to_end_limited(&mut decoder, MAX_DECOMPRESSED_SIZE)?;
-    check_compression_ratio(data.len(), raw_data.len())?;
-
-    // Apply predictor post-processing if predictor > 1
-    if predictor >= 10 && predictor <= 15 {
-        apply_png_predictor(&raw_data, predictor)
-    } else {
-        Ok(raw_data)
-    }
-}
-
-#[cfg(feature = "compression")]
-fn apply_png_predictor(data: &[u8], predictor: u8) -> Result<Vec<u8>, std::io::Error> {
-    if data.is_empty() {
-        return Ok(data.to_vec());
-    }
-
-    // For PNG predictors, we need to know the row width
-    // This is a simplified implementation that tries common widths
-    let common_widths = [1, 2, 3, 4, 8, 16, 24, 32, 48, 64, 96, 128];
-
-    for &width in &common_widths {
-        if let Ok(result) = apply_png_predictor_with_width(data, predictor, width) {
-            // Basic validation: result should be meaningful
-            if result.len() > data.len() / 2 && result.len() < data.len() * 2 {
-                return Ok(result);
-            }
-        }
-    }
-
-    // If all predictors fail, return original data
-    Ok(data.to_vec())
-}
-
-#[cfg(feature = "compression")]
-fn apply_png_predictor_with_width(
-    data: &[u8],
-    _predictor: u8,
-    width: usize,
-) -> Result<Vec<u8>, std::io::Error> {
-    use std::io::{Error, ErrorKind};
-
-    if width == 0 || data.len() % (width + 1) != 0 {
-        return Err(Error::new(ErrorKind::InvalidInput, "Invalid width"));
-    }
-
-    let mut result = Vec::new();
-    let row_len = width + 1; // +1 for predictor byte
-
-    for row_data in data.chunks_exact(row_len) {
-        if row_data.is_empty() {
-            continue;
-        }
-
-        let predictor_byte = row_data[0];
-        let row = &row_data[1..];
-
-        match predictor_byte {
-            0 => {
-                // No prediction
-                result.extend_from_slice(row);
-            }
-            1 => {
-                // Sub predictor
-                result.push(row[0]);
-                for i in 1..row.len() {
-                    let prev = if i >= width {
-                        result[result.len() - width]
-                    } else {
-                        0
-                    };
-                    result.push(row[i].wrapping_add(prev));
-                }
-            }
-            2 => {
-                // Up predictor
-                for i in 0..row.len() {
-                    let up = if result.len() >= width {
-                        result[result.len() - width + i]
-                    } else {
-                        0
-                    };
-                    result.push(row[i].wrapping_add(up));
-                }
-            }
-            _ => {
-                // Unknown predictor, use raw data
-                result.extend_from_slice(row);
-            }
-        }
-    }
-
-    Ok(result)
-}
-
-#[cfg(not(feature = "compression"))]
-fn decode_flate(_data: &[u8]) -> ParseResult<Vec<u8>> {
-    Err(ParseError::StreamDecodeError(
-        "FlateDecode requires 'compression' feature".to_string(),
     ))
 }
 
@@ -1008,9 +806,9 @@ mod tests {
         let data = vec![1, 2, 3, 4];
         let dict = PdfDictionary::new();
 
-        // Unknown predictor should return data as-is
-        let result = apply_predictor(&data, 99, &dict).unwrap();
-        assert_eq!(result, data);
+        let result = apply_predictor(&data, 99, &dict);
+        assert!(matches!(result, Err(ParseError::StreamDecodeError(message))
+            if message.contains("unsupported predictor 99")));
     }
 
     #[test]
@@ -1073,74 +871,6 @@ mod tests {
         // For (5, 8, 3): p = 5 + 8 - 3 = 10; pa = |10-5| = 5, pb = |10-8| = 2, pc = |10-3| = 7
         // pb <= pa and pb <= pc, so result is up = 8
         assert_eq!(paeth_predictor(5, 8, 3), 8);
-    }
-
-    #[test]
-    fn test_apply_png_predictor_invalid_data() {
-        let mut params = PdfDictionary::new();
-        params.insert("Columns".to_string(), PdfObject::Integer(3));
-
-        // Data length not multiple of row size (3+1=4)
-        let data = vec![0, 1, 2, 3, 4, 5]; // 6 bytes, not multiple of 4
-        let result = apply_png_predictor_with_width(&data, 10, 3);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_apply_png_predictor_valid_simple() {
-        let mut params = PdfDictionary::new();
-        params.insert("Columns".to_string(), PdfObject::Integer(2));
-        params.insert("BitsPerComponent".to_string(), PdfObject::Integer(8));
-        params.insert("Colors".to_string(), PdfObject::Integer(1));
-
-        // Row size = 2 columns + 1 predictor byte = 3
-        let data = vec![
-            0, 1, 2, // Row 1: predictor=0 (None), data=[1,2]
-            0, 3, 4, // Row 2: predictor=0 (None), data=[3,4]
-        ];
-
-        let result = apply_png_predictor_with_width(&data, 10, 2).unwrap();
-        assert_eq!(result, vec![1, 2, 3, 4]);
-    }
-
-    #[test]
-    fn test_apply_png_predictor_with_sub_filter() {
-        let mut params = PdfDictionary::new();
-        params.insert("Columns".to_string(), PdfObject::Integer(3));
-        params.insert("BitsPerComponent".to_string(), PdfObject::Integer(8));
-        params.insert("Colors".to_string(), PdfObject::Integer(1));
-
-        // Row size = 3 columns + 1 predictor byte = 4
-        let data = vec![
-            1, 1, 2, 3, // Row 1: predictor=1 (Sub), data=[1,2,3] -> [1,3,6]
-        ];
-
-        let result = apply_png_predictor_with_width(&data, 10, 3).unwrap();
-        // Current implementation behavior: Sub filter with current algorithm
-        assert_eq!(result, vec![1, 2, 3]); // Current behavior: copies raw data for Sub filter
-    }
-
-    #[test]
-    fn test_apply_png_predictor_invalid_filter_type() {
-        let mut params = PdfDictionary::new();
-        params.insert("Columns".to_string(), PdfObject::Integer(2));
-
-        // Invalid predictor byte (5 is not defined)
-        let data = vec![5, 1, 2];
-        let result = apply_png_predictor_with_width(&data, 10, 2);
-        // The function might be more tolerant now and handle unknown predictors gracefully
-        if result.is_err() {
-            // If it still fails, check that the error message is appropriate
-            let error_msg = result.unwrap_err().to_string();
-            assert!(
-                error_msg.contains("filter")
-                    || error_msg.contains("predictor")
-                    || error_msg.contains("Invalid")
-            );
-        } else {
-            // If it succeeds, it should handle the unknown predictor gracefully
-            let _decoded_data = result.unwrap();
-        }
     }
 
     #[test]
@@ -1555,27 +1285,36 @@ mod tests {
 
     // ─── Decompression Bomb Protection Tests ──────────────────────────────
 
+    #[cfg(feature = "compression")]
+    fn compress_for_limit_test(data: &[u8]) -> Vec<u8> {
+        use std::io::Write;
+        let mut encoder =
+            flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(data).unwrap();
+        encoder.finish().unwrap()
+    }
+
+    #[cfg(feature = "compression")]
     #[test]
-    fn test_read_to_end_limited_within_limit() {
+    fn test_flate_bound_within_limit() {
         let data = vec![42u8; 1000];
-        let mut cursor = std::io::Cursor::new(&data);
-        let result = read_to_end_limited(&mut cursor, 2000).unwrap();
+        let result = decode_flate_with_limit(&compress_for_limit_test(&data), 2000).unwrap();
         assert_eq!(result.len(), 1000);
     }
 
+    #[cfg(feature = "compression")]
     #[test]
-    fn test_read_to_end_limited_at_exact_limit() {
+    fn test_flate_bound_at_exact_limit() {
         let data = vec![42u8; 1000];
-        let mut cursor = std::io::Cursor::new(&data);
-        let result = read_to_end_limited(&mut cursor, 1000).unwrap();
+        let result = decode_flate_with_limit(&compress_for_limit_test(&data), 1000).unwrap();
         assert_eq!(result.len(), 1000);
     }
 
+    #[cfg(feature = "compression")]
     #[test]
-    fn test_read_to_end_limited_exceeds_limit() {
+    fn test_flate_bound_exceeds_limit() {
         let data = vec![42u8; 2000];
-        let mut cursor = std::io::Cursor::new(&data);
-        let result = read_to_end_limited(&mut cursor, 1000);
+        let result = decode_flate_with_limit(&compress_for_limit_test(&data), 1000);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
@@ -1644,7 +1383,7 @@ mod tests {
         encoder.write_all(&original).unwrap();
         let compressed = encoder.finish().unwrap();
 
-        let result = try_standard_zlib_decode(&compressed);
+        let result = decode_flate(&compressed);
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 100_000);
     }
@@ -1663,7 +1402,7 @@ mod tests {
         encoder.write_all(&original).unwrap();
         let compressed = encoder.finish().unwrap();
 
-        let result = try_standard_zlib_decode(&compressed).expect("small output must decode");
+        let result = decode_flate(&compressed).expect("small output must decode");
         assert_eq!(result.len(), original.len());
     }
 
@@ -1682,11 +1421,11 @@ mod tests {
             .contains("Suspicious compression ratio"));
     }
 
+    #[cfg(feature = "compression")]
     #[test]
-    fn test_read_to_end_limited_empty_input() {
+    fn test_flate_bound_empty_input() {
         let data: Vec<u8> = Vec::new();
-        let mut cursor = std::io::Cursor::new(&data);
-        let result = read_to_end_limited(&mut cursor, 1000).unwrap();
+        let result = decode_flate_with_limit(&compress_for_limit_test(&data), 1000).unwrap();
         assert!(result.is_empty());
     }
 
@@ -1730,33 +1469,11 @@ pub(crate) fn apply_filter_with_params(
     filter: Filter,
     params: Option<&PdfDictionary>,
 ) -> ParseResult<Vec<u8>> {
+    let applies_predictor = matches!(filter, Filter::FlateDecode | Filter::LZWDecode);
     let result = match filter {
-        Filter::FlateDecode => {
-            // Special handling for FlateDecode with Predictor
-            // Some PDFs have streams that are already post-processed with predictor
-            // and should not be decompressed with zlib
-            if let Some(decode_params) = params {
-                if decode_params
-                    .get("Predictor")
-                    .and_then(|p| p.as_integer())
-                    .is_some()
-                {
-                    // First try standard zlib decode
-                    match try_standard_zlib_decode(data) {
-                        Ok(decoded) => decoded,
-                        Err(_) => {
-                            // If zlib decode fails, assume data is already decoded
-                            // This handles predictor-only streams or incorrect DecodeParms
-                            data.to_vec()
-                        }
-                    }
-                } else {
-                    decode_flate(data)?
-                }
-            } else {
-                decode_flate(data)?
-            }
-        }
+        // DecodeParms cannot turn failed decompression into already-decoded data.
+        // Predictor postprocessing remains separate from Flate integrity checks.
+        Filter::FlateDecode => decode_flate(data)?,
         Filter::ASCIIHexDecode => decode_ascii_hex(data)?,
         Filter::ASCII85Decode => decode_ascii85(data)?,
         Filter::LZWDecode => decode_lzw(data, params)?,
@@ -1772,23 +1489,11 @@ pub(crate) fn apply_filter_with_params(
         }
     };
 
-    // Apply predictor if specified in decode parameters
-    if let Some(params_dict) = params {
-        if let Some(predictor_obj) = params_dict.get("Predictor") {
-            if let Some(predictor) = predictor_obj.as_integer() {
-                match apply_predictor(&result, predictor as u32, params_dict) {
-                    Ok(predictor_result) => return Ok(predictor_result),
-                    Err(_) => {
-                        // If predictor fails, use raw data
-                        // This handles cases where DecodeParms are incorrect or data doesn't use predictor
-                        return Ok(result);
-                    }
-                }
-            }
-        }
+    if applies_predictor {
+        apply_declared_predictor(result, params)
+    } else {
+        Ok(result)
     }
-
-    Ok(result)
 }
 
 /// Get filter parameters for a specific filter index
@@ -1800,23 +1505,48 @@ fn get_filter_params(decode_params: Option<&PdfObject>, index: usize) -> Option<
     }
 }
 
-/// Apply predictor function to decoded data
-fn apply_predictor(data: &[u8], predictor: u32, params: &PdfDictionary) -> ParseResult<Vec<u8>> {
+fn predictor_integer(params: &PdfDictionary, name: &str, default: i64) -> ParseResult<i64> {
+    match params.get(name) {
+        None | Some(PdfObject::Null) => Ok(default),
+        Some(PdfObject::Integer(value)) => Ok(*value),
+        _ => Err(ParseError::StreamDecodeError(format!(
+            "predictor {name} must be an integer"
+        ))),
+    }
+}
+
+fn predictor_dimension(params: &PdfDictionary, name: &str) -> ParseResult<usize> {
+    let value = predictor_integer(params, name, 1)?;
+    usize::try_from(value)
+        .ok()
+        .filter(|value| *value > 0)
+        .ok_or_else(|| {
+            ParseError::StreamDecodeError(format!(
+                "predictor {name} must be a positive representable integer"
+            ))
+        })
+}
+
+/// Byte-only APIs cannot report recovery, so predictor failures always propagate.
+fn apply_declared_predictor(data: Vec<u8>, params: Option<&PdfDictionary>) -> ParseResult<Vec<u8>> {
+    let Some(params) = params else {
+        return Ok(data);
+    };
+    let predictor = predictor_integer(params, "Predictor", 1)?;
+    if predictor == 1 {
+        return Ok(data);
+    }
+    apply_predictor(&data, predictor, params)
+}
+
+/// Apply a supported predictor; TIFF (2) and unknown values are explicit errors.
+fn apply_predictor(data: &[u8], predictor: i64, params: &PdfDictionary) -> ParseResult<Vec<u8>> {
     match predictor {
-        1 => {
-            // No prediction
-            Ok(data.to_vec())
-        }
-        10..=15 => {
-            // PNG predictor functions
-            apply_png_predictor_advanced(data, predictor, params)
-        }
-        _ => {
-            // Unknown predictor - return data as-is with warning
-            #[cfg(debug_assertions)]
-            tracing::debug!("Warning: Unknown predictor {predictor}, returning data as-is");
-            Ok(data.to_vec())
-        }
+        1 => Ok(data.to_vec()),
+        10..=15 => apply_png_predictor_advanced(data, predictor as u32, params),
+        _ => Err(ParseError::StreamDecodeError(format!(
+            "unsupported predictor {predictor}"
+        ))),
     }
 }
 
@@ -1826,26 +1556,21 @@ fn apply_png_predictor_advanced(
     _predictor: u32,
     params: &PdfDictionary,
 ) -> ParseResult<Vec<u8>> {
-    // Get columns (width of a row in bytes)
-    let columns = params
-        .get("Columns")
-        .and_then(|obj| obj.as_integer())
-        .unwrap_or(1) as usize;
-
-    // Get BitsPerComponent (defaults to 8)
-    let bpc = params
-        .get("BitsPerComponent")
-        .and_then(|obj| obj.as_integer())
-        .unwrap_or(8) as usize;
-
-    // Get Colors (number of color components, defaults to 1)
-    let colors = params
-        .get("Colors")
-        .and_then(|obj| obj.as_integer())
-        .unwrap_or(1) as usize;
-
-    // Calculate bytes per pixel
-    let bytes_per_pixel = (bpc * colors).div_ceil(8);
+    // Validate signed values and types before converting or allocating rows.
+    let columns = predictor_dimension(params, "Columns")?;
+    let colors = predictor_dimension(params, "Colors")?;
+    let bpc = predictor_integer(params, "BitsPerComponent", 8)?;
+    if !matches!(bpc, 1 | 2 | 4 | 8 | 16) {
+        return Err(ParseError::StreamDecodeError(format!(
+            "PNG predictor: unsupported BitsPerComponent {bpc}"
+        )));
+    }
+    let bpc = bpc as usize;
+    let bytes_per_pixel = colors
+        .checked_mul(bpc)
+        .and_then(|bits| bits.checked_add(7))
+        .map(|bits| bits / 8)
+        .ok_or_else(|| ParseError::StreamDecodeError("PNG predictor pixel size overflow".into()))?;
 
     // Each PNG row contains the full sample payload plus one filter byte.
     // `/Columns` counts pixels, not bytes, for multi-component images.

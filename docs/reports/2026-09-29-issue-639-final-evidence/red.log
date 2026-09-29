@@ -1,0 +1,247 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.45
+   Compiling unicode-ident v1.0.24
+   Compiling cfg-if v1.0.4
+   Compiling libc v0.2.186
+   Compiling syn v2.0.117
+   Compiling version_check v0.9.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling generic-array v0.14.7
+   Compiling find-msvc-tools v0.1.9
+   Compiling serde_core v1.0.228
+   Compiling shlex v2.0.1
+   Compiling typenum v1.20.1
+   Compiling cc v1.2.63
+   Compiling synstructure v0.13.2
+   Compiling zerofrom-derive v0.1.7
+   Compiling zerofrom v0.1.8
+   Compiling yoke-derive v0.8.2
+   Compiling zerovec-derive v0.11.3
+   Compiling yoke v0.8.3
+   Compiling displaydoc v0.2.6
+   Compiling zerovec v0.11.6
+   Compiling autocfg v1.5.1
+   Compiling once_cell v1.21.4
+   Compiling memchr v2.8.1
+   Compiling num-traits v0.2.19
+   Compiling zerocopy v0.8.50
+   Compiling tinystr v0.8.3
+   Compiling zeroize_derive v1.4.3
+   Compiling zerocopy-derive v0.8.50
+   Compiling litemap v0.8.2
+   Compiling writeable v0.6.3
+   Compiling icu_locale_core v2.2.0
+   Compiling zeroize v1.8.2
+   Compiling potential_utf v0.1.5
+   Compiling zerotrie v0.2.4
+   Compiling crypto-common v0.1.7
+   Compiling utf8_iter v1.0.4
+   Compiling bitflags v2.13.0
+   Compiling icu_normalizer_data v2.2.0
+   Compiling regex-syntax v0.8.10
+   Compiling icu_properties_data v2.2.0
+   Compiling getrandom v0.3.4
+   Compiling getrandom v0.4.2
+   Compiling rand_core v0.10.1
+   Compiling serde v1.0.228
+   Compiling crossbeam-utils v0.8.21
+   Compiling icu_collections v2.2.0
+   Compiling icu_provider v2.2.0
+   Compiling aho-corasick v1.1.4
+   Compiling serde_derive v1.0.228
+   Compiling ring v0.17.14
+   Compiling smallvec v1.15.1
+   Compiling crc32fast v1.5.0
+   Compiling rustix v1.1.4
+   Compiling simd-adler32 v0.3.9
+   Compiling regex-automata v0.4.14
+   Compiling rustls-pki-types v1.14.1
+   Compiling block-padding v0.3.3
+   Compiling zmij v1.0.21
+   Compiling utf8parse v0.2.2
+   Compiling adler2 v2.0.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling miniz_oxide v0.8.9
+   Compiling anstyle-parse v1.0.0
+   Compiling inout v0.1.4
+   Compiling rand_core v0.9.5
+   Compiling icu_properties v2.2.0
+   Compiling icu_normalizer v2.2.0
+   Compiling crossbeam-epoch v0.9.18
+   Compiling tracing-core v0.1.36
+   Compiling block-buffer v0.10.4
+   Compiling getrandom v0.2.17
+   Compiling either v1.16.0
+   Compiling serde_json v1.0.150
+   Compiling fastrand v2.4.1
+   Compiling rayon-core v1.13.0
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling anstyle v1.0.14
+   Compiling const-oid v0.9.6
+   Compiling colorchoice v1.0.5
+   Compiling anstyle-query v1.1.5
+   Compiling cpufeatures v0.2.17
+   Compiling untrusted v0.9.0
+   Compiling log v0.4.32
+   Compiling anstream v1.0.0
+   Compiling digest v0.10.7
+   Compiling tempfile v3.27.0
+   Compiling idna_adapter v1.2.2
+   Compiling flate2 v1.1.9
+   Compiling crossbeam-deque v0.8.6
+   Compiling cipher v0.4.4
+   Compiling fdeflate v0.3.7
+   Compiling half v2.7.1
+   Compiling tracing-attributes v0.1.31
+   Compiling alloca v0.4.0
+   Compiling thiserror v2.0.18
+   Compiling cpufeatures v0.3.0
+   Compiling portable-atomic v1.13.1
+   Compiling ciborium-io v0.2.2
+   Compiling percent-encoding v2.3.2
+   Compiling strsim v0.11.1
+   Compiling rustls v0.23.40
+   Compiling plotters-backend v0.3.7
+   Compiling pin-project-lite v0.2.17
+   Compiling winnow v1.0.3
+   Compiling itoa v1.0.18
+   Compiling subtle v2.6.1
+   Compiling heck v0.5.0
+   Compiling clap_lex v1.1.0
+   Compiling lazy_static v1.5.0
+   Compiling pxfm v0.1.29
+   Compiling tinyvec_macros v0.1.1
+   Compiling zune-core v0.5.1
+   Compiling zune-jpeg v0.5.15
+   Compiling tinyvec v1.11.0
+   Compiling clap_derive v4.6.1
+   Compiling moxcms v0.8.1
+   Compiling clap_builder v4.6.0
+   Compiling toml_parser v1.1.2+spec-1.1.0
+   Compiling plotters-svg v0.3.7
+   Compiling tracing v0.1.44
+   Compiling form_urlencoded v1.2.2
+   Compiling ciborium-ll v0.2.2
+   Compiling chacha20 v0.10.0
+   Compiling png v0.18.1
+   Compiling rustls-webpki v0.103.13
+   Compiling idna v1.1.0
+   Compiling itertools v0.13.0
+   Compiling regex v1.12.3
+   Compiling webpki-roots v1.0.7
+   Compiling ppv-lite86 v0.2.21
+   Compiling toml_datetime v0.7.5+spec-1.1.0
+   Compiling serde_spanned v1.1.1
+   Compiling thiserror-impl v2.0.18
+   Compiling wait-timeout v0.2.1
+   Compiling bit-vec v0.8.0
+   Compiling toml_writer v1.1.1+spec-1.1.0
+   Compiling same-file v1.0.6
+   Compiling iana-time-zone v0.1.65
+   Compiling bytemuck v1.25.0
+   Compiling winnow v0.7.15
+   Compiling fnv v1.0.7
+   Compiling byteorder-lite v0.1.0
+   Compiling quick-error v1.2.3
+   Compiling cast v0.3.0
+   Compiling unicode-width v0.2.2
+   Compiling console v0.16.3
+   Compiling criterion-plot v0.8.2
+   Compiling toml v0.9.12+spec-1.1.0
+   Compiling rusty-fork v0.3.1
+   Compiling image v0.25.10
+   Compiling chrono v0.4.45
+   Compiling walkdir v2.5.0
+   Compiling bit-set v0.8.0
+   Compiling rand_chacha v0.9.0
+   Compiling webpki-roots v0.26.11
+   Compiling url v2.5.8
+   Compiling rayon v1.12.0
+   Compiling rand v0.10.1
+   Compiling ciborium v0.2.2
+   Compiling plotters v0.3.7
+   Compiling tinytemplate v1.2.1
+   Compiling clap v4.6.1
+   Compiling unicode-normalization v0.1.25
+   Compiling sharded-slab v0.1.7
+   Compiling cbc v0.1.2
+   Compiling aes v0.8.4
+   Compiling sha2 v0.10.9
+   Compiling tracing-log v0.2.0
+   Compiling rand_xorshift v0.4.0
+   Compiling rand v0.9.4
+   Compiling matchers v0.2.0
+   Compiling quick-xml v0.41.0
+   Compiling page_size v0.6.0
+   Compiling num_cpus v1.17.0
+   Compiling thread_local v1.1.9
+   Compiling oorandom v11.1.5
+   Compiling anes v0.1.6
+   Compiling base64 v0.22.1
+   Compiling unit-prefix v0.5.2
+   Compiling unarray v0.1.4
+   Compiling md5 v0.8.0
+   Compiling nu-ansi-term v0.50.3
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-issue-639-final/oxidize-pdf-core)
+   Compiling tracing-subscriber v0.3.23
+   Compiling ureq v2.12.1
+   Compiling proptest v1.11.0
+   Compiling indicatif v0.18.4
+   Compiling criterion v0.8.2
+   Compiling sha1 v0.10.6
+   Compiling weezl v0.1.12
+    Finished `test` profile [unoptimized] target(s) in 1m 19s
+     Running tests/issue_639_build_identification_test.rs (/tmp/oxidize-639-final-target/debug/deps/issue_639_build_identification_test-2a86fc05e80244bd)
+
+running 11 tests
+test fingerprint_reports_effective_writer_configuration ... FAILED
+test issue_653_retains_leaf_pages_resources_and_parent_links ... FAILED
+test incremental_writers_do_not_add_info_when_source_has_none ... ok
+test independent_metadata_survives_all_incremental_apis ... FAILED
+test incremental_replacement_is_explicit_and_uses_document_policy ... ok
+test modern_incremental_editor_preserves_info_without_injecting_identification ... ok
+test policy_can_be_changed_between_writes_and_producer_is_independent ... ok
+test incremental_writers_preserve_the_source_info_by_default ... ok
+test issue_654_encrypted_inputs_are_rejected_before_any_output ... FAILED
+test default_and_explicit_enabled_emit_identification_in_all_output_apis ... ok
+test disabled_omits_all_three_fields_and_preserves_unrelated_metadata ... ok
+
+failures:
+
+---- fingerprint_reports_effective_writer_configuration stdout ----
+
+thread 'fingerprint_reports_effective_writer_configuration' (3322) panicked at oxidize-pdf-core/tests/issue_639_build_identification_test.rs:351:13:
+assertion `left == right` failed
+  left: true
+ right: false
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- issue_653_retains_leaf_pages_resources_and_parent_links stdout ----
+
+thread 'issue_653_retains_leaf_pages_resources_and_parent_links' (3327) panicked at oxidize-pdf-core/tests/issue_639_build_identification_test.rs:307:17:
+assertion `left == right` failed
+  left: Some(Reference(2, 0))
+ right: Some(Reference(11, 0))
+
+---- independent_metadata_survives_all_incremental_apis stdout ----
+
+thread 'independent_metadata_survives_all_incremental_apis' (3326) panicked at oxidize-pdf-core/tests/issue_639_build_identification_test.rs:284:17:
+assertion `left == right` failed: flat API 0 Lang
+  left: Some(String(PdfString([101, 115, 45, 69, 83])))
+ right: None
+
+---- issue_654_encrypted_inputs_are_rejected_before_any_output stdout ----
+
+thread 'issue_654_encrypted_inputs_are_rejected_before_any_output' (3328) panicked at oxidize-pdf-core/tests/issue_639_build_identification_test.rs:334:13:
+API 0 Preserve
+
+
+failures:
+    fingerprint_reports_effective_writer_configuration
+    independent_metadata_survives_all_incremental_apis
+    issue_653_retains_leaf_pages_resources_and_parent_links
+    issue_654_encrypted_inputs_are_rejected_before_any_output
+
+test result: FAILED. 7 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.48s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_639_build_identification_test`

@@ -1,0 +1,75 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 16 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs       16     96
+
+--- Worst Offenders ---
+  tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters (oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:34) - Score: 90
+    - Test 'tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters' has multiple assertions without diagnostic messages
+  tj_zero_width_kerning_phone_number_formatting (oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:56) - Score: 90
+    - Test 'tj_zero_width_kerning_phone_number_formatting' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'tj_zero_width_kerning_phone_number_formatting' asserts against a hardcoded constant instead of a computed expected value
+  tj_word_breaks_as_negative_kerns_without_explicit_spaces_still_split_words (oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:67) - Score: 90
+    - Test 'tj_word_breaks_as_negative_kerns_without_explicit_spaces_still_split_words' only exercises the happy path — no None, Err, or edge-case inputs
+  tj_ordinary_intra_word_kerning_unaffected (oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:79) - Score: 90
+    - Test 'tj_ordinary_intra_word_kerning_unaffected' only exercises the happy path — no None, Err, or edge-case inputs
+  tj_punctuation_and_symbols_in_tracking_sequence (oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:91) - Score: 90
+    - Test 'tj_punctuation_and_symbols_in_tracking_sequence' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'tj_punctuation_and_symbols_in_tracking_sequence' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'tj_punctuation_and_symbols_in_tracking_sequence' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:
+  tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters (line 34) - Score: 90
+    - Test 'tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters' has multiple assertions without diagnostic messages
+  tj_zero_width_kerning_phone_number_formatting (line 56) - Score: 90
+    - Test 'tj_zero_width_kerning_phone_number_formatting' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'tj_zero_width_kerning_phone_number_formatting' asserts against a hardcoded constant instead of a computed expected value
+  tj_word_breaks_as_negative_kerns_without_explicit_spaces_still_split_words (line 67) - Score: 90
+    - Test 'tj_word_breaks_as_negative_kerns_without_explicit_spaces_still_split_words' only exercises the happy path — no None, Err, or edge-case inputs
+  tj_ordinary_intra_word_kerning_unaffected (line 79) - Score: 90
+    - Test 'tj_ordinary_intra_word_kerning_unaffected' only exercises the happy path — no None, Err, or edge-case inputs
+  tj_punctuation_and_symbols_in_tracking_sequence (line 91) - Score: 90
+    - Test 'tj_punctuation_and_symbols_in_tracking_sequence' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'tj_punctuation_and_symbols_in_tracking_sequence' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'tj_punctuation_and_symbols_in_tracking_sequence' has multiple assertions without diagnostic messages
+  ordinary_word_gaps_are_not_tracking (line 149) - Score: 100
+    i Test 'ordinary_word_gaps_are_not_tracking' asserts against a hardcoded constant instead of a computed expected value
+  zero_width_single_word_without_literal_space (line 157) - Score: 100
+    i Test 'zero_width_single_word_without_literal_space' asserts against a hardcoded constant instead of a computed expected value
+  zero_width_tracking_preserves_larger_word_gap (line 165) - Score: 100
+    i Test 'zero_width_tracking_preserves_larger_word_gap' asserts against a hardcoded constant instead of a computed expected value
+  type0_identity_h_zero_widths_without_literal_space (line 180) - Score: 100
+    i Test 'type0_identity_h_zero_widths_without_literal_space' asserts against a hardcoded constant instead of a computed expected value
+  type0_tracking_uses_cids_not_unicode_or_source_codes (line 196) - Score: 100
+    i Test 'type0_tracking_uses_cids_not_unicode_or_source_codes' asserts against a hardcoded constant instead of a computed expected value
+  char_spacing_does_not_get_discounted_as_missing_advance (line 213) - Score: 90
+    - Test 'char_spacing_does_not_get_discounted_as_missing_advance' has identical neighborhood to 'word_spacing_does_not_get_discounted_as_missing_advance'
+    i Test 'char_spacing_does_not_get_discounted_as_missing_advance' asserts against a hardcoded constant instead of a computed expected value
+  nonuniform_zero_width_advances_remain_conservative (line 222) - Score: 100
+    i Test 'nonuniform_zero_width_advances_remain_conservative' asserts against a hardcoded constant instead of a computed expected value
+  one_transition_cannot_establish_tracking (line 230) - Score: 100
+    i Test 'one_transition_cannot_establish_tracking' asserts against a hardcoded constant instead of a computed expected value
+  positive_declared_widths_do_not_activate_tracking (line 238) - Score: 100
+    i Test 'positive_declared_widths_do_not_activate_tracking' asserts against a hardcoded constant instead of a computed expected value
+  leading_and_trailing_kerns_do_not_establish_tracking (line 252) - Score: 100
+    i Test 'leading_and_trailing_kerns_do_not_establish_tracking' asserts against a hardcoded constant instead of a computed expected value
+  word_spacing_does_not_get_discounted_as_missing_advance (line 261) - Score: 90
+    - Test 'word_spacing_does_not_get_discounted_as_missing_advance' has identical neighborhood to 'char_spacing_does_not_get_discounted_as_missing_advance'
+    i Test 'word_spacing_does_not_get_discounted_as_missing_advance' asserts against a hardcoded constant instead of a computed expected value
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

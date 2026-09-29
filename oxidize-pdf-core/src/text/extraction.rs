@@ -3,6 +3,9 @@
 //! This module provides functionality to extract text from PDF pages,
 //! handling text positioning, transformations, and basic encodings.
 
+mod recovery;
+pub use recovery::{RecoveredText, RecoveryLocation, TextRecoveryAction, TextRecoveryDiagnostic};
+
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -56,6 +59,12 @@ pub struct ExtractionOptions {
     /// post-glyph gap between separate text-show operators) because the TJ
     /// numeric kern is measured without any glyph advance baseline and
     /// needs a more sensitive threshold (issue #272).
+    /// For alternating single-glyph TJ arrays with explicitly zero source
+    /// widths and a repeated forward advance, the inferred advance is first
+    /// subtracted; only the excess is compared with this threshold (#649).
+    /// This conservative inference needs at least two matching adjustments
+    /// forming a strict majority and no Tc/Tw spacing. Unknown widths,
+    /// nonuniform advances, and leading/trailing kerns use the ordinary rule.
     pub tj_space_threshold: f64,
     /// Minimum vertical distance to insert newline (in text space units)
     pub newline_threshold: f64,
@@ -671,6 +680,7 @@ fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_thres
 
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
+    recovery: Option<recovery::RecoveryContext>,
     options: ExtractionOptions,
     /// Emit figure text decoded only through a custom `/Differences` table.
     /// Disabled by default because such text lacks an authoritative Unicode
@@ -714,6 +724,7 @@ impl TextExtractor {
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
+            recovery: None,
         }
     }
 
@@ -728,6 +739,7 @@ impl TextExtractor {
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
+            recovery: None,
         }
     }
 
@@ -1007,6 +1019,56 @@ impl TextExtractor {
         self.tj_space_gap_threshold(state, TJ_BOUNDARY_SPACE_EM)
     }
 
+    /// Infer a repeated advance only when the source font explicitly gives
+    /// every glyph zero width. Unicode text and literal spaces cannot establish
+    /// that property: simple widths are code-indexed and composite widths are
+    /// CID-indexed. Unknown metrics retain the ordinary TJ gap rule.
+    ///
+    /// Accept only alternating single-glyph/forward-adjustment arrays. At least
+    /// two adjustments and a strict majority must match the smallest advance
+    /// within 0.05 em; larger outliers remain potential word gaps. Leading or
+    /// trailing kerns, explicit Tc/Tw, and ambiguous/nonuniform advances retain
+    /// the conservative rule. No extra Unicode decoding or sorting is needed.
+    fn detect_tj_uniform_tracking(&self, array: &[TextElement], state: &TextState) -> Option<f64> {
+        if array.len() < 5
+            || array.len() % 2 == 0
+            || state.char_space != 0.0
+            || state.word_space != 0.0
+            || !state.font_size.is_finite()
+            || state.font_size <= 0.0
+            || !self.options.tj_space_threshold.is_finite()
+        {
+            return None;
+        }
+        let font = self.font_cache.get(state.font_name.as_ref()?)?;
+        let mut baseline = f64::INFINITY;
+        for (index, item) in array.iter().enumerate() {
+            match item {
+                TextElement::Text(codes) if index % 2 == 0 => {
+                    if !is_explicit_zero_width_glyph(codes, font) {
+                        return None;
+                    }
+                }
+                TextElement::Spacing(adjustment) if index % 2 == 1 => {
+                    let advance = -f64::from(*adjustment) / 1000.0;
+                    if !advance.is_finite() || advance <= self.options.tj_space_threshold.max(0.0) {
+                        return None;
+                    }
+                    baseline = baseline.min(advance);
+                }
+                _ => return None,
+            }
+        }
+        let matching = array
+            .iter()
+            .filter(|item| {
+                matches!(item, TextElement::Spacing(adjustment)
+                if (-f64::from(*adjustment) / 1000.0 - baseline).abs() <= 0.05)
+            })
+            .count();
+        (matching >= 2 && matching > (array.len() / 2) / 2).then_some(baseline)
+    }
+
     /// A font switch between adjacent show-text operators is evidence that a
     /// short gap separates an inline styled token from prose, rather than
     /// splitting one word. Keep this below the ordinary boundary threshold so
@@ -1198,6 +1260,15 @@ impl TextExtractor {
         document: &PdfDocument<R>,
         page_index: u32,
     ) -> ParseResult<ExtractedText> {
+        self.recovery = None;
+        self.extract_page_impl(document, page_index)
+    }
+
+    fn extract_page_impl<R: Read + Seek>(
+        &mut self,
+        document: &PdfDocument<R>,
+        page_index: u32,
+    ) -> ParseResult<ExtractedText> {
         // Get the page
         let page = document.get_page(page_index)?;
         // Tagged-PDF metadata is advisory: malformed mappings fall back to
@@ -1211,9 +1282,13 @@ impl TextExtractor {
         }
 
         // Get content streams
-        let streams = {
+        let stream_groups = {
             let _span = tracing::info_span!("stream_decompress").entered();
-            page.content_streams_with_document(document)?
+            if self.recovery.is_some() {
+                self.recovery_content_groups(document, &page)?
+            } else {
+                vec![page.content_streams_with_document(document)?]
+            }
         };
 
         let extracted_text = String::new();
@@ -1254,7 +1329,7 @@ impl TextExtractor {
         // in the array were concatenated, in order, to form a single stream, with
         // whitespace inserted between streams. This preserves operands and operators
         // split across stream boundaries (issue #613).
-        if !streams.is_empty() {
+        for streams in stream_groups {
             let operations = match {
                 let _span = tracing::info_span!("content_parse").entered();
                 ContentParser::parse_content_streams(&streams)
@@ -1688,6 +1763,13 @@ impl TextExtractor {
 
                 ContentOperation::ShowTextArray(array) => {
                     if in_text_object {
+                        // Detect whether the TJ array represents uniform per-glyph tracking
+                        // (issue #649), where zero-advance glyphs have their horizontal advance
+                        // encoded via uniform negative kern numbers in TJ.
+                        let tracking_baseline_em = self
+                            .detect_tj_uniform_tracking(&array, &state)
+                            .unwrap_or(0.0);
+
                         // True until this `TJ` array draws its first glyph. Only
                         // on that first text element can a forward pen jump come
                         // from the operator boundary (a `Tm`, or the previous
@@ -1775,9 +1857,42 @@ impl TextExtractor {
                                         // accurate as the font widths, so a
                                         // producer that draws one word as several
                                         // positioned runs must not be split.
+                                        //
+                                        // When the baseline shifts perpendicular
+                                        // to text advance across text runs (e.g.
+                                        // adjacent table cells or offset columns),
+                                        // the pen was explicitly repositioned
+                                        // rather than kerned within a single word
+                                        // (issue #648). For same-baseline runs
+                                        // (or sub-point vertical jitter from text-
+                                        // matrix arithmetic, bounded by
+                                        // `0.1 * font_size`), retain the
+                                        // conservative 0.7em boundary threshold
+                                        // (#458) or 0.3em on font change (#602).
+                                        // When the baseline shifts past the
+                                        // vertical jitter guard, use the same
+                                        // `flat_space_gap_threshold` as `Tj`.
                                         let font_changed = last_shown_font_name.as_deref()
                                             != state.font_name.as_deref();
-                                        let boundary_threshold = if font_changed {
+                                        // Match pen_delta's perpendicular projection. The
+                                        // full Y-vector norm includes shear along the
+                                        // baseline and would inflate the jitter guard.
+                                        let m = multiply_matrix(&state.text_matrix, &state.ctm);
+                                        let baseline = m[0].hypot(m[1]);
+                                        let y_scale = (m[0] * m[3] - m[1] * m[2]).abs() / baseline;
+                                        let y_scale =
+                                            if y_scale.is_finite() && y_scale > f64::EPSILON {
+                                                y_scale
+                                            } else {
+                                                1.0
+                                            };
+                                        let vertical_shift_guard =
+                                            (0.1 * state.font_size.abs() * y_scale)
+                                                .max(SAME_LINE_EPS);
+                                        let baseline_shifted = dy > vertical_shift_guard;
+                                        let boundary_threshold = if baseline_shifted {
+                                            self.flat_space_gap_threshold(&state)
+                                        } else if font_changed {
                                             self.tj_font_change_space_gap_threshold(&state)
                                         } else {
                                             self.tj_boundary_space_gap_threshold(&state)
@@ -1911,12 +2026,16 @@ impl TextExtractor {
                                     // we treat the kern as an implicit `U+0020` (issue #272):
                                     // many PDFs encode word breaks purely as wide negative
                                     // kerns and never emit a literal space byte.
+                                    // When uniform per-glyph tracking is detected (issue #649),
+                                    // only the excess gap beyond the tracking baseline is tested.
                                     let tx = -(adjustment as f64) / 1000.0 * state.font_size;
+                                    let gap_tx = tx - tracking_baseline_em * state.font_size;
 
                                     let skip_tj_space =
                                         skip_artifact_text(&state, self.options.include_artifacts);
                                     if !skip_tj_space
-                                        && tx > self.options.tj_space_threshold * state.font_size
+                                        && gap_tx
+                                            > self.options.tj_space_threshold * state.font_size
                                         && !extracted_text.is_empty()
                                         && !extracted_text.ends_with(' ')
                                     {
@@ -2432,7 +2551,7 @@ impl TextExtractor {
                     const MAX_XOBJECT_DEPTH: u8 = 12;
                     if depth < MAX_XOBJECT_DEPTH {
                         if let Some((xobj_ops, xobj_res, matrix, xobj_dict)) =
-                            self.load_form_xobject(resources, &name, document)
+                            self.load_form_xobject(resources, &name, document)?
                         {
                             let mut form_structure_actual_text =
                                 resolve_structure_actual_text(&xobj_dict, document);
@@ -2489,7 +2608,7 @@ impl TextExtractor {
                                 line_groups,
                                 cur_group,
                             };
-                            let mut out = self.process_operations(
+                            let out = self.process_operations(
                                 xobj_ops,
                                 document,
                                 xobj_res.as_ref(),
@@ -2497,11 +2616,13 @@ impl TextExtractor {
                                 sub,
                                 page_index,
                                 depth + 1,
-                            )?;
+                            );
+                            // Restore shared font state even when a nested form fails.
+                            self.font_cache = saved_fonts;
+                            let mut out = out?;
 
                             outer.restore_into(&mut out.state);
                             out.state.saved_states = outer_stack;
-                            self.font_cache = saved_fonts;
 
                             state = out.state;
                             at_text_object_start = out.at_text_object_start;
@@ -2538,42 +2659,64 @@ impl TextExtractor {
     }
 
     /// Load a Form XObject by name: parsed operations, resolved /Resources,
-    /// and optional /Matrix. None for image XObjects or anything unparseable.
+    /// and optional /Matrix. Non-forms or unresolvable resources return None;
+    /// decoding errors propagate so corrupt form content cannot become empty text.
     fn load_form_xobject<R: Read + Seek>(
-        &self,
+        &mut self,
         resources: Option<&crate::parser::objects::PdfDictionary>,
         name: &str,
         document: &PdfDocument<R>,
-    ) -> Option<(
-        Vec<ContentOperation>,
-        Option<crate::parser::objects::PdfDictionary>,
-        Option<[f64; 6]>,
-        crate::parser::objects::PdfDictionary,
-    )> {
+    ) -> ParseResult<
+        Option<(
+            Vec<ContentOperation>,
+            Option<crate::parser::objects::PdfDictionary>,
+            Option<[f64; 6]>,
+            crate::parser::objects::PdfDictionary,
+        )>,
+    > {
         use crate::parser::objects::PdfObject;
-        let res = resources?;
-        let xobjects = match res.get("XObject")? {
-            PdfObject::Dictionary(d) => d.clone(),
-            PdfObject::Reference(n, g) => match document.get_object(*n, *g).ok()? {
-                PdfObject::Dictionary(d) => d,
+        let stream = (|| {
+            let res = resources?;
+            let xobjects = match res.get("XObject")? {
+                PdfObject::Dictionary(d) => d.clone(),
+                PdfObject::Reference(n, g) => match document.get_object(*n, *g).ok()? {
+                    PdfObject::Dictionary(d) => d,
+                    _ => return None,
+                },
                 _ => return None,
-            },
-            _ => return None,
+            };
+            let (n, g) = xobjects.get(name)?.as_reference()?;
+            let PdfObject::Stream(stream) = document.get_object(n, g).ok()? else {
+                return None;
+            };
+            if stream
+                .dict
+                .get("Subtype")
+                .and_then(|o| o.as_name())
+                .map(|nm| nm.0.as_str())
+                != Some("Form")
+            {
+                return None;
+            }
+            Some((stream, (n, g)))
+        })();
+        let Some((stream, object)) = stream else {
+            return Ok(None);
         };
-        let (n, g) = xobjects.get(name)?.as_reference()?;
-        let obj = document.get_object(n, g).ok()?;
-        let stream = obj.as_stream()?;
-        if stream
-            .dict
-            .get("Subtype")
-            .and_then(|o| o.as_name())
-            .map(|nm| nm.0.as_str())
-            != Some("Form")
-        {
-            return None;
-        }
-        let data = stream.decode(&Default::default()).ok()?;
-        let ops = ContentParser::parse_content(&data).ok()?;
+        let Some(data) = self.decode_content_for_recovery(
+            document,
+            &stream,
+            RecoveryLocation::FormXObject {
+                name: name.to_owned(),
+                object,
+            },
+        )?
+        else {
+            return Ok(None);
+        };
+        let Ok(ops) = ContentParser::parse_content(&data) else {
+            return Ok(None);
+        };
         let xobj_res = match stream.dict.get("Resources") {
             Some(PdfObject::Dictionary(d)) => Some(d.clone()),
             Some(PdfObject::Reference(rn, rg)) => document
@@ -2599,7 +2742,7 @@ impl TextExtractor {
                     None
                 }
             });
-        Some((ops, xobj_res, matrix, stream.dict.clone()))
+        Ok(Some((ops, xobj_res, matrix, stream.dict)))
     }
 
     /// Fuse a hyphen-ended fragment with its line-wrap continuation while
@@ -4331,6 +4474,46 @@ fn cids_for_codes<'a>(codes: &'a [u8], font: &FontInfo) -> Option<Vec<(&'a [u8],
         offset += code_len;
     }
     Some(result)
+}
+
+/// Certify one horizontal source glyph with a declared zero advance. Do not
+/// turn missing widths, fallback metrics or decoded Unicode into that evidence.
+fn is_explicit_zero_width_glyph(codes: &[u8], font: &FontInfo) -> bool {
+    if font.font_type == "Type0" || font.descendant_font.is_some() {
+        // Identity-H codes are exactly two bytes; cids_for_codes intentionally
+        // tolerates a short tail for legacy extraction, not for this inference.
+        if font.encoding.as_deref() == Some("Identity-H") && codes.len() != 2 {
+            return false;
+        }
+        let Some(cids) = cids_for_codes(codes, font) else {
+            return false;
+        };
+        let [(_, cid)] = cids.as_slice() else {
+            return false;
+        };
+        return font
+            .descendant_font
+            .as_deref()
+            .unwrap_or(font)
+            .metrics
+            .cid_widths
+            .as_ref()
+            .is_some_and(|widths| widths.width_for(*cid) == 0.0);
+    }
+    let [code] = codes else {
+        return false;
+    };
+    let code = u32::from(*code);
+    let first = font.metrics.first_char.unwrap_or(0);
+    let last = font.metrics.last_char.unwrap_or(255);
+    if code < first || code > last {
+        return false;
+    }
+    font.metrics
+        .widths
+        .as_ref()
+        .and_then(|widths| widths.get((code - first) as usize))
+        .is_some_and(|width| *width == 0.0)
 }
 
 fn calculate_text_width_from_codes(

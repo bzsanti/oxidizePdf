@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-issue-639-final/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 30.77s
+     Running tests/issue_639_build_identification_test.rs (/tmp/oxidize-pr651-review-target/debug/deps/issue_639_build_identification_test-2a86fc05e80244bd)
+
+running 1 test
+test overlays_preserve_binary_metadata_geometry_annotations_and_destinations ... FAILED
+
+failures:
+
+---- overlays_preserve_binary_metadata_geometry_annotations_and_destinations stdout ----
+
+thread 'overlays_preserve_binary_metadata_geometry_annotations_and_destinations' (399) panicked at oxidize-pdf-core/tests/issue_639_build_identification_test.rs:445:50:
+called `Option::unwrap()` on a `None` value
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    overlays_preserve_binary_metadata_geometry_annotations_and_destinations
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_639_build_identification_test`

@@ -1,0 +1,85 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 15 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...e-pdf-core/tests/issue_639_build_identification_test.rs       15    100
+
+--- Worst Offenders ---
+  default_and_explicit_enabled_emit_identification_in_all_output_apis (oxidize-pdf-core/tests/issue_639_build_identification_test.rs:59) - Score: 100
+    i Test 'default_and_explicit_enabled_emit_identification_in_all_output_apis' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'default_and_explicit_enabled_emit_identification_in_all_output_apis' has multiple assertions without diagnostic messages
+    i Test 'default_and_explicit_enabled_emit_identification_in_all_output_apis' uses .unwrap() which silently discards error information
+  disabled_omits_all_three_fields_and_preserves_unrelated_metadata (oxidize-pdf-core/tests/issue_639_build_identification_test.rs:92) - Score: 100
+    i Test 'disabled_omits_all_three_fields_and_preserves_unrelated_metadata' has multiple assertions without diagnostic messages
+    i Test 'disabled_omits_all_three_fields_and_preserves_unrelated_metadata' uses .unwrap() which silently discards error information
+  policy_can_be_changed_between_writes_and_producer_is_independent (oxidize-pdf-core/tests/issue_639_build_identification_test.rs:135) - Score: 100
+    i Test 'policy_can_be_changed_between_writes_and_producer_is_independent' has multiple assertions without diagnostic messages
+    i Test 'policy_can_be_changed_between_writes_and_producer_is_independent' uses .unwrap() which silently discards error information
+  incremental_writers_preserve_the_source_info_by_default (oxidize-pdf-core/tests/issue_639_build_identification_test.rs:200) - Score: 100
+    i Test 'incremental_writers_preserve_the_source_info_by_default' has multiple assertions without diagnostic messages
+    i Test 'incremental_writers_preserve_the_source_info_by_default' uses .unwrap() which silently discards error information
+  incremental_replacement_is_explicit_and_uses_document_policy (oxidize-pdf-core/tests/issue_639_build_identification_test.rs:223) - Score: 100
+    i Test 'incremental_replacement_is_explicit_and_uses_document_policy' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_replacement_is_explicit_and_uses_document_policy' has multiple assertions without diagnostic messages
+    i Test 'incremental_replacement_is_explicit_and_uses_document_policy' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_639_build_identification_test.rs:
+  default_and_explicit_enabled_emit_identification_in_all_output_apis (line 59) - Score: 100
+    i Test 'default_and_explicit_enabled_emit_identification_in_all_output_apis' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'default_and_explicit_enabled_emit_identification_in_all_output_apis' has multiple assertions without diagnostic messages
+    i Test 'default_and_explicit_enabled_emit_identification_in_all_output_apis' uses .unwrap() which silently discards error information
+  disabled_omits_all_three_fields_and_preserves_unrelated_metadata (line 92) - Score: 100
+    i Test 'disabled_omits_all_three_fields_and_preserves_unrelated_metadata' has multiple assertions without diagnostic messages
+    i Test 'disabled_omits_all_three_fields_and_preserves_unrelated_metadata' uses .unwrap() which silently discards error information
+  policy_can_be_changed_between_writes_and_producer_is_independent (line 135) - Score: 100
+    i Test 'policy_can_be_changed_between_writes_and_producer_is_independent' has multiple assertions without diagnostic messages
+    i Test 'policy_can_be_changed_between_writes_and_producer_is_independent' uses .unwrap() which silently discards error information
+  incremental_writers_preserve_the_source_info_by_default (line 200) - Score: 100
+    i Test 'incremental_writers_preserve_the_source_info_by_default' has multiple assertions without diagnostic messages
+    i Test 'incremental_writers_preserve_the_source_info_by_default' uses .unwrap() which silently discards error information
+  incremental_replacement_is_explicit_and_uses_document_policy (line 223) - Score: 100
+    i Test 'incremental_replacement_is_explicit_and_uses_document_policy' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_replacement_is_explicit_and_uses_document_policy' has multiple assertions without diagnostic messages
+    i Test 'incremental_replacement_is_explicit_and_uses_document_policy' uses .unwrap() which silently discards error information
+  modern_incremental_editor_preserves_info_without_injecting_identification (line 260) - Score: 100
+    i Test 'modern_incremental_editor_preserves_info_without_injecting_identification' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'modern_incremental_editor_preserves_info_without_injecting_identification' has multiple assertions without diagnostic messages
+    i Test 'modern_incremental_editor_preserves_info_without_injecting_identification' uses .unwrap() which silently discards error information
+  independent_metadata_survives_all_incremental_apis (line 300) - Score: 100
+    i Test 'independent_metadata_survives_all_incremental_apis' has multiple assertions without diagnostic messages
+    i Test 'independent_metadata_survives_all_incremental_apis' uses .unwrap() which silently discards error information
+  issue_653_retains_leaf_pages_resources_and_parent_links (line 332) - Score: 100
+    i Test 'issue_653_retains_leaf_pages_resources_and_parent_links' has multiple assertions without diagnostic messages
+    i Test 'issue_653_retains_leaf_pages_resources_and_parent_links' uses .unwrap() which silently discards error information
+  issue_654_encrypted_inputs_are_rejected_before_any_output (line 380) - Score: 100
+    i Test 'issue_654_encrypted_inputs_are_rejected_before_any_output' has multiple assertions without diagnostic messages
+    i Test 'issue_654_encrypted_inputs_are_rejected_before_any_output' uses .unwrap() which silently discards error information
+  fingerprint_reports_effective_writer_configuration (line 415) - Score: 100
+    i Test 'fingerprint_reports_effective_writer_configuration' has multiple assertions without diagnostic messages
+    i Test 'fingerprint_reports_effective_writer_configuration' uses .unwrap() which silently discards error information
+  overlays_preserve_binary_metadata_geometry_annotations_and_destinations (line 439) - Score: 100
+    i Test 'overlays_preserve_binary_metadata_geometry_annotations_and_destinations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'overlays_preserve_binary_metadata_geometry_annotations_and_destinations' has multiple assertions without diagnostic messages
+    i Test 'overlays_preserve_binary_metadata_geometry_annotations_and_destinations' uses .unwrap() which silently discards error information
+  exhausted_object_numbers_reject_without_output (line 502) - Score: 100
+    i Test 'exhausted_object_numbers_reject_without_output' has multiple assertions without diagnostic messages
+    i Test 'exhausted_object_numbers_reject_without_output' uses .unwrap() which silently discards error information
+  repeated_updates_preserve_info_and_handle_eof_without_newline (line 521) - Score: 100
+    i Test 'repeated_updates_preserve_info_and_handle_eof_without_newline' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'repeated_updates_preserve_info_and_handle_eof_without_newline' has multiple assertions without diagnostic messages
+    i Test 'repeated_updates_preserve_info_and_handle_eof_without_newline' uses .unwrap() which silently discards error information
+  incremental_rejects_incompatible_writer_config_before_output (line 542) - Score: 100
+    i Test 'incremental_rejects_incompatible_writer_config_before_output' has multiple assertions without diagnostic messages
+    i Test 'incremental_rejects_incompatible_writer_config_before_output' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

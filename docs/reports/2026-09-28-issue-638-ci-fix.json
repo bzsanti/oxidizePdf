@@ -1,0 +1,27 @@
+{
+  "issue": 638,
+  "pr": 645,
+  "red": {
+    "run": 36471334187,
+    "job": 109094052597,
+    "errors": [
+      "E0282",
+      "E0283"
+    ]
+  },
+  "features": "internal-testing,unstable-spi,semantic",
+  "green": {
+    "passed": 24,
+    "failed": 0
+  },
+  "clippy": "passed -D warnings",
+  "format": "passed",
+  "kripteia": {
+    "score": 98,
+    "tests": 18,
+    "security_findings": 0
+  },
+  "product_code_changed": false,
+  "test_sha256": "6d4dd88dc23f946097ebc705c3487e326b42f4e88eece7ec7740036ab0501f8e",
+  "next_action": "Push and verify full PR CI"
+}

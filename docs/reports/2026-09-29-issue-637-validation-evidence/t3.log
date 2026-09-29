@@ -1,0 +1,11 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-issue-637-recovery-20260929/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 8.49s
+     Running tests/t3_stress.rs (/tmp/issue-637-recovery-target/debug/deps/t3_stress-6b68b9ef43cb37f0)
+
+running 1 test
+test t3_text_extraction_coverage has been running for over 60 seconds
+T3 strict_success=1560; successful_with_flate_recovery=54; full diagnostics retained separately
+T3 explicit recovery extraction: 1613/1761 parsed PDFs (91.6%)
+test t3_text_extraction_coverage ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 21 filtered out; finished in 210.99s

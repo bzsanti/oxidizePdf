@@ -16,6 +16,21 @@ use std::sync::Arc;
 mod encryption;
 pub use encryption::{DocumentEncryption, EncryptionStrength};
 
+/// Controls the additional build, edition and feature fields in generated PDFs.
+///
+/// Enabled by default for compatibility. This does not control standard
+/// Producer/Creator metadata or sanitize an existing PDF.
+/// These fields identify the declared generator build and features; they are
+/// editable metadata, not a digital signature or proof of document origin.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BuildIdentification {
+    /// Emit the three `oxidize-pdf-*` Info entries (the compatibility default).
+    #[default]
+    Enabled,
+    /// Omit the generated build, edition and feature entries.
+    Disabled,
+}
+
 /// A PDF document that can contain multiple pages and metadata.
 ///
 /// # Example
@@ -35,6 +50,7 @@ pub use encryption::{DocumentEncryption, EncryptionStrength};
 pub struct Document {
     pub(crate) pages: Vec<Page>,
     pub(crate) metadata: DocumentMetadata,
+    pub(crate) build_identification: BuildIdentification,
     pub(crate) encryption: Option<DocumentEncryption>,
     pub(crate) outline: Option<OutlineTree>,
     pub(crate) named_destinations: Option<NamedDestinations>,
@@ -126,6 +142,7 @@ impl Document {
         Self {
             pages: Vec::new(),
             metadata: DocumentMetadata::default(),
+            build_identification: BuildIdentification::default(),
             encryption: None,
             outline: None,
             named_destinations: None,
@@ -413,6 +430,31 @@ impl Document {
     /// Sets the document producer (software that produced the PDF).
     pub fn set_producer(&mut self, producer: impl Into<String>) {
         self.metadata.producer = Some(producer.into());
+    }
+
+    /// Controls additional build/edition/feature identification on generated output.
+    ///
+    /// The default is [`BuildIdentification::Enabled`] for compatibility.
+    /// Disabling it preserves all standard metadata, including Producer and Creator;
+    /// use [`Self::set_producer`] and [`Self::set_creator`] to change those separately.
+    /// This does not remove metadata from existing incremental input bytes.
+    ///
+    /// ```
+    /// use oxidize_pdf::{BuildIdentification, Document, Page};
+    /// let mut doc = Document::new();
+    /// doc.set_build_identification(BuildIdentification::Disabled);
+    /// doc.set_producer("My application");
+    /// doc.add_page(Page::a4());
+    /// let bytes = doc.to_bytes()?;
+    /// # Ok::<(), oxidize_pdf::PdfError>(())
+    /// ```
+    pub fn set_build_identification(&mut self, policy: BuildIdentification) {
+        self.build_identification = policy;
+    }
+
+    /// Returns the policy used for additional generated identification fields.
+    pub fn build_identification(&self) -> BuildIdentification {
+        self.build_identification
     }
 
     /// Sets the document creation date.
