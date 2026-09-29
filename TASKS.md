@@ -1,3 +1,11 @@
+## Corrección de revisión #648 / PR #650
+
+- Issue: #648 — bug(text): ShowTextArray boundary space threshold (0.7 em) suppresses word separator when baseline shifts across text runs — https://github.com/bzsanti/oxidizePdf/issues/648
+- Estado: `[-]` corrección publicada; actualizada con develop tras #652, integración autorizada. Prioridad P1. Responsable Codex.
+- Criterio de cierre: distancia y guard vertical en la misma proyección; regresiones, corpus, revisión y CI aprobados.
+- Última validación: RED cizallamiento sobre fa4f944; GREEN 27 regresiones, 6780 biblioteca (3 omitidos), 72 diferenciales; Clippy, formato y QR pasan. Evidencia: docs/reports/2026-09-29-pr-650-correction-review.md.
+- Siguiente acción: validar combinación #637/#648 y fusionar #650; después integrar #651.
+
 ## Publicación #637 — PR #652
 
 - Issue: #637 — fix(parser): reject exhausted FlateDecode recovery instead of reporting empty success — https://github.com/bzsanti/oxidizePdf/issues/637

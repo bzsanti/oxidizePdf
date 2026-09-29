@@ -1794,9 +1794,42 @@ impl TextExtractor {
                                         // accurate as the font widths, so a
                                         // producer that draws one word as several
                                         // positioned runs must not be split.
+                                        //
+                                        // When the baseline shifts perpendicular
+                                        // to text advance across text runs (e.g.
+                                        // adjacent table cells or offset columns),
+                                        // the pen was explicitly repositioned
+                                        // rather than kerned within a single word
+                                        // (issue #648). For same-baseline runs
+                                        // (or sub-point vertical jitter from text-
+                                        // matrix arithmetic, bounded by
+                                        // `0.1 * font_size`), retain the
+                                        // conservative 0.7em boundary threshold
+                                        // (#458) or 0.3em on font change (#602).
+                                        // When the baseline shifts past the
+                                        // vertical jitter guard, use the same
+                                        // `flat_space_gap_threshold` as `Tj`.
                                         let font_changed = last_shown_font_name.as_deref()
                                             != state.font_name.as_deref();
-                                        let boundary_threshold = if font_changed {
+                                        // Match pen_delta's perpendicular projection. The
+                                        // full Y-vector norm includes shear along the
+                                        // baseline and would inflate the jitter guard.
+                                        let m = multiply_matrix(&state.text_matrix, &state.ctm);
+                                        let baseline = m[0].hypot(m[1]);
+                                        let y_scale = (m[0] * m[3] - m[1] * m[2]).abs() / baseline;
+                                        let y_scale =
+                                            if y_scale.is_finite() && y_scale > f64::EPSILON {
+                                                y_scale
+                                            } else {
+                                                1.0
+                                            };
+                                        let vertical_shift_guard =
+                                            (0.1 * state.font_size.abs() * y_scale)
+                                                .max(SAME_LINE_EPS);
+                                        let baseline_shifted = dy > vertical_shift_guard;
+                                        let boundary_threshold = if baseline_shifted {
+                                            self.flat_space_gap_threshold(&state)
+                                        } else if font_changed {
                                             self.tj_font_change_space_gap_threshold(&state)
                                         } else {
                                             self.tj_boundary_space_gap_threshold(&state)

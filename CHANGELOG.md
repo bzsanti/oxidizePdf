@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve word separation across shifted TJ baselines, including sheared, rotated
+  and scaled text, while retaining the same-baseline jitter guard (#648).
+
 - Flate byte-only decoding now requires a complete checksum-verified zlib stream
   in every parse mode. Exhausted recovery no longer fabricates empty success;
   content and Form errors propagate to strict extraction. Damaged-corpus gates
