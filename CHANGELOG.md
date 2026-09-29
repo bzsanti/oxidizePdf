@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.2.0] - 2026-09-29
+
 ### Added
 
 - `Document::set_build_identification(BuildIdentification::Disabled)` omits the
@@ -25,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   APIs, render handwritten strokes and optional certificate labels, and pass the
   prepared appearance to existing detached signing APIs. Handwritten completion
   remains distinct from a cryptographic signature; DocMDP/FieldMDP restrictions
-  apply. Required for the next release (#646).
+  apply. Available in 5.2.0 (#646).
 
 ### Documentation
 
@@ -78,9 +80,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when splitting tagged PDFs; identify reachable zero-offset references and
   reject unsafe repairs without publishing partial outputs (#621).
 
-- Replace native certificate-verification cryptography with Rust primitives,
-  preserving certificate chains, supported algorithms and CRL checks; add
-  dependency gates for supported product and binding configurations (#627).
+## [5.1.5] - 2026-09-26
+
+### Fixed
+
+- Remove native cryptography from certificate verification by consuming
+  `oxidize-webpki 0.1.0` from crates.io. Preserve WebPKI certificate chains,
+  trust, validity, key usage and CRL checks, with supported RSA, ECDSA and
+  Ed25519 algorithms unchanged (#627).
+- Preserve signed fixture bytes on Windows checkouts, preventing CRLF changes
+  from invalidating reference message digests (#627).
+
+### Changed
+
+- Gate supported product and binding dependency graphs against native code,
+  and validate an external certificate consumer with C/C++ compilers disabled.
+
+## [5.1.4] - 2026-09-25
+
+### Fixed
 
 - Deliver streaming text callbacks incrementally, retaining operand state and
   allowing cancellation before parsing the remaining page (#618).
@@ -93,6 +111,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Preserve generated footers after imported content without a final newline,
   including trailing comments (#616).
+
+- Strip escaped LF, CR and CRLF continuations from PDF literal strings (#609).
+- Avoid synthetic spaces before punctuation in fragmented text runs (#610).
+- Preserve operands across page content streams according to PDF concatenation
+  semantics, with valid fixtures covering multi-stream text arrays (#613, #619).
+
+### Changed
+
+- Give OmniDocBench text serialization an explicit, verified contract; bind
+  predictions, evaluator inputs and scores through provenance manifests (#620).
+
+### Known limitations
+
+- Signature verification still uses the C-backed `ring` dependency through
+  `rustls-webpki`. Removing C from supported configurations and bindings remains
+  mandatory follow-up #627; this maintenance release does not resolve it.
 
 ## [5.1.3] - 2026-09-19
 

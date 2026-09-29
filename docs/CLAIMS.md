@@ -8,9 +8,25 @@ below resolve under `oxidize-pdf-core/`; source and tests establish only the
 stated operation, not an entire standard, service or audited security guarantee.
 This is a bounded claims inventory, not an exhaustive codebase audit.
 
+The **5.2.0 release candidate** adds the following verified changes to that
+historical inventory. Measurements and 5.1.5 reproductions below keep their
+original version and date; they are not new measurements of 5.2.0.
+
+| 5.2.0 change | Evidence | Limits / migration |
+|---|---|---|
+| Strict Flate/predictor errors and explicit bounded recovery (#637/#638) | `issue_637_flate_errors_test.rs`, `issue_637_recovery_test.rs`, `issue_638_predictor_errors_test.rs`; [Flate guide](flate-decoding.md), [predictor guide](predictor-decoding.md) | Strict APIs now reject malformed input; recovery is opt-in and returns diagnostics/incompleteness, not verified success. TIFF predictor 2 remains unsupported. |
+| Optional build identification and incremental metadata preservation (#639/#653/#654/#655) | `issue_639_build_identification_test.rs`; [review](reports/2026-09-29-issue-639-final-review.md) | Build fields remain enabled by default; opt-out does not sanitize Producer/Creator or existing PDFs. Encrypted incremental input is rejected. |
+| Participant signature preparation (#646) | `signature_preparation_test.rs`; [contract](signatures.md) | Handwritten appearances are not cryptographic signatures; external CMS and detailed verification remain separate steps. |
+| Tagged split, outline links and reconstructive metadata (#621/#633/#634) | Public regression tests for those issues | Preservation remains operation-specific; no arbitrary lossless-editing claim. |
+| TJ baseline/tracking spacing (#648/#649) | `issue_648_tj_boundary_baseline_shift_test.rs`, `issue_649_tj_zero_width_kerning_test.rs` | Verified zero-width glyph advances only; ambiguous inputs retain ordinary spacing. |
+
+Certificate-recipient implementation #642 / draft PR #658 is excluded from
+5.2.0. Its green functional CI does not resolve its RSA security acceptance.
+PAdES remains outside the library scope as documented under #641.
+
 | Claim / classification | Public source | Checked at | Version / source revision | Verification evidence | Limit |
 |---|---|---|---|---|---|
-| Certificate-based recipient encryption is unsupported; password encryption and signature certificate verification are separate APIs. | [`README.md`](../README.md); [`recipient-encryption.md`](recipient-encryption.md); encryption rustdoc | 2026-09-28 | Unreleased #640 integrated in develop `b76f738` via #643 | `issue_640_public_key_containment_test.rs`; all eight `SecurityHandler` entry points, recipient operations and permission checks inspected. | No supported certificate-based document writer/reader. Raw dictionary helpers do not protect or validate data. Actual implementation is tracked in #642. |
+| Certificate-based recipient encryption is unsupported; password encryption and signature certificate verification are separate APIs. | [`README.md`](../README.md); [`recipient-encryption.md`](recipient-encryption.md); encryption rustdoc | 2026-09-29 | 5.2.0 candidate; #640 integrated via #643 | `issue_640_public_key_containment_test.rs`; all eight `SecurityHandler` entry points, recipient operations and permission checks inspected. | No supported certificate-based document writer/reader. Raw dictionary helpers do not protect or validate data. Actual implementation is tracked in #642. |
 | PDF/A conformance validation is available for eight levels. **Basic functionality.** | [README](../README.md); [use cases](IDEAL_USE_CASES.md) | 2026-09-28 | 5.1.5 / fb4042fd | `src/pdfa/validator.rs`; [consumer tests](../oxidize-pdf-core/tests/pdfa_integration_test.rs) and validator coverage tests | No claim of PDF/A authoring, remediation or certification. Validation implements checks; this is not independent certification of complete standards coverage. |
 | Signature detection, PKCS#7 verification and certificate validation are available; an incremental-signature preparation API is public. **Basic functionality.** | [README](../README.md); [use cases](IDEAL_USE_CASES.md); [contract](signatures.md); signatures rustdoc | 2026-09-28 | 5.1.5 / fb4042fd | [Real CMS/PDF and negative tests](../oxidize-pdf-core/tests/issue_526_signature_validation_test.rs): altered bytes/attributes, missing intermediate, revoked certificate, requested time and explicit anchors | No managed keys, certificate issuance, hosted signing service or legal/compliance assurance. Interpret detailed results, errors, warnings, trust and revocation. An `Ok` result alone is insufficient. |
 | Prepare covered bytes and embed external CMS. **Caller-supplied/extension functionality.** | [Signature contract](signatures.md); signatures rustdoc | 2026-09-28 | 5.1.5 / fb4042fd | [Signing consumer tests](../oxidize-pdf-core/tests/issue_540_incremental_signing_test.rs); [appearance tests](../oxidize-pdf-core/tests/issue_606_signature_layout_test.rs); `src/signatures/signing.rs` | Preparation is not a completed cryptographic signature. Finalize checks only the outer DER SEQUENCE envelope and capacity, not CMS SignedData, actual signature validity or trust. External signer and subsequent verification are required. |

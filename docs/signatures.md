@@ -58,7 +58,7 @@ certificate verification. The legacy handler now rejects
 cryptographic operations explicitly (#640); it does not protect documents.
 Actual recipient encryption is tracked separately in #642.
 
-## Participant signature slots (next release, #646)
+## Participant signature slots (5.2.0, #646)
 
 `create_signature_slot` appends an unsigned root signature widget with portable
 application metadata. `list_signature_slots` and `read_signature_slot` inspect
