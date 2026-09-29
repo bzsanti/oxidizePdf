@@ -1,0 +1,45 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-issue-639-final/oxidize-pdf-core)
+    Finished `dev` profile [unoptimized] target(s) in 2.38s
+     Running `/tmp/oxidize-639-final-target/debug/examples/issue639_validation_probe`
+flat method=0 replace=false: Ok(()); output_bytes=3630
+flat method=0 replace=true: Ok(()); output_bytes=3840
+flat method=1 replace=false: Ok(()); output_bytes=3459
+flat method=1 replace=true: Ok(()); output_bytes=3669
+flat method=2 replace=false: Ok(()); output_bytes=5004
+flat method=2 replace=true: Ok(()); output_bytes=5294
+nested method=0 replace=false: Ok(()); output_bytes=3730
+nested method=0 replace=true: Ok(()); output_bytes=3940
+nested method=1 replace=false: Ok(()); output_bytes=3559
+nested method=1 replace=true: Ok(()); output_bytes=3769
+nested method=2 replace=false: Ok(()); output_bytes=5104
+nested method=2 replace=true: Ok(()); output_bytes=5394
+maxsize method=0 replace=false: Err(InvalidStructure("PDF object number space is exhausted")); output_bytes=0
+maxsize method=0 replace=true: Err(InvalidStructure("PDF object number space is exhausted")); output_bytes=0
+maxsize method=1 replace=false: Err(InvalidStructure("PDF object number space is exhausted")); output_bytes=0
+maxsize method=1 replace=true: Err(InvalidStructure("PDF object number space is exhausted")); output_bytes=0
+maxsize method=2 replace=false: Err(InvalidStructure("PDF object number space is exhausted")); output_bytes=0
+maxsize method=2 replace=true: Err(InvalidStructure("PDF object number space is exhausted")); output_bytes=0
+encrypted method=0 replace=false: Err(InvalidStructure("Encrypted PDFs are not supported by legacy incremental writes")); output_bytes=0
+encrypted method=0 replace=true: Err(InvalidStructure("Encrypted PDFs are not supported by legacy incremental writes")); output_bytes=0
+encrypted method=1 replace=false: Err(InvalidStructure("Encrypted PDFs are not supported by legacy incremental writes")); output_bytes=0
+encrypted method=1 replace=true: Err(InvalidStructure("Encrypted PDFs are not supported by legacy incremental writes")); output_bytes=0
+encrypted method=2 replace=false: Err(InvalidStructure("Encrypted PDFs are not supported by legacy incremental writes")); output_bytes=0
+encrypted method=2 replace=true: Err(InvalidStructure("Encrypted PDFs are not supported by legacy incremental writes")); output_bytes=0
+compressed method=0 replace=false: Ok(()); output_bytes=3514
+compressed method=0 replace=true: Ok(()); output_bytes=3724
+compressed method=1 replace=false: Ok(()); output_bytes=3343
+compressed method=1 replace=true: Ok(()); output_bytes=3553
+compressed method=2 replace=false: Ok(()); output_bytes=4887
+compressed method=2 replace=true: Ok(()); output_bytes=5177
+generation method=0 replace=false: Ok(()); output_bytes=3630
+generation method=0 replace=true: Ok(()); output_bytes=3840
+generation method=1 replace=false: Ok(()); output_bytes=3459
+generation method=1 replace=true: Ok(()); output_bytes=3669
+generation method=2 replace=false: Ok(()); output_bytes=5004
+generation method=2 replace=true: Ok(()); output_bytes=5294
+rich method=0 replace=false: Ok(()); output_bytes=4190
+rich method=0 replace=true: Ok(()); output_bytes=4400
+rich method=1 replace=false: Ok(()); output_bytes=3991
+rich method=1 replace=true: Ok(()); output_bytes=4201
+rich method=2 replace=false: Ok(()); output_bytes=5584
+rich method=2 replace=true: Ok(()); output_bytes=5874

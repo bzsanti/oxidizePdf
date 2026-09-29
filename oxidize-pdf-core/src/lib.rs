@@ -225,7 +225,7 @@ pub mod dashboard;
 
 // Re-export generation types
 pub use coordinate_system::{CoordinateSystem, RenderContext, TransformMatrix};
-pub use document::{Document, DocumentMetadata};
+pub use document::{BuildIdentification, Document, DocumentMetadata};
 pub use error::{OxidizePdfError, PdfError, Result};
 pub use geometry::{Point, Rectangle};
 pub use graphics::{Color, ColorSpace, GraphicsContext, Image, ImageFormat, MaskType};

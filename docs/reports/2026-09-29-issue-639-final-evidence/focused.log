@@ -1,0 +1,23 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-issue-639-final/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 13.06s
+     Running tests/issue_639_build_identification_test.rs (/tmp/oxidize-639-final-target/debug/deps/issue_639_build_identification_test-2a86fc05e80244bd)
+
+running 15 tests
+test incremental_rejects_incompatible_writer_config_before_output ... ok
+test fingerprint_reports_effective_writer_configuration ... ok
+test exhausted_object_numbers_reject_without_output ... ok
+test incremental_writers_do_not_add_info_when_source_has_none ... ok
+test incremental_replacement_is_explicit_and_uses_document_policy ... ok
+test modern_incremental_editor_preserves_info_without_injecting_identification ... ok
+test policy_can_be_changed_between_writes_and_producer_is_independent ... ok
+test incremental_writers_preserve_the_source_info_by_default ... ok
+test overlays_preserve_binary_metadata_geometry_annotations_and_destinations ... ok
+test repeated_updates_preserve_info_and_handle_eof_without_newline ... ok
+test issue_653_retains_leaf_pages_resources_and_parent_links ... ok
+test independent_metadata_survives_all_incremental_apis ... ok
+test issue_654_encrypted_inputs_are_rejected_before_any_output ... ok
+test default_and_explicit_enabled_emit_identification_in_all_output_apis ... ok
+test disabled_omits_all_three_fields_and_preserves_unrelated_metadata ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 37.35s
+

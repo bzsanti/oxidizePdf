@@ -9,6 +9,17 @@ use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
+/// Policy for the Info dictionary in legacy [`PdfWriter`] incremental APIs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IncrementalInfoPolicy {
+    /// Keep the source Info reference, including its absence (default).
+    #[default]
+    Preserve,
+    /// Replace Info with the supplied document's metadata and identification policy.
+    /// Overlay uses its temporary document's defaults. Source bytes remain intact.
+    Replace,
+}
+
 /// Configuration for PDF writer
 #[derive(Debug, Clone)]
 pub struct WriterConfig {
@@ -117,6 +128,7 @@ pub struct PdfWriter<W: Write> {
     catalog_id: Option<ObjectId>,
     pages_id: Option<ObjectId>,
     info_id: Option<ObjectId>,
+    incremental_info_policy: IncrementalInfoPolicy,
     // Maps for tracking form fields and their widgets
     #[allow(dead_code)]
     field_widget_map: HashMap<String, Vec<ObjectId>>, // field name -> widget IDs
@@ -165,6 +177,15 @@ struct WriterEncryptionState {
 }
 
 impl<W: Write> PdfWriter<W> {
+    /// Selects whether incremental append/replacement/overlay preserves source Info.
+    ///
+    /// The default is [`IncrementalInfoPolicy::Preserve`], even if the supplied
+    /// document has metadata or a build-identification policy. `Replace` opts in
+    /// to rewriting Info; it does not erase the previous revision's bytes or XMP.
+    pub fn set_incremental_info_policy(&mut self, policy: IncrementalInfoPolicy) {
+        self.incremental_info_policy = policy;
+    }
+
     pub fn new_with_writer(writer: W) -> Self {
         Self::with_config(writer, WriterConfig::default())
     }
@@ -178,6 +199,7 @@ impl<W: Write> PdfWriter<W> {
             catalog_id: None,
             pages_id: None,
             info_id: None,
+            incremental_info_policy: IncrementalInfoPolicy::default(),
             field_widget_map: HashMap::new(),
             field_id_map: HashMap::new(),
             form_field_ids: Vec::new(),
@@ -210,9 +232,9 @@ impl<W: Write> PdfWriter<W> {
         self.write_header()?;
 
         // Reserve object IDs for fixed objects (written in order)
-        self.catalog_id = Some(self.allocate_object_id());
-        self.pages_id = Some(self.allocate_object_id());
-        self.info_id = Some(self.allocate_object_id());
+        self.catalog_id = Some(self.allocate_object_id()?);
+        self.pages_id = Some(self.allocate_object_id()?);
+        self.info_id = Some(self.allocate_object_id()?);
 
         // Initialize encryption state BEFORE writing objects
         // (objects need to be encrypted as they are written)
@@ -287,6 +309,10 @@ impl<W: Write> PdfWriter<W> {
     ///
     /// Returns Ok(()) if the incremental update was written successfully
     ///
+    /// Catalog and existing page metadata are retained; Info is preserved by
+    /// default. Encrypted input is rejected before writing. Use
+    /// [`WriterConfig::incremental`] and discard output on error.
+    ///
     /// # Example - Adding Pages
     ///
     /// ```no_run
@@ -308,172 +334,8 @@ impl<W: Write> PdfWriter<W> {
         base_pdf_path: impl AsRef<std::path::Path>,
         document: &mut Document,
     ) -> Result<()> {
-        use std::io::{BufReader, Read, Seek, SeekFrom};
-
-        // Step 1: Parse the base PDF to get catalog and page information
-        let base_pdf_file = std::fs::File::open(base_pdf_path.as_ref())?;
-        let mut pdf_reader = crate::parser::PdfReader::new(BufReader::new(base_pdf_file))?;
-
-        // Get catalog from base PDF
-        let base_catalog = pdf_reader.catalog()?;
-
-        // Extract Pages reference from base catalog
-        let (base_pages_id, base_pages_gen) = base_catalog
-            .get("Pages")
-            .and_then(|obj| {
-                if let crate::parser::objects::PdfObject::Reference(id, gen) = obj {
-                    Some((*id, *gen))
-                } else {
-                    None
-                }
-            })
-            .ok_or_else(|| {
-                crate::error::PdfError::InvalidStructure(
-                    "Base PDF catalog missing /Pages reference".to_string(),
-                )
-            })?;
-
-        // Get the pages dictionary from the base PDF using the reference
-        let base_pages_obj = pdf_reader.get_object(base_pages_id, base_pages_gen)?;
-        let base_pages_kids = if let crate::parser::objects::PdfObject::Dictionary(dict) =
-            base_pages_obj
-        {
-            dict.get("Kids")
-                .and_then(|obj| {
-                    if let crate::parser::objects::PdfObject::Array(arr) = obj {
-                        // Convert PdfObject::Reference to writer::Object::Reference
-                        // PdfArray.0 gives access to the internal Vec<PdfObject>
-                        Some(
-                            arr.0
-                                .iter()
-                                .filter_map(|item| {
-                                    if let crate::parser::objects::PdfObject::Reference(id, gen) =
-                                        item
-                                    {
-                                        Some(crate::objects::Object::Reference(
-                                            crate::objects::ObjectId::new(*id, *gen),
-                                        ))
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect::<Vec<_>>(),
-                        )
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or_default()
-        } else {
-            Vec::new()
-        };
-
-        // Count existing pages
-        let base_page_count = base_pages_kids.len();
-
-        // Step 2: Copy the base PDF content
-        let base_pdf = std::fs::File::open(base_pdf_path.as_ref())?;
-        let mut base_reader = BufReader::new(base_pdf);
-
-        // Find the startxref offset in the base PDF
-        base_reader.seek(SeekFrom::End(-100))?;
-        let mut end_buffer = vec![0u8; 100];
-        let bytes_read = base_reader.read(&mut end_buffer)?;
-        end_buffer.truncate(bytes_read);
-
-        let end_str = String::from_utf8_lossy(&end_buffer);
-        let prev_xref = if let Some(startxref_pos) = end_str.find("startxref") {
-            let after_startxref = &end_str[startxref_pos + 9..];
-
-            let number_str: String = after_startxref
-                .chars()
-                .skip_while(|c| c.is_whitespace())
-                .take_while(|c| c.is_ascii_digit())
-                .collect();
-
-            number_str.parse::<u64>().map_err(|_| {
-                crate::error::PdfError::InvalidStructure(
-                    "Could not parse startxref offset".to_string(),
-                )
-            })?
-        } else {
-            return Err(crate::error::PdfError::InvalidStructure(
-                "startxref not found in base PDF".to_string(),
-            ));
-        };
-
-        // Copy entire base PDF
-        base_reader.seek(SeekFrom::Start(0))?;
-        let base_size = std::io::copy(&mut base_reader, &mut self.writer)? as u64;
-
-        // Store base PDF info for trailer
-        self.prev_xref_offset = Some(prev_xref);
-        self.base_pdf_size = Some(base_size);
-        self.current_position = base_size;
-
-        // Step 3: Write new/modified objects only
-        if !document.used_characters_by_font.is_empty() {
-            self.document_used_chars_by_font = document.used_characters_by_font.clone();
-        }
-
-        // Allocate IDs for new objects
-        self.catalog_id = Some(self.allocate_object_id());
-        self.pages_id = Some(self.allocate_object_id());
-        self.info_id = Some(self.allocate_object_id());
-
-        // Write custom fonts first
-        let font_refs = self.write_fonts(document)?;
-
-        // Write NEW pages only (not rewriting all pages)
-        self.write_pages(document, &font_refs)?;
-
-        // Write form fields
-        self.write_form_fields(document)?;
-
-        // Step 4: Write modified catalog that references BOTH old and new pages
-        let catalog_id = self.get_catalog_id()?;
-        let new_pages_id = self.get_pages_id()?;
-
-        let mut catalog = crate::objects::Dictionary::new();
-        catalog.set("Type", crate::objects::Object::Name("Catalog".to_string()));
-        catalog.set("Pages", crate::objects::Object::Reference(new_pages_id));
-
-        // Note: For now, we only preserve the Pages reference.
-        // Full catalog preservation (Outlines, AcroForm, etc.) would require
-        // converting parser::PdfObject to writer::Object, which is a future enhancement.
-
-        self.write_object(catalog_id, crate::objects::Object::Dictionary(catalog))?;
-
-        // Step 5: Write new Pages tree that includes BOTH base pages and new pages
-        let mut all_pages_kids = base_pages_kids;
-
-        // Add references to new pages
-        for page_id in &self.page_ids {
-            all_pages_kids.push(crate::objects::Object::Reference(*page_id));
-        }
-
-        let mut pages_dict = crate::objects::Dictionary::new();
-        pages_dict.set("Type", crate::objects::Object::Name("Pages".to_string()));
-        pages_dict.set("Kids", crate::objects::Object::Array(all_pages_kids));
-        pages_dict.set(
-            "Count",
-            crate::objects::Object::Integer((base_page_count + self.page_ids.len()) as i64),
-        );
-
-        self.write_object(new_pages_id, crate::objects::Object::Dictionary(pages_dict))?;
-
-        // Write document info
-        self.write_info(document)?;
-
-        // Step 6: Write new XRef table with /Prev pointer
-        let xref_position = self.current_position;
-        self.write_xref()?;
-
-        // Step 7: Write trailer with /Prev
-        self.write_trailer(xref_position)?;
-
-        self.writer.flush()?;
-        Ok(())
+        let bytes = std::fs::read(base_pdf_path)?;
+        self.write_incremental_document(&bytes, document, false)
     }
 
     /// Replaces pages in an existing PDF using incremental update structure (ISO 32000-1 §7.5.6).
@@ -527,12 +389,14 @@ impl<W: Write> PdfWriter<W> {
     /// - Preserves original PDF bytes (append-only)
     /// - Uses /Prev pointer in trailer
     /// - Maintains cross-reference chain
-    /// - Compatible with digital signatures on base PDF
+    /// Retaining signed bytes does not establish whether the changes are permitted
+    /// by a document's signature policy.
     ///
-    /// # Future: Automatic Overlay API
-    /// For automatic form filling (load + modify + save) without manual recreation,
-    /// a future `write_incremental_with_overlay()` API is planned. This will require
-    /// implementation of `Document::load()` and content overlay system.
+    /// To retain original page content while adding new content, use
+    /// [`Self::write_incremental_with_overlay`]. Catalog and page metadata are
+    /// retained. Info is preserved unless [`IncrementalInfoPolicy::Replace`] is set.
+    /// Encrypted input is rejected before writing. Use [`WriterConfig::incremental`]
+    /// and discard the output on error.
     ///
     /// # Parameters
     /// - `base_pdf_path`: Path to the existing PDF to modify
@@ -546,319 +410,244 @@ impl<W: Write> PdfWriter<W> {
         base_pdf_path: impl AsRef<std::path::Path>,
         document: &mut Document,
     ) -> Result<()> {
-        use std::io::Cursor;
-
-        // Step 1: Read the entire base PDF into memory (avoids double file open)
-        let base_pdf_bytes = std::fs::read(base_pdf_path.as_ref())?;
-        let base_size = base_pdf_bytes.len() as u64;
-
-        // Step 2: Parse from memory to get page information
-        let mut pdf_reader = crate::parser::PdfReader::new(Cursor::new(&base_pdf_bytes))?;
-
-        let base_catalog = pdf_reader.catalog()?;
-
-        let (base_pages_id, base_pages_gen) = base_catalog
-            .get("Pages")
-            .and_then(|obj| {
-                if let crate::parser::objects::PdfObject::Reference(id, gen) = obj {
-                    Some((*id, *gen))
-                } else {
-                    None
-                }
-            })
-            .ok_or_else(|| {
-                crate::error::PdfError::InvalidStructure(
-                    "Base PDF catalog missing /Pages reference".to_string(),
-                )
-            })?;
-
-        let base_pages_obj = pdf_reader.get_object(base_pages_id, base_pages_gen)?;
-        let base_pages_kids = if let crate::parser::objects::PdfObject::Dictionary(dict) =
-            base_pages_obj
-        {
-            dict.get("Kids")
-                .and_then(|obj| {
-                    if let crate::parser::objects::PdfObject::Array(arr) = obj {
-                        Some(
-                            arr.0
-                                .iter()
-                                .filter_map(|item| {
-                                    if let crate::parser::objects::PdfObject::Reference(id, gen) =
-                                        item
-                                    {
-                                        Some(crate::objects::Object::Reference(
-                                            crate::objects::ObjectId::new(*id, *gen),
-                                        ))
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect::<Vec<_>>(),
-                        )
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or_default()
-        } else {
-            Vec::new()
-        };
-
-        let base_page_count = base_pages_kids.len();
-
-        // Step 3: Find startxref offset from the bytes
-        let start_search = if base_size > 100 { base_size - 100 } else { 0 } as usize;
-        let end_bytes = &base_pdf_bytes[start_search..];
-        let end_str = String::from_utf8_lossy(end_bytes);
-
-        let prev_xref = if let Some(startxref_pos) = end_str.find("startxref") {
-            let after_startxref = &end_str[startxref_pos + 9..];
-            let number_str: String = after_startxref
-                .chars()
-                .skip_while(|c| c.is_whitespace())
-                .take_while(|c| c.is_ascii_digit())
-                .collect();
-
-            number_str.parse::<u64>().map_err(|_| {
-                crate::error::PdfError::InvalidStructure(
-                    "Could not parse startxref offset".to_string(),
-                )
-            })?
-        } else {
-            return Err(crate::error::PdfError::InvalidStructure(
-                "startxref not found in base PDF".to_string(),
-            ));
-        };
-
-        // Step 4: Copy base PDF bytes to output
-        self.writer.write_all(&base_pdf_bytes)?;
-
-        self.prev_xref_offset = Some(prev_xref);
-        self.base_pdf_size = Some(base_size);
-        self.current_position = base_size;
-
-        // Step 3: Write replacement pages
-        if !document.used_characters_by_font.is_empty() {
-            self.document_used_chars_by_font = document.used_characters_by_font.clone();
-        }
-
-        self.catalog_id = Some(self.allocate_object_id());
-        self.pages_id = Some(self.allocate_object_id());
-        self.info_id = Some(self.allocate_object_id());
-
-        let font_refs = self.write_fonts(document)?;
-        self.write_pages(document, &font_refs)?;
-        self.write_form_fields(document)?;
-
-        // Step 4: Create Pages tree with REPLACEMENTS
-        let catalog_id = self.get_catalog_id()?;
-        let new_pages_id = self.get_pages_id()?;
-
-        let mut catalog = crate::objects::Dictionary::new();
-        catalog.set("Type", crate::objects::Object::Name("Catalog".to_string()));
-        catalog.set("Pages", crate::objects::Object::Reference(new_pages_id));
-        self.write_object(catalog_id, crate::objects::Object::Dictionary(catalog))?;
-
-        // Build new Kids array: replace first N pages, keep rest from base
-        let mut all_pages_kids = Vec::new();
-        let replacement_count = document.pages.len();
-
-        // Add replacement pages (these override base pages at same indices)
-        for page_id in &self.page_ids {
-            all_pages_kids.push(crate::objects::Object::Reference(*page_id));
-        }
-
-        // Add remaining base pages that weren't replaced
-        if replacement_count < base_page_count {
-            for i in replacement_count..base_page_count {
-                if let Some(page_ref) = base_pages_kids.get(i) {
-                    all_pages_kids.push(page_ref.clone());
-                }
-            }
-        }
-
-        let mut pages_dict = crate::objects::Dictionary::new();
-        pages_dict.set("Type", crate::objects::Object::Name("Pages".to_string()));
-        pages_dict.set(
-            "Kids",
-            crate::objects::Object::Array(all_pages_kids.clone()),
-        );
-        pages_dict.set(
-            "Count",
-            crate::objects::Object::Integer(all_pages_kids.len() as i64),
-        );
-
-        self.write_object(new_pages_id, crate::objects::Object::Dictionary(pages_dict))?;
-        self.write_info(document)?;
-
-        let xref_position = self.current_position;
-        self.write_xref()?;
-        self.write_trailer(xref_position)?;
-
-        self.writer.flush()?;
-        Ok(())
+        let bytes = std::fs::read(base_pdf_path)?;
+        self.write_incremental_document(&bytes, document, true)
     }
 
-    /// Overlays content onto existing PDF pages using incremental updates (PLANNED).
+    /// Apply a callback to every source page, retaining its existing content and resources.
     ///
-    /// **STATUS**: Not yet implemented. This API is planned for a future release.
+    /// The source revision remains a byte-for-byte prefix. Catalog and page metadata
+    /// are retained; Info follows [`IncrementalInfoPolicy`] (preserved by default).
+    /// Encrypted inputs are rejected before invoking the callback or writing bytes.
+    /// Use [`WriterConfig::incremental`]. Discard the output if writing fails.
     ///
-    /// # What This Will Do
-    /// When implemented, this function will allow you to:
-    /// - Load an existing PDF
-    /// - Modify specific elements (fill form fields, add annotations, watermarks)
-    /// - Save incrementally without recreating entire pages
-    ///
-    /// # Difference from Page Replacement
-    /// - **Page Replacement** (`write_incremental_with_page_replacement`): Replaces entire pages with manually recreated content
-    /// - **Overlay** (this function): Modifies existing pages by adding/changing specific elements
-    ///
-    /// # Planned Usage (Future)
-    /// ```rust,ignore
-    /// // This code will work in a future release
-    /// let mut pdf_writer = PdfWriter::with_config(writer, WriterConfig::incremental());
-    ///
-    /// let overlays = vec![
-    ///     PageOverlay::new(0)
-    ///         .add_text(110.0, 700.0, "John Smith")
-    ///         .add_annotation(Annotation::text(200.0, 500.0, "Review this")),
-    /// ];
-    ///
-    /// pdf_writer.write_incremental_with_overlay("form.pdf", overlays)?;
+    /// ```no_run
+    /// use oxidize_pdf::writer::{PdfWriter, WriterConfig};
+    /// let mut output = Vec::new();
+    /// let mut writer = PdfWriter::with_config(&mut output, WriterConfig::incremental());
+    /// writer.write_incremental_with_overlay("source.pdf", |page| {
+    ///     page.text().set_font(oxidize_pdf::text::Font::Helvetica, 12.0)
+    ///         .at(20.0, 20.0).write("Reviewed")?;
+    ///     Ok(())
+    /// })?;
+    /// # Ok::<(), oxidize_pdf::PdfError>(())
     /// ```
-    ///
-    /// # Implementation Requirements
-    /// This function requires:
-    /// 1. `Document::load()` - Load existing PDF into Document structure
-    /// 2. `Page::from_parsed()` - Convert parsed pages to writable format
-    /// 3. Content stream overlay system - Append to existing content streams
-    /// 4. Resource merging - Combine new resources with existing ones
-    ///
-    /// Estimated implementation effort: 6-7 days
-    ///
-    /// # Current Workaround
-    /// Until this is implemented, use `write_incremental_with_page_replacement()` with manual
-    /// page recreation. See that function's documentation for examples.
-    ///
-    /// # Parameters
-    /// - `base_pdf_path`: Path to the existing PDF to modify (future)
-    /// - `overlays`: Content to overlay on existing pages (future)
-    ///
-    /// # Returns
-    /// Currently always returns `PdfError::NotImplemented`
     pub fn write_incremental_with_overlay<P: AsRef<std::path::Path>>(
         &mut self,
         base_pdf_path: P,
         mut overlay_fn: impl FnMut(&mut crate::Page) -> Result<()>,
     ) -> Result<()> {
-        use std::io::Cursor;
+        let bytes = std::fs::read(base_pdf_path)?;
+        let reader = crate::parser::PdfReader::new(std::io::Cursor::new(&bytes))?;
+        self.initialize_incremental_info(&reader)?;
+        let parsed = crate::parser::PdfDocument::new(reader);
+        let mut document = Document::new();
+        for index in 0..parsed.page_count()? {
+            let source = parsed.get_page(index)?;
+            let mut page = crate::Page::from_parsed_with_content(&source, &parsed)?;
+            overlay_fn(&mut page)?;
+            document.add_page(page);
+        }
+        self.write_incremental_document(&bytes, &mut document, true)
+    }
 
-        // Step 1: Read the entire base PDF into memory
-        let base_pdf_bytes = std::fs::read(base_pdf_path.as_ref())?;
-        let base_size = base_pdf_bytes.len() as u64;
-
-        // Step 2: Parse from memory to get page information
-        let pdf_reader = crate::parser::PdfReader::new(Cursor::new(&base_pdf_bytes))?;
-        let parsed_doc = crate::parser::PdfDocument::new(pdf_reader);
-
-        // Get all pages from base PDF
-        let page_count = parsed_doc.page_count()?;
-
-        // Step 3: Find startxref offset from the bytes
-        let start_search = if base_size > 100 { base_size - 100 } else { 0 } as usize;
-        let end_bytes = &base_pdf_bytes[start_search..];
-        let end_str = String::from_utf8_lossy(end_bytes);
-
-        let prev_xref = if let Some(startxref_pos) = end_str.find("startxref") {
-            let after_startxref = &end_str[startxref_pos + 9..];
-            let number_str: String = after_startxref
-                .chars()
-                .skip_while(|c| c.is_whitespace())
-                .take_while(|c| c.is_ascii_digit())
-                .collect();
-
-            number_str.parse::<u64>().map_err(|_| {
-                crate::error::PdfError::InvalidStructure(
-                    "Could not parse startxref offset".to_string(),
-                )
-            })?
-        } else {
-            return Err(crate::error::PdfError::InvalidStructure(
-                "startxref not found in base PDF".to_string(),
-            ));
-        };
-
-        // Step 5: Copy base PDF bytes to output
-        self.writer.write_all(&base_pdf_bytes)?;
-
+    /// Rebuild a flat page tree from leaf pages, materializing inherited attributes.
+    /// Original page object identities remain valid for annotations and destinations.
+    fn write_incremental_document(
+        &mut self,
+        bytes: &[u8],
+        document: &mut Document,
+        replace: bool,
+    ) -> Result<()> {
+        let mut reader = crate::parser::PdfReader::new(std::io::Cursor::new(bytes))?;
+        self.initialize_incremental_info(&reader)?;
+        let prev_xref = reader.trailer().xref_offset;
+        let mut catalog = Self::incremental_dictionary(reader.catalog()?)?;
+        let parsed = crate::parser::PdfDocument::new(reader);
+        let mut originals = Vec::new();
+        for index in 0..parsed.page_count()? {
+            let page = parsed.get_page(index)?;
+            let mut dict = Self::incremental_dictionary(&page.dict)?;
+            // Resolve an indirect annotations array before merging new annotations.
+            if let Some(annotations) = page.dict.get("Annots") {
+                let resolved = parsed.resolve(annotations)?;
+                if !matches!(
+                    resolved,
+                    crate::parser::objects::PdfObject::Array(_)
+                        | crate::parser::objects::PdfObject::Null
+                ) {
+                    return Err(PdfError::InvalidStructure(
+                        "Page Annots must resolve to an array".into(),
+                    ));
+                }
+                dict.set("Annots", Self::incremental_object(&resolved, 0)?);
+            }
+            if !dict.contains_key("Resources") {
+                if let Some(resources) = page.get_resources() {
+                    dict.set(
+                        "Resources",
+                        Object::Dictionary(Self::incremental_dictionary(resources)?),
+                    );
+                }
+            }
+            dict.set(
+                "MediaBox",
+                Object::Array(page.media_box.iter().map(|v| Object::Real(*v)).collect()),
+            );
+            if let Some(crop) = page.crop_box {
+                dict.set(
+                    "CropBox",
+                    Object::Array(crop.iter().map(|v| Object::Real(*v)).collect()),
+                );
+            }
+            dict.set("Rotate", Object::Integer(page.rotation as i64));
+            originals.push((ObjectId::new(page.obj_ref.0, page.obj_ref.1), dict));
+        }
+        self.catalog_id = Some(self.allocate_object_id()?);
+        self.pages_id = Some(self.allocate_object_id()?);
+        let parent = self.get_pages_id()?;
+        self.writer.write_all(bytes)?;
+        self.current_position = bytes.len() as u64;
+        self.base_pdf_size = Some(self.current_position);
         self.prev_xref_offset = Some(prev_xref);
-        self.base_pdf_size = Some(base_size);
-        self.current_position = base_size;
-
-        // Step 6: Build temporary document with overlaid pages
-        let mut temp_doc = crate::Document::new();
-
-        for page_idx in 0..page_count {
-            // Convert parsed page to writable with content preservation
-            let parsed_page = parsed_doc.get_page(page_idx)?;
-            let mut writable_page =
-                crate::Page::from_parsed_with_content(&parsed_page, &parsed_doc)?;
-
-            // Apply overlay function
-            overlay_fn(&mut writable_page)?;
-
-            // Add to temporary document
-            temp_doc.add_page(writable_page);
+        // A source file need not end with whitespace after %%EOF.
+        self.write_bytes(b"\n")?;
+        self.document_used_chars_by_font = document.used_characters_by_font.clone();
+        let fonts = self.write_fonts(document)?;
+        self.write_pages_preserving_metadata(
+            document,
+            &fonts,
+            if replace { &originals } else { &[] },
+        )?;
+        self.write_form_fields(document)?;
+        let mut kids = Vec::new();
+        if replace {
+            kids.extend(self.page_ids.iter().copied().map(Object::Reference));
         }
-
-        // Step 7: Write document with standard writer methods
-        // This ensures consistent object numbering
-        if !temp_doc.used_characters_by_font.is_empty() {
-            self.document_used_chars_by_font = temp_doc.used_characters_by_font.clone();
+        let skip = if replace { document.pages.len() } else { 0 };
+        for (id, mut dict) in originals.into_iter().skip(skip) {
+            dict.set("Parent", Object::Reference(parent));
+            self.write_object(id, Object::Dictionary(dict))?;
+            kids.push(Object::Reference(id));
         }
-
-        self.catalog_id = Some(self.allocate_object_id());
-        self.pages_id = Some(self.allocate_object_id());
-        self.info_id = Some(self.allocate_object_id());
-
-        let font_refs = self.write_fonts(&temp_doc)?;
-        self.write_pages(&temp_doc, &font_refs)?;
-        self.write_form_fields(&mut temp_doc)?;
-
-        // Step 8: Create new catalog and pages tree
-        let catalog_id = self.get_catalog_id()?;
-        let new_pages_id = self.get_pages_id()?;
-
-        let mut catalog = crate::objects::Dictionary::new();
-        catalog.set("Type", crate::objects::Object::Name("Catalog".to_string()));
-        catalog.set("Pages", crate::objects::Object::Reference(new_pages_id));
-        self.write_object(catalog_id, crate::objects::Object::Dictionary(catalog))?;
-
-        // Build new Kids array with ALL overlaid pages
-        let mut all_pages_kids = Vec::new();
-        for page_id in &self.page_ids {
-            all_pages_kids.push(crate::objects::Object::Reference(*page_id));
+        if !replace {
+            kids.extend(self.page_ids.iter().copied().map(Object::Reference));
         }
-
-        let mut pages_dict = crate::objects::Dictionary::new();
-        pages_dict.set("Type", crate::objects::Object::Name("Pages".to_string()));
-        pages_dict.set(
-            "Kids",
-            crate::objects::Object::Array(all_pages_kids.clone()),
-        );
-        pages_dict.set(
-            "Count",
-            crate::objects::Object::Integer(all_pages_kids.len() as i64),
-        );
-
-        self.write_object(new_pages_id, crate::objects::Object::Dictionary(pages_dict))?;
-        self.write_info(&temp_doc)?;
-
-        let xref_position = self.current_position;
+        let mut pages = Dictionary::new();
+        pages.set("Type", Object::Name("Pages".into()));
+        pages.set("Count", Object::Integer(kids.len() as i64));
+        pages.set("Kids", Object::Array(kids));
+        self.write_object(parent, Object::Dictionary(pages))?;
+        catalog.set("Pages", Object::Reference(parent));
+        self.write_object(self.get_catalog_id()?, Object::Dictionary(catalog))?;
+        if self.incremental_info_policy == IncrementalInfoPolicy::Replace {
+            self.write_info(document)?;
+        }
+        let xref = self.current_position;
         self.write_xref()?;
-        self.write_trailer(xref_position)?;
-
+        self.write_trailer(xref)?;
         self.writer.flush()?;
+        Ok(())
+    }
+
+    fn incremental_dictionary(dict: &crate::parser::objects::PdfDictionary) -> Result<Dictionary> {
+        match Self::incremental_object(
+            &crate::parser::objects::PdfObject::Dictionary(dict.clone()),
+            0,
+        )? {
+            Object::Dictionary(dict) => Ok(dict),
+            _ => unreachable!(),
+        }
+    }
+
+    /// Preserve string bytes and indirect references; never decode customer metadata.
+    fn incremental_object(obj: &crate::parser::objects::PdfObject, depth: usize) -> Result<Object> {
+        use crate::parser::objects::PdfObject as Parsed;
+        if depth > 64 {
+            return Err(PdfError::InvalidStructure(
+                "Incremental metadata nesting exceeds 64".into(),
+            ));
+        }
+        Ok(match obj {
+            Parsed::Null => Object::Null,
+            Parsed::Boolean(v) => Object::Boolean(*v),
+            Parsed::Integer(v) => Object::Integer(*v),
+            Parsed::Real(v) => Object::Real(*v),
+            Parsed::Name(v) => Object::Name(Self::incremental_name(v.as_str())?),
+            Parsed::String(v) => Object::ByteString(v.as_bytes().to_vec()),
+            Parsed::Reference(n, g) => Object::Reference(ObjectId::new(*n, *g)),
+            Parsed::Array(items) => Object::Array(
+                items
+                    .0
+                    .iter()
+                    .map(|v| Self::incremental_object(v, depth + 1))
+                    .collect::<Result<_>>()?,
+            ),
+            Parsed::Dictionary(dict) => {
+                let mut result = Dictionary::new();
+                for (key, value) in dict.0.iter() {
+                    result.set(
+                        Self::incremental_name(key.as_str())?,
+                        Self::incremental_object(value, depth + 1)?,
+                    );
+                }
+                Object::Dictionary(result)
+            }
+            Parsed::Stream(_) => {
+                return Err(PdfError::InvalidStructure(
+                    "Direct stream inside incremental metadata".into(),
+                ))
+            }
+        })
+    }
+
+    /// The parser represents each PDF name byte as one Latin-1 character.
+    /// The writer accepts serialized name tokens, so restore bytes and escapes.
+    fn incremental_name(name: &str) -> Result<String> {
+        let mut encoded = String::new();
+        for character in name.chars() {
+            let byte = u8::try_from(character as u32).map_err(|_| {
+                PdfError::InvalidStructure("Parsed PDF name contains a non-byte character".into())
+            })?;
+            if (b'!'..=b'~').contains(&byte) && !b"#%()/<>[]{}".contains(&byte) {
+                encoded.push(byte as char);
+            } else {
+                encoded.push_str(&format!("#{byte:02X}"));
+            }
+        }
+        Ok(encoded)
+    }
+
+    fn initialize_incremental_info<R: std::io::Read + std::io::Seek>(
+        &mut self,
+        reader: &crate::parser::PdfReader<R>,
+    ) -> Result<()> {
+        if reader.trailer().is_encrypted() {
+            return Err(PdfError::InvalidStructure(
+                "Encrypted PDFs are not supported by legacy incremental writes".into(),
+            ));
+        }
+        if self.config.use_object_streams || self.config.use_xref_streams {
+            return Err(PdfError::InvalidStructure("Legacy incremental writes require classic xref tables; use WriterConfig::incremental()".into()));
+        }
+        let next = reader
+            .object_references()
+            .iter()
+            .map(|id| id.0)
+            .max()
+            .unwrap_or(0)
+            .checked_add(1)
+            .ok_or_else(|| {
+                PdfError::InvalidStructure("PDF object number space is exhausted".into())
+            })?;
+        self.next_object_id = self.next_object_id.max(reader.trailer().size()?).max(next);
+        self.info_id = match self.incremental_info_policy {
+            IncrementalInfoPolicy::Preserve => reader
+                .trailer()
+                .info()
+                .map(|(number, generation)| ObjectId::new(number, generation)),
+            IncrementalInfoPolicy::Replace => Some(self.allocate_object_id()?),
+        };
         Ok(())
     }
 
@@ -989,7 +778,7 @@ impl<W: Write> PdfWriter<W> {
         // Add AcroForm if present
         if let Some(acro_form) = &document.acro_form {
             // Reserve object ID for AcroForm
-            let acro_form_id = self.allocate_object_id();
+            let acro_form_id = self.allocate_object_id()?;
 
             // Write AcroForm object
             self.write_object(acro_form_id, Object::Dictionary(acro_form.to_dict()))?;
@@ -1030,7 +819,7 @@ impl<W: Write> PdfWriter<W> {
         // Generate XMP from document metadata and embed as stream
         let xmp_metadata = document.create_xmp_metadata();
         let xmp_packet = xmp_metadata.to_xmp_packet();
-        let metadata_id = self.allocate_object_id();
+        let metadata_id = self.allocate_object_id()?;
 
         // Create metadata stream dictionary
         let mut metadata_dict = Dictionary::new();
@@ -1062,12 +851,12 @@ impl<W: Write> PdfWriter<W> {
         // (§12.3.2.3). Both the name tree and the Name Dictionary are
         // written as indirect objects.
         if let Some(named_dests) = &document.named_destinations {
-            let dests_tree_id = self.allocate_object_id();
+            let dests_tree_id = self.allocate_object_id()?;
             self.write_object(dests_tree_id, Object::Dictionary(named_dests.to_dict()))?;
 
             let mut names_dict = Dictionary::new();
             names_dict.set("Dests", Object::Reference(dests_tree_id));
-            let names_dict_id = self.allocate_object_id();
+            let names_dict_id = self.allocate_object_id()?;
             self.write_object(names_dict_id, Object::Dictionary(names_dict))?;
 
             catalog.set("Names", Object::Reference(names_dict_id));
@@ -1077,7 +866,7 @@ impl<W: Write> PdfWriter<W> {
         // The value is a number tree; we emit it as an indirect object so
         // large documents can grow without reshuffling the catalog.
         if let Some(page_labels) = &document.page_labels {
-            let labels_id = self.allocate_object_id();
+            let labels_id = self.allocate_object_id()?;
             self.write_object(labels_id, Object::Dictionary(page_labels.to_dict()))?;
             catalog.set("PageLabels", Object::Reference(labels_id));
         }
@@ -1163,7 +952,7 @@ impl<W: Write> PdfWriter<W> {
         outline_tree: &crate::structure::OutlineTree,
     ) -> Result<ObjectId> {
         // Create root outline dictionary
-        let outline_root_id = self.allocate_object_id();
+        let outline_root_id = self.allocate_object_id()?;
 
         let mut outline_root = Dictionary::new();
         outline_root.set("Type", Object::Name("Outlines".to_string()));
@@ -1186,7 +975,10 @@ impl<W: Write> PdfWriter<W> {
         items: &[crate::structure::OutlineItem],
         parent_id: ObjectId,
     ) -> Result<(Option<ObjectId>, Option<ObjectId>)> {
-        let ids: Vec<_> = items.iter().map(|_| self.allocate_object_id()).collect();
+        let ids: Vec<_> = items
+            .iter()
+            .map(|_| self.allocate_object_id())
+            .collect::<Result<Vec<_>>>()?;
         for (index, item) in items.iter().enumerate() {
             let item_id = ids[index];
             let (first_child, last_child) = self.write_outline_items(&item.children, item_id)?;
@@ -1211,10 +1003,10 @@ impl<W: Write> PdfWriter<W> {
         struct_tree: &crate::structure::StructTree,
     ) -> Result<ObjectId> {
         // Allocate IDs for StructTreeRoot and all elements
-        let struct_tree_root_id = self.allocate_object_id();
+        let struct_tree_root_id = self.allocate_object_id()?;
         let mut element_ids = Vec::new();
         for _ in 0..struct_tree.len() {
-            element_ids.push(self.allocate_object_id());
+            element_ids.push(self.allocate_object_id()?);
         }
 
         // Build the ParentTree ownership map. Each tagged page gets a
@@ -1348,7 +1140,7 @@ impl<W: Write> PdfWriter<W> {
         let mut struct_tree_root = Dictionary::new();
         struct_tree_root.set("Type", Object::Name("StructTreeRoot".to_string()));
 
-        let parent_tree_id = self.allocate_object_id();
+        let parent_tree_id = self.allocate_object_id()?;
         let mut nums = Vec::new();
         for (struct_parent_key, (_page_index, owners)) in page_owners.iter().enumerate() {
             let max_mcid = *owners.keys().next_back().expect("non-empty owner map");
@@ -1453,7 +1245,7 @@ impl<W: Write> PdfWriter<W> {
         };
 
         for (_name, _form_field, placeholder) in form_manager.iter_fields_sorted() {
-            let real_id = self.allocate_object_id();
+            let real_id = self.allocate_object_id()?;
             self.form_field_placeholder_map.insert(placeholder, real_id);
             self.form_manager_field_refs.push(real_id);
         }
@@ -1515,12 +1307,14 @@ impl<W: Write> PdfWriter<W> {
             info_dict.set("ModDate", Object::String(date_string));
         }
 
-        // Add PDF signature (anti-spoofing and licensing)
-        // This is written AFTER user-configurable metadata so it cannot be overridden
-        let edition = super::Edition::OpenSource;
-
-        let signature = super::PdfSignature::new(document, edition);
-        signature.write_to_info_dict(&mut info_dict);
+        if document.build_identification == crate::BuildIdentification::Enabled {
+            let identification = super::PdfBuildIdentification::new(
+                document,
+                super::Edition::OpenSource,
+                &self.config,
+            );
+            identification.write_to_info_dict(&mut info_dict);
+        }
 
         self.write_object(info_id, Object::Dictionary(info_dict))?;
         Ok(())
@@ -1635,11 +1429,11 @@ impl<W: Write> PdfWriter<W> {
         }
 
         // Allocate IDs for all font objects
-        let font_id = self.allocate_object_id();
-        let descendant_font_id = self.allocate_object_id();
-        let descriptor_id = self.allocate_object_id();
-        let font_file_id = self.allocate_object_id();
-        let to_unicode_id = self.allocate_object_id();
+        let font_id = self.allocate_object_id()?;
+        let descendant_font_id = self.allocate_object_id()?;
+        let descriptor_id = self.allocate_object_id()?;
+        let font_file_id = self.allocate_object_id()?;
+        let to_unicode_id = self.allocate_object_id()?;
 
         // Write font file. Large fonts are subsetted; the subsetter always
         // emits raw CFF for OpenType/CFF fonts, so OpenType font files are
@@ -1797,7 +1591,7 @@ impl<W: Write> PdfWriter<W> {
                 // crushes it by 95-99%. For CJK-heavy documents this is the
                 // difference between a 130 KB map (Issue #165) and a ~1 KB
                 // stream.
-                let cid_to_gid_map_id = self.allocate_object_id();
+                let cid_to_gid_map_id = self.allocate_object_id()?;
                 let map_dict = Dictionary::new();
                 #[cfg(feature = "compression")]
                 let map_stream = if self.config.compress_streams {
@@ -1905,11 +1699,11 @@ impl<W: Write> PdfWriter<W> {
                 }
             };
 
-        let font_id = self.allocate_object_id();
-        let descendant_font_id = self.allocate_object_id();
-        let descriptor_id = self.allocate_object_id();
-        let font_file_id = self.allocate_object_id();
-        let to_unicode_id = self.allocate_object_id();
+        let font_id = self.allocate_object_id()?;
+        let descendant_font_id = self.allocate_object_id()?;
+        let descriptor_id = self.allocate_object_id()?;
+        let font_file_id = self.allocate_object_id()?;
+        let to_unicode_id = self.allocate_object_id()?;
 
         // FontFile2 stream — subset font, /Length1 = uncompressed byte count
         // (ISO 32000-1 §9.9), FlateDecode-compressed when configured.
@@ -2005,7 +1799,7 @@ impl<W: Write> PdfWriter<W> {
         if cid_to_gid_map.is_empty() {
             cid_font.set("CIDToGIDMap", Object::Name("Identity".to_string()));
         } else {
-            let cid_to_gid_map_id = self.allocate_object_id();
+            let cid_to_gid_map_id = self.allocate_object_id()?;
             let map_dict = Dictionary::new();
             #[cfg(feature = "compression")]
             let map_stream = if self.config.compress_streams {
@@ -2459,9 +2253,9 @@ impl<W: Write> PdfWriter<W> {
         font: &crate::text::font_manager::CustomFont,
     ) -> Result<ObjectId> {
         // Allocate IDs for font objects
-        let font_id = self.allocate_object_id();
-        let descriptor_id = self.allocate_object_id();
-        let font_file_id = self.allocate_object_id();
+        let font_id = self.allocate_object_id()?;
+        let descriptor_id = self.allocate_object_id()?;
+        let font_file_id = self.allocate_object_id()?;
 
         // Write font file (embedded TTF data)
         if let Some(ref data) = font.font_data {
@@ -2522,6 +2316,15 @@ impl<W: Write> PdfWriter<W> {
         document: &Document,
         font_refs: &HashMap<String, ObjectId>,
     ) -> Result<()> {
+        self.write_pages_preserving_metadata(document, font_refs, &[])
+    }
+
+    fn write_pages_preserving_metadata(
+        &mut self,
+        document: &Document,
+        font_refs: &HashMap<String, ObjectId>,
+        originals: &[(ObjectId, Dictionary)],
+    ) -> Result<()> {
         let pages_id = self.get_pages_id()?;
         let mut pages_dict = Dictionary::new();
         pages_dict.set("Type", Object::Name("Pages".to_string()));
@@ -2532,9 +2335,12 @@ impl<W: Write> PdfWriter<W> {
         // Allocate page object IDs sequentially
         let mut page_ids = Vec::new();
         let mut content_ids = Vec::new();
-        for _ in 0..document.pages.len() {
-            page_ids.push(self.allocate_object_id());
-            content_ids.push(self.allocate_object_id());
+        for index in 0..document.pages.len() {
+            page_ids.push(match originals.get(index) {
+                Some((id, _)) => *id,
+                None => self.allocate_object_id()?,
+            });
+            content_ids.push(self.allocate_object_id()?);
         }
 
         for page_id in &page_ids {
@@ -2574,6 +2380,7 @@ impl<W: Write> PdfWriter<W> {
                 struct_parent_keys.get(&i).copied(),
                 font_refs,
                 &preserved_font_map,
+                originals.get(i).map(|(_, dict)| dict),
             )?;
             self.write_page_content(content_id, page, &preserved_font_map)?;
         }
@@ -2600,9 +2407,35 @@ impl<W: Write> PdfWriter<W> {
         struct_parent_key: Option<i64>,
         font_refs: &HashMap<String, ObjectId>,
         preserved_font_map: &HashMap<String, String>,
+        original: Option<&Dictionary>,
     ) -> Result<()> {
-        // Start with the page's dictionary which includes annotations
-        let mut page_dict = page.to_dict();
+        let mut page_dict = original.cloned().unwrap_or_default();
+        // The Page owns the new content, resources, dimensions and rotation.
+        // Keep other source keys (Metadata, Lang, annotations, custom entries).
+        page_dict.remove("Rotate");
+        for (key, value) in page.to_dict().iter() {
+            page_dict.set(key, value.clone());
+        }
+        if let Some(original) = original {
+            if let Some(Object::Array(bounds)) = original.get("MediaBox") {
+                let values: Vec<f64> = bounds
+                    .iter()
+                    .filter_map(|v| match v {
+                        Object::Real(n) => Some(*n),
+                        Object::Integer(n) => Some(*n as f64),
+                        _ => None,
+                    })
+                    .collect();
+                if values.len() == 4
+                    && values[2] - values[0] == page.width()
+                    && values[3] - values[1] == page.height()
+                {
+                    page_dict.set("MediaBox", Object::Array(bounds.clone()));
+                } else {
+                    page_dict.remove("CropBox");
+                }
+            }
+        }
 
         page_dict.set("Type", Object::Name("Page".to_string()));
         page_dict.set("Parent", Object::Reference(parent_id));
@@ -2757,7 +2590,7 @@ impl<W: Write> PdfWriter<W> {
             image_entries.sort_by_key(|(name, _)| name.as_str());
             for (name, image) in image_entries {
                 // Use sequential ObjectId allocation to avoid conflicts
-                let image_id = self.allocate_object_id();
+                let image_id = self.allocate_object_id()?;
 
                 // Check if image has transparency (alpha channel)
                 if image.has_transparency() {
@@ -2766,7 +2599,7 @@ impl<W: Write> PdfWriter<W> {
 
                     // If we have a soft mask, write it as a separate object and reference it
                     if let Some(smask_stream) = smask_obj {
-                        let smask_id = self.allocate_object_id();
+                        let smask_id = self.allocate_object_id()?;
                         self.write_object(smask_id, smask_stream)?;
 
                         // Add SMask reference to the main image dictionary
@@ -2791,7 +2624,7 @@ impl<W: Write> PdfWriter<W> {
                 page.form_xobjects().iter().collect();
             form_entries.sort_by_key(|(name, _)| name.as_str());
             for (name, form) in form_entries {
-                let form_id = self.allocate_object_id();
+                let form_id = self.allocate_object_id()?;
                 let stream = form.to_stream()?;
                 let stream_obj =
                     Object::Stream(stream.dictionary().clone(), stream.data().to_vec());
@@ -2923,7 +2756,7 @@ impl<W: Write> PdfWriter<W> {
                 // inlined into the resource dict. Every other shape (device-name
                 // alias, Cal*/Lab parameterised dict) is inline via `to_object`.
                 if let Some((icc_dict, icc_data)) = cs.icc_stream_parts() {
-                    let icc_id = self.allocate_object_id();
+                    let icc_id = self.allocate_object_id()?;
                     self.write_object(icc_id, Object::Stream(icc_dict, icc_data))?;
                     cs_dict.set(
                         name,
@@ -2945,7 +2778,7 @@ impl<W: Write> PdfWriter<W> {
                 page.patterns().iter().collect();
             entries.sort_by_key(|(name, _)| name.as_str());
             for (name, pattern) in entries {
-                let pattern_id = self.allocate_object_id();
+                let pattern_id = self.allocate_object_id()?;
                 let pattern_dict = pattern.to_pdf_dictionary()?;
                 self.write_object(
                     pattern_id,
@@ -3040,7 +2873,7 @@ impl<W: Write> PdfWriter<W> {
                             // produce invalid PDF; externalize each before
                             // writing the image itself.
                             let dict = self.externalize_nested_streams_in_dict(dict)?;
-                            let obj_id = self.allocate_object_id();
+                            let obj_id = self.allocate_object_id()?;
                             self.write_object(obj_id, Object::Stream(dict, data.clone()))?;
                             xobjects_with_refs.set(xobj_name, Object::Reference(obj_id));
                         }
@@ -3095,7 +2928,7 @@ impl<W: Write> PdfWriter<W> {
                 if let Object::Dictionary(ref annot_dict) = annot {
                     if let Some(Object::Name(subtype)) = annot_dict.get("Subtype") {
                         if subtype == "Widget" {
-                            let widget_id = self.allocate_object_id();
+                            let widget_id = self.allocate_object_id()?;
                             self.write_object(widget_id, annot.clone())?;
                             annot_refs.push(Object::Reference(widget_id));
 
@@ -3122,7 +2955,7 @@ impl<W: Write> PdfWriter<W> {
         //    Handles highlights, text notes, stamps, links, etc. added via
         //    page.add_annotation(). Each is written as an indirect object.
         for annotation in page.annotations() {
-            let annot_id = self.allocate_object_id();
+            let annot_id = self.allocate_object_id()?;
             let mut annot_dict = annotation.to_dict();
 
             // Remap `/Parent` from FormManager placeholder → real ObjectId.
@@ -3177,7 +3010,7 @@ impl<W: Write> PdfWriter<W> {
                             // by form-field appearance generators that don't
                             // know the Type0 font's ObjectId.
                             let patched_sd = Self::rewrite_ap_stream_font_resources(sd, font_refs);
-                            let stream_id = self.allocate_object_id();
+                            let stream_id = self.allocate_object_id()?;
                             self.write_object(stream_id, Object::Stream(patched_sd, data.clone()))?;
                             updated_ap.set(state_key, Object::Reference(stream_id));
                         }
@@ -3236,6 +3069,7 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             catalog_id: None,
             pages_id: None,
             info_id: None,
+            incremental_info_policy: IncrementalInfoPolicy::default(),
             field_widget_map: HashMap::new(),
             field_id_map: HashMap::new(),
             form_field_ids: Vec::new(),
@@ -3308,7 +3142,7 @@ impl<W: Write> PdfWriter<W> {
         match value {
             Object::Stream(d, data) => {
                 let d = self.externalize_nested_streams_in_dict(d)?;
-                let obj_id = self.allocate_object_id();
+                let obj_id = self.allocate_object_id()?;
                 self.write_object(obj_id, Object::Stream(d, data.clone()))?;
                 Ok(Object::Reference(obj_id))
             }
@@ -3339,7 +3173,7 @@ impl<W: Write> PdfWriter<W> {
             match value {
                 Object::Stream(d, data) => {
                     let patched_d = Self::rewrite_ap_stream_font_resources(d, font_refs);
-                    let obj_id = self.allocate_object_id();
+                    let obj_id = self.allocate_object_id()?;
                     self.write_object(obj_id, Object::Stream(patched_d, data.clone()))?;
                     result.set(key, Object::Reference(obj_id));
                 }
@@ -3444,7 +3278,7 @@ impl<W: Write> PdfWriter<W> {
                                 let updated_cidfont =
                                     self.write_cidfont_embedded_streams(cidfont)?;
                                 // Write CIDFont as a separate object
-                                let cidfont_id = self.allocate_object_id();
+                                let cidfont_id = self.allocate_object_id()?;
                                 self.write_object(cidfont_id, Object::Dictionary(updated_cidfont))?;
                                 // Replace with reference
                                 updated_descendants.push(Object::Reference(cidfont_id));
@@ -3464,7 +3298,7 @@ impl<W: Write> PdfWriter<W> {
 
                 // Process ToUnicode stream if embedded
                 if let Some(Object::Stream(stream_dict, stream_data)) = font_dict.get("ToUnicode") {
-                    let tounicode_id = self.allocate_object_id();
+                    let tounicode_id = self.allocate_object_id()?;
                     self.write_object(
                         tounicode_id,
                         Object::Stream(stream_dict.clone(), stream_data.clone()),
@@ -3486,7 +3320,7 @@ impl<W: Write> PdfWriter<W> {
             for key in &font_file_keys {
                 if let Some(Object::Stream(stream_dict, stream_data)) = descriptor.get(*key) {
                     // Found embedded stream! Write it as a separate object
-                    let stream_id = self.allocate_object_id();
+                    let stream_id = self.allocate_object_id()?;
                     let stream_obj = Object::Stream(stream_dict.clone(), stream_data.clone());
                     self.write_object(stream_id, stream_obj)?;
 
@@ -3518,7 +3352,7 @@ impl<W: Write> PdfWriter<W> {
             // Write embedded font streams
             for key in &font_file_keys {
                 if let Some(Object::Stream(stream_dict, stream_data)) = descriptor.get(*key) {
-                    let stream_id = self.allocate_object_id();
+                    let stream_id = self.allocate_object_id()?;
                     self.write_object(
                         stream_id,
                         Object::Stream(stream_dict.clone(), stream_data.clone()),
@@ -3528,7 +3362,7 @@ impl<W: Write> PdfWriter<W> {
             }
 
             // Write FontDescriptor as a separate object
-            let descriptor_id = self.allocate_object_id();
+            let descriptor_id = self.allocate_object_id()?;
             self.write_object(descriptor_id, Object::Dictionary(updated_descriptor))?;
 
             // Update CIDFont to reference the FontDescriptor
@@ -3537,7 +3371,7 @@ impl<W: Write> PdfWriter<W> {
 
         // Process CIDToGIDMap if present and embedded as stream
         if let Some(Object::Stream(map_dict, map_data)) = cidfont.get("CIDToGIDMap") {
-            let map_id = self.allocate_object_id();
+            let map_id = self.allocate_object_id()?;
             self.write_object(map_id, Object::Stream(map_dict.clone(), map_data.clone()))?;
             updated_cidfont.set("CIDToGIDMap", Object::Reference(map_id));
         }
@@ -3545,10 +3379,12 @@ impl<W: Write> PdfWriter<W> {
         Ok(updated_cidfont)
     }
 
-    fn allocate_object_id(&mut self) -> ObjectId {
+    fn allocate_object_id(&mut self) -> Result<ObjectId> {
         let id = ObjectId::new(self.next_object_id, 0);
-        self.next_object_id += 1;
-        id
+        self.next_object_id = self.next_object_id.checked_add(1).ok_or_else(|| {
+            PdfError::InvalidStructure("PDF object number space is exhausted".into())
+        })?;
+        Ok(id)
     }
 
     /// Write a shading as an indirect object and return its id. For a
@@ -3567,22 +3403,22 @@ impl<W: Write> PdfWriter<W> {
                     Some(Object::Dictionary(_)) | Some(Object::Stream(_, _))
                 ) {
                     if let Some(func_obj) = dict.remove("Function") {
-                        let func_id = self.allocate_object_id();
+                        let func_id = self.allocate_object_id()?;
                         self.write_object(func_id, func_obj)?;
                         dict.set("Function", Object::Reference(func_id));
                     }
                 }
-                let shading_id = self.allocate_object_id();
+                let shading_id = self.allocate_object_id()?;
                 self.write_object(shading_id, Object::Dictionary(dict))?;
                 Ok(shading_id)
             }
             stream @ Object::Stream(_, _) => {
-                let shading_id = self.allocate_object_id();
+                let shading_id = self.allocate_object_id()?;
                 self.write_object(shading_id, stream)?;
                 Ok(shading_id)
             }
             other => {
-                let shading_id = self.allocate_object_id();
+                let shading_id = self.allocate_object_id()?;
                 self.write_object(shading_id, other)?;
                 Ok(shading_id)
             }
@@ -3871,6 +3707,21 @@ impl<W: Write> PdfWriter<W> {
             .collect();
         entries.sort_by_key(|(id, _)| id.number());
 
+        if self.prev_xref_offset.is_some() {
+            for (id, position) in entries {
+                self.write_bytes(
+                    format!(
+                        "{} 1\n{:010} {:05} n \n",
+                        id.number(),
+                        position,
+                        id.generation()
+                    )
+                    .as_bytes(),
+                )?;
+            }
+            return Ok(());
+        }
+
         // Find the highest object number to determine size
         let max_obj_num = entries.iter().map(|(id, _)| id.number()).max().unwrap_or(0);
 
@@ -3904,7 +3755,7 @@ impl<W: Write> PdfWriter<W> {
         let info_id = self.get_info_id()?;
 
         // Allocate object ID for the xref stream
-        let xref_stream_id = self.allocate_object_id();
+        let xref_stream_id = self.allocate_object_id()?;
         let xref_position = self.current_position;
 
         // Create XRef stream writer with trailer information
@@ -3979,6 +3830,8 @@ impl<W: Write> PdfWriter<W> {
         // Add filter if compression is enabled
         if self.config.compress_streams {
             dict.set("Filter", Object::Name("FlateDecode".to_string()));
+        } else {
+            dict.remove("Filter");
         }
         self.write_bytes(b"<<")?;
         for (key, value) in dict.iter() {
@@ -4054,7 +3907,7 @@ impl<W: Write> PdfWriter<W> {
             ObjectEncryptor::new(Arc::new(filter_manager), enc_key, enc_dict.encrypt_metadata);
 
         // Reserve ID for /Encrypt dict (will be written at the end)
-        let encrypt_id = self.allocate_object_id();
+        let encrypt_id = self.allocate_object_id()?;
         self.encrypt_obj_id = Some(encrypt_id);
         self.file_id = Some(fid);
         self.encryption_state = Some(WriterEncryptionState { encryptor });
@@ -4080,7 +3933,6 @@ impl<W: Write> PdfWriter<W> {
 
     fn write_trailer(&mut self, xref_position: u64) -> Result<()> {
         let catalog_id = self.get_catalog_id()?;
-        let info_id = self.get_info_id()?;
         // Find the highest object number to determine size
         let max_obj_num = self
             .xref_positions
@@ -4092,7 +3944,9 @@ impl<W: Write> PdfWriter<W> {
         let mut trailer = Dictionary::new();
         trailer.set("Size", Object::Integer((max_obj_num + 1) as i64));
         trailer.set("Root", Object::Reference(catalog_id));
-        trailer.set("Info", Object::Reference(info_id));
+        if let Some(info_id) = self.info_id {
+            trailer.set("Info", Object::Reference(info_id));
+        }
 
         // Add /Prev pointer for incremental updates (ISO 32000-1 §7.5.6)
         if let Some(prev_xref) = self.prev_xref_offset {
@@ -4197,7 +4051,7 @@ impl<W: Write> PdfWriter<W> {
         stream_dict.set("Length", Object::Integer(content.len() as i64));
 
         // Write the appearance stream
-        let stream_id = self.allocate_object_id();
+        let stream_id = self.allocate_object_id()?;
         self.write_object(stream_id, Object::Stream(stream_dict, content.into_bytes()))?;
 
         Ok(stream_id)
@@ -4275,7 +4129,7 @@ impl<W: Write> PdfWriter<W> {
         stream_dict.set("Length", Object::Integer(content.len() as i64));
 
         // Write the appearance stream
-        let stream_id = self.allocate_object_id();
+        let stream_id = self.allocate_object_id()?;
         self.write_object(stream_id, Object::Stream(stream_dict, content.into_bytes()))?;
 
         Ok(stream_id)

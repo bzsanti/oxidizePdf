@@ -110,9 +110,15 @@ fn test_allocate_object_id_sequential() {
     let buffer = Vec::new();
     let mut writer = PdfWriter::new_with_writer(buffer);
 
-    let id1 = writer.allocate_object_id();
-    let id2 = writer.allocate_object_id();
-    let id3 = writer.allocate_object_id();
+    let id1 = writer
+        .allocate_object_id()
+        .expect("test object ID allocation");
+    let id2 = writer
+        .allocate_object_id()
+        .expect("test object ID allocation");
+    let id3 = writer
+        .allocate_object_id()
+        .expect("test object ID allocation");
 
     // IDs must be sequential
     assert_eq!(id1.number(), 1, "First object ID must be 1");
@@ -131,7 +137,13 @@ fn test_allocate_object_id_no_gaps() {
     let mut writer = PdfWriter::new_with_writer(buffer);
 
     // Allocate 100 IDs
-    let ids: Vec<_> = (0..100).map(|_| writer.allocate_object_id()).collect();
+    let ids: Vec<_> = (0..100)
+        .map(|_| {
+            writer
+                .allocate_object_id()
+                .expect("test object ID allocation")
+        })
+        .collect();
 
     // Verify no gaps in sequence
     for (i, id) in ids.iter().enumerate() {
