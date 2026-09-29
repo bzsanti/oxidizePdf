@@ -32,9 +32,11 @@ profile compliance or certification.
 
 Managed-key, certificate-issuing or signing-service workflows are not provided.
 Neither are PDF/UA compliance, archival certification or managed enterprise
-support. Certificate-based recipient encryption is a separate, unsupported
-workflow in 5.1.5; its public handler has known simulated-success defects (#640).
-Do not use that handler to protect documents.
+support. A certificate-based recipient encryption candidate is under review with the
+`recipient-encryption` feature and its [bounded Adobe.PubSec profile](recipient-encryption.md).
+Security acceptance is blocked by an upstream RSA timing advisory. It does not
+provide authenticated integrity. The legacy
+`PublicKeySecurityHandler` remains unsupported (#640); use `RecipientEncryption` (#642).
 
 ## Deployment and evaluation
 

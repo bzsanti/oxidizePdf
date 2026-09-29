@@ -229,6 +229,18 @@ impl<W: Write> PdfWriter<W> {
             self.document_used_chars_by_font = document.used_characters_by_font.clone();
         }
 
+        #[cfg(feature = "recipient-encryption")]
+        if let Some(ref recipients) = document.recipient_encryption {
+            if document.encryption.is_some()
+                || self.config.use_xref_streams
+                || self.config.use_object_streams
+                || self.config.incremental_update
+            {
+                return Err(PdfError::EncryptionError("recipient encryption requires a fresh document, classic xref, and no password policy".into()));
+            }
+            self.init_recipient_encryption(recipients)?;
+            self.config.pdf_version = "2.0".into();
+        }
         self.write_header()?;
 
         // Reserve object IDs for fixed objects (written in order)
@@ -459,6 +471,12 @@ impl<W: Write> PdfWriter<W> {
         document: &mut Document,
         replace: bool,
     ) -> Result<()> {
+        #[cfg(feature = "recipient-encryption")]
+        if document.recipient_encryption.is_some() {
+            return Err(PdfError::EncryptionError(
+                "recipient encryption cannot be applied to an incremental update".into(),
+            ));
+        }
         let mut reader = crate::parser::PdfReader::new(std::io::Cursor::new(bytes))?;
         self.initialize_incremental_info(&reader)?;
         let prev_xref = reader.trailer().xref_offset;
@@ -3915,6 +3933,44 @@ impl<W: Write> PdfWriter<W> {
         // Store the dict to write later
         self.pending_encrypt_dict = Some(enc_dict.to_dict());
 
+        Ok(())
+    }
+
+    #[cfg(feature = "recipient-encryption")]
+    fn init_recipient_encryption(
+        &mut self,
+        recipients: &crate::encryption::RecipientEncryption,
+    ) -> Result<()> {
+        use crate::encryption::{
+            AuthEvent, CryptFilterManager, CryptFilterMethod, FunctionalCryptFilter,
+            ObjectEncryptor, StandardSecurityHandler,
+        };
+        use rsa::rand_core::{OsRng, RngCore};
+        let (dict, key) = recipients.prepare()?;
+        let mut file_id = vec![0; 16];
+        OsRng
+            .try_fill_bytes(&mut file_id)
+            .map_err(|_| PdfError::EncryptionError("system randomness unavailable".into()))?;
+        // Reuse only the AESV3 object cipher; no password derivation is involved.
+        let mut filters = CryptFilterManager::new(
+            Box::new(StandardSecurityHandler::aes_256_r5()),
+            "DefaultCryptFilter".into(),
+            "DefaultCryptFilter".into(),
+        );
+        filters.add_filter(FunctionalCryptFilter {
+            name: "DefaultCryptFilter".into(),
+            method: CryptFilterMethod::AESV3,
+            length: Some(32),
+            auth_event: AuthEvent::DocOpen,
+            recipients: None,
+        });
+        self.encrypt_obj_id = Some(self.allocate_object_id()?);
+        self.file_id = Some(file_id);
+        self.pending_encrypt_dict = Some(dict);
+        self.encryption_state = Some(WriterEncryptionState {
+            encryptor: ObjectEncryptor::new(std::sync::Arc::new(filters), key, true)
+                .with_recipient_filter(),
+        });
         Ok(())
     }
 

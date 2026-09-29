@@ -90,7 +90,7 @@ impl PdfBuildIdentification {
         let mut features = 0u16;
 
         // Bit 0: Encryption
-        if document.encryption.is_some() {
+        if document.is_encrypted() {
             features |= 0x0001;
         }
 

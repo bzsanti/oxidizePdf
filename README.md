@@ -192,10 +192,12 @@ recipient-encryption handler, malformed Flate/predictor error handling, and a
 non-optional writer build marker. See the [versioned inventory](docs/CLAIMS.md)
 for evidence and follow-up issues before selecting these workflows.
 
-Certificate-based **recipient encryption is unsupported**. The legacy
-`PublicKeySecurityHandler` returns explicit errors for cryptographic operations;
-certificate verification for signatures is separate. See the
-[support and migration boundary](docs/recipient-encryption.md).
+Under review (#642): the optional `recipient-encryption` implementation adds certificate-based
+**recipient encryption** through `RecipientEncryption`, the document writer and
+reader: Adobe.PubSec, RSA-OAEP SHA-256 and AES-256-CBC. It does not authenticate
+content integrity. The legacy `PublicKeySecurityHandler` remains unsupported.
+Security acceptance is blocked by an upstream RSA timing advisory; this is not
+a declaration of supported use. See the [profile and security status](docs/recipient-encryption.md).
 
 See [`oxidize-pdf-core/examples/`](https://github.com/bzsanti/oxidizePdf/tree/main/oxidize-pdf-core/examples) for working samples (133 examples) and [docs.rs](https://docs.rs/oxidize-pdf) for the API surface.
 

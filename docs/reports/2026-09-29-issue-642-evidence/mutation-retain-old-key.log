@@ -1,0 +1,158 @@
+{
+  "target": "x86_64-unknown-linux-gnu",
+  "features": [
+    "--features",
+    ""
+  ],
+  "packages": [
+    "adler2@2.0.1",
+    "aes@0.8.4",
+    "aho-corasick@1.1.4",
+    "autocfg@1.5.1",
+    "base64ct@1.8.3",
+    "bitflags@2.13.0",
+    "block-buffer@0.10.4",
+    "block-padding@0.3.3",
+    "cbc@0.1.2",
+    "cfg-if@1.0.4",
+    "chacha20@0.10.0",
+    "chrono@0.4.45",
+    "cipher@0.4.4",
+    "cms@0.2.3",
+    "const-oid@0.9.6",
+    "cpufeatures@0.2.17",
+    "cpufeatures@0.3.0",
+    "crc32fast@1.5.0",
+    "crypto-common@0.1.7",
+    "der@0.7.10",
+    "der_derive@0.7.3",
+    "digest@0.10.7",
+    "fastrand@2.4.1",
+    "flagset@0.4.7",
+    "flate2@1.1.9",
+    "generic-array@0.14.7",
+    "getrandom@0.2.17",
+    "getrandom@0.4.2",
+    "iana-time-zone@0.1.65",
+    "inout@0.1.4",
+    "lazy_static@1.5.0",
+    "libc@0.2.186",
+    "libm@0.2.16",
+    "linux-raw-sys@0.12.1",
+    "md5@0.8.0",
+    "memchr@2.8.1",
+    "miniz_oxide@0.8.9",
+    "num-bigint-dig@0.8.6",
+    "num-integer@0.1.46",
+    "num-iter@0.1.45",
+    "num-traits@0.2.19",
+    "num_cpus@1.17.0",
+    "once_cell@1.21.4",
+    "oxidize-pdf@5.1.3",
+    "pem-rfc7468@0.7.0",
+    "pin-project-lite@0.2.17",
+    "pkcs1@0.7.5",
+    "pkcs8@0.10.2",
+    "ppv-lite86@0.2.21",
+    "proc-macro2@1.0.106",
+    "quick-xml@0.41.0",
+    "quote@1.0.45",
+    "rand@0.10.1",
+    "rand@0.8.6",
+    "rand_chacha@0.3.1",
+    "rand_core@0.10.1",
+    "rand_core@0.6.4",
+    "recipient-product-probe@0.0.0",
+    "regex-automata@0.4.14",
+    "regex-syntax@0.8.10",
+    "regex@1.12.3",
+    "rsa@0.9.10",
+    "rustix@1.1.4",
+    "serde@1.0.228",
+    "serde_core@1.0.228",
+    "serde_derive@1.0.228",
+    "serde_spanned@1.1.1",
+    "sha2@0.10.9",
+    "signature@2.2.0",
+    "simd-adler32@0.3.9",
+    "smallvec@1.15.1",
+    "spin@0.9.8",
+    "spki@0.7.3",
+    "subtle@2.6.1",
+    "syn@2.0.117",
+    "tempfile@3.27.0",
+    "thiserror-impl@2.0.18",
+    "thiserror@2.0.18",
+    "tinyvec@1.11.0",
+    "tinyvec_macros@0.1.1",
+    "toml@0.9.12+spec-1.1.0",
+    "toml_datetime@0.7.5+spec-1.1.0",
+    "toml_parser@1.1.2+spec-1.1.0",
+    "toml_writer@1.1.1+spec-1.1.0",
+    "tracing-attributes@0.1.31",
+    "tracing-core@0.1.36",
+    "tracing@0.1.44",
+    "typenum@1.20.1",
+    "unicode-ident@1.0.24",
+    "unicode-normalization@0.1.25",
+    "version_check@0.9.5",
+    "winnow@0.7.15",
+    "winnow@1.0.3",
+    "x509-cert@0.2.5",
+    "zerocopy@0.8.50",
+    "zeroize@1.8.2",
+    "zeroize_derive@1.4.3"
+  ],
+  "errors": []
+}
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-642-mutations/oxidize-pdf-core)
+   Compiling recipient-product-probe v0.0.0 (/tmp/oxidize-recipient-consumer-c_80wjwk)
+    Finished `test` profile [unoptimized] target(s) in 1m 05s
+     Running unittests src/lib.rs (/tmp/oxidize-642-consumer-target/x86_64-unknown-linux-gnu/debug/deps/recipient_product_probe-3ccaee20753e27f9)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/recipient_encryption_test.rs (/tmp/oxidize-642-consumer-target/x86_64-unknown-linux-gnu/debug/deps/recipient_encryption_test-c0c92afd766f584f)
+
+running 9 tests
+test rejects_incompatible_writer_configuration_before_output ... ok
+test independent_unsupported_profiles_are_rejected ... ok
+test rejects_invalid_unsuitable_or_mismatched_credentials ... ok
+test independent_pyhanko_fixtures_and_both_recipients ... FAILED
+test malformed_and_unsupported_encryption_dictionaries_fail_closed ... ok
+test invalid_ciphertext_length_is_an_error_not_plaintext ... ok
+test public_writer_encrypts_text_image_and_strings_for_two_recipients ... FAILED
+test public_reader_rejects_unsupported_profile_and_corrupt_stream ... ok
+test randomness_changes_recipient_envelopes_and_content_ivs ... ok
+
+failures:
+
+---- independent_pyhanko_fixtures_and_both_recipients stdout ----
+
+thread 'independent_pyhanko_fixtures_and_both_recipients' (411) panicked at tests/recipient_encryption_test.rs:129:5:
+assertion failed: !r.is_unlocked()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- public_writer_encrypts_text_image_and_strings_for_two_recipients stdout ----
+
+thread 'public_writer_encrypts_text_image_and_strings_for_two_recipients' (416) panicked at tests/recipient_encryption_test.rs:129:5:
+assertion failed: !r.is_unlocked()
+
+
+failures:
+    independent_pyhanko_fixtures_and_both_recipients
+    public_writer_encrypts_text_image_and_strings_for_two_recipients
+
+test result: FAILED. 7 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+
+error: test failed, to rerun pass `--test recipient_encryption_test`
+Traceback (most recent call last):
+  File "/tmp/oxidize-642-mutations/scripts/check_recipient_product.py", line 45, in <module>
+    main()
+  File "/tmp/oxidize-642-mutations/scripts/check_recipient_product.py", line 41, in main
+    subprocess.run(['cargo', 'test', '--locked', '--offline', '--manifest-path', manifest, '--target', args.target], env=env, check=True)
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['cargo', 'test', '--locked', '--offline', '--manifest-path', '/tmp/oxidize-recipient-consumer-c_80wjwk/Cargo.toml', '--target', 'x86_64-unknown-linux-gnu']' returned non-zero exit status 101.

@@ -52,6 +52,8 @@ pub struct Document {
     pub(crate) metadata: DocumentMetadata,
     pub(crate) build_identification: BuildIdentification,
     pub(crate) encryption: Option<DocumentEncryption>,
+    #[cfg(feature = "recipient-encryption")]
+    pub(crate) recipient_encryption: Option<crate::encryption::RecipientEncryption>,
     pub(crate) outline: Option<OutlineTree>,
     pub(crate) named_destinations: Option<NamedDestinations>,
     pub(crate) page_labels: Option<PageLabelTree>,
@@ -144,6 +146,8 @@ impl Document {
             metadata: DocumentMetadata::default(),
             build_identification: BuildIdentification::default(),
             encryption: None,
+            #[cfg(feature = "recipient-encryption")]
+            recipient_encryption: None,
             outline: None,
             named_destinations: None,
             page_labels: None,
@@ -255,6 +259,13 @@ impl Document {
         self.metadata.keywords = Some(keywords.into());
     }
 
+    /// Encrypt to X.509 recipients using the documented Adobe.PubSec profile.
+    /// Password encryption and recipient encryption are mutually exclusive.
+    #[cfg(feature = "recipient-encryption")]
+    pub fn set_recipient_encryption(&mut self, encryption: crate::encryption::RecipientEncryption) {
+        self.recipient_encryption = Some(encryption);
+    }
+
     /// Set document encryption
     pub fn set_encryption(&mut self, encryption: DocumentEncryption) {
         self.encryption = Some(encryption);
@@ -274,6 +285,10 @@ impl Document {
 
     /// Check if document is encrypted
     pub fn is_encrypted(&self) -> bool {
+        #[cfg(feature = "recipient-encryption")]
+        if self.recipient_encryption.is_some() {
+            return true;
+        }
         self.encryption.is_some()
     }
 

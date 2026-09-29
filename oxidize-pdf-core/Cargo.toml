@@ -455,6 +455,8 @@ multilingual-fixtures = []  # Enable tests that require UDHR multilingual fixtur
 internal-testing = []  # Enable `_for_test` introspection helpers used by integration tests (kept out of production ABI)
 
 # Digital signature verification features
+recipient-encryption = ["dep:cms", "dep:x509-cert", "dep:der", "dep:spki", "dep:const-oid", "dep:rsa", "aes/zeroize"]
+
 signatures = [
     "dep:cms",
     "dep:x509-cert",
