@@ -1,0 +1,40 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-review-650/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 5.92s
+     Running tests/issue_458_tj_boundary_space_test.rs (/tmp/oxidize-pr650-review-target/debug/deps/issue_458_tj_boundary_space_test-bc0d6511bd1a6835)
+
+running 16 tests
+test a_gap_below_the_threshold_leaves_the_runs_welded ... ok
+test a_gap_above_the_threshold_splits_the_runs ... ok
+test a_leading_kern_produces_one_space_not_two ... ok
+test a_hairline_gap_between_two_tj_operators_does_not_break_the_word ... ok
+test a_narrow_font_change_boundary_becomes_a_space ... ok
+test a_gap_between_two_tj_operators_on_one_line_becomes_a_space ... ok
+test a_small_leading_kern_does_not_mask_a_real_boundary_gap ... ok
+test a_subthreshold_font_change_boundary_stays_welded ... ok
+test issue_458_multi_column_table_cells_are_not_fused ... ok
+test a_trailing_kern_followed_by_another_array_produces_one_space_not_two ... ok
+test kerning_inside_one_tj_array_is_left_to_the_spacing_rule ... ok
+test ctm_scaling_does_not_turn_a_small_tj_boundary_residue_into_a_space ... ok
+test tm_scaling_does_not_turn_a_small_tj_boundary_residue_into_a_space ... ok
+test form_xobject_preserves_the_last_shown_font_for_tj_boundaries ... ok
+test tm_scaling_preserves_a_real_tj_boundary_space ... ok
+test horizontal_text_scaling_is_included_in_the_tj_boundary_threshold ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_648_tj_boundary_baseline_shift_test.rs (/tmp/oxidize-pr650-review-target/debug/deps/issue_648_tj_boundary_baseline_shift_test-68625f3ac669d081)
+
+running 11 tests
+test issue_648_baseline_shift_emits_space_at_moderate_gap ... ok
+test issue_648_baseline_shift_via_td_operator ... ok
+test issue_648_subpixel_vertical_jitter_leaves_same_baseline_runs_welded ... ok
+test issue_648_superscript_citation_following_word_stays_attached ... ok
+test issue_648_large_vertical_shift_still_emits_newline ... ok
+test issue_648_superscript_with_baseline_shift_does_not_insert_artificial_space ... ok
+test issue_648_table_cells_with_shifted_baselines_are_not_fused ... ok
+test issue_648_same_baseline_runs_retain_conservative_threshold ... ok
+test rotation_preserves_baseline_shift ... ok
+test vertical_scale_preserves_baseline_shift ... ok
+test shear_keeps_perpendicular_baseline_threshold ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

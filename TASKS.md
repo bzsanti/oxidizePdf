@@ -1,3 +1,11 @@
+## Corrección de revisión #648 / PR #650
+
+- Issue: #648 — bug(text): ShowTextArray boundary space threshold (0.7 em) suppresses word separator when baseline shifts across text runs — https://github.com/bzsanti/oxidizePdf/issues/648
+- Estado: `[-]` corrección local validada; publicación/CI pendientes. Prioridad P1. Responsable Codex.
+- Criterio de cierre: distancia y guard vertical en la misma proyección; regresiones, corpus, revisión y CI aprobados.
+- Última validación: RED cizallamiento sobre fa4f944; GREEN 27 regresiones, 6780 biblioteca (3 omitidos), 72 diferenciales; Clippy, formato y QR pasan. Evidencia: docs/reports/2026-09-29-pr-650-correction-review.md.
+- Siguiente acción: validar corrección perpendicular, actualizar PR y verificar CI.
+
 ## Integración signature-preparation #646 — 2026-09-28
 
 - Issue: #646 — feat(signatures): integrate participant signature preparation for next release — https://github.com/bzsanti/oxidizePdf/issues/646

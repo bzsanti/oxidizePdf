@@ -180,3 +180,24 @@ fn issue_648_large_vertical_shift_still_emits_newline() {
         "large vertical jump past newline_threshold must produce a newline: {text:?}"
     );
 }
+
+#[test]
+fn shear_keeps_perpendicular_baseline_threshold() {
+    // Both cases have page-space gap 4pt and perpendicular baseline displacement 1.05pt.
+    let normal = extract(
+        "BT /F1 10 Tf 1 0 0 1 100 100 Tm [(alpha)] TJ 1 0 0 1 128.45 101.05 Tm [(beta)] TJ ET",
+    );
+    let shear=extract("1 0 0.5 1 0 0 cm BT /F1 10 Tf 1 0 0 1 50 100 Tm [(alpha)] TJ 1 0 0 1 77.925 101.05 Tm [(beta)] TJ ET");
+    assert_eq!(normal.trim(), "alpha beta");
+    assert_eq!(shear.trim(), "alpha beta");
+}
+#[test]
+fn rotation_preserves_baseline_shift() {
+    let text=extract("0 1 -1 0 800 0 cm BT /F1 10 Tf 1 0 0 1 100 100 Tm [(alpha)] TJ 1 0 0 1 128.45 102 Tm [(beta)] TJ ET");
+    assert_eq!(text.trim(), "alpha beta");
+}
+#[test]
+fn vertical_scale_preserves_baseline_shift() {
+    let text=extract("1 0 0 2 0 0 cm BT /F1 10 Tf 1 0 0 1 100 100 Tm [(alpha)] TJ 1 0 0 1 128.45 102 Tm [(beta)] TJ ET");
+    assert_eq!(text.trim(), "alpha beta");
+}

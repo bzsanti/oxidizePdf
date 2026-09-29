@@ -1,0 +1,4 @@
+{
+  "oxidize-pdf-core/src/text/extraction.rs": "af61e18558e48cf8cdd20685181b549fdec703a97195a0c75c1c76fec433e5a3",
+  "oxidize-pdf-core/tests/issue_648_tj_boundary_baseline_shift_test.rs": "010d4ac2b53976ae4a394d17da710242fe166ad5d4e095800b05b5f4e7033ef3"
+}

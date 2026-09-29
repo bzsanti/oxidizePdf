@@ -1792,7 +1792,12 @@ impl TextExtractor {
                                         // `flat_space_gap_threshold` as `Tj`.
                                         let font_changed = last_shown_font_name.as_deref()
                                             != state.font_name.as_deref();
-                                        let (_, y_scale) = combined_text_scale(&state);
+                                        // Match pen_delta's perpendicular projection. The
+                                        // full Y-vector norm includes shear along the
+                                        // baseline and would inflate the jitter guard.
+                                        let m = multiply_matrix(&state.text_matrix, &state.ctm);
+                                        let baseline = m[0].hypot(m[1]);
+                                        let y_scale = (m[0] * m[3] - m[1] * m[2]).abs() / baseline;
                                         let y_scale =
                                             if y_scale.is_finite() && y_scale > f64::EPSILON {
                                                 y_scale

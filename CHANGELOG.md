@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve word separation across shifted TJ baselines, including sheared, rotated
+  and scaled text, while retaining the same-baseline jitter guard (#648).
+
 - Propagate invalid Flate/LZW predictor errors instead of returning untransformed
   samples. Validate predictor values, PNG dimensions, component depth and checked
   arithmetic consistently on ordinary/bounded APIs. TIFF predictor 2 is
