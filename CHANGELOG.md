@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Recover repeated TJ glyph advances only for verified zero-width source glyphs,
+  preserving ordinary word separators and larger word gaps, including Type0 CID
+  metrics. Ambiguous advances retain the ordinary spacing rule (#649).
+
 - Propagate invalid Flate/LZW predictor errors instead of returning untransformed
   samples. Validate predictor values, PNG dimensions, component depth and checked
   arithmetic consistently on ordinary/bounded APIs. TIFF predictor 2 is

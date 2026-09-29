@@ -1,3 +1,11 @@
+## Corrección de revisión #649 / PR #651
+
+- Issue: #649 — bug(text): TJ negative kerning (adjustment > 0.2 em) injects spurious spaces when glyph advance widths are encoded as kerning — https://github.com/bzsanti/oxidizePdf/issues/649
+- Estado: `[-]` rediseño local validado; publicación/CI pendientes. Prioridad P1. Responsable Codex.
+- Criterio de cierre: métricas cero verificadas, Type1/Type0/CID cubiertos, huecos reales preservados, revisión/corpus/CI aprobados.
+- Última validación: RED 6 fallos/7 controles; GREEN 32 regresiones, 6780 biblioteca (3 omitidos), 72 diferenciales; Clippy y QR pasan. Incluye Type0/CMap/CID y controles de fuentes normales. Informe: docs/reports/2026-09-29-pr-651-correction-review.md.
+- Siguiente acción: validar detección basada en métricas, actualizar PR y verificar CI.
+
 ## Integración signature-preparation #646 — 2026-09-28
 
 - Issue: #646 — feat(signatures): integrate participant signature preparation for next release — https://github.com/bzsanti/oxidizePdf/issues/646

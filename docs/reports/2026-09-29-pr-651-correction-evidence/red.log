@@ -1,0 +1,76 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-review-650-651/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.59s
+     Running tests/issue_649_tj_zero_width_kerning_test.rs (/tmp/oxidize-pr651-review-target/debug/deps/issue_649_tj_zero_width_kerning_test-0313173623056b0d)
+
+running 13 tests
+test tj_ordinary_intra_word_kerning_unaffected ... ok
+test tj_word_breaks_as_negative_kerns_without_explicit_spaces_still_split_words ... ok
+test ordinary_word_gaps_are_not_tracking ... FAILED
+test one_transition_cannot_establish_tracking ... ok
+test char_spacing_does_not_get_discounted_as_missing_advance ... FAILED
+test nonuniform_zero_width_advances_remain_conservative ... ok
+test tj_punctuation_and_symbols_in_tracking_sequence ... ok
+test tj_zero_width_kerning_phone_number_formatting ... ok
+test tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters ... ok
+test zero_width_single_word_without_literal_space ... FAILED
+test type0_tracking_uses_cids_not_unicode_or_source_codes ... FAILED
+test zero_width_tracking_preserves_larger_word_gap ... FAILED
+test type0_identity_h_zero_widths_without_literal_space ... FAILED
+
+failures:
+
+---- ordinary_word_gaps_are_not_tracking stdout ----
+
+thread 'ordinary_word_gaps_are_not_tracking' (115) panicked at oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:162:5:
+assertion `left == right` failed
+  left: "IaI"
+ right: "I a I"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- char_spacing_does_not_get_discounted_as_missing_advance stdout ----
+
+thread 'char_spacing_does_not_get_discounted_as_missing_advance' (112) panicked at oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:226:5:
+assertion `left == right` failed
+  left: "IaI"
+ right: "I a I"
+
+---- zero_width_single_word_without_literal_space stdout ----
+
+thread 'zero_width_single_word_without_literal_space' (123) panicked at oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:170:5:
+assertion `left == right` failed
+  left: "T e s t"
+ right: "Test"
+
+---- type0_tracking_uses_cids_not_unicode_or_source_codes stdout ----
+
+thread 'type0_tracking_uses_cids_not_unicode_or_source_codes' (122) panicked at oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:213:5:
+assertion `left == right` failed
+  left: "T e s t"
+ right: "Test"
+
+---- zero_width_tracking_preserves_larger_word_gap stdout ----
+
+thread 'zero_width_tracking_preserves_larger_word_gap' (124) panicked at oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:178:5:
+assertion `left == right` failed
+  left: "A B C D  E"
+ right: "AB CD E"
+
+---- type0_identity_h_zero_widths_without_literal_space stdout ----
+
+thread 'type0_identity_h_zero_widths_without_literal_space' (121) panicked at oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs:196:5:
+assertion `left == right` failed
+  left: "T e s t"
+ right: "Test"
+
+
+failures:
+    char_spacing_does_not_get_discounted_as_missing_advance
+    ordinary_word_gaps_are_not_tracking
+    type0_identity_h_zero_widths_without_literal_space
+    type0_tracking_uses_cids_not_unicode_or_source_codes
+    zero_width_single_word_without_literal_space
+    zero_width_tracking_preserves_larger_word_gap
+
+test result: FAILED. 7 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_649_tj_zero_width_kerning_test`
