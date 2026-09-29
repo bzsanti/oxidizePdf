@@ -5,8 +5,8 @@
 - Autorización: usuario solicita iniciar release tras CI #658 y selecciona 5.2.0.
 - Base: develop 48d8b8f; historial main/v5.1.5 se conserva mediante merge.
 - Criterio de cierre de preparación: versiones/notas coherentes, validación proporcional y PR de promoción a main revisable.
-- Última validación: CI #658 final 17 SUCCESS/2 SKIPPED; #658 permanece borrador por RSA y se excluye del release.
-- Siguiente acción: validar candidato, revisar empaquetado y publicar PR a main. Tag/publicación requieren CI verde y merge verificado conforme al proceso.
+- Última validación: workspace 9934 pasan/0 fallos/71 omitidas; firmas 43 pasan/0 fallos/3 omitidas; Clippy, empaquetado y compilación de ejemplos pasan. Runtime RAG omitido por falta de corpus. #658 permanece borrador por RSA y se excluye del release.
+- Siguiente acción: publicar PR a main y verificar su CI. Tag/publicación requieren CI verde y merge verificado conforme al proceso.
 - Restricciones: preservar WIP original; sin #642, sin PAdES y sin cambios a métricas/baselines.
 
 ## Resolución #641 y desarrollo #642 — 2026-09-29
