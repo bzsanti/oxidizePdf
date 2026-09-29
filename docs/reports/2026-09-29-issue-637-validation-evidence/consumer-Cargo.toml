@@ -1,0 +1,6 @@
+[package]
+name="issue-637-consumer"
+version="0.0.0"
+edition="2021"
+[dependencies]
+oxidize-pdf={path="/tmp/oxidize-issue-637-recovery-20260929/oxidize-pdf-core",default-features=false,features=["compression"]}

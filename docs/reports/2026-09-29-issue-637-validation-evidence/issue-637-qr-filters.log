@@ -1,0 +1,238 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 73 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/parser/filters.rs                           73     91
+
+--- Worst Offenders ---
+  test_ascii_hex_decode_empty (oxidize-pdf-core/src/parser/filters.rs:691) - Score: 70
+    - Test 'test_ascii_hex_decode_empty' has identical neighborhood to 'test_ascii_hex_decode_no_terminator'
+    - Test 'test_ascii_hex_decode_empty' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_ascii_hex_decode_empty' uses .unwrap() which silently discards error information
+    - Test 'test_ascii_hex_decode_empty' does not call any production code
+  test_ascii_hex_decode_no_terminator (oxidize-pdf-core/src/parser/filters.rs:705) - Score: 70
+    - Test 'test_ascii_hex_decode_no_terminator' has identical neighborhood to 'test_ascii_hex_decode_empty'
+    - Test 'test_ascii_hex_decode_no_terminator' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_ascii_hex_decode_no_terminator' uses .unwrap() which silently discards error information
+    - Test 'test_ascii_hex_decode_no_terminator' does not call any production code
+  test_filter_equality (oxidize-pdf-core/src/parser/filters.rs:621) - Score: 75
+    i Test 'test_filter_equality' has multiple assertions without diagnostic messages
+    - Test 'test_filter_equality' does not call any production code
+    - Test 'test_filter_equality' line 622: assert_eq! with identical arguments: Filter :: ASCIIHexDecode
+  test_ascii_hex_decode (oxidize-pdf-core/src/parser/filters.rs:568) - Score: 80
+    - Test 'test_ascii_hex_decode' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_ascii_hex_decode' has multiple assertions without diagnostic messages
+    i Test 'test_ascii_hex_decode' uses .unwrap() which silently discards error information
+    - Test 'test_ascii_hex_decode' does not call any production code
+  test_ascii85_decode (oxidize-pdf-core/src/parser/filters.rs:583) - Score: 80
+    - Test 'test_ascii85_decode' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_ascii85_decode' has multiple assertions without diagnostic messages
+    i Test 'test_ascii85_decode' uses .unwrap() which silently discards error information
+    - Test 'test_ascii85_decode' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/src/parser/filters.rs:
+  test_ascii_hex_decode (line 568) - Score: 80
+    - Test 'test_ascii_hex_decode' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_ascii_hex_decode' has multiple assertions without diagnostic messages
+    i Test 'test_ascii_hex_decode' uses .unwrap() which silently discards error information
+    - Test 'test_ascii_hex_decode' does not call any production code
+  test_ascii85_decode (line 583) - Score: 80
+    - Test 'test_ascii85_decode' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_ascii85_decode' has multiple assertions without diagnostic messages
+    i Test 'test_ascii85_decode' uses .unwrap() which silently discards error information
+    - Test 'test_ascii85_decode' does not call any production code
+  test_filter_from_name (line 594) - Score: 100
+    i Test 'test_filter_from_name' has multiple assertions without diagnostic messages
+  test_filter_equality (line 621) - Score: 75
+    i Test 'test_filter_equality' has multiple assertions without diagnostic messages
+    - Test 'test_filter_equality' does not call any production code
+    - Test 'test_filter_equality' line 622: assert_eq! with identical arguments: Filter :: ASCIIHexDecode
+  test_filter_clone (line 628) - Score: 90
+    - Test 'test_filter_clone' does not call any production code
+  test_decode_stream_no_filter (line 635) - Score: 80
+    - Test 'test_decode_stream_no_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_decode_stream_no_filter' uses .unwrap() which silently discards error information
+    - Test 'test_decode_stream_no_filter' does not call any production code
+  test_decode_stream_single_filter (line 644) - Score: 90
+    - Test 'test_decode_stream_single_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_decode_stream_single_filter' uses .unwrap() which silently discards error information
+  test_decode_stream_invalid_filter (line 657) - Score: 80
+    - Test 'test_decode_stream_invalid_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_decode_stream_invalid_filter' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  test_decode_stream_filter_array (line 670) - Score: 90
+    - Test 'test_decode_stream_filter_array' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_decode_stream_filter_array' uses .unwrap() which silently discards error information
+  test_decode_stream_invalid_filter_type (line 681) - Score: 80
+    - Test 'test_decode_stream_invalid_filter_type' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_decode_stream_invalid_filter_type' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_ascii_hex_decode_empty (line 691) - Score: 70
+    - Test 'test_ascii_hex_decode_empty' has identical neighborhood to 'test_ascii_hex_decode_no_terminator'
+    - Test 'test_ascii_hex_decode_empty' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_ascii_hex_decode_empty' uses .unwrap() which silently discards error information
+    - Test 'test_ascii_hex_decode_empty' does not call any production code
+  test_ascii_hex_decode_invalid (line 698) - Score: 90
+    - Test 'test_ascii_hex_decode_invalid' only exercises the happy path — no None, Err, or edge-case inputs
+  test_ascii_hex_decode_no_terminator (line 705) - Score: 70
+    - Test 'test_ascii_hex_decode_no_terminator' has identical neighborhood to 'test_ascii_hex_decode_empty'
+    - Test 'test_ascii_hex_decode_no_terminator' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_ascii_hex_decode_no_terminator' uses .unwrap() which silently discards error information
+    - Test 'test_ascii_hex_decode_no_terminator' does not call any production code
+  test_ascii85_decode_empty (line 712) - Score: 80
+    - Test 'test_ascii85_decode_empty' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_ascii85_decode_empty' uses .unwrap() which silently discards error information
+    - Test 'test_ascii85_decode_empty' does not call any production code
+  test_ascii85_decode_invalid (line 719) - Score: 90
+    - Test 'test_ascii85_decode_invalid' only exercises the happy path — no None, Err, or edge-case inputs
+  test_flate_decode (line 727) - Score: 90
+    - Test 'test_flate_decode' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_flate_decode' uses .unwrap() which silently discards error information
+  test_flate_decode_not_supported (line 743) - Score: 90
+    - Test 'test_flate_decode_not_supported' only exercises the happy path — no None, Err, or edge-case inputs
+  test_apply_filter (line 750) - Score: 80
+    - Test 'test_apply_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_apply_filter' uses .unwrap() which silently discards error information
+    - Test 'test_apply_filter' does not call any production code
+  test_apply_filter_unsupported (line 757) - Score: 80
+    - Test 'test_apply_filter_unsupported' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_apply_filter_unsupported' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_apply_filter_dct_decode (line 768) - Score: 90
+    - Test 'test_apply_filter_dct_decode' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_apply_filter_dct_decode' has multiple assertions without diagnostic messages
+  test_apply_filter_with_params_no_predictor (line 787) - Score: 80
+    - Test 'test_apply_filter_with_params_no_predictor' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_apply_filter_with_params_no_predictor' uses .unwrap() which silently discards error information
+    - Test 'test_apply_filter_with_params_no_predictor' does not call any production code
+  test_apply_predictor_none (line 796) - Score: 90
+    i Test 'test_apply_predictor_none' uses .unwrap() which silently discards error information
+    - Test 'test_apply_predictor_none' does not call any production code
+  test_apply_predictor_unknown (line 805) - Score: 90
+    - Test 'test_apply_predictor_unknown' does not call any production code
+  test_png_predictor_sub_filter (line 815) - Score: 90
+    - Test 'test_png_predictor_sub_filter' does not call any production code
+  test_png_predictor_up_filter (line 823) - Score: 90
+    - Test 'test_png_predictor_up_filter' does not call any production code
+  test_png_predictor_up_filter_no_prev (line 832) - Score: 90
+    - Test 'test_png_predictor_up_filter_no_prev' does not call any production code
+  test_png_predictor_average_filter (line 840) - Score: 80
+    - Test 'test_png_predictor_average_filter' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'test_png_predictor_average_filter' does not call any production code
+  test_png_predictor_paeth_filter (line 851) - Score: 80
+    i Test 'test_png_predictor_paeth_filter' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_png_predictor_paeth_filter' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+    - Test 'test_png_predictor_paeth_filter' does not call any production code
+  test_paeth_predictor_algorithm (line 861) - Score: 90
+    i Test 'test_paeth_predictor_algorithm' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_paeth_predictor_algorithm' has multiple assertions without diagnostic messages
+    - Test 'test_paeth_predictor_algorithm' does not call any production code
+  test_get_filter_params_dict (line 877) - Score: 100
+    i Test 'test_get_filter_params_dict' has multiple assertions without diagnostic messages
+  test_get_filter_params_array (line 891) - Score: 100
+    i Test 'test_get_filter_params_array' has multiple assertions without diagnostic messages
+  test_compressed_xref_integration (line 913) - Score: 100
+    i Test 'test_compressed_xref_integration' uses .unwrap() which silently discards error information
+  test_lzw_decode_simple (line 988) - Score: 90
+    i Test 'test_lzw_decode_simple' uses .unwrap() which silently discards error information
+    - Test 'test_lzw_decode_simple' does not call any production code
+  test_lzw_decode_with_repetition (line 998) - Score: 90
+    i Test 'test_lzw_decode_with_repetition' uses .unwrap() which silently discards error information
+    - Test 'test_lzw_decode_with_repetition' does not call any production code
+  test_lzw_decode_clear_code (line 1008) - Score: 90
+    i Test 'test_lzw_decode_clear_code' uses .unwrap() which silently discards error information
+    - Test 'test_lzw_decode_clear_code' does not call any production code
+  test_lzw_decode_growing_codes (line 1018) - Score: 90
+    - Test 'test_lzw_decode_growing_codes' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_lzw_decode_crosses_9_to_10_bit_boundary_early_change (line 1032) - Score: 90
+    - Test 'test_lzw_decode_crosses_9_to_10_bit_boundary_early_change' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  test_lzw_decode_early_change_false (line 1085) - Score: 100
+    i Test 'test_lzw_decode_early_change_false' uses .unwrap() which silently discards error information
+  test_lzw_decode_empty (line 1105) - Score: 90
+    i Test 'test_lzw_decode_empty' uses .unwrap() which silently discards error information
+    - Test 'test_lzw_decode_empty' does not call any production code
+  test_lzw_bit_reader (line 1114) - Score: 100
+    i Test 'test_lzw_bit_reader' has multiple assertions without diagnostic messages
+  test_lzw_bit_reader_edge_cases (line 1135) - Score: 100
+    i Test 'test_lzw_bit_reader_edge_cases' has multiple assertions without diagnostic messages
+  test_apply_filter_lzw (line 1153) - Score: 90
+    i Test 'test_apply_filter_lzw' uses .unwrap() which silently discards error information
+    - Test 'test_apply_filter_lzw' does not call any production code
+  test_apply_filter_with_params_lzw (line 1162) - Score: 100
+    i Test 'test_apply_filter_with_params_lzw' uses .unwrap() which silently discards error information
+  test_run_length_decode_literal (line 1176) - Score: 90
+    i Test 'test_run_length_decode_literal' uses .unwrap() which silently discards error information
+    - Test 'test_run_length_decode_literal' does not call any production code
+  test_run_length_decode_repeat (line 1184) - Score: 90
+    i Test 'test_run_length_decode_repeat' uses .unwrap() which silently discards error information
+    - Test 'test_run_length_decode_repeat' does not call any production code
+  test_run_length_decode_mixed (line 1192) - Score: 90
+    i Test 'test_run_length_decode_mixed' uses .unwrap() which silently discards error information
+    - Test 'test_run_length_decode_mixed' does not call any production code
+  test_run_length_decode_eod (line 1204) - Score: 90
+    i Test 'test_run_length_decode_eod' uses .unwrap() which silently discards error information
+    - Test 'test_run_length_decode_eod' does not call any production code
+  test_run_length_decode_empty (line 1212) - Score: 90
+    i Test 'test_run_length_decode_empty' uses .unwrap() which silently discards error information
+    - Test 'test_run_length_decode_empty' does not call any production code
+  test_run_length_decode_single_literal (line 1220) - Score: 90
+    i Test 'test_run_length_decode_single_literal' uses .unwrap() which silently discards error information
+    - Test 'test_run_length_decode_single_literal' does not call any production code
+  test_run_length_decode_single_repeat (line 1228) - Score: 90
+    i Test 'test_run_length_decode_single_repeat' uses .unwrap() which silently discards error information
+    - Test 'test_run_length_decode_single_repeat' does not call any production code
+  test_run_length_decode_max_repeat (line 1236) - Score: 100
+    i Test 'test_run_length_decode_max_repeat' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_run_length_decode_max_repeat' has multiple assertions without diagnostic messages
+    i Test 'test_run_length_decode_max_repeat' uses .unwrap() which silently discards error information
+  test_run_length_decode_max_literal (line 1245) - Score: 100
+    i Test 'test_run_length_decode_max_literal' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_run_length_decode_max_literal' has multiple assertions without diagnostic messages
+    i Test 'test_run_length_decode_max_literal' uses .unwrap() which silently discards error information
+  test_apply_filter_run_length (line 1271) - Score: 90
+    i Test 'test_apply_filter_run_length' uses .unwrap() which silently discards error information
+    - Test 'test_apply_filter_run_length' does not call any production code
+  test_apply_filter_with_params_run_length (line 1279) - Score: 90
+    i Test 'test_apply_filter_with_params_run_length' uses .unwrap() which silently discards error information
+    - Test 'test_apply_filter_with_params_run_length' does not call any production code
+  test_flate_bound_within_limit (line 1299) - Score: 90
+    i Test 'test_flate_bound_within_limit' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_flate_bound_within_limit' uses .unwrap() which silently discards error information
+    - Test 'test_flate_bound_within_limit' does not call any production code
+  test_flate_bound_at_exact_limit (line 1307) - Score: 90
+    i Test 'test_flate_bound_at_exact_limit' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_flate_bound_at_exact_limit' uses .unwrap() which silently discards error information
+    - Test 'test_flate_bound_at_exact_limit' does not call any production code
+  test_flate_bound_exceeds_limit (line 1315) - Score: 100
+    i Test 'test_flate_bound_exceeds_limit' has multiple assertions without diagnostic messages
+  test_check_compression_ratio_normal (line 1328) - Score: 90
+    - Test 'test_check_compression_ratio_normal' has identical neighborhood to 'test_check_compression_ratio_at_exact_floor_allowed'
+  test_check_compression_ratio_small_output_high_ratio_allowed (line 1334) - Score: 100
+    i Test 'test_check_compression_ratio_small_output_high_ratio_allowed' has multiple assertions without diagnostic messages
+  test_check_compression_ratio_at_exact_floor_allowed (line 1357) - Score: 90
+    - Test 'test_check_compression_ratio_at_exact_floor_allowed' has identical neighborhood to 'test_check_compression_ratio_normal'
+  test_check_compression_ratio_zero_input (line 1364) - Score: 90
+    - Test 'test_check_compression_ratio_zero_input' has identical neighborhood to 'test_check_compression_ratio_at_exact_floor_allowed'
+  test_flate_normal_data_succeeds (line 1371) - Score: 100
+    i Test 'test_flate_normal_data_succeeds' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_flate_normal_data_succeeds' has multiple assertions without diagnostic messages
+    i Test 'test_flate_normal_data_succeeds' uses .unwrap() which silently discards error information
+  test_flate_high_ratio_small_output_now_decodes (line 1393) - Score: 100
+    i Test 'test_flate_high_ratio_small_output_now_decodes' uses .unwrap() which silently discards error information
+  test_flate_large_high_ratio_still_rejected (line 1411) - Score: 100
+    i Test 'test_flate_large_high_ratio_still_rejected' has multiple assertions without diagnostic messages
+  test_flate_bound_empty_input (line 1426) - Score: 90
+    i Test 'test_flate_bound_empty_input' uses .unwrap() which silently discards error information
+    - Test 'test_flate_bound_empty_input' does not call any production code
+  test_flate_high_ratio_small_output_decodes_issue_286 (line 1434) - Score: 100
+    i Test 'test_flate_high_ratio_small_output_decodes_issue_286' has multiple assertions without diagnostic messages
+    i Test 'test_flate_high_ratio_small_output_decodes_issue_286' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
