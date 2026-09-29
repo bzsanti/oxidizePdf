@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Recover repeated TJ glyph advances only for verified zero-width source glyphs,
+  preserving ordinary word separators and larger word gaps, including Type0 CID
+  metrics. Ambiguous advances retain the ordinary spacing rule (#649).
+
 - Preserve word separation across shifted TJ baselines, including sheared, rotated
   and scaled text, while retaining the same-baseline jitter guard (#648).
 

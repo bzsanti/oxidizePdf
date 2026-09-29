@@ -1,0 +1,4 @@
+{
+  "oxidize-pdf-core/src/text/extraction.rs": "17c2a4b713ae81266caa084f72919af6b76d9182626bc44e26383d0ce3994202",
+  "oxidize-pdf-core/tests/issue_649_tj_zero_width_kerning_test.rs": "ab5b505d5fd70917b294fb1f4e27f148bd8fd2503f39f7118deb07557241b96e"
+}

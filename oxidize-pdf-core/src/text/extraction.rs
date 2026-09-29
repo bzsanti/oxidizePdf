@@ -59,6 +59,12 @@ pub struct ExtractionOptions {
     /// post-glyph gap between separate text-show operators) because the TJ
     /// numeric kern is measured without any glyph advance baseline and
     /// needs a more sensitive threshold (issue #272).
+    /// For alternating single-glyph TJ arrays with explicitly zero source
+    /// widths and a repeated forward advance, the inferred advance is first
+    /// subtracted; only the excess is compared with this threshold (#649).
+    /// This conservative inference needs at least two matching adjustments
+    /// forming a strict majority and no Tc/Tw spacing. Unknown widths,
+    /// nonuniform advances, and leading/trailing kerns use the ordinary rule.
     pub tj_space_threshold: f64,
     /// Minimum vertical distance to insert newline (in text space units)
     pub newline_threshold: f64,
@@ -1013,6 +1019,56 @@ impl TextExtractor {
         self.tj_space_gap_threshold(state, TJ_BOUNDARY_SPACE_EM)
     }
 
+    /// Infer a repeated advance only when the source font explicitly gives
+    /// every glyph zero width. Unicode text and literal spaces cannot establish
+    /// that property: simple widths are code-indexed and composite widths are
+    /// CID-indexed. Unknown metrics retain the ordinary TJ gap rule.
+    ///
+    /// Accept only alternating single-glyph/forward-adjustment arrays. At least
+    /// two adjustments and a strict majority must match the smallest advance
+    /// within 0.05 em; larger outliers remain potential word gaps. Leading or
+    /// trailing kerns, explicit Tc/Tw, and ambiguous/nonuniform advances retain
+    /// the conservative rule. No extra Unicode decoding or sorting is needed.
+    fn detect_tj_uniform_tracking(&self, array: &[TextElement], state: &TextState) -> Option<f64> {
+        if array.len() < 5
+            || array.len() % 2 == 0
+            || state.char_space != 0.0
+            || state.word_space != 0.0
+            || !state.font_size.is_finite()
+            || state.font_size <= 0.0
+            || !self.options.tj_space_threshold.is_finite()
+        {
+            return None;
+        }
+        let font = self.font_cache.get(state.font_name.as_ref()?)?;
+        let mut baseline = f64::INFINITY;
+        for (index, item) in array.iter().enumerate() {
+            match item {
+                TextElement::Text(codes) if index % 2 == 0 => {
+                    if !is_explicit_zero_width_glyph(codes, font) {
+                        return None;
+                    }
+                }
+                TextElement::Spacing(adjustment) if index % 2 == 1 => {
+                    let advance = -f64::from(*adjustment) / 1000.0;
+                    if !advance.is_finite() || advance <= self.options.tj_space_threshold.max(0.0) {
+                        return None;
+                    }
+                    baseline = baseline.min(advance);
+                }
+                _ => return None,
+            }
+        }
+        let matching = array
+            .iter()
+            .filter(|item| {
+                matches!(item, TextElement::Spacing(adjustment)
+                if (-f64::from(*adjustment) / 1000.0 - baseline).abs() <= 0.05)
+            })
+            .count();
+        (matching >= 2 && matching > (array.len() / 2) / 2).then_some(baseline)
+    }
+
     /// A font switch between adjacent show-text operators is evidence that a
     /// short gap separates an inline styled token from prose, rather than
     /// splitting one word. Keep this below the ordinary boundary threshold so
@@ -1707,6 +1763,13 @@ impl TextExtractor {
 
                 ContentOperation::ShowTextArray(array) => {
                     if in_text_object {
+                        // Detect whether the TJ array represents uniform per-glyph tracking
+                        // (issue #649), where zero-advance glyphs have their horizontal advance
+                        // encoded via uniform negative kern numbers in TJ.
+                        let tracking_baseline_em = self
+                            .detect_tj_uniform_tracking(&array, &state)
+                            .unwrap_or(0.0);
+
                         // True until this `TJ` array draws its first glyph. Only
                         // on that first text element can a forward pen jump come
                         // from the operator boundary (a `Tm`, or the previous
@@ -1963,12 +2026,16 @@ impl TextExtractor {
                                     // we treat the kern as an implicit `U+0020` (issue #272):
                                     // many PDFs encode word breaks purely as wide negative
                                     // kerns and never emit a literal space byte.
+                                    // When uniform per-glyph tracking is detected (issue #649),
+                                    // only the excess gap beyond the tracking baseline is tested.
                                     let tx = -(adjustment as f64) / 1000.0 * state.font_size;
+                                    let gap_tx = tx - tracking_baseline_em * state.font_size;
 
                                     let skip_tj_space =
                                         skip_artifact_text(&state, self.options.include_artifacts);
                                     if !skip_tj_space
-                                        && tx > self.options.tj_space_threshold * state.font_size
+                                        && gap_tx
+                                            > self.options.tj_space_threshold * state.font_size
                                         && !extracted_text.is_empty()
                                         && !extracted_text.ends_with(' ')
                                     {
@@ -4407,6 +4474,46 @@ fn cids_for_codes<'a>(codes: &'a [u8], font: &FontInfo) -> Option<Vec<(&'a [u8],
         offset += code_len;
     }
     Some(result)
+}
+
+/// Certify one horizontal source glyph with a declared zero advance. Do not
+/// turn missing widths, fallback metrics or decoded Unicode into that evidence.
+fn is_explicit_zero_width_glyph(codes: &[u8], font: &FontInfo) -> bool {
+    if font.font_type == "Type0" || font.descendant_font.is_some() {
+        // Identity-H codes are exactly two bytes; cids_for_codes intentionally
+        // tolerates a short tail for legacy extraction, not for this inference.
+        if font.encoding.as_deref() == Some("Identity-H") && codes.len() != 2 {
+            return false;
+        }
+        let Some(cids) = cids_for_codes(codes, font) else {
+            return false;
+        };
+        let [(_, cid)] = cids.as_slice() else {
+            return false;
+        };
+        return font
+            .descendant_font
+            .as_deref()
+            .unwrap_or(font)
+            .metrics
+            .cid_widths
+            .as_ref()
+            .is_some_and(|widths| widths.width_for(*cid) == 0.0);
+    }
+    let [code] = codes else {
+        return false;
+    };
+    let code = u32::from(*code);
+    let first = font.metrics.first_char.unwrap_or(0);
+    let last = font.metrics.last_char.unwrap_or(255);
+    if code < first || code > last {
+        return false;
+    }
+    font.metrics
+        .widths
+        .as_ref()
+        .and_then(|widths| widths.get((code - first) as usize))
+        .is_some_and(|width| *width == 0.0)
 }
 
 fn calculate_text_width_from_codes(

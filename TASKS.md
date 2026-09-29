@@ -1,7 +1,15 @@
+## Corrección de revisión #649 / PR #651
+
+- Issue: #649 — bug(text): TJ negative kerning (adjustment > 0.2 em) injects spurious spaces when glyph advance widths are encoded as kerning — https://github.com/bzsanti/oxidizePdf/issues/649
+- Estado: `[-]` rediseño publicado; actualizado con #637/#648, integración autorizada. Prioridad P1. Responsable Codex.
+- Criterio de cierre: métricas cero verificadas, Type1/Type0/CID cubiertos, huecos reales preservados, revisión/corpus/CI aprobados.
+- Última validación: RED 6 fallos/7 controles; GREEN 32 regresiones, 6780 biblioteca (3 omitidos), 72 diferenciales; Clippy y QR pasan. Incluye Type0/CMap/CID y controles de fuentes normales. Informe: docs/reports/2026-09-29-pr-651-correction-review.md.
+- Siguiente acción: validar conjunto #637/#648/#649 y fusionar #651.
+
 ## Corrección de revisión #648 / PR #650
 
 - Issue: #648 — bug(text): ShowTextArray boundary space threshold (0.7 em) suppresses word separator when baseline shifts across text runs — https://github.com/bzsanti/oxidizePdf/issues/648
-- Estado: `[-]` corrección publicada; actualizada con develop tras #652, integración autorizada. Prioridad P1. Responsable Codex.
+- Estado: `[-]` integrada en develop mediante #650 (00c4b73), issue #648 cerrada. Prioridad P1. Responsable Codex.
 - Criterio de cierre: distancia y guard vertical en la misma proyección; regresiones, corpus, revisión y CI aprobados.
 - Última validación: RED cizallamiento sobre fa4f944; GREEN 27 regresiones, 6780 biblioteca (3 omitidos), 72 diferenciales; Clippy, formato y QR pasan. Evidencia: docs/reports/2026-09-29-pr-650-correction-review.md.
 - Siguiente acción: validar combinación #637/#648 y fusionar #650; después integrar #651.
