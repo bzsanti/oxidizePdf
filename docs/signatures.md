@@ -56,7 +56,8 @@ profile compliance or certification.
 Certificate-based **recipient encryption** is different from signing and
 certificate verification. The legacy handler now rejects
 cryptographic operations explicitly (#640); it does not protect documents.
-Actual recipient encryption is tracked separately in #642.
+The separate `recipient-encryption` feature implements the bounded
+[Adobe.PubSec profile](recipient-encryption.md) through `RecipientEncryption` (#642).
 
 ## Participant signature slots (next release, #646)
 

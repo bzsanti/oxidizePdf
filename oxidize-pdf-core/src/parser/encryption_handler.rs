@@ -61,11 +61,46 @@ pub struct EncryptionHandler {
     encryption_key: Option<EncryptionKey>,
     /// File ID from trailer
     file_id: Option<Vec<u8>>,
+    #[cfg(feature = "recipient-encryption")]
+    recipient_state: Option<crate::encryption::recipient::RecipientState>,
 }
 
 impl EncryptionHandler {
     /// Create encryption handler from encryption dictionary
     pub fn new(encrypt_dict: &PdfDictionary, file_id: Option<Vec<u8>>) -> ParseResult<Self> {
+        #[cfg(feature = "recipient-encryption")]
+        if encrypt_dict
+            .get("Filter")
+            .and_then(|v| v.as_name())
+            .is_some_and(|n| n.0 == "Adobe.PubSec")
+        {
+            let state =
+                crate::encryption::recipient::RecipientState::parse(encrypt_dict).map_err(|e| {
+                    ParseError::SyntaxError {
+                        position: 0,
+                        message: e.to_string(),
+                    }
+                })?;
+            return Ok(Self {
+                encryption_info: EncryptionInfo {
+                    filter: "Adobe.PubSec".into(),
+                    v: 5,
+                    r: 0,
+                    o: vec![],
+                    u: vec![],
+                    p: 0,
+                    length: Some(256),
+                    ue: None,
+                    oe: None,
+                    cfm: Some("AESV3".into()),
+                    encrypt_metadata: true,
+                },
+                security_handler: StandardSecurityHandler::aes_256_r5(),
+                encryption_key: None,
+                file_id,
+                recipient_state: Some(state),
+            });
+        }
         let encryption_info = Self::parse_encryption_dict(encrypt_dict)?;
 
         // Create the security handler. For V>=4 the cipher is determined by the
@@ -99,6 +134,8 @@ impl EncryptionHandler {
             security_handler,
             encryption_key: None,
             file_id,
+            #[cfg(feature = "recipient-encryption")]
+            recipient_state: None,
         })
     }
 
@@ -234,6 +271,9 @@ impl EncryptionHandler {
 
     /// Try to unlock PDF with user password
     pub fn unlock_with_user_password(&mut self, password: &str) -> ParseResult<bool> {
+        if self.is_recipient_encryption() {
+            return Err(ParseError::EncryptionNotSupported);
+        }
         let user_password = UserPassword(password.to_string());
 
         match self.encryption_info.r {
@@ -424,6 +464,9 @@ impl EncryptionHandler {
     /// 2. Decrypting the O entry to recover the user password
     /// 3. Using the recovered user password to compute the encryption key
     pub fn unlock_with_owner_password(&mut self, password: &str) -> ParseResult<bool> {
+        if self.is_recipient_encryption() {
+            return Err(ParseError::EncryptionNotSupported);
+        }
         // R5/R6 (AES-256) use a completely different owner-password algorithm.
         // The MD5/RC4 path below assumes key_length <= 16 (MD5 output); for R5/R6
         // key_length is 32, so `hash[..key_length]` would panic. Dispatch first.
@@ -587,8 +630,35 @@ impl EncryptionHandler {
         }
     }
 
+    /// Whether this uses Adobe.PubSec certificate recipients.
+    pub fn is_recipient_encryption(&self) -> bool {
+        self.encryption_info.filter == "Adobe.PubSec"
+    }
+
+    #[cfg(feature = "recipient-encryption")]
+    pub(crate) fn unlock_recipient(&mut self, cert: &[u8], key: &[u8]) -> ParseResult<()> {
+        let state = self
+            .recipient_state
+            .as_ref()
+            .ok_or(ParseError::EncryptionNotSupported)?;
+        self.encryption_key = None;
+        self.encryption_info.p = 0;
+        let (key, permissions) = state
+            .unlock(cert, key)
+            .map_err(|e| ParseError::SyntaxError {
+                position: 0,
+                message: e.to_string(),
+            })?;
+        self.encryption_key = Some(key);
+        self.encryption_info.p = permissions as i32;
+        Ok(())
+    }
+
     /// Get encryption algorithm information
     pub fn algorithm_info(&self) -> String {
+        if self.is_recipient_encryption() {
+            return "Adobe.PubSec AES-256 / RSA-OAEP SHA-256".into();
+        }
         match (
             self.encryption_info.r,
             self.encryption_info.length.unwrap_or(40),

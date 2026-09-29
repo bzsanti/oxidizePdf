@@ -1,0 +1,17 @@
+[
+  {
+    "name": "retain-old-key",
+    "consumer_exit": 1,
+    "oracle_exit": null
+  },
+  {
+    "name": "double-decrypt-object-stream",
+    "consumer_exit": 1,
+    "oracle_exit": null
+  },
+  {
+    "name": "constant-seed",
+    "consumer_exit": 0,
+    "oracle_exit": 1
+  }
+]

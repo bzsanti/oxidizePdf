@@ -21,6 +21,7 @@ pub struct ObjectEncryptor {
     encrypt_metadata: bool,
     /// Embedded file encryption handler
     embedded_file_handler: Option<EmbeddedFileEncryption>,
+    implicit_recipient_filter: bool,
 }
 
 impl ObjectEncryptor {
@@ -35,6 +36,7 @@ impl ObjectEncryptor {
             encryption_key,
             encrypt_metadata,
             embedded_file_handler: None,
+            implicit_recipient_filter: false,
         }
     }
 
@@ -56,7 +58,14 @@ impl ObjectEncryptor {
             encryption_key,
             encrypt_metadata,
             embedded_file_handler,
+            implicit_recipient_filter: false,
         }
+    }
+
+    #[cfg(feature = "recipient-encryption")]
+    pub(crate) fn with_recipient_filter(mut self) -> Self {
+        self.implicit_recipient_filter = true;
+        self
     }
 
     /// Encrypt an object
@@ -171,6 +180,18 @@ impl ObjectEncryptor {
 
     /// Encrypt a stream
     fn encrypt_stream(&self, stream: &mut Stream, obj_id: &ObjectId) -> Result<()> {
+        if self.implicit_recipient_filter {
+            let is_crypt = |o: &Object| matches!(o, Object::Name(n) if n == "Crypt");
+            if stream.dictionary().contains_key("StmF")
+                || stream.dictionary().get("Filter").is_some_and(|o| {
+                    is_crypt(o) || matches!(o, Object::Array(a) if a.iter().any(is_crypt))
+                })
+            {
+                return Err(PdfError::EncryptionError(
+                    "explicit stream crypt filters are unsupported for recipients".into(),
+                ));
+            }
+        }
         // Check if stream should be encrypted
         if !self.should_encrypt_stream(stream) {
             return Ok(());
@@ -197,6 +218,10 @@ impl ObjectEncryptor {
 
         *stream.data_mut() = encrypted_data;
 
+        if self.implicit_recipient_filter {
+            self.encrypt_dictionary(stream.dictionary_mut(), obj_id)?;
+            return Ok(());
+        }
         // Update stream dictionary if needed
         if !stream.dictionary().contains_key("Filter") {
             stream
@@ -342,6 +367,11 @@ impl ObjectEncryptor {
 
     /// Check if a dictionary key should be skipped during encryption
     fn should_skip_dictionary_key(&self, key: &str) -> bool {
+        // Recipient writer excludes Encrypt and trailer objects at the object
+        // boundary. Identically named keys in ordinary dictionaries are data.
+        if self.implicit_recipient_filter {
+            return false;
+        }
         // These keys should never be encrypted
         matches!(
             key,

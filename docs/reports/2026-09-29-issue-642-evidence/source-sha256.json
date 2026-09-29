@@ -1,0 +1,12 @@
+{
+  "oxidize-pdf-core/src/encryption/recipient.rs": "eb6b9df0eeb2f476ff2d7ff739a71c31bc70205f4e5ede83f07124487d79bc88",
+  "oxidize-pdf-core/src/encryption/object_encryption.rs": "2376e6779ed52909bc379b8a869483d4b4deebdb3bf78bb89c6292e3e989d4a7",
+  "oxidize-pdf-core/src/parser/encryption_handler.rs": "3206f5aa886fd15b57f443f09dce5a59babaebc433c8916c05ce3549732457c9",
+  "oxidize-pdf-core/src/parser/reader.rs": "e4490a9a98a0ea2156baeb241a9674904b299e93c8395ece3d9f0a15811c2228",
+  "oxidize-pdf-core/src/document.rs": "e3821394b4a593cadc850c3474899320db892a6afe4cfe66ee36bf93f0b4bd4a",
+  "oxidize-pdf-core/src/writer/pdf_writer/mod.rs": "ca50409192bf584aca6f271f8f264a05c0e23b1803babb204d49b1be5d3de0da",
+  "oxidize-pdf-core/src/writer/build_identification.rs": "49bb98b86cf50eebaa18f117db9e426e2d9a24b0c19c46e4535b2a27125f1de5",
+  "oxidize-pdf-core/tests/recipient_encryption_test.rs": "071a89c9fe35bcf732fd91e65bf696b59ce3637a1a5066b0ef1023acf9ce4af1",
+  "scripts/check_recipient_product.py": "c55d695f693d4835c0948e51d752900ef9e95478286d61fe7982427b8bfea1f3",
+  "oxidize-pdf-core/tests/fixtures/recipient_encryption/oracle.py": "cb64e3c1041d1729512cca2d07241ed008758082422d84ab47e82e308f4b4e96"
+}

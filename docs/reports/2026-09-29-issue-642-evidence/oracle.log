@@ -1,0 +1,3 @@
+{"reader": "pyHanko 0.29.1", "file": "/tmp/642-consumer-final.pdf", "recipient": "alice", "permissions": "PubKeyPermissions.ALLOW_PRINTING|ALLOW_MODIFICATION_GENERIC|ALLOW_CONTENT_EXTRACTION|ALLOW_ANNOTS_FORM_FILLING|ALLOW_FORM_FILLING|ALLOW_ASSISTIVE_TECHNOLOGY|ALLOW_REASSEMBLY|ALLOW_HIGH_QUALITY_PRINTING|TOLERATE_MISSING_PDF_MAC", "text_image_title": "verified"}
+{"reader": "pyHanko 0.29.1", "file": "/tmp/642-consumer-final.pdf", "recipient": "bob", "permissions": "PubKeyPermissions.ALLOW_PRINTING|TOLERATE_MISSING_PDF_MAC", "text_image_title": "verified"}
+Independent seed and file-key randomization verified
