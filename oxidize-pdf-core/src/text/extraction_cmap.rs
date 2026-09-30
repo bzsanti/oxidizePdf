@@ -1517,10 +1517,10 @@ fn decode_winansi(byte: u8) -> char {
     }
 }
 
-/// Decode MacRomanEncoding
+/// Decode MacRomanEncoding per Adobe PostScript / PDF specification (issue #662).
 fn decode_macroman(byte: u8) -> char {
-    // MacRomanEncoding differs from Latin-1 in the 0x80-0xFF range
     match byte {
+        0x00..=0x7F => byte as char,
         0x80 => 'Ä',
         0x81 => 'Å',
         0x82 => 'Ç',
@@ -1553,8 +1553,102 @@ fn decode_macroman(byte: u8) -> char {
         0x9D => 'ù',
         0x9E => 'û',
         0x9F => 'ü',
-        // ... more mappings
-        _ => byte as char,
+        0xA0 => '†',
+        0xA1 => '°',
+        0xA2 => '¢',
+        0xA3 => '£',
+        0xA4 => '§',
+        0xA5 => '•',
+        0xA6 => '¶',
+        0xA7 => 'ß',
+        0xA8 => '®',
+        0xA9 => '©',
+        0xAA => '™',
+        0xAB => '´',
+        0xAC => '¨',
+        0xAD => '≠',
+        0xAE => 'Æ',
+        0xAF => 'Ø',
+        0xB0 => '∞',
+        0xB1 => '±',
+        0xB2 => '≤',
+        0xB3 => '≥',
+        0xB4 => '¥',
+        0xB5 => 'µ',
+        0xB6 => '∂',
+        0xB7 => '∑',
+        0xB8 => '∏',
+        0xB9 => 'π',
+        0xBA => '∫',
+        0xBB => 'ª',
+        0xBC => 'º',
+        0xBD => 'Ω',
+        0xBE => 'æ',
+        0xBF => 'ø',
+        0xC0 => '¿',
+        0xC1 => '¡',
+        0xC2 => '¬',
+        0xC3 => '√',
+        0xC4 => 'ƒ',
+        0xC5 => '≈',
+        0xC6 => '∆',
+        0xC7 => '«',
+        0xC8 => '»',
+        0xC9 => '…',
+        0xCA => '\u{00A0}', // Non-breaking space
+        0xCB => 'À',
+        0xCC => 'Ã',
+        0xCD => 'Õ',
+        0xCE => 'Œ',
+        0xCF => 'œ',
+        0xD0 => '–',
+        0xD1 => '—',
+        0xD2 => '“',
+        0xD3 => '”',
+        0xD4 => '‘',
+        0xD5 => '’',
+        0xD6 => '÷',
+        0xD7 => '◊',
+        0xD8 => 'ÿ',
+        0xD9 => 'Ÿ',
+        0xDA => '⁄',
+        0xDB => '€',
+        0xDC => '‹',
+        0xDD => '›',
+        0xDE => 'ﬁ',
+        0xDF => 'ﬂ',
+        0xE0 => '‡',
+        0xE1 => '·',
+        0xE2 => '‚',
+        0xE3 => '„',
+        0xE4 => '‰',
+        0xE5 => 'Â',
+        0xE6 => 'Ê',
+        0xE7 => 'Á',
+        0xE8 => 'Ë',
+        0xE9 => 'È',
+        0xEA => 'Í',
+        0xEB => 'Î',
+        0xEC => 'Ï',
+        0xED => 'Ì',
+        0xEE => 'Ó',
+        0xEF => 'Ô',
+        0xF0 => '\u{F8FF}', // Apple logo
+        0xF1 => 'Ò',
+        0xF2 => 'Ú',
+        0xF3 => 'Û',
+        0xF4 => 'Ù',
+        0xF5 => 'ı',
+        0xF6 => 'ˆ',
+        0xF7 => '˜',
+        0xF8 => '¯',
+        0xF9 => '˘',
+        0xFA => '˙',
+        0xFB => '˚',
+        0xFC => '¸',
+        0xFD => '˝',
+        0xFE => '˛',
+        0xFF => 'ˇ',
     }
 }
 
@@ -1698,6 +1792,14 @@ mod tests {
         assert_eq!(decode_macroman(0x41), 'A');
         assert_eq!(decode_macroman(0x80), 'Ä');
         assert_eq!(decode_macroman(0x87), 'á');
+        // Issue #662: MacRoman bytes in 0xA0..=0xFF range
+        assert_eq!(decode_macroman(0xA0), '†');
+        assert_eq!(decode_macroman(0xBB), 'ª');
+        assert_eq!(decode_macroman(0xBC), 'º');
+        assert_eq!(decode_macroman(0xDB), '€');
+        assert_eq!(decode_macroman(0xD2), '“');
+        assert_eq!(decode_macroman(0xD3), '”');
+        assert_eq!(decode_macroman(0xE7), 'Á');
     }
 
     #[test]
