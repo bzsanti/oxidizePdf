@@ -380,7 +380,9 @@ impl StructureActualText {
         {
             return Err(());
         }
-        let decoded = decode_pdf_string(value.as_bytes());
+        let version = document.effective_version().map_err(|_| ())?;
+        let decoded =
+            crate::parser::objects::decode_text_string_with_version(value.as_bytes(), &version);
         self.cache.insert(mcid, Some(decoded.clone()));
         Ok(Some(decoded))
     }
@@ -1570,6 +1572,7 @@ impl TextExtractor {
             mut line_groups,
             mut cur_group,
         } = run;
+        let text_string_version = document.effective_version()?;
         let page_properties: Option<&crate::parser::objects::PdfDictionary> =
             resources.and_then(|res| match res.get("Properties") {
                 Some(crate::parser::objects::PdfObject::Dictionary(d)) => Some(d),
@@ -2462,7 +2465,8 @@ impl TextExtractor {
 
                 ContentOperation::BeginMarkedContentWithProps(tag, props) => {
                     let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
-                    let (mcid, inline_actual_text) = resolve_props(&props, page_properties);
+                    let (mcid, inline_actual_text) =
+                        resolve_props_with_version(&props, page_properties, &text_string_version);
                     let actual_text = if inline_actual_text.is_some() {
                         inline_actual_text
                     } else if let Some(id) = mcid {
@@ -4210,11 +4214,10 @@ fn multiply_matrix(a: &[f64; 6], b: &[f64; 6]) -> [f64; 6] {
 /// A string inside marked-content properties (notably `/ActualText`) is a PDF
 /// text string like any other, so this is
 /// [`PdfString::to_text`](crate::parser::objects::PdfString::to_text): UTF-16BE
-/// when a byte order mark is present — the canonical encoding for non-ASCII
-/// `/ActualText`, e.g. an `fi` ligature or a Greek symbol — and the WinAnsi
-/// reading of PDFDocEncoding otherwise. Before that helper existed this mapped
-/// non-BOM bytes to `char` one by one, which is Latin-1 and wrong for the
-/// typographic punctuation WinAnsi puts in `0x80..=0x9F`.
+/// when a byte order mark is present, and PDFDocEncoding otherwise. Undefined
+/// bytes and malformed UTF-16 are visible as replacement characters rather than
+/// being silently discarded. Font strings use their own encoding path.
+#[cfg(test)]
 fn decode_pdf_string(bytes: &[u8]) -> String {
     crate::parser::objects::decode_text_string(bytes)
 }
@@ -4332,9 +4335,21 @@ fn resolve_structure_actual_text<R: Read + Seek>(
 /// it's a Dictionary, extract `/MCID` and `/ActualText` from there. If
 /// not found (or the named entry is not a dict), return `(None, None)`
 /// — a malformed reference must not abort extraction.
+#[cfg(test)]
 fn resolve_props(
     props: &crate::parser::content::MarkedContentProps,
     properties: Option<&crate::parser::objects::PdfDictionary>,
+) -> (Option<u32>, Option<String>) {
+    resolve_props_with_version(
+        props,
+        properties,
+        &crate::parser::header::PdfVersion::new(1, 7),
+    )
+}
+fn resolve_props_with_version(
+    props: &crate::parser::content::MarkedContentProps,
+    properties: Option<&crate::parser::objects::PdfDictionary>,
+    version: &crate::parser::header::PdfVersion,
 ) -> (Option<u32>, Option<String>) {
     use crate::parser::content::{MarkedContentProps, MarkedContentValue};
 
@@ -4347,7 +4362,7 @@ fn resolve_props(
                 _ => None,
             };
             let actual = match map.get("ActualText") {
-                Some(MarkedContentValue::String(bytes)) => Some(decode_pdf_string(bytes)),
+                Some(MarkedContentValue::String(bytes)) => Some(crate::parser::objects::decode_text_string_with_version(bytes, version)),
                 _ => None,
             };
             (mcid, actual)
@@ -4374,9 +4389,9 @@ fn resolve_props(
                 _ => None,
             });
             let actual_text = dict.get("ActualText").and_then(|o| match o {
-                crate::parser::objects::PdfObject::String(s) => {
-                    Some(decode_pdf_string(s.as_bytes()))
-                }
+                crate::parser::objects::PdfObject::String(s) => Some(
+                    crate::parser::objects::decode_text_string_with_version(s.as_bytes(), version),
+                ),
                 _ => None,
             });
             (mcid, actual_text)

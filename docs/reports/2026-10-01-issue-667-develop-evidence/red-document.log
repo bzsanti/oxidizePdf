@@ -1,0 +1,240 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 30.72s
+     Running tests/text_document_string_contract_test.rs (target/debug/deps/text_document_string_contract_test-4bb9f5f742bc9015)
+
+running 12 tests
+test document_oracle_preserves_defined_and_undefined_positions ... ok
+test empty_bookmarks_and_form_values_remain_empty ... ok
+test empty_document_strings_remain_empty ... ok
+test malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail ... FAILED
+test actualtext_utf16be_bom_sequences_are_exact ... ok
+test metadata_utf16be_bom_sequences_are_exact ... ok
+test undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes ... FAILED
+test bookmarks_and_form_values_preserve_utf16be_sequences ... ok
+test stored_form_values_match_pdfdocencoding_normative_table ... FAILED
+test metadata_matches_pdfdocencoding_normative_table ... FAILED
+test actualtext_matches_pdfdocencoding_normative_table ... FAILED
+test bookmark_titles_match_pdfdocencoding_normative_table ... FAILED
+
+failures:
+
+---- malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail stdout ----
+
+thread 'malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail' (406) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:283:5:
+[FE, FF, 00]: expected "�", actual ""
+[FE, FF, 00, 41, 00]: expected "A�", actual "A"
+[FE, FF, D8, 00, 00]: expected "��", actual "�"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes stdout ----
+
+thread 'undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes' (410) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:262:5:
+00: "A\0B"
+01: "A\u{1}B"
+02: "A\u{2}B"
+03: "A\u{3}B"
+04: "A\u{4}B"
+05: "A\u{5}B"
+06: "A\u{6}B"
+07: "A\u{7}B"
+08: "A\u{8}B"
+0B: "A\u{b}B"
+0C: "A\u{c}B"
+0E: "A\u{e}B"
+0F: "A\u{f}B"
+10: "A\u{10}B"
+11: "A\u{11}B"
+12: "A\u{12}B"
+13: "A\u{13}B"
+14: "A\u{14}B"
+15: "A\u{15}B"
+16: "A\u{16}B"
+17: "A\u{17}B"
+7F: "A\u{7f}B"
+9F: "AŸB"
+AD: "A\u{ad}B"
+
+---- stored_form_values_match_pdfdocencoding_normative_table stdout ----
+form V: 232 defined positions, 38 mismatches
+
+thread 'stored_form_values_match_pdfdocencoding_normative_table' (409) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:125:5:
+form V 0x18: expected "˘", actual "\u{18}"
+form V 0x19: expected "ˇ", actual "\u{19}"
+form V 0x1A: expected "ˆ", actual "\u{1a}"
+form V 0x1B: expected "˙", actual "\u{1b}"
+form V 0x1C: expected "˝", actual "\u{1c}"
+form V 0x1D: expected "˛", actual "\u{1d}"
+form V 0x1E: expected "˚", actual "\u{1e}"
+form V 0x1F: expected "˜", actual "\u{1f}"
+form V 0x80: expected "•", actual "€"
+form V 0x81: expected "†", actual "\u{81}"
+form V 0x82: expected "‡", actual "‚"
+form V 0x83: expected "…", actual "ƒ"
+form V 0x84: expected "—", actual "„"
+form V 0x85: expected "–", actual "…"
+form V 0x86: expected "ƒ", actual "†"
+form V 0x87: expected "⁄", actual "‡"
+form V 0x88: expected "‹", actual "ˆ"
+form V 0x89: expected "›", actual "‰"
+form V 0x8A: expected "−", actual "Š"
+form V 0x8B: expected "‰", actual "‹"
+form V 0x8C: expected "„", actual "Œ"
+form V 0x8D: expected "“", actual "\u{8d}"
+form V 0x8E: expected "”", actual "Ž"
+form V 0x8F: expected "‘", actual "\u{8f}"
+form V 0x90: expected "’", actual "\u{90}"
+form V 0x91: expected "‚", actual "‘"
+form V 0x92: expected "™", actual "’"
+form V 0x93: expected "ﬁ", actual "“"
+form V 0x94: expected "ﬂ", actual "”"
+form V 0x95: expected "Ł", actual "•"
+form V 0x96: expected "Œ", actual "–"
+form V 0x97: expected "Š", actual "—"
+form V 0x98: expected "Ÿ", actual "˜"
+form V 0x99: expected "Ž", actual "™"
+form V 0x9A: expected "ı", actual "š"
+form V 0x9B: expected "ł", actual "›"
+form V 0x9D: expected "š", actual "\u{9d}"
+form V 0xA0: expected "€", actual "\u{a0}"
+
+---- metadata_matches_pdfdocencoding_normative_table stdout ----
+metadata: 232 defined positions, 38 mismatches
+
+thread 'metadata_matches_pdfdocencoding_normative_table' (407) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:125:5:
+metadata 0x18: expected "˘", actual "\u{18}"
+metadata 0x19: expected "ˇ", actual "\u{19}"
+metadata 0x1A: expected "ˆ", actual "\u{1a}"
+metadata 0x1B: expected "˙", actual "\u{1b}"
+metadata 0x1C: expected "˝", actual "\u{1c}"
+metadata 0x1D: expected "˛", actual "\u{1d}"
+metadata 0x1E: expected "˚", actual "\u{1e}"
+metadata 0x1F: expected "˜", actual "\u{1f}"
+metadata 0x80: expected "•", actual "€"
+metadata 0x81: expected "†", actual "\u{81}"
+metadata 0x82: expected "‡", actual "‚"
+metadata 0x83: expected "…", actual "ƒ"
+metadata 0x84: expected "—", actual "„"
+metadata 0x85: expected "–", actual "…"
+metadata 0x86: expected "ƒ", actual "†"
+metadata 0x87: expected "⁄", actual "‡"
+metadata 0x88: expected "‹", actual "ˆ"
+metadata 0x89: expected "›", actual "‰"
+metadata 0x8A: expected "−", actual "Š"
+metadata 0x8B: expected "‰", actual "‹"
+metadata 0x8C: expected "„", actual "Œ"
+metadata 0x8D: expected "“", actual "\u{8d}"
+metadata 0x8E: expected "”", actual "Ž"
+metadata 0x8F: expected "‘", actual "\u{8f}"
+metadata 0x90: expected "’", actual "\u{90}"
+metadata 0x91: expected "‚", actual "‘"
+metadata 0x92: expected "™", actual "’"
+metadata 0x93: expected "ﬁ", actual "“"
+metadata 0x94: expected "ﬂ", actual "”"
+metadata 0x95: expected "Ł", actual "•"
+metadata 0x96: expected "Œ", actual "–"
+metadata 0x97: expected "Š", actual "—"
+metadata 0x98: expected "Ÿ", actual "˜"
+metadata 0x99: expected "Ž", actual "™"
+metadata 0x9A: expected "ı", actual "š"
+metadata 0x9B: expected "ł", actual "›"
+metadata 0x9D: expected "š", actual "\u{9d}"
+metadata 0xA0: expected "€", actual "\u{a0}"
+
+---- actualtext_matches_pdfdocencoding_normative_table stdout ----
+ActualText: 232 defined positions, 38 mismatches
+
+thread 'actualtext_matches_pdfdocencoding_normative_table' (399) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:125:5:
+ActualText 0x18: expected "˘", actual "\u{18}"
+ActualText 0x19: expected "ˇ", actual "\u{19}"
+ActualText 0x1A: expected "ˆ", actual "\u{1a}"
+ActualText 0x1B: expected "˙", actual "\u{1b}"
+ActualText 0x1C: expected "˝", actual "\u{1c}"
+ActualText 0x1D: expected "˛", actual "\u{1d}"
+ActualText 0x1E: expected "˚", actual "\u{1e}"
+ActualText 0x1F: expected "˜", actual "\u{1f}"
+ActualText 0x80: expected "•", actual "€"
+ActualText 0x81: expected "†", actual "\u{81}"
+ActualText 0x82: expected "‡", actual "‚"
+ActualText 0x83: expected "…", actual "ƒ"
+ActualText 0x84: expected "—", actual "„"
+ActualText 0x85: expected "–", actual "…"
+ActualText 0x86: expected "ƒ", actual "†"
+ActualText 0x87: expected "⁄", actual "‡"
+ActualText 0x88: expected "‹", actual "ˆ"
+ActualText 0x89: expected "›", actual "‰"
+ActualText 0x8A: expected "−", actual "Š"
+ActualText 0x8B: expected "‰", actual "‹"
+ActualText 0x8C: expected "„", actual "Œ"
+ActualText 0x8D: expected "“", actual "\u{8d}"
+ActualText 0x8E: expected "”", actual "Ž"
+ActualText 0x8F: expected "‘", actual "\u{8f}"
+ActualText 0x90: expected "’", actual "\u{90}"
+ActualText 0x91: expected "‚", actual "‘"
+ActualText 0x92: expected "™", actual "’"
+ActualText 0x93: expected "ﬁ", actual "“"
+ActualText 0x94: expected "ﬂ", actual "”"
+ActualText 0x95: expected "Ł", actual "•"
+ActualText 0x96: expected "Œ", actual "–"
+ActualText 0x97: expected "Š", actual "—"
+ActualText 0x98: expected "Ÿ", actual "˜"
+ActualText 0x99: expected "Ž", actual "™"
+ActualText 0x9A: expected "ı", actual "š"
+ActualText 0x9B: expected "ł", actual "›"
+ActualText 0x9D: expected "š", actual "\u{9d}"
+ActualText 0xA0: expected "€", actual "\u{a0}"
+
+---- bookmark_titles_match_pdfdocencoding_normative_table stdout ----
+bookmark: 232 defined positions, 38 mismatches
+
+thread 'bookmark_titles_match_pdfdocencoding_normative_table' (401) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:125:5:
+bookmark 0x18: expected "˘", actual "\u{18}"
+bookmark 0x19: expected "ˇ", actual "\u{19}"
+bookmark 0x1A: expected "ˆ", actual "\u{1a}"
+bookmark 0x1B: expected "˙", actual "\u{1b}"
+bookmark 0x1C: expected "˝", actual "\u{1c}"
+bookmark 0x1D: expected "˛", actual "\u{1d}"
+bookmark 0x1E: expected "˚", actual "\u{1e}"
+bookmark 0x1F: expected "˜", actual "\u{1f}"
+bookmark 0x80: expected "•", actual "€"
+bookmark 0x81: expected "†", actual "\u{81}"
+bookmark 0x82: expected "‡", actual "‚"
+bookmark 0x83: expected "…", actual "ƒ"
+bookmark 0x84: expected "—", actual "„"
+bookmark 0x85: expected "–", actual "…"
+bookmark 0x86: expected "ƒ", actual "†"
+bookmark 0x87: expected "⁄", actual "‡"
+bookmark 0x88: expected "‹", actual "ˆ"
+bookmark 0x89: expected "›", actual "‰"
+bookmark 0x8A: expected "−", actual "Š"
+bookmark 0x8B: expected "‰", actual "‹"
+bookmark 0x8C: expected "„", actual "Œ"
+bookmark 0x8D: expected "“", actual "\u{8d}"
+bookmark 0x8E: expected "”", actual "Ž"
+bookmark 0x8F: expected "‘", actual "\u{8f}"
+bookmark 0x90: expected "’", actual "\u{90}"
+bookmark 0x91: expected "‚", actual "‘"
+bookmark 0x92: expected "™", actual "’"
+bookmark 0x93: expected "ﬁ", actual "“"
+bookmark 0x94: expected "ﬂ", actual "”"
+bookmark 0x95: expected "Ł", actual "•"
+bookmark 0x96: expected "Œ", actual "–"
+bookmark 0x97: expected "Š", actual "—"
+bookmark 0x98: expected "Ÿ", actual "˜"
+bookmark 0x99: expected "Ž", actual "™"
+bookmark 0x9A: expected "ı", actual "š"
+bookmark 0x9B: expected "ł", actual "›"
+bookmark 0x9D: expected "š", actual "\u{9d}"
+bookmark 0xA0: expected "€", actual "\u{a0}"
+
+
+failures:
+    actualtext_matches_pdfdocencoding_normative_table
+    bookmark_titles_match_pdfdocencoding_normative_table
+    malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail
+    metadata_matches_pdfdocencoding_normative_table
+    stored_form_values_match_pdfdocencoding_normative_table
+    undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes
+
+test result: FAILED. 6 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_document_string_contract_test`

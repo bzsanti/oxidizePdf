@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Decode the complete PDF Standard, WinAnsi and MacExpert tables and select
   built-in Symbol/ZapfDingbats encodings. Preserve Differences/ToUnicode
   precedence and AFM widths; undefined codes recover visibly (#668).
+- Decode document text strings with PDFDocEncoding and recognize UTF-8 BOMs
+  under the effective PDF 2.0 version. Preserve valid content around malformed
+  Unicode and apply the same rules to metadata, ActualText, outlines, form field
+  names and signature text fields (#667).
 
 - Legacy incremental append, replacement and overlay retain catalog/page metadata,
   leaf pages, inherited resources and stable page references; encrypted inputs are

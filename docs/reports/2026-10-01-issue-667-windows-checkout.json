@@ -1,0 +1,14 @@
+{
+  "issue": 667,
+  "pr": 669,
+  "cause": "Git checkout with core.autocrlf=true converts the pinned TSV to CRLF without explicit eol attribute.",
+  "LF_sha256": "6b1815a8a28ba37c0f7d71cc9a6ab0cb18af8b6ba6fc2fed49e3b9291343a4ac",
+  "CRLF_sha256": "99da279bcdf13fa0cd2a0ce6a6cd4e3f4432ed719ee35f4a889ebbb64cc128c2",
+  "windows_observed_sha256": "99da279bcdf13fa0cd2a0ce6a6cd4e3f4432ed719ee35f4a889ebbb64cc128c2",
+  "checkout_with_autocrlf_true": {
+    "before": "99da279bcdf13fa0cd2a0ce6a6cd4e3f4432ed719ee35f4a889ebbb64cc128c2",
+    "after": "6b1815a8a28ba37c0f7d71cc9a6ab0cb18af8b6ba6fc2fed49e3b9291343a4ac",
+    "after_crlf_count": 0
+  },
+  "contract_validation": "cargo test --locked -p oxidize-pdf --test text_document_string_contract_test --test text_pdf20_string_contract_test: 30 passed, 0 failed"
+}

@@ -25,10 +25,10 @@ La batería ampliada selecciona todos los targets de integración versionados
 con internal-testing, además de la biblioteca. Excluye los tests no versionados
 de otros bloques pendientes de #666. El helper local preexistente solo añade
 una función no utilizada por estos targets; no se mezcla en el commit.
-Resultado de integración: pendiente de finalizar; 343 suites terminadas sin
-fallos a última consulta. Doctests: 220 PASS/24 omitidos. Clippy y formato pasan.
-Se publica la corrección focalizada mientras continúa la ejecución ampliada;
-no se declara validación completa ni CI remota aprobada.
+Resultado de integración final: 375 targets y biblioteca, 9766 PASS,
+cero fallos, 47 omitidas; exit 0. Doctests: 220 PASS/24 omitidos.
+Clippy y formato pasan. La corrección está publicada como a8b595e; la nueva CI
+remota sigue en curso, sin fallos a última consulta.
 
 ## Hallazgos
 
@@ -53,7 +53,7 @@ FFI, unsafe o dependencias nuevas.
 ## Métricas
 
 Un archivo Rust revisado; dos hallazgos, fixture corregido y ampliación de
-validación en curso. Evidencia en 2026-10-01-pr-670-ci-fix-evidence/.
-Pendientes: integración ampliada, hook, publicación y nueva CI.
+validación completa con exit 0. Evidencia en 2026-10-01-pr-670-ci-fix-evidence/.
+Pendiente: nueva CI remota. Hook y publicación completados.
 
 Skill: [quality-review](/home/santi/.codex/skills/quality-review/SKILL.md).

@@ -111,9 +111,12 @@ fn resolve_acroform_fields(
         _ => Vec::new(),
     };
 
+    let version = reader
+        .effective_version()
+        .map_err(|e| PdfError::InvalidStructure(format!("read effective PDF version: {e}")))?;
     let mut out = HashMap::new();
     for (n, g) in field_refs {
-        collect_fields(reader, (n, g), "", &mut out, 0)?;
+        collect_fields(reader, (n, g), "", &mut out, 0, &version)?;
     }
     Ok(out)
 }
@@ -127,6 +130,7 @@ fn collect_fields(
     parent_prefix: &str,
     out: &mut HashMap<String, (u32, u16)>,
     depth: u8,
+    version: &crate::parser::header::PdfVersion,
 ) -> Result<()> {
     if depth >= MAX_FIELD_DEPTH {
         return Err(PdfError::InvalidStructure(
@@ -146,7 +150,7 @@ fn collect_fields(
     let partial = node
         .get("T")
         .and_then(|o| o.as_string())
-        .map(|s| s.to_text());
+        .map(|s| s.to_text_with_version(version));
 
     let full_name = match (&partial, parent_prefix.is_empty()) {
         (Some(t), true) => t.clone(),
@@ -181,7 +185,7 @@ fn collect_fields(
         }
     } else {
         for kid in kids {
-            collect_fields(reader, kid, &full_name, out, depth + 1)?;
+            collect_fields(reader, kid, &full_name, out, depth + 1, version)?;
         }
     }
     Ok(())

@@ -1,0 +1,96 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 13.89s
+     Running tests/issue_476_carriage_return_policy_test.rs (target/debug/deps/issue_476_carriage_return_policy_test-f87dc9182e6bc4b8)
+
+running 6 tests
+test extraction_can_replace_carriage_returns_with_spaces ... ok
+test extraction_removes_standalone_cr_and_normalizes_crlf_by_default ... ok
+test cmap_decoding_applies_the_selected_carriage_return_policy ... ok
+test unassigned_winansi_codes_do_not_become_unicode_line_endings ... ok
+test extraction_can_remove_carriage_returns ... ok
+test extraction_can_preserve_standalone_cr_and_normalize_crlf ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_document_string_contract_test.rs (target/debug/deps/text_document_string_contract_test-4bb9f5f742bc9015)
+
+running 12 tests
+test malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail ... ok
+test document_oracle_preserves_defined_and_undefined_positions ... ok
+test empty_document_strings_remain_empty ... ok
+test empty_bookmarks_and_form_values_remain_empty ... ok
+test undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes ... ok
+test metadata_utf16be_bom_sequences_are_exact ... ok
+test actualtext_utf16be_bom_sequences_are_exact ... ok
+test bookmarks_and_form_values_preserve_utf16be_sequences ... ok
+test metadata_matches_pdfdocencoding_normative_table ... ok
+test stored_form_values_match_pdfdocencoding_normative_table ... ok
+test actualtext_matches_pdfdocencoding_normative_table ... ok
+test bookmark_titles_match_pdfdocencoding_normative_table ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-8b823f1d04deae6c)
+
+running 24 tests
+test builtin_font_selection_does_not_match_unrelated_names_or_type3 ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test builtin_symbol_subset_names_and_explicit_tounicode_are_distinct ... ok
+test builtin_decoding_preserves_afm_widths_and_following_origins ... ok
+test differences_restart_the_code_counter_and_preserve_unmodified_codes ... ok
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test differences_override_the_base_encoding ... ok
+test builtin_symbol_and_zapf_keep_encoding_and_differences_precedence ... ok
+test custom_type3_names_keep_existing_byte_recovery_and_mapping_precedence ... ok
+test macroman_overrides_cover_undefined_and_currency_codes ... ok
+test tounicode_overrides_builtin_symbol_and_dingbats ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test unknown_intrinsic_type1_encoding_keeps_existing_recovery ... ok
+test unresolved_differences_replace_instead_of_restoring_the_base_glyph ... ok
+test macroman_undefined_codes_preserve_neighbors_with_replacement ... ok
+test zapf_differences_resolve_adobe_names_before_builtin_codes ... ok
+test symbol_builtin_encoding_matches_independent_table ... ok
+test standard_encoding_matches_independent_table ... ok
+test macroman_encoding_matches_independent_table ... ok
+test winansi_encoding_matches_independent_table ... ok
+test zapfdingbats_builtin_encoding_matches_independent_table ... ok
+test all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding ... ok
+test simple_encoding_undefined_codes_recover_without_losing_neighbors ... ok
+test latin_standard14_fonts_use_complete_explicit_pdf_encodings_in_both_modes ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.92s
+
+     Running tests/text_expert_contract_test.rs (target/debug/deps/text_expert_contract_test-61ced53d1b848098)
+
+running 5 tests
+test expert_program_and_independent_name_inventory_are_pinned ... ok
+test macexpert_unambiguous_glyph_names_decode_without_tounicode ... ok
+test tounicode_can_choose_non_pua_text_for_expert_glyphs ... ok
+test all_expert_codes_preserve_their_explicit_tounicode_values ... ok
+test all_macexpert_codes_follow_agl_or_explicit_undefined_recovery ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+
+     Running tests/text_pdf20_string_contract_test.rs (target/debug/deps/text_pdf20_string_contract_test-c18f4e3693b98cf4)
+
+running 18 tests
+test indirect_catalog_version_is_resolved ... ok
+test catalog_version_upgrade_enables_utf8_and_downgrade_does_not_disable_it ... ok
+test pdf17_does_not_silently_apply_pdf20_utf8_semantics ... ok
+test inline_utf8_actualtext_overrides_structure_in_page_and_form ... ok
+test signature_metadata_uses_pdf20_text_strings ... ok
+test malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix ... ok
+test malformed_catalog_version_names_do_not_enable_utf8 ... ok
+test pdf20_metadata_utf8_bom_decodes_exact_sequences ... ok
+test stored_pdf20_form_value_can_be_decoded_with_effective_version ... ok
+test indirect_version_resolution_is_bounded_and_rejects_cycles ... ok
+test pdf20_utf8_without_bom_remains_pdfdocencoding ... ok
+test pdf20_outline_title_uses_effective_document_version ... ok
+test structure_actualtext_on_page_uses_catalog_version ... ok
+test structure_actualtext_in_form_uses_its_own_parent_tree_key ... ok
+test upgraded_catalog_and_named_actualtext_properties_share_version_context ... ok
+test utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding ... ok
+test pdf20_actualtext_utf8_bom_decodes_exact_sequences ... ok
+test utf8_named_field_remains_addressable_to_form_filler ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
