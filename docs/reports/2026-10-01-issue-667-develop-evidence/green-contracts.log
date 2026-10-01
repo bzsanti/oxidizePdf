@@ -1,0 +1,135 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 14.59s
+     Running tests/issue_459_literal_binary_string_test.rs (target/debug/deps/issue_459_literal_binary_string_test-6b8dc22181ff318d)
+
+running 5 tests
+test utf16be_metadata_decodes_through_the_same_boundary ... ok
+test pdfdoc_metadata_decodes_to_text_when_the_bytes_are_preserved ... ok
+test a_literal_string_reaches_the_object_model_as_the_bytes_the_file_holds ... ok
+test a_malformed_encryption_entry_is_reported_as_such_instead_of_as_a_wrong_password ... ok
+test an_encrypted_document_whose_u_entry_is_a_literal_string_unlocks_with_the_empty_password ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests/issue_648_tj_boundary_baseline_shift_test.rs (target/debug/deps/issue_648_tj_boundary_baseline_shift_test-68625f3ac669d081)
+
+running 11 tests
+test issue_648_baseline_shift_emits_space_at_moderate_gap ... ok
+test issue_648_subpixel_vertical_jitter_leaves_same_baseline_runs_welded ... ok
+test issue_648_baseline_shift_via_td_operator ... ok
+test issue_648_large_vertical_shift_still_emits_newline ... ok
+test issue_648_superscript_citation_following_word_stays_attached ... ok
+test issue_648_same_baseline_runs_retain_conservative_threshold ... ok
+test issue_648_superscript_with_baseline_shift_does_not_insert_artificial_space ... ok
+test rotation_preserves_baseline_shift ... ok
+test vertical_scale_preserves_baseline_shift ... ok
+test issue_648_table_cells_with_shifted_baselines_are_not_fused ... ok
+test shear_keeps_perpendicular_baseline_threshold ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_649_tj_zero_width_kerning_test.rs (target/debug/deps/issue_649_tj_zero_width_kerning_test-0313173623056b0d)
+
+running 16 tests
+test ordinary_word_gaps_are_not_tracking ... ok
+test tj_ordinary_intra_word_kerning_unaffected ... ok
+test leading_and_trailing_kerns_do_not_establish_tracking ... ok
+test one_transition_cannot_establish_tracking ... ok
+test char_spacing_does_not_get_discounted_as_missing_advance ... ok
+test nonuniform_zero_width_advances_remain_conservative ... ok
+test positive_declared_widths_do_not_activate_tracking ... ok
+test tj_word_breaks_as_negative_kerns_without_explicit_spaces_still_split_words ... ok
+test tj_zero_width_kerning_with_explicit_spaces_does_not_split_characters ... ok
+test tj_zero_width_kerning_phone_number_formatting ... ok
+test tj_punctuation_and_symbols_in_tracking_sequence ... ok
+test word_spacing_does_not_get_discounted_as_missing_advance ... ok
+test type0_tracking_uses_cids_not_unicode_or_source_codes ... ok
+test zero_width_single_word_without_literal_space ... ok
+test type0_identity_h_zero_widths_without_literal_space ... ok
+test zero_width_tracking_preserves_larger_word_gap ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_662_macroman_extraction_test.rs (target/debug/deps/issue_662_macroman_extraction_test-882889a8962482ce)
+
+running 3 tests
+test test_issue_662_accented_characters_in_macroman_upper_range ... ok
+test test_issue_662_special_symbols_in_macroman_upper_range ... ok
+test test_issue_662_ordinal_indicators_extracted_correctly ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_662_pdf_macroman_contract_test.rs (target/debug/deps/issue_662_pdf_macroman_contract_test-fcd37259913d5400)
+
+running 2 tests
+test explicit_mappings_override_currency_and_undefined_codes ... ok
+test all_pdf_macroman_positions_match_independent_reference ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+
+     Running tests/issue_663_lenient_tracking_fallback_test.rs (target/debug/deps/issue_663_lenient_tracking_fallback_test-82f91c7fd8e717db)
+
+running 3 tests
+test test_issue_663_corrupt_descendant_fonts_non_full_em_kerns_do_not_infer ... ok
+test test_issue_663_corrupt_descendant_fonts_with_explicit_spaces_infers_tracking ... ok
+test test_issue_663_corrupt_descendant_fonts_without_explicit_spaces_does_not_infer ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/issue_663_tracking_guards_test.rs (target/debug/deps/issue_663_tracking_guards_test-9972973d9b53af32)
+
+running 10 tests
+test missing_space_guard_is_exercised_by_two_full_em_adjustments ... ok
+test a_space_inside_a_unicode_sequence_is_not_a_space_glyph ... ok
+test multiple_source_glyphs_cannot_certify_per_glyph_tracking ... ok
+test larger_outlier_remains_a_word_gap_during_recovery ... ok
+test resolved_descendant_without_widths_does_not_enable_recovery ... ok
+test truncated_identity_codes_cannot_certify_tracking ... ok
+test vertical_encoding_does_not_enable_horizontal_recovery ... ok
+test damaged_type0_recovery_covers_full_em_tolerance_and_mode ... ok
+test damaged_type0_rejects_non_em_baselines_and_explicit_spacing ... ok
+test simple_fonts_with_unknown_widths_keep_word_boundaries ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_document_string_contract_test.rs (target/debug/deps/text_document_string_contract_test-4bb9f5f742bc9015)
+
+running 12 tests
+test document_oracle_preserves_defined_and_undefined_positions ... ok
+test empty_document_strings_remain_empty ... ok
+test malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail ... ok
+test empty_bookmarks_and_form_values_remain_empty ... ok
+test actualtext_utf16be_bom_sequences_are_exact ... ok
+test metadata_utf16be_bom_sequences_are_exact ... ok
+test undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes ... ok
+test bookmarks_and_form_values_preserve_utf16be_sequences ... ok
+test stored_form_values_match_pdfdocencoding_normative_table ... ok
+test metadata_matches_pdfdocencoding_normative_table ... ok
+test actualtext_matches_pdfdocencoding_normative_table ... ok
+test bookmark_titles_match_pdfdocencoding_normative_table ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/text_pdf20_string_contract_test.rs (target/debug/deps/text_pdf20_string_contract_test-c18f4e3693b98cf4)
+
+running 18 tests
+test indirect_catalog_version_is_resolved ... ok
+test pdf17_does_not_silently_apply_pdf20_utf8_semantics ... ok
+test catalog_version_upgrade_enables_utf8_and_downgrade_does_not_disable_it ... ok
+test malformed_catalog_version_names_do_not_enable_utf8 ... ok
+test inline_utf8_actualtext_overrides_structure_in_page_and_form ... ok
+test signature_metadata_uses_pdf20_text_strings ... ok
+test stored_pdf20_form_value_can_be_decoded_with_effective_version ... ok
+test pdf20_utf8_without_bom_remains_pdfdocencoding ... ok
+test pdf20_metadata_utf8_bom_decodes_exact_sequences ... ok
+test malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix ... ok
+test structure_actualtext_on_page_uses_catalog_version ... ok
+test structure_actualtext_in_form_uses_its_own_parent_tree_key ... ok
+test pdf20_outline_title_uses_effective_document_version ... ok
+test pdf20_actualtext_utf8_bom_decodes_exact_sequences ... ok
+test upgraded_catalog_and_named_actualtext_properties_share_version_context ... ok
+test indirect_version_resolution_is_bounded_and_rejects_cycles ... ok
+test utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding ... ok
+test utf8_named_field_remains_addressable_to_form_filler ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s

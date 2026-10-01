@@ -216,10 +216,10 @@ fn a_malformed_encryption_entry_is_reported_as_such_instead_of_as_a_wrong_passwo
 }
 
 #[test]
-fn winansi_metadata_still_decodes_to_text_when_the_bytes_are_preserved() {
-    // "Título — año" in WinAnsi: the bytes a producer writes without a UTF-16
-    // BOM. The em dash at 0x97 is why this is WinAnsi and not ISO-8859-1, which
-    // has a C1 control character in that slot.
+fn pdfdoc_metadata_decodes_to_text_when_the_bytes_are_preserved() {
+    // PDFDocEncoding Table D.2 assigns 0x97 to Scaron, not the WinAnsi
+    // em dash. Preserve the original fixture bytes and assert their normative
+    // document-string interpretation (#667).
     let latin1: Vec<u8> = vec![
         b'T', 0xED, b't', b'u', b'l', b'o', b' ', 0x97, b' ', b'a', 0xF1, b'o',
     ];
@@ -236,7 +236,7 @@ fn winansi_metadata_still_decodes_to_text_when_the_bytes_are_preserved() {
 
     assert_eq!(
         metadata.title.as_deref(),
-        Some("Título — año"),
+        Some("Título Š año"),
         "a text string without a BOM is PDFDocEncoding: preserving raw bytes must not lose the text"
     );
 

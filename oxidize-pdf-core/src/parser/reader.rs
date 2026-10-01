@@ -2684,28 +2684,62 @@ impl<R: Read + Seek> PdfReader<R> {
         }
     }
 
+    /// Effective PDF version: the greater of the header and catalog /Version.
+    ///
+    /// Catalog versions can raise, but cannot lower, the header version.
+    /// An invalid catalog version name is ignored. Resolving the catalog can
+    /// fail, so unlike [`Self::version`] this method returns a result.
+    pub fn effective_version(&mut self) -> ParseResult<super::header::PdfVersion> {
+        let mut version = self.version().clone();
+        let mut value = self.catalog()?.get("Version").cloned();
+        let mut visited = Vec::new();
+        while let Some(PdfObject::Reference(id, generation)) = value {
+            if visited.contains(&(id, generation)) {
+                return Err(ParseError::CircularReference);
+            }
+            if visited.len() == 64 {
+                return Err(ParseError::SyntaxError {
+                    position: 0,
+                    message: "catalog Version reference chain exceeds 64 objects".into(),
+                });
+            }
+            visited.push((id, generation));
+            value = Some(self.get_object(id, generation)?.clone());
+        }
+        if let Some(name) = value.as_ref().and_then(|v| v.as_name()) {
+            if let [major @ b'0'..=b'9', b'.', minor @ b'0'..=b'9'] = name.0.as_bytes() {
+                let (major, minor) = (major - b'0', minor - b'0');
+                if (major, minor) > (version.major, version.minor) {
+                    version = super::header::PdfVersion::new(major, minor);
+                }
+            }
+        }
+        Ok(version)
+    }
+
     /// Get metadata from the document
     pub fn metadata(&mut self) -> ParseResult<DocumentMetadata> {
         let mut metadata = DocumentMetadata::default();
+        let version = self.effective_version()?;
 
         if let Some(info_dict) = self.info()? {
             if let Some(title) = info_dict.get("Title").and_then(|o| o.as_string()) {
-                metadata.title = Some(title.to_text());
+                metadata.title = Some(title.to_text_with_version(&version));
             }
             if let Some(author) = info_dict.get("Author").and_then(|o| o.as_string()) {
-                metadata.author = Some(author.to_text());
+                metadata.author = Some(author.to_text_with_version(&version));
             }
             if let Some(subject) = info_dict.get("Subject").and_then(|o| o.as_string()) {
-                metadata.subject = Some(subject.to_text());
+                metadata.subject = Some(subject.to_text_with_version(&version));
             }
             if let Some(keywords) = info_dict.get("Keywords").and_then(|o| o.as_string()) {
-                metadata.keywords = Some(keywords.to_text());
+                metadata.keywords = Some(keywords.to_text_with_version(&version));
             }
             if let Some(creator) = info_dict.get("Creator").and_then(|o| o.as_string()) {
-                metadata.creator = Some(creator.to_text());
+                metadata.creator = Some(creator.to_text_with_version(&version));
             }
             if let Some(producer) = info_dict.get("Producer").and_then(|o| o.as_string()) {
-                metadata.producer = Some(producer.to_text());
+                metadata.producer = Some(producer.to_text_with_version(&version));
             }
         }
 
