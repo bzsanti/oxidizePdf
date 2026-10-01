@@ -9,9 +9,11 @@
 - Validación: 27 contratos + 46 regresiones pasan; tres mutaciones detectadas y restauración 28/28; biblioteca 6776/0/3; mínimo 27/27 y SPI 41/41; QR 97/90 tests, Security sin alertas. Corpus 72/72, pero orden compara 1054 PDFs frente a 1058 en base: diagnóstico por documento en curso antes de publicar.
 - Diagnóstico resuelto con TDD: recuperación personalizada Type3/intrínseca conservada; dos RED por aserción y 29 contratos + 46 regresiones GREEN. MuPDF 1.26.10 confirma los cuatro Type3. QR actualizado 97/92 tests, Security sin alertas; biblioteca 6776/0/3, mínimo 29 y SPI 43 pasan.
 - Corpus final 72/72: recuperados 1058 comparados, 594837 palabras, orden plano 110427 (0.185642), reading-order 94887 (0.159518), transposiciones iguales a base; fusiones 278/211815. Sin cambios de umbrales. Detalle de 16 PDFs y avisos MuPDF en corpus-diagnosis.json.
-- Siguiente acción: publicar rama y PR en borrador tras hook; comprobar CI. Corregir por separado los atributos de checkout de #667/#669.
+- Publicación: cbd579660c708f95fe20273c73442bc481d252ba en origin/fix/issue-668-simple-encodings; PR #670 abierto en borrador contra develop, https://github.com/bzsanti/oxidizePdf/pull/670. Hook completo aprobado.
+- CI #670: Ubuntu falla en tres pruebas #476 que trataban bytes WinAnsi indefinidos como CR/LF. Reproducido localmente (1 PASS/3 FAIL). Fixture actualizado con ToUnicode explícito, aserciones previas conservadas; añadidos NormalizeLineEnding y control WinAnsi sin mapeo. Seis pruebas pasan; integración completa de targets versionados en curso.
+- Validación del fixture: 6/6 pruebas CR, 29/29 contratos, 220 doctests (24 omitidos), Clippy/formato y QR 93/6 tests sin alertas de seguridad. Batería ampliada aún en curso, 343 suites terminadas sin fallos a última consulta; no equivale a ejecución completa.
+- Siguiente acción: publicar ya el arreglo focalizado en #670; registrar por separado resultado final de integración y comprobar nueva CI.
 - Restricciones: sin /tmp ni worktrees; no cambiar codecs del sistema operativo, oráculos, umbrales ni solución MacRoman de #664.
-
 
 ## Resolución #641 y desarrollo #642 — 2026-09-29
 
