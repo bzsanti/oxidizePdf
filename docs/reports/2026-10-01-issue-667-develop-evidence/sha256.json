@@ -1,0 +1,14 @@
+{
+  "clippy-all.log": "aded74a6143a022acc9896360ba14616ac7e9773dcf19651a4551aa6eff542f6",
+  "clippy.log": "0c35c9a41bc86ce0e7925e196e0e0365d895f00b8fc7648c679e97f19ddaf34d",
+  "corpus.log": "28da1768769c03410b8bfdb070ae4c38b4cd2129d966463947eb1f68b48bd5b1",
+  "format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "green-contracts.log": "76d6a7ad8c9dccafaac089c2239d75ae4f6b1a2da0864b2788e5a0589001d170",
+  "library.log": "06f2b4075f77820faa54c503a0b1e75aa8d7b1b174b4bd7492ca3f297daf6de5",
+  "minimal-config.log": "14430332f155ee286e0c859579e2755c8afccad3aeab7002f80916b9c25cd31a",
+  "quality-security.log": "21fa8c66849f9aebcaf0bef6e3485c871d4441f201b6ebc1686fd9cb487358cc",
+  "red-document.log": "6a45875fb5ba5a78b02b692a75ba6465e9df73e621ea73d621ffab11f61990a5",
+  "red-pdf20.log": "dabdc594fb94ddac35c9df91c92dfe989167b543e47d73b8f829b26e83493c2e",
+  "source.json": "a96585acac097a9b3f5ca03bb66d1919f6b48083a64039875f9b5f0b6db32a85",
+  "spi-config.log": "6e537bf3f8ba9cef2ecdb592cb520a077907db62ccbf3984b19a4d30f3d0d11a"
+}

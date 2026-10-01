@@ -1,0 +1,16 @@
+{
+  "base": "4a2c38a8c9b4e0629a9027b3ba6e89c1d85b3b3a",
+  "branch": "fix/issue-667-document-strings",
+  "files": {
+    "oxidize-pdf-core/src/parser/document.rs": "6e9d322f9591782462a42d2720d2dbfdf4017a6839e351aa7c8151bd4ee07506",
+    "oxidize-pdf-core/src/parser/objects.rs": "f26e4d6cb22f7c0d146ff186208f680adc0e5b15bd9346479993ec2c71d654d5",
+    "oxidize-pdf-core/src/parser/outline.rs": "1a439f54621b6780d99ed3cad7aef89423723097398b314bf5bb43b038ca6c63",
+    "oxidize-pdf-core/src/parser/reader.rs": "25af4f595989e48149e70742db89e69367b958d58b968448fd8cc39781116665",
+    "oxidize-pdf-core/src/signatures/detection.rs": "b32810deca36efb7357a2120c712801fac1a35e82ea9167942f384c3f8457ad8",
+    "oxidize-pdf-core/src/text/extraction.rs": "e1ec4b4faff616ae1c7f7e336f8e74a9bc4652b153e9bc3b749d5161c21199a8",
+    "oxidize-pdf-core/src/writer/incremental_form_fill.rs": "c5fdb3fe61c79c727c6c89e93ba1743772f87497850579af9062eae1b56a42c7",
+    "oxidize-pdf-core/tests/text_document_string_contract_test.rs": "f3c20923439b4179cbfa805dac27a1dae9cf32c8b5554e0138af855d9cca8caa",
+    "oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs": "cfa0d72d4799c3610215d209ef71fe3077c7629b112cf3d8336c3d0d43a675d6",
+    "oxidize-pdf-core/tests/issue_459_literal_binary_string_test.rs": "94b837a0d14c1d34ade3f89251bccf89e357247ab522de98bfdccc819f5a6189"
+  }
+}

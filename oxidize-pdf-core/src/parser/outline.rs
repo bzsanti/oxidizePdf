@@ -59,7 +59,9 @@ pub(crate) fn read_outline<R: Read + Seek>(
         .get("Last")
         .ok_or_else(|| malformed("/Outlines has First without Last"))
         .and_then(|value| require_reference(value, "/Outlines/Last"))?;
+    let text_string_version = reader.effective_version()?;
     let mut parser = OutlineParser {
+        text_string_version,
         reader,
         pages,
         named,
@@ -74,6 +76,7 @@ pub(crate) fn read_outline<R: Read + Seek>(
 }
 
 struct OutlineParser<'a, R: Read + Seek> {
+    text_string_version: super::header::PdfVersion,
     reader: &'a mut PdfReader<R>,
     pages: &'a HashMap<ObjectRef, u32>,
     named: HashMap<Vec<u8>, PdfObject>,
@@ -127,7 +130,7 @@ impl<R: Read + Seek> OutlineParser<'_, R> {
                 .resolve_optional(dictionary.get("Title"))?
                 .as_ref()
                 .and_then(PdfObject::as_string)
-                .map(|title| title.to_text())
+                .map(|title| title.to_text_with_version(&self.text_string_version))
                 .ok_or_else(|| malformed("outline item has no string Title"))?;
             let destination = self.read_item_destination(&dictionary, path)?;
             let flags = self

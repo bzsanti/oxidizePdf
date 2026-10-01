@@ -1195,13 +1195,12 @@ impl PdfString {
     /// Decode as a PDF *text string* (ISO 32000-1 §7.9.2.2).
     ///
     /// A text string is either UTF-16BE introduced by a `0xFE 0xFF` byte order
-    /// mark, or PDFDocEncoding. Without a BOM this decodes through the WinAnsi
-    /// (Windows-1252) table, which agrees with PDFDocEncoding across the Latin
-    /// letters and diverges only where few real documents go: PDFDocEncoding
-    /// puts typographic punctuation in `0x80..=0x9F` in a different order than
-    /// WinAnsi does, and maps `0xA0` to `€` where WinAnsi has a no-break space.
-    /// Producers that need those characters emit the BOM. Swapping in the full
-    /// PDFDocEncoding table would only change the reading of those slots.
+    /// mark, or PDFDocEncoding (ISO 32000-1 Annex D, Table D.2).
+    /// Undefined PDFDocEncoding bytes and malformed UTF-16 are replaced with
+    /// U+FFFD; valid units are preserved, including after malformed input.
+    /// This infallible conversion is not a Unicode validity check. It applies
+    /// PDF 1.x text-string semantics and does not infer UTF-8 without version
+    /// context.
     ///
     /// Use this for entries a PDF defines as text — `/Title`, `/Author`,
     /// `/ActualText`. Entries that are binary — `/U`, `/O`, `/Perms`, `/ID` —
@@ -1224,6 +1223,16 @@ impl PdfString {
         decode_text_string(&self.0)
     }
 
+    /// Decode a document text string using the effective PDF version.
+    ///
+    /// PDF 2.0 adds UTF-8 identified by EF BB BF. Without that BOM, this uses
+    /// the same PDFDocEncoding/UTF-16BE rules as [`Self::to_text`]. Malformed
+    /// UTF-8 subsequences become U+FFFD; valid suffixes are preserved. This is
+    /// not appropriate for binary strings or font character codes in Tj/TJ.
+    pub fn to_text_with_version(&self, version: &super::header::PdfVersion) -> String {
+        decode_text_string_with_version(&self.0, version)
+    }
+
     /// Get as bytes
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
@@ -1240,12 +1249,48 @@ pub(crate) fn decode_text_string(bytes: &[u8]) -> String {
             .chunks_exact(2)
             .map(|pair| u16::from_be_bytes([pair[0], pair[1]]))
             .collect();
-        String::from_utf16_lossy(&code_units)
+        let mut text = String::from_utf16_lossy(&code_units);
+        if (bytes.len() - 2) % 2 != 0 {
+            text.push('\u{fffd}');
+        }
+        text
     } else {
-        bytes
-            .iter()
-            .map(|&byte| crate::text::encoding::winansi_decode_char(byte))
-            .collect()
+        bytes.iter().map(|&byte| pdfdoc_decode_char(byte)).collect()
+    }
+}
+
+pub(crate) fn decode_text_string_with_version(
+    bytes: &[u8],
+    version: &super::header::PdfVersion,
+) -> String {
+    if version.major >= 2 {
+        if let Some(utf8) = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]) {
+            return String::from_utf8_lossy(utf8).into_owned();
+        }
+    }
+    decode_text_string(bytes)
+}
+
+/// PDFDocEncoding is a document-string encoding, distinct from WinAnsi font
+/// encoding. Values follow ISO 32000-1:2008 Annex D, Table D.2.
+fn pdfdoc_decode_char(byte: u8) -> char {
+    const ACCENTS: [char; 8] = [
+        '\u{02d8}', '\u{02c7}', '\u{02c6}', '\u{02d9}', '\u{02dd}', '\u{02db}', '\u{02da}',
+        '\u{02dc}',
+    ];
+    const SPECIAL: [char; 31] = [
+        '\u{2022}', '\u{2020}', '\u{2021}', '\u{2026}', '\u{2014}', '\u{2013}', '\u{0192}',
+        '\u{2044}', '\u{2039}', '\u{203a}', '\u{2212}', '\u{2030}', '\u{201e}', '\u{201c}',
+        '\u{201d}', '\u{2018}', '\u{2019}', '\u{201a}', '\u{2122}', '\u{fb01}', '\u{fb02}',
+        '\u{0141}', '\u{0152}', '\u{0160}', '\u{0178}', '\u{017d}', '\u{0131}', '\u{0142}',
+        '\u{0153}', '\u{0161}', '\u{017e}',
+    ];
+    match byte {
+        0x09 | 0x0a | 0x0d | 0x20..=0x7e | 0xa1..=0xac | 0xae..=0xff => char::from(byte),
+        0x18..=0x1f => ACCENTS[usize::from(byte - 0x18)],
+        0x80..=0x9e => SPECIAL[usize::from(byte - 0x80)],
+        0xa0 => '\u{20ac}',
+        _ => '\u{fffd}',
     }
 }
 

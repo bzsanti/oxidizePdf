@@ -1,3 +1,15 @@
+## #667 sobre develop integrado — 2026-10-01
+
+- Issue: #667 — fix(parser): decode PDF document strings with PDFDocEncoding and version-scoped UTF-8 — https://github.com/bzsanti/oxidizePdf/issues/667
+- Estado: `[-]` TDD en curso en la rama fix/issue-667-document-strings del repositorio actual, base develop 4a2c38a. Prioridad P1. Responsable Codex.
+- Alcance: adaptar el parche #667 previamente revisado a develop 4a2c38a, preservando las soluciones integradas de Omer; PDFDocEncoding, UTF-16 y UTF-8 PDF 2.0 en consumidores documentales.
+- Criterio de cierre: 30 contratos documentales pasan; regresiones de #664/#665 y consumidores conservadas; revisión de calidad/seguridad y validación de configuraciones/corpus/CI proporcionada.
+- Última validación: GitHub confirma #667 OPEN; implementación alternativa anterior separada, no trasladar #668 ni reemplazos de MacRoman/tracking.
+- Última ejecución TDD en el repositorio actual: PDFDocEncoding RED 6 PASS/6 FAIL; PDF 2.0 RED de compilación por APIs ausentes. Parche aislado de #667 aplicado sin conflictos sobre 4a2c38a; GREEN y regresiones de #664/#665 en ejecución. Evidencia: docs/reports/2026-10-01-issue-667-develop-evidence/.
+- Validación final local: 30 contratos y 50 regresiones pasan; biblioteca 6776/0/3; compression mínima 30/30; SPI+semantic 44/44; corpus diferencial 72/72, métricas idénticas a la base (278/211815 fusiones, orden plano 0.185653 y reading-order 0.159528), umbrales intactos. Clippy completo/formato/diff-check pasan; Kripteia 94/340 tests/10 archivos, Security sin alertas.
+- Siguiente acción: commit limitado a #667, publicar rama y abrir PR en borrador; CI remota e integración pendientes. No cerrar #667/#666 por el GREEN local.
+- Restricciones: no usar /tmp ni worktrees. Restos locales obsoletos de #637 eliminados por instrucción del usuario, sin stash nuevo. Conservar tablas/oráculos; ninguna recalibración del corpus ni cierre de #666 por este bloque.
+
 ## Resolución #641 y desarrollo #642 — 2026-09-29
 
 - Issue: #641 — docs(signatures): clarify basic support and keep PAdES outside library scope — https://github.com/bzsanti/oxidizePdf/issues/641
