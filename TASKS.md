@@ -851,3 +851,14 @@
 - Closure: focused contracts, review and CI approved, integration verified; do not close the issue on local validation alone.
 - Next action: append this commit to the existing PR branch without rewriting its history; check remote CI before integration.
 - Constraints: no changes from #667/#668 or the general #666 implementation; no merge/release in this follow-up.
+
+## PR #665 follow-up — 2026-10-01
+
+- Issue: #663 — enhancement(text): fallback heuristic for TJ tracking inference in lenient mode when DescendantFonts cannot be resolved — https://github.com/bzsanti/oxidizePdf/issues/663
+- Status: local implementation validated; remote CI/integration pending. Priority P1. Owner: Codex / maintenance.
+- Original contribution: Omer Shtivi, c7031f7645d947de03264485c8e38c4452feebe3; retained unchanged as parent history.
+- Scope: Preserve GlyphZeroWidthStatus and the original inference flow; restrict unknown-metric recovery by mode, font type, descendant, source code and ToUnicode evidence.
+- Validation: 40 focused tests; 6776 library tests pass, 3 pre-existing ignored; Clippy and formatting pass. Independent RED recorded against the original PR; quality/security review complete within this diff.
+- Closure: focused contracts, review and CI approved, integration verified; do not close the issue on local validation alone.
+- Next action: append this commit to the existing PR branch without rewriting its history; check remote CI before integration.
+- Constraints: no changes from #667/#668 or the general #666 implementation; no merge/release in this follow-up.

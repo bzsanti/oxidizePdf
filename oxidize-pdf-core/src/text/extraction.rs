@@ -1028,8 +1028,15 @@ impl TextExtractor {
     /// two adjustments and a strict majority must match the smallest advance
     /// within 0.05 em; larger outliers remain potential word gaps. Leading or
     /// trailing kerns, explicit Tc/Tw, and ambiguous/nonuniform advances retain
-    /// the conservative rule. No extra Unicode decoding or sorting is needed.
-    fn detect_tj_uniform_tracking(&self, array: &[TextElement], state: &TextState) -> Option<f64> {
+    /// the conservative rule. Non-strict recovery for unresolved horizontal
+    /// Type0 descendants additionally requires complete ToUnicode and a dedicated
+    /// space glyph; it does not certify missing metrics as zero widths.
+    fn detect_tj_uniform_tracking(
+        &self,
+        array: &[TextElement],
+        state: &TextState,
+        allow_damaged_type0_recovery: bool,
+    ) -> Option<f64> {
         if array.len() < 5
             || array.len() % 2 == 0
             || state.char_space != 0.0
@@ -1042,11 +1049,30 @@ impl TextExtractor {
         }
         let font = self.font_cache.get(state.font_name.as_ref()?)?;
         let mut baseline = f64::INFINITY;
+        let mut all_explicit_zero = true;
         for (index, item) in array.iter().enumerate() {
             match item {
                 TextElement::Text(codes) if index % 2 == 0 => {
-                    if !is_explicit_zero_width_glyph(codes, font) {
-                        return None;
+                    match glyph_zero_width_status(codes, font) {
+                        GlyphZeroWidthStatus::ExplicitZero => {}
+                        GlyphZeroWidthStatus::ExplicitNonZero => return None,
+                        GlyphZeroWidthStatus::UnknownMetrics => {
+                            if !allow_damaged_type0_recovery
+                                || font.font_type != "Type0"
+                                || font.descendant_font.is_some()
+                                || cids_for_codes(codes, font)?.len() != 1
+                            {
+                                return None;
+                            }
+                            // Recovery requires a complete, authoritative mapping
+                            // for each source glyph, including Unicode sequences.
+                            let map = font.to_unicode.as_ref()?;
+                            let decoded = map.to_unicode(&map.map(codes)?)?;
+                            if decoded.is_empty() || decoded.contains('\u{FFFD}') {
+                                return None;
+                            }
+                            all_explicit_zero = false;
+                        }
                     }
                 }
                 TextElement::Spacing(adjustment) if index % 2 == 1 => {
@@ -1057,6 +1083,23 @@ impl TextExtractor {
                     baseline = baseline.min(advance);
                 }
                 _ => return None,
+            }
+        }
+        // When font metrics are unresolvable (e.g. malformed or missing /DescendantFonts
+        // in Type0 fonts), allow tracking inference only when the array explicitly marks
+        // word boundaries with space characters and the advance matches a full-em glyph
+        // advance (~1000 units, issue #663).
+        if !all_explicit_zero {
+            let has_explicit_space = array.iter().any(|item| match item {
+                TextElement::Text(bytes) => font
+                    .to_unicode
+                    .as_ref()
+                    .and_then(|map| map.map(bytes).and_then(|mapped| map.to_unicode(&mapped)))
+                    .is_some_and(|text| text == " "),
+                _ => false,
+            });
+            if !has_explicit_space || !(0.85..=1.15).contains(&baseline) {
+                return None;
             }
         }
         let matching = array
@@ -1513,6 +1556,7 @@ impl TextExtractor {
         page_index: u32,
         depth: u8,
     ) -> ParseResult<OpRunState> {
+        let allow_damaged_type0_recovery = !document.options().strict_mode;
         let OpRunState {
             mut state,
             mut in_text_object,
@@ -1767,7 +1811,11 @@ impl TextExtractor {
                         // (issue #649), where zero-advance glyphs have their horizontal advance
                         // encoded via uniform negative kern numbers in TJ.
                         let tracking_baseline_em = self
-                            .detect_tj_uniform_tracking(&array, &state)
+                            .detect_tj_uniform_tracking(
+                                &array,
+                                &state,
+                                allow_damaged_type0_recovery,
+                            )
                             .unwrap_or(0.0);
 
                         // True until this `TJ` array draws its first glyph. Only
@@ -4478,42 +4526,57 @@ fn cids_for_codes<'a>(codes: &'a [u8], font: &FontInfo) -> Option<Vec<(&'a [u8],
 
 /// Certify one horizontal source glyph with a declared zero advance. Do not
 /// turn missing widths, fallback metrics or decoded Unicode into that evidence.
-fn is_explicit_zero_width_glyph(codes: &[u8], font: &FontInfo) -> bool {
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum GlyphZeroWidthStatus {
+    ExplicitZero,
+    ExplicitNonZero,
+    UnknownMetrics,
+}
+
+/// Certify one horizontal source glyph with a declared zero advance (issue #649).
+/// When metrics are unavailable or unresolvable (e.g. malformed Type0 /DescendantFonts),
+/// return `UnknownMetrics` so safe fallback heuristics can be evaluated (issue #663).
+fn glyph_zero_width_status(codes: &[u8], font: &FontInfo) -> GlyphZeroWidthStatus {
     if font.font_type == "Type0" || font.descendant_font.is_some() {
         // Identity-H codes are exactly two bytes; cids_for_codes intentionally
         // tolerates a short tail for legacy extraction, not for this inference.
         if font.encoding.as_deref() == Some("Identity-H") && codes.len() != 2 {
-            return false;
+            return GlyphZeroWidthStatus::ExplicitNonZero;
         }
         let Some(cids) = cids_for_codes(codes, font) else {
-            return false;
+            return GlyphZeroWidthStatus::UnknownMetrics;
         };
         let [(_, cid)] = cids.as_slice() else {
-            return false;
+            return GlyphZeroWidthStatus::ExplicitNonZero;
         };
-        return font
-            .descendant_font
-            .as_deref()
-            .unwrap_or(font)
-            .metrics
-            .cid_widths
-            .as_ref()
-            .is_some_and(|widths| widths.width_for(*cid) == 0.0);
+        let target_font = font.descendant_font.as_deref().unwrap_or(font);
+        let Some(widths) = target_font.metrics.cid_widths.as_ref() else {
+            return GlyphZeroWidthStatus::UnknownMetrics;
+        };
+        if widths.width_for(*cid) == 0.0 {
+            GlyphZeroWidthStatus::ExplicitZero
+        } else {
+            GlyphZeroWidthStatus::ExplicitNonZero
+        }
+    } else {
+        let [code] = codes else {
+            return GlyphZeroWidthStatus::ExplicitNonZero;
+        };
+        let code = u32::from(*code);
+        let first = font.metrics.first_char.unwrap_or(0);
+        let last = font.metrics.last_char.unwrap_or(255);
+        if code < first || code > last {
+            return GlyphZeroWidthStatus::UnknownMetrics;
+        }
+        let Some(widths) = font.metrics.widths.as_ref() else {
+            return GlyphZeroWidthStatus::UnknownMetrics;
+        };
+        match widths.get((code - first) as usize) {
+            Some(&0.0) => GlyphZeroWidthStatus::ExplicitZero,
+            Some(_) => GlyphZeroWidthStatus::ExplicitNonZero,
+            None => GlyphZeroWidthStatus::UnknownMetrics,
+        }
     }
-    let [code] = codes else {
-        return false;
-    };
-    let code = u32::from(*code);
-    let first = font.metrics.first_char.unwrap_or(0);
-    let last = font.metrics.last_char.unwrap_or(255);
-    if code < first || code > last {
-        return false;
-    }
-    font.metrics
-        .widths
-        .as_ref()
-        .and_then(|widths| widths.get((code - first) as usize))
-        .is_some_and(|width| *width == 0.0)
 }
 
 fn calculate_text_width_from_codes(
