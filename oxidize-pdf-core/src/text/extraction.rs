@@ -1028,8 +1028,15 @@ impl TextExtractor {
     /// two adjustments and a strict majority must match the smallest advance
     /// within 0.05 em; larger outliers remain potential word gaps. Leading or
     /// trailing kerns, explicit Tc/Tw, and ambiguous/nonuniform advances retain
-    /// the conservative rule. No extra Unicode decoding or sorting is needed.
-    fn detect_tj_uniform_tracking(&self, array: &[TextElement], state: &TextState) -> Option<f64> {
+    /// the conservative rule. Non-strict recovery for unresolved horizontal
+    /// Type0 descendants additionally requires complete ToUnicode and a dedicated
+    /// space glyph; it does not certify missing metrics as zero widths.
+    fn detect_tj_uniform_tracking(
+        &self,
+        array: &[TextElement],
+        state: &TextState,
+        allow_damaged_type0_recovery: bool,
+    ) -> Option<f64> {
         if array.len() < 5
             || array.len() % 2 == 0
             || state.char_space != 0.0
@@ -1050,6 +1057,20 @@ impl TextExtractor {
                         GlyphZeroWidthStatus::ExplicitZero => {}
                         GlyphZeroWidthStatus::ExplicitNonZero => return None,
                         GlyphZeroWidthStatus::UnknownMetrics => {
+                            if !allow_damaged_type0_recovery
+                                || font.font_type != "Type0"
+                                || font.descendant_font.is_some()
+                                || cids_for_codes(codes, font)?.len() != 1
+                            {
+                                return None;
+                            }
+                            // Recovery requires a complete, authoritative mapping
+                            // for each source glyph, including Unicode sequences.
+                            let map = font.to_unicode.as_ref()?;
+                            let decoded = map.to_unicode(&map.map(codes)?)?;
+                            if decoded.is_empty() || decoded.contains('\u{FFFD}') {
+                                return None;
+                            }
                             all_explicit_zero = false;
                         }
                     }
@@ -1070,12 +1091,14 @@ impl TextExtractor {
         // advance (~1000 units, issue #663).
         if !all_explicit_zero {
             let has_explicit_space = array.iter().any(|item| match item {
-                TextElement::Text(bytes) => self
-                    .decode_text(bytes, state)
-                    .is_ok_and(|s| s.contains(' ')),
+                TextElement::Text(bytes) => font
+                    .to_unicode
+                    .as_ref()
+                    .and_then(|map| map.map(bytes).and_then(|mapped| map.to_unicode(&mapped)))
+                    .is_some_and(|text| text == " "),
                 _ => false,
             });
-            if !has_explicit_space || (baseline - 1.0).abs() > 0.15 {
+            if !has_explicit_space || !(0.85..=1.15).contains(&baseline) {
                 return None;
             }
         }
@@ -1533,6 +1556,7 @@ impl TextExtractor {
         page_index: u32,
         depth: u8,
     ) -> ParseResult<OpRunState> {
+        let allow_damaged_type0_recovery = !document.options().strict_mode;
         let OpRunState {
             mut state,
             mut in_text_object,
@@ -1787,7 +1811,11 @@ impl TextExtractor {
                         // (issue #649), where zero-advance glyphs have their horizontal advance
                         // encoded via uniform negative kern numbers in TJ.
                         let tracking_baseline_em = self
-                            .detect_tj_uniform_tracking(&array, &state)
+                            .detect_tj_uniform_tracking(
+                                &array,
+                                &state,
+                                allow_damaged_type0_recovery,
+                            )
                             .unwrap_or(0.0);
 
                         // True until this `TJ` array draws its first glyph. Only

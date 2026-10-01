@@ -17,10 +17,9 @@
 //! (`( 1 1 )   3 0 3 0 - 7 1 7 7` instead of `(11) 3030-7177`).
 //!
 //! The fallback activates only when:
-//! 1. Font metrics are unresolvable (`all_explicit_zero == false`).
-//! 2. The TJ array explicitly contains space characters (literal \x20 or ToUnicode-mapped spaces),
-//!    proving the producer explicitly marks word boundaries.
-//! 3. The baseline advance is approximately a full em (~1000 units, |baseline - 1.0| <= 0.15).
+//! 1. Parsing is non-strict and the horizontal Type0 descendant cannot be resolved.
+//! 2. Each element is one mapped source glyph and ToUnicode supplies a dedicated space.
+//! 3. The baseline advance is approximately a full em (0.85 through 1.15 em).
 
 mod common;
 
@@ -59,7 +58,7 @@ fn extract_with_corrupted_descendant(content: &[u8]) -> String {
             .to_vec(),
         stream_obj("", TO_UNICODE),
         // Object 7 is an Image stream, making descendant font dictionary resolution fail
-        stream_obj("<< /Type /XObject /Subtype /Image /Width 1 /Height 1 /BitsPerComponent 8 /ColorSpace /DeviceGray >>", &[0]),
+        stream_obj("/Type /XObject /Subtype /Image /Width 1 /Height 1 /BitsPerComponent 8 /ColorSpace /DeviceGray", &[0]),
     ];
 
     let pdf_bytes = assemble_pdf(&objects);
@@ -94,15 +93,15 @@ fn test_issue_663_corrupt_descendant_fonts_with_explicit_spaces_infers_tracking(
 
 #[test]
 fn test_issue_663_corrupt_descendant_fonts_without_explicit_spaces_does_not_infer() {
-    // Array: [ word1 -1000 word2 ] without explicit space characters in the array.
+    // Three glyphs and two kerns reach the space guard; a single kern would exit earlier.
     // When no space glyph is present, -1000 kerns between words MUST be preserved as word gaps.
     let content = b"BT\n/F1 10 Tf\n100 700 Td\n\
-        [ <0031> -1000 <0030> ] TJ\nET";
+        [ <0031> -1000 <0030> -1000 <0031> ] TJ\nET";
 
     let text = extract_with_corrupted_descendant(content);
     // Because no explicit space glyph is present and metrics are unknown,
     // the -1000 kern must remain a word break.
-    assert_eq!(text.trim(), "1 0");
+    assert_eq!(text.trim(), "1 0 1");
 }
 
 #[test]
