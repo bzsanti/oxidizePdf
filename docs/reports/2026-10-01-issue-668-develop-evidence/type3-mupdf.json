@@ -1,0 +1,70 @@
+{
+  "versions": [
+    "1.26.5",
+    "1.26.10",
+    null
+  ],
+  "documents": [
+    {
+      "path": "test-corpus/t3-stress/pdfium/pdfium_type3.pdf",
+      "text": "abcabc\n",
+      "fonts": [
+        [
+          5,
+          "n/a",
+          "Type3",
+          "",
+          "Font1",
+          ""
+        ]
+      ],
+      "warnings": "format error: cannot find startxref\ntrying to repair broken xref\nrepairing PDF document"
+    },
+    {
+      "path": "test-corpus/t3-stress/poppler/poppler_type3.pdf",
+      "text": "ababab\n",
+      "fonts": [
+        [
+          4,
+          "n/a",
+          "Type1",
+          "Helvetica",
+          "F0",
+          ""
+        ],
+        [
+          9,
+          "n/a",
+          "Type3",
+          "",
+          "FTYPE3",
+          ""
+        ]
+      ],
+      "warnings": ""
+    },
+    {
+      "path": "test-corpus/t3-stress/poppler/poppler_pdf-signature-sample-2sigs.pdf",
+      "text": "Contents\na\nAlpha\nr\nRomeo\nb\nBravo\ns\nSierra\nc\nCharlie\nt\nTango\nd\nDelta\nu\nUniform\ne\nEcho\nw\nWhiskey\nf\nFoxtrot\nx\nX-Ray\ng\nGolf\ny\nYankee\nh\nHotel\nz\nZulu\ni\nIndia\n1\nOne\nj\nJuliet\n3\nThree\nk\nKilo\n4\nFour\nm\nMike\n5\nFive\nn\nNovember\n6\nSix\no\nOscar\n7\nSeven\np\nPapa\n8\nEight\nq\nQuebec\n9\nNiner\n1\nDokument unterschrieben\nvon: Koch, Werner\nam: 28.02.2023 08:55\nDokument unterschrieben\nvon: Koch, Werner\nam: 03.03.2023 11:50\nSIGN\nSIGN\n",
+      "fonts": [
+        [
+          9,
+          "n/a",
+          "Type3",
+          "F19",
+          "F19",
+          ""
+        ],
+        [
+          10,
+          "n/a",
+          "Type3",
+          "F16",
+          "F16",
+          ""
+        ]
+      ],
+      "warnings": ""
+    }
+  ]
+}

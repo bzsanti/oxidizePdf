@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Decode the complete PDF Standard, WinAnsi and MacExpert tables and select
+  built-in Symbol/ZapfDingbats encodings. Preserve Differences/ToUnicode
+  precedence and AFM widths; undefined codes recover visibly (#668).
+
 - Legacy incremental append, replacement and overlay retain catalog/page metadata,
   leaf pages, inherited resources and stable page references; encrypted inputs are
   rejected before any output (#639, #653, #654).

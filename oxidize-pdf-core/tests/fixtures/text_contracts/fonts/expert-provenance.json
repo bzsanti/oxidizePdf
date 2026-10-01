@@ -1,0 +1,10 @@
+{
+  "license": "Original project test fixture; same license as repository",
+  "tool": "FontTools 4.60.1",
+  "program": "name-keyed CFF/Type2 charstrings (PDF Type1C)",
+  "glyphs": 166,
+  "width": 500,
+  "outline_note": "original rectangles, not expert typography; space and .notdef empty",
+  "oracle_sha256": "1876dd5e59c2a3e3975d0ed7f1620552f49d42621d9412248ade3de6c082dcbb",
+  "sha256": "e21c49330c138d65763f6894086eccdfb6d71c04f8679a32b5c3cf625aba351a"
+}

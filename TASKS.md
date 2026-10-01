@@ -1,3 +1,18 @@
+## #668 sobre develop integrado — 2026-10-01
+
+- Issue: #668 — fix(text): decode normative simple-font encodings and built-in Symbol/Zapf — https://github.com/bzsanti/oxidizePdf/issues/668
+- Estado: `[-]` TDD activo. Prioridad P1. Responsable Codex.
+- Alcance: cinco codificaciones simples; conservar intacta la función MacRoman de Omer y el tracking integrado. Rama fix/issue-668-simple-encodings desde develop 4a2c38a, independiente de #669.
+- Criterio de cierre: tablas y selección/precedencias correctas, recuperación visible, métricas conservadas, RED/GREEN, mutaciones discriminantes, QR y corpus/CI.
+- Última validación: issue OPEN confirmada; #669 en CI sin fallos reportados al iniciar.
+- TDD: RED 13 PASS/14 FAIL en 27 contratos. Adaptadas cinco tablas y selección/precedencias; función decode_macroman comparada byte a byte con HEAD, sin cambios. GREEN y consumidores en ejecución.
+- Validación: 27 contratos + 46 regresiones pasan; tres mutaciones detectadas y restauración 28/28; biblioteca 6776/0/3; mínimo 27/27 y SPI 41/41; QR 97/90 tests, Security sin alertas. Corpus 72/72, pero orden compara 1054 PDFs frente a 1058 en base: diagnóstico por documento en curso antes de publicar.
+- Diagnóstico resuelto con TDD: recuperación personalizada Type3/intrínseca conservada; dos RED por aserción y 29 contratos + 46 regresiones GREEN. MuPDF 1.26.10 confirma los cuatro Type3. QR actualizado 97/92 tests, Security sin alertas; biblioteca 6776/0/3, mínimo 29 y SPI 43 pasan.
+- Corpus final 72/72: recuperados 1058 comparados, 594837 palabras, orden plano 110427 (0.185642), reading-order 94887 (0.159518), transposiciones iguales a base; fusiones 278/211815. Sin cambios de umbrales. Detalle de 16 PDFs y avisos MuPDF en corpus-diagnosis.json.
+- Siguiente acción: publicar rama y PR en borrador tras hook; comprobar CI. Corregir por separado los atributos de checkout de #667/#669.
+- Restricciones: sin /tmp ni worktrees; no cambiar codecs del sistema operativo, oráculos, umbrales ni solución MacRoman de #664.
+
+
 ## Resolución #641 y desarrollo #642 — 2026-09-29
 
 - Issue: #641 — docs(signatures): clarify basic support and keep PAdES outside library scope — https://github.com/bzsanti/oxidizePdf/issues/641
