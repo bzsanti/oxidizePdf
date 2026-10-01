@@ -1042,11 +1042,16 @@ impl TextExtractor {
         }
         let font = self.font_cache.get(state.font_name.as_ref()?)?;
         let mut baseline = f64::INFINITY;
+        let mut all_explicit_zero = true;
         for (index, item) in array.iter().enumerate() {
             match item {
                 TextElement::Text(codes) if index % 2 == 0 => {
-                    if !is_explicit_zero_width_glyph(codes, font) {
-                        return None;
+                    match glyph_zero_width_status(codes, font) {
+                        GlyphZeroWidthStatus::ExplicitZero => {}
+                        GlyphZeroWidthStatus::ExplicitNonZero => return None,
+                        GlyphZeroWidthStatus::UnknownMetrics => {
+                            all_explicit_zero = false;
+                        }
                     }
                 }
                 TextElement::Spacing(adjustment) if index % 2 == 1 => {
@@ -1057,6 +1062,21 @@ impl TextExtractor {
                     baseline = baseline.min(advance);
                 }
                 _ => return None,
+            }
+        }
+        // When font metrics are unresolvable (e.g. malformed or missing /DescendantFonts
+        // in Type0 fonts), allow tracking inference only when the array explicitly marks
+        // word boundaries with space characters and the advance matches a full-em glyph
+        // advance (~1000 units, issue #663).
+        if !all_explicit_zero {
+            let has_explicit_space = array.iter().any(|item| match item {
+                TextElement::Text(bytes) => self
+                    .decode_text(bytes, state)
+                    .is_ok_and(|s| s.contains(' ')),
+                _ => false,
+            });
+            if !has_explicit_space || (baseline - 1.0).abs() > 0.15 {
+                return None;
             }
         }
         let matching = array
@@ -4478,42 +4498,57 @@ fn cids_for_codes<'a>(codes: &'a [u8], font: &FontInfo) -> Option<Vec<(&'a [u8],
 
 /// Certify one horizontal source glyph with a declared zero advance. Do not
 /// turn missing widths, fallback metrics or decoded Unicode into that evidence.
-fn is_explicit_zero_width_glyph(codes: &[u8], font: &FontInfo) -> bool {
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum GlyphZeroWidthStatus {
+    ExplicitZero,
+    ExplicitNonZero,
+    UnknownMetrics,
+}
+
+/// Certify one horizontal source glyph with a declared zero advance (issue #649).
+/// When metrics are unavailable or unresolvable (e.g. malformed Type0 /DescendantFonts),
+/// return `UnknownMetrics` so safe fallback heuristics can be evaluated (issue #663).
+fn glyph_zero_width_status(codes: &[u8], font: &FontInfo) -> GlyphZeroWidthStatus {
     if font.font_type == "Type0" || font.descendant_font.is_some() {
         // Identity-H codes are exactly two bytes; cids_for_codes intentionally
         // tolerates a short tail for legacy extraction, not for this inference.
         if font.encoding.as_deref() == Some("Identity-H") && codes.len() != 2 {
-            return false;
+            return GlyphZeroWidthStatus::ExplicitNonZero;
         }
         let Some(cids) = cids_for_codes(codes, font) else {
-            return false;
+            return GlyphZeroWidthStatus::UnknownMetrics;
         };
         let [(_, cid)] = cids.as_slice() else {
-            return false;
+            return GlyphZeroWidthStatus::ExplicitNonZero;
         };
-        return font
-            .descendant_font
-            .as_deref()
-            .unwrap_or(font)
-            .metrics
-            .cid_widths
-            .as_ref()
-            .is_some_and(|widths| widths.width_for(*cid) == 0.0);
+        let target_font = font.descendant_font.as_deref().unwrap_or(font);
+        let Some(widths) = target_font.metrics.cid_widths.as_ref() else {
+            return GlyphZeroWidthStatus::UnknownMetrics;
+        };
+        if widths.width_for(*cid) == 0.0 {
+            GlyphZeroWidthStatus::ExplicitZero
+        } else {
+            GlyphZeroWidthStatus::ExplicitNonZero
+        }
+    } else {
+        let [code] = codes else {
+            return GlyphZeroWidthStatus::ExplicitNonZero;
+        };
+        let code = u32::from(*code);
+        let first = font.metrics.first_char.unwrap_or(0);
+        let last = font.metrics.last_char.unwrap_or(255);
+        if code < first || code > last {
+            return GlyphZeroWidthStatus::UnknownMetrics;
+        }
+        let Some(widths) = font.metrics.widths.as_ref() else {
+            return GlyphZeroWidthStatus::UnknownMetrics;
+        };
+        match widths.get((code - first) as usize) {
+            Some(&0.0) => GlyphZeroWidthStatus::ExplicitZero,
+            Some(_) => GlyphZeroWidthStatus::ExplicitNonZero,
+            None => GlyphZeroWidthStatus::UnknownMetrics,
+        }
     }
-    let [code] = codes else {
-        return false;
-    };
-    let code = u32::from(*code);
-    let first = font.metrics.first_char.unwrap_or(0);
-    let last = font.metrics.last_char.unwrap_or(255);
-    if code < first || code > last {
-        return false;
-    }
-    font.metrics
-        .widths
-        .as_ref()
-        .and_then(|widths| widths.get((code - first) as usize))
-        .is_some_and(|width| *width == 0.0)
 }
 
 fn calculate_text_width_from_codes(
