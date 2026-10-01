@@ -1517,10 +1517,11 @@ fn decode_winansi(byte: u8) -> char {
     }
 }
 
-/// Decode MacRomanEncoding per Adobe PostScript / PDF specification (issue #662).
+/// Decode PDF MacRomanEncoding (ISO 32000-1 Annex D.2, issue #662).
+/// Unlike OS Mac Roman, 0xDB is currency and undefined codes recover as U+FFFD.
 fn decode_macroman(byte: u8) -> char {
     match byte {
-        0x00..=0x7F => byte as char,
+        0x20..=0x7E => byte as char,
         0x80 => 'Ä',
         0x81 => 'Å',
         0x82 => 'Ç',
@@ -1566,32 +1567,19 @@ fn decode_macroman(byte: u8) -> char {
         0xAA => '™',
         0xAB => '´',
         0xAC => '¨',
-        0xAD => '≠',
         0xAE => 'Æ',
         0xAF => 'Ø',
-        0xB0 => '∞',
         0xB1 => '±',
-        0xB2 => '≤',
-        0xB3 => '≥',
         0xB4 => '¥',
         0xB5 => 'µ',
-        0xB6 => '∂',
-        0xB7 => '∑',
-        0xB8 => '∏',
-        0xB9 => 'π',
-        0xBA => '∫',
         0xBB => 'ª',
         0xBC => 'º',
-        0xBD => 'Ω',
         0xBE => 'æ',
         0xBF => 'ø',
         0xC0 => '¿',
         0xC1 => '¡',
         0xC2 => '¬',
-        0xC3 => '√',
         0xC4 => 'ƒ',
-        0xC5 => '≈',
-        0xC6 => '∆',
         0xC7 => '«',
         0xC8 => '»',
         0xC9 => '…',
@@ -1608,11 +1596,10 @@ fn decode_macroman(byte: u8) -> char {
         0xD4 => '‘',
         0xD5 => '’',
         0xD6 => '÷',
-        0xD7 => '◊',
         0xD8 => 'ÿ',
         0xD9 => 'Ÿ',
         0xDA => '⁄',
-        0xDB => '€',
+        0xDB => '¤',
         0xDC => '‹',
         0xDD => '›',
         0xDE => 'ﬁ',
@@ -1633,7 +1620,6 @@ fn decode_macroman(byte: u8) -> char {
         0xED => 'Ì',
         0xEE => 'Ó',
         0xEF => 'Ô',
-        0xF0 => '\u{F8FF}', // Apple logo
         0xF1 => 'Ò',
         0xF2 => 'Ú',
         0xF3 => 'Û',
@@ -1649,6 +1635,8 @@ fn decode_macroman(byte: u8) -> char {
         0xFD => '˝',
         0xFE => '˛',
         0xFF => 'ˇ',
+        // PDF leaves these codes unassigned; preserve their position in recovery.
+        _ => '\u{FFFD}',
     }
 }
 
@@ -1796,7 +1784,7 @@ mod tests {
         assert_eq!(decode_macroman(0xA0), '†');
         assert_eq!(decode_macroman(0xBB), 'ª');
         assert_eq!(decode_macroman(0xBC), 'º');
-        assert_eq!(decode_macroman(0xDB), '€');
+        assert_eq!(decode_macroman(0xDB), '¤');
         assert_eq!(decode_macroman(0xD2), '“');
         assert_eq!(decode_macroman(0xD3), '”');
         assert_eq!(decode_macroman(0xE7), 'Á');

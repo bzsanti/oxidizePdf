@@ -840,3 +840,14 @@
 - Siguiente acción: mantenimiento crea/vincula issue antes de corregir.
 - Restricciones: no corregir bajo #627 ni afirmar que un grafo sin C implica
   compilación correcta. La matriz mínima de producto incluye compression.
+
+## PR #664 follow-up — 2026-10-01
+
+- Issue: #662 — bug(text): decode_macroman in extraction_cmap.rs is incomplete for bytes 0xA0..=0xFF — https://github.com/bzsanti/oxidizePdf/issues/662
+- Status: local implementation validated; remote CI/integration pending. Priority P1. Owner: Codex / maintenance.
+- Original contribution: Omer Shtivi, 70f28714e2ef7115c0f0898d47a3af6cae3de953; retained unchanged as parent history.
+- Scope: Preserve the original match table; correct PDF currency and undefined codes, extend independent public-API coverage.
+- Validation: 6 focused tests; 6776 library tests pass, 3 pre-existing ignored; Clippy and formatting pass. Independent RED recorded against the original PR; quality/security review complete within this diff.
+- Closure: focused contracts, review and CI approved, integration verified; do not close the issue on local validation alone.
+- Next action: append this commit to the existing PR branch without rewriting its history; check remote CI before integration.
+- Constraints: no changes from #667/#668 or the general #666 implementation; no merge/release in this follow-up.

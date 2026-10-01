@@ -10,7 +10,7 @@
 //! - Byte 0xBB (feminine ordinal `ª`, U+00AA) was extracted as `»` (U+00BB).
 //! - Byte 0xE7 (capital A with acute `Á`, U+00C1) was extracted as `ç` (U+00E7).
 //! - Byte 0xA0 (dagger `†`, U+2020) was extracted as non-breaking space (U+00A0).
-//! - Byte 0xDB (euro sign `€`, U+20AC) was extracted as `Û` (U+00DB).
+//! - Byte 0xDB (PDF currency sign `¤`, U+00A4) was extracted as `Û` (U+00DB).
 
 use oxidize_pdf::parser::{ParseOptions, PdfReader};
 use oxidize_pdf::text::TextExtractor;
@@ -44,7 +44,7 @@ fn build_pdf_with_macroman_font(content: &[u8]) -> Vec<u8> {
     write_obj(
         &mut bytes,
         &mut offsets[4],
-        "4 0 obj\n<< /Type /Font /Subtype /TrueType /BaseFont /Helvetica /Encoding /MacRomanEncoding >>\nendobj\n",
+        "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /MacRomanEncoding >>\nendobj\n",
     );
 
     offsets[5] = bytes.len();
@@ -123,7 +123,7 @@ fn test_issue_662_accented_characters_in_macroman_upper_range() {
 fn test_issue_662_special_symbols_in_macroman_upper_range() {
     // In MacRoman:
     // 0xA0 = '†' (U+2020, dagger)
-    // 0xDB = '€' (U+20AC, euro)
+    // 0xDB = '¤' (U+00A4, PDF currency; OS Mac Roman uses euro)
     // 0xD2 = '“' (U+201C, left double quote)
     // 0xD3 = '”' (U+201D, right double quote)
     // 0xD0 = '–' (U+2013, en dash)
@@ -142,5 +142,5 @@ fn test_issue_662_special_symbols_in_macroman_upper_range() {
     content.extend_from_slice(b") Tj\nET\n");
 
     let text = extract_text_from_content(&content);
-    assert_eq!(text.trim(), "€100 “quote” A–B†");
+    assert_eq!(text.trim(), "¤100 “quote” A–B†");
 }
