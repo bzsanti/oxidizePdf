@@ -7,7 +7,10 @@
 - Última validación: GitHub confirma #667 OPEN; implementación alternativa anterior separada, no trasladar #668 ni reemplazos de MacRoman/tracking.
 - Última ejecución TDD en el repositorio actual: PDFDocEncoding RED 6 PASS/6 FAIL; PDF 2.0 RED de compilación por APIs ausentes. Parche aislado de #667 aplicado sin conflictos sobre 4a2c38a; GREEN y regresiones de #664/#665 en ejecución. Evidencia: docs/reports/2026-10-01-issue-667-develop-evidence/.
 - Validación final local: 30 contratos y 50 regresiones pasan; biblioteca 6776/0/3; compression mínima 30/30; SPI+semantic 44/44; corpus diferencial 72/72, métricas idénticas a la base (278/211815 fusiones, orden plano 0.185653 y reading-order 0.159528), umbrales intactos. Clippy completo/formato/diff-check pasan; Kripteia 94/340 tests/10 archivos, Security sin alertas.
-- Siguiente acción: commit limitado a #667, publicar rama y abrir PR en borrador; CI remota e integración pendientes. No cerrar #667/#666 por el GREEN local.
+- Publicación: PR #669 abierto en borrador contra develop, https://github.com/bzsanti/oxidizePdf/pull/669; implementación 2217f6d.
+- CI: Windows falló por transformación LF→CRLF del TSV; 16 checks pasaron y dos se omitieron por workflow. Reproducido con checkout-index y core.autocrlf=true: hash exacto del fallo. Añadido *.tsv text eol=lf; mismo checkout conserva el hash normativo y cero CRLF. Evidencia: docs/reports/2026-10-01-issue-667-windows-checkout.json.
+- Validación de corrección: 30/30 contratos documentales pasan; no cambian código Rust ni valores del oráculo.
+- Siguiente acción: publicar corrección de checkout tras hook; comprobar nueva CI Windows. No cerrar #667/#666 por el GREEN local.
 - Restricciones: no usar /tmp ni worktrees. Restos locales obsoletos de #637 eliminados por instrucción del usuario, sin stash nuevo. Conservar tablas/oráculos; ninguna recalibración del corpus ni cierre de #666 por este bloque.
 
 ## Resolución #641 y desarrollo #642 — 2026-09-29
