@@ -16,6 +16,7 @@ mod layout;
 mod list;
 pub mod metrics;
 pub mod ocr;
+mod pdf_simple_encodings;
 pub mod plaintext;
 pub mod structured;
 pub mod table;

@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 18.90s
+     Running tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-8b823f1d04deae6c)
+
+running 1 test
+test builtin_decoding_preserves_afm_widths_and_following_origins ... FAILED
+
+failures:
+
+---- builtin_decoding_preserves_afm_widths_and_following_origins stdout ----
+
+thread 'builtin_decoding_preserves_afm_widths_and_following_origins' (1158) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:593:9:
+Symbol: width 6 expected 7.572
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    builtin_decoding_preserves_afm_widths_and_following_origins
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 21 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_encoding_contract_test`

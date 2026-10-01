@@ -1,7 +1,28 @@
+## #668 sobre develop integrado — 2026-10-01
+
+- Issue: #668 — fix(text): decode normative simple-font encodings and built-in Symbol/Zapf — https://github.com/bzsanti/oxidizePdf/issues/668
+- Estado: `[-]` TDD activo. Prioridad P1. Responsable Codex.
+- Alcance: cinco codificaciones simples; conservar intacta la función MacRoman de Omer y el tracking integrado. Rama fix/issue-668-simple-encodings desde develop 4a2c38a, independiente de #669.
+- Criterio de cierre: tablas y selección/precedencias correctas, recuperación visible, métricas conservadas, RED/GREEN, mutaciones discriminantes, QR y corpus/CI.
+- Última validación: issue OPEN confirmada; #669 en CI sin fallos reportados al iniciar.
+- TDD: RED 13 PASS/14 FAIL en 27 contratos. Adaptadas cinco tablas y selección/precedencias; función decode_macroman comparada byte a byte con HEAD, sin cambios. GREEN y consumidores en ejecución.
+- Validación: 27 contratos + 46 regresiones pasan; tres mutaciones detectadas y restauración 28/28; biblioteca 6776/0/3; mínimo 27/27 y SPI 41/41; QR 97/90 tests, Security sin alertas. Corpus 72/72, pero orden compara 1054 PDFs frente a 1058 en base: diagnóstico por documento en curso antes de publicar.
+- Diagnóstico resuelto con TDD: recuperación personalizada Type3/intrínseca conservada; dos RED por aserción y 29 contratos + 46 regresiones GREEN. MuPDF 1.26.10 confirma los cuatro Type3. QR actualizado 97/92 tests, Security sin alertas; biblioteca 6776/0/3, mínimo 29 y SPI 43 pasan.
+- Corpus final 72/72: recuperados 1058 comparados, 594837 palabras, orden plano 110427 (0.185642), reading-order 94887 (0.159518), transposiciones iguales a base; fusiones 278/211815. Sin cambios de umbrales. Detalle de 16 PDFs y avisos MuPDF en corpus-diagnosis.json.
+- Publicación: cbd579660c708f95fe20273c73442bc481d252ba en origin/fix/issue-668-simple-encodings; PR #670 abierto en borrador contra develop, https://github.com/bzsanti/oxidizePdf/pull/670. Hook completo aprobado.
+- CI #670: Ubuntu falla en tres pruebas #476 que trataban bytes WinAnsi indefinidos como CR/LF. Reproducido localmente (1 PASS/3 FAIL). Fixture actualizado con ToUnicode explícito, aserciones previas conservadas; añadidos NormalizeLineEnding y control WinAnsi sin mapeo. Seis pruebas pasan; integración completa de targets versionados en curso.
+- Validación del fixture: 6/6 pruebas CR, 29/29 contratos, 220 doctests (24 omitidos), Clippy/formato y QR 93/6 tests sin alertas de seguridad. Batería ampliada terminada: 375 targets de integración + biblioteca, 9766 PASS/0 FAIL/47 omitidas; exit 0. Evidencia integration-final.json e integration.log.gz.
+- Corrección publicada en #670: a8b595ecafc5988038361a567808053815570aa8; hook completo aprobado.
+- Integración de base: develop 8c0c803 (#669) incorporado; conflictos limitados a CHANGELOG/TASKS, conservadas ambas entradas y ambas implementaciones sin cambios Rust manuales.
+- Validación conjunta: 65/65 contratos pasan; archivos Rust entrantes idénticos a develop y archivos de codificación idénticos al HEAD revisado de #670.
+- Siguiente acción: publicar el merge de develop y fusionar #670 cuando su nueva CI esté aprobada.
+- Restricciones: sin /tmp ni worktrees; no cambiar codecs del sistema operativo, oráculos, umbrales ni solución MacRoman de #664.
+
+
 ## #667 sobre develop integrado — 2026-10-01
 
 - Issue: #667 — fix(parser): decode PDF document strings with PDFDocEncoding and version-scoped UTF-8 — https://github.com/bzsanti/oxidizePdf/issues/667
-- Estado: `[-]` TDD en curso en la rama fix/issue-667-document-strings del repositorio actual, base develop 4a2c38a. Prioridad P1. Responsable Codex.
+- Estado: `[x]` implementada, validada e integrada en develop mediante PR #669. Prioridad P1. Responsable Codex.
 - Alcance: adaptar el parche #667 previamente revisado a develop 4a2c38a, preservando las soluciones integradas de Omer; PDFDocEncoding, UTF-16 y UTF-8 PDF 2.0 en consumidores documentales.
 - Criterio de cierre: 30 contratos documentales pasan; regresiones de #664/#665 y consumidores conservadas; revisión de calidad/seguridad y validación de configuraciones/corpus/CI proporcionada.
 - Última validación: GitHub confirma #667 OPEN; implementación alternativa anterior separada, no trasladar #668 ni reemplazos de MacRoman/tracking.
@@ -10,7 +31,9 @@
 - Publicación: PR #669 abierto en borrador contra develop, https://github.com/bzsanti/oxidizePdf/pull/669; implementación 2217f6d.
 - CI: Windows falló por transformación LF→CRLF del TSV; 16 checks pasaron y dos se omitieron por workflow. Reproducido con checkout-index y core.autocrlf=true: hash exacto del fallo. Añadido *.tsv text eol=lf; mismo checkout conserva el hash normativo y cero CRLF. Evidencia: docs/reports/2026-10-01-issue-667-windows-checkout.json.
 - Validación de corrección: 30/30 contratos documentales pasan; no cambian código Rust ni valores del oráculo.
-- Siguiente acción: publicar corrección de checkout tras hook; comprobar nueva CI Windows. No cerrar #667/#666 por el GREEN local.
+- Corrección publicada: aa06f27069cfe79473129284729dae7112cd0db8 en #669; hook completo aprobado (formato, Clippy, build y biblioteca 6776/0/3).
+- Integración: issue #667 CLOSED como completed; PR #669 MERGED, commit 8c0c80321f236a139e783722d8a337251a7ceaf2; HEAD aa06f27 validado con 17 SUCCESS y dos jobs programados SKIPPED. Linux, Windows y macOS aprobados.
+- Siguiente acción: continuar #668/#670 y el resto de #666; este bloque no completa el plan general.
 - Restricciones: no usar /tmp ni worktrees. Restos locales obsoletos de #637 eliminados por instrucción del usuario, sin stash nuevo. Conservar tablas/oráculos; ninguna recalibración del corpus ni cierre de #666 por este bloque.
 
 ## Resolución #641 y desarrollo #642 — 2026-09-29

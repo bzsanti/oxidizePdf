@@ -1,0 +1,48 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...r670-cr-review/issue_476_carriage_return_policy_test.rs        6     93
+
+--- Worst Offenders ---
+  extraction_removes_standalone_cr_and_normalizes_crlf_by_default (target/pr670-cr-review/issue_476_carriage_return_policy_test.rs:66) - Score: 90
+    i Test 'extraction_removes_standalone_cr_and_normalizes_crlf_by_default' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'extraction_removes_standalone_cr_and_normalizes_crlf_by_default' does not call any production code
+  extraction_can_remove_carriage_returns (target/pr670-cr-review/issue_476_carriage_return_policy_test.rs:119) - Score: 90
+    i Test 'extraction_can_remove_carriage_returns' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'extraction_can_remove_carriage_returns' does not call any production code
+  extraction_can_replace_carriage_returns_with_spaces (target/pr670-cr-review/issue_476_carriage_return_policy_test.rs:127) - Score: 90
+    i Test 'extraction_can_replace_carriage_returns_with_spaces' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'extraction_can_replace_carriage_returns_with_spaces' does not call any production code
+  extraction_can_preserve_standalone_cr_and_normalize_crlf (target/pr670-cr-review/issue_476_carriage_return_policy_test.rs:135) - Score: 90
+    i Test 'extraction_can_preserve_standalone_cr_and_normalize_crlf' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'extraction_can_preserve_standalone_cr_and_normalize_crlf' does not call any production code
+  cmap_decoding_applies_the_selected_carriage_return_policy (target/pr670-cr-review/issue_476_carriage_return_policy_test.rs:96) - Score: 100
+
+--- Details ---
+target/pr670-cr-review/issue_476_carriage_return_policy_test.rs:
+  extraction_removes_standalone_cr_and_normalizes_crlf_by_default (line 66) - Score: 90
+    i Test 'extraction_removes_standalone_cr_and_normalizes_crlf_by_default' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'extraction_removes_standalone_cr_and_normalizes_crlf_by_default' does not call any production code
+  extraction_can_remove_carriage_returns (line 119) - Score: 90
+    i Test 'extraction_can_remove_carriage_returns' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'extraction_can_remove_carriage_returns' does not call any production code
+  extraction_can_replace_carriage_returns_with_spaces (line 127) - Score: 90
+    i Test 'extraction_can_replace_carriage_returns_with_spaces' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'extraction_can_replace_carriage_returns_with_spaces' does not call any production code
+  extraction_can_preserve_standalone_cr_and_normalize_crlf (line 135) - Score: 90
+    i Test 'extraction_can_preserve_standalone_cr_and_normalize_crlf' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'extraction_can_preserve_standalone_cr_and_normalize_crlf' does not call any production code
+  unassigned_winansi_codes_do_not_become_unicode_line_endings (line 143) - Score: 100
+    i Test 'unassigned_winansi_codes_do_not_become_unicode_line_endings' asserts against a hardcoded constant instead of a computed expected value
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

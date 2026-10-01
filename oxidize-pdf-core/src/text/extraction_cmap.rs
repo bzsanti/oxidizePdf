@@ -8,6 +8,7 @@ use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
 use crate::parser::{ParseError, ParseOptions, ParseResult};
 use crate::text::cid_to_unicode::CidCollection;
 use crate::text::cmap::CMap;
+use crate::text::pdf_simple_encodings;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
@@ -223,6 +224,31 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                     }
                 }
                 _ => {}
+            }
+        }
+
+        // A non-embedded standard Type1 font supplies its built-in encoding
+        // when Encoding (or BaseEncoding within a Differences dictionary) is
+        // absent. Do not guess an embedded font's intrinsic encoding by name.
+        if font_info.encoding.is_none() && font_info.font_type == "Type1" {
+            let has_embedded_program = font_dict
+                .get("FontDescriptor")
+                .and_then(|obj| document.resolve(obj).ok())
+                .is_some_and(|obj| {
+                    obj.as_dict().is_some_and(|descriptor| {
+                        ["FontFile", "FontFile2", "FontFile3"]
+                            .iter()
+                            .any(|key| descriptor.get(key).is_some())
+                    })
+                });
+            if !has_embedded_program {
+                // PDF subset prefixes contain exactly six uppercase letters.
+                let base_name = without_subset_prefix(&font_info.name);
+                font_info.encoding = match base_name {
+                    "Symbol" => Some("SymbolEncoding".to_owned()),
+                    "ZapfDingbats" => Some("ZapfDingbatsEncoding".to_owned()),
+                    _ => None,
+                };
             }
         }
 
@@ -948,15 +974,51 @@ fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
     Ok(result)
 }
 
+fn without_subset_prefix(name: &str) -> &str {
+    name.split_once('+')
+        .filter(|(prefix, _)| prefix.len() == 6 && prefix.bytes().all(|b| b.is_ascii_uppercase()))
+        .map_or(name, |(_, name)| name)
+}
+
 /// Decode text using encoding differences and base encoding — free function.
 fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<String> {
     let mut result = String::new();
+    let is_zapf =
+        font_info.font_type == "Type1" && without_subset_prefix(&font_info.name) == "ZapfDingbats";
 
     for &byte in text_bytes {
         if let Some(ref differences) = font_info.differences {
             if let Some(char_name) = differences.get(&byte) {
                 if let Some(unicode) = glyph_name_to_unicode_sequence(char_name) {
                     result.push_str(&unicode);
+                    continue;
+                }
+                if let Some(unicode) = is_zapf
+                    .then(|| pdf_simple_encodings::zapf_glyph(char_name))
+                    .flatten()
+                {
+                    result.push(unicode);
+                    continue;
+                }
+                // For a known simple encoding, Differences replaces the base
+                // glyph even if its name cannot be mapped to Unicode. Keep the
+                // existing best-effort recovery for custom Type3 fonts and
+                // unknown intrinsic encodings: these need font-program evidence
+                // and are not covered by the normative tables below.
+                if font_info.font_type != "Type3"
+                    && matches!(
+                        font_info.encoding.as_deref(),
+                        Some(
+                            "WinAnsiEncoding"
+                                | "MacRomanEncoding"
+                                | "StandardEncoding"
+                                | "MacExpertEncoding"
+                                | "SymbolEncoding"
+                                | "ZapfDingbatsEncoding"
+                        )
+                    )
+                {
+                    result.push('\u{FFFD}');
                     continue;
                 }
             }
@@ -966,6 +1028,9 @@ fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<
             Some("WinAnsiEncoding") => decode_winansi(byte),
             Some("MacRomanEncoding") => decode_macroman(byte),
             Some("StandardEncoding") => decode_standard(byte),
+            Some("MacExpertEncoding") => pdf_simple_encodings::MAC_EXPERT[usize::from(byte)],
+            Some("SymbolEncoding") => pdf_simple_encodings::SYMBOL[usize::from(byte)],
+            Some("ZapfDingbatsEncoding") => pdf_simple_encodings::ZAPF_DINGBATS[usize::from(byte)],
             _ => byte as char,
         };
 
@@ -1482,39 +1547,9 @@ fn legacy_glyph_name_to_unicode(name: &str) -> Option<char> {
     }
 }
 
-/// Decode WinAnsiEncoding
+/// Decode PDF WinAnsiEncoding, distinct from the Windows-1252 OS codec.
 fn decode_winansi(byte: u8) -> char {
-    // WinAnsiEncoding is mostly Latin-1 with some differences in 0x80-0x9F range
-    match byte {
-        0x80 => '€',
-        0x82 => '‚',
-        0x83 => 'ƒ',
-        0x84 => '„',
-        0x85 => '…',
-        0x86 => '†',
-        0x87 => '‡',
-        0x88 => 'ˆ',
-        0x89 => '‰',
-        0x8A => 'Š',
-        0x8B => '‹',
-        0x8C => 'Œ',
-        0x8E => 'Ž',
-        0x91 => '\u{2018}', // Left single quotation mark
-        0x92 => '\u{2019}', // Right single quotation mark
-        0x93 => '"',
-        0x94 => '"',
-        0x95 => '•',
-        0x96 => '–',
-        0x97 => '—',
-        0x98 => '˜',
-        0x99 => '™',
-        0x9A => 'š',
-        0x9B => '›',
-        0x9C => 'œ',
-        0x9E => 'ž',
-        0x9F => 'Ÿ',
-        _ => byte as char,
-    }
+    pdf_simple_encodings::WIN_ANSI[usize::from(byte)]
 }
 
 /// Decode PDF MacRomanEncoding (ISO 32000-1 Annex D.2, issue #662).
@@ -1642,9 +1677,7 @@ fn decode_macroman(byte: u8) -> char {
 
 /// Decode StandardEncoding
 fn decode_standard(byte: u8) -> char {
-    // StandardEncoding is similar to Latin-1 with some differences
-    // For simplicity, using Latin-1 as approximation
-    byte as char
+    pdf_simple_encodings::STANDARD[usize::from(byte)]
 }
 
 #[cfg(test)]
