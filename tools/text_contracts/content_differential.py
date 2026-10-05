@@ -143,7 +143,10 @@ def checked_path(root, entry):
     if relative.is_absolute() or ".." in relative.parts:
         raise ValueError("manifest path escapes corpus")
     path = (root / relative).resolve()
-    path.relative_to(root.resolve())
+    try:
+        path.relative_to(root.resolve())
+    except ValueError as error:
+        raise ValueError("manifest path escapes corpus") from error
     if sha256(path) != entry["sha256"]:
         raise ValueError("input hash changed")
     return path

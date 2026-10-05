@@ -1,0 +1,11 @@
+{
+  "pr": 681,
+  "url": "https://github.com/bzsanti/oxidizePdf/pull/681",
+  "draft": true,
+  "head": "f1b9b25397feaf16bda0e6a734e2e18e14e5a3ec",
+  "branch": "test/issue-666-text-contracts",
+  "base": "develop",
+  "local_matrix": "local-matrix-final.json",
+  "remote_ci": "pending",
+  "merge_or_release": false
+}
