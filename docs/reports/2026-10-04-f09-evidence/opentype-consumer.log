@@ -1,0 +1,24 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.81s
+     Running tests/issue_513_resolved_parser_fonts_test.rs (target/debug/deps/issue_513_resolved_parser_fonts_test-f63f4f8a7a1d4ec6)
+
+running 16 tests
+test rejects_circular_font_resource_without_panicking ... ok
+test decodes_win_ansi_without_confusing_code_and_unicode ... ok
+test rejects_non_cid_descendant_in_type0_font ... ok
+test rejects_odd_cid_to_gid_map_without_panicking ... ok
+test exposes_type3_through_the_coherent_resource_model ... ok
+test resolves_inherited_identity_type2_into_renderer_glyphs ... ok
+test rejects_type0_font_without_required_encoding ... ok
+test cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings ... ok
+test resolves_non_identity_encoding_cmap_and_default_identity_gid ... ok
+test unmapped_composite_code_uses_default_cid_width ... ok
+test type3_uses_tounicode_when_decoding_glyphs ... ok
+test resolves_cidfont_type0_open_type_program_and_vertical_mode ... ok
+test rejects_oversized_cid_to_gid_map_after_bounded_decompression ... ok
+test resolves_symbol_difference_as_a_bullet_not_latin_x ... ok
+test named_unicode_encoding_resolves_cid_before_width_and_unicode ... ok
+test rejects_oversized_embedded_font_after_bounded_decompression ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+

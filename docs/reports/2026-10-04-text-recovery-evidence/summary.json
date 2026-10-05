@@ -1,0 +1,31 @@
+{
+  "passed": 7157,
+  "failed": 0,
+  "ignored": 3,
+  "targets": 34,
+  "contracts": 246,
+  "contract_targets": 27,
+  "new_contracts": 8,
+  "library_passed": 6800,
+  "differential_passed": 72,
+  "corpus_metrics": [
+    "differential fusion gate [t3-stress]: compared=1695 skipped=107 fusions=276 candidates=211815 rate=0.001303 content_coverage=0.9728",
+    "differential order gate [t3-stress]: compared=1060 skipped=742 pop_words=594863 common=583048 misplaced=98087 misplaced_rate=0.164890 transposed=86272 transposed_rate=0.147967 fidelity_micro=0.8520 median=1.0000 p10=0.8250 docs_below_0.95=213 alignment_coverage=0.9801 content_coverage=0.9942",
+    "differential order gate [t3-stress-reading-order]: compared=1060 skipped=742 pop_words=594863 common=583048 misplaced=82512 misplaced_rate=0.138708 transposed=70697 transposed_rate=0.121254 fidelity_micro=0.8787 median=1.0000 p10=0.8657 docs_below_0.95=198 alignment_coverage=0.9801 content_coverage=0.9942"
+  ],
+  "red_evidence": {
+    "initial": "1 passed, 4 failed",
+    "utf16": "6 passed, 1 failed",
+    "simple_compatibility": "7 passed, 1 failed"
+  },
+  "clippy": "pass",
+  "format": "pass",
+  "traceability": "pass",
+  "baselines_changed": false,
+  "kripteia": {
+    "tests": 8,
+    "score": 85,
+    "security_alerts": 0
+  },
+  "scope": "Final single aggregate execution; previous logs are intermediate."
+}

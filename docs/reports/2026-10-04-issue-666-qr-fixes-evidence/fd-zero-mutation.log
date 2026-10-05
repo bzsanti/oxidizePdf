@@ -1,0 +1,20 @@
+
+running 1 test
+test text::fonts::cff::dict::contract_fd_selection::real_full_and_subset_programs_select_both_font_dicts ... FAILED
+
+failures:
+
+---- text::fonts::cff::dict::contract_fd_selection::real_full_and_subset_programs_select_both_font_dicts stdout ----
+
+thread 'text::fonts::cff::dict::contract_fd_selection::real_full_and_subset_programs_select_both_font_dicts' (234) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-qr-fix-mutations/dict-mutated.rs:462:17:
+assertion `left == right` failed: format 0, full
+  left: [0, 0, 0, 0]
+ right: [0, 0, 1, 1]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    text::fonts::cff::dict::contract_fd_selection::real_full_and_subset_programs_select_both_font_dicts
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

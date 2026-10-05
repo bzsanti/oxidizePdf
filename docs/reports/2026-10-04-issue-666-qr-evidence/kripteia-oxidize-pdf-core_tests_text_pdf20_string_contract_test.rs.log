@@ -1,0 +1,84 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 18 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs        18     96
+
+--- Worst Offenders ---
+  pdf20_actualtext_utf8_bom_decodes_exact_sequences (oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs:77) - Score: 90
+    - Test 'pdf20_actualtext_utf8_bom_decodes_exact_sequences' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  pdf20_utf8_without_bom_remains_pdfdocencoding (oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs:89) - Score: 90
+    i Test 'pdf20_utf8_without_bom_remains_pdfdocencoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'pdf20_utf8_without_bom_remains_pdfdocencoding' does not call any production code
+  pdf17_does_not_silently_apply_pdf20_utf8_semantics (oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs:94) - Score: 90
+    i Test 'pdf17_does_not_silently_apply_pdf20_utf8_semantics' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'pdf17_does_not_silently_apply_pdf20_utf8_semantics' does not call any production code
+  utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding (oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs:98) - Score: 90
+    i Test 'utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+  malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix (oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs:131) - Score: 90
+    i Test 'malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix' has multiple assertions without diagnostic messages
+    - Test 'malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs:
+  pdf20_actualtext_utf8_bom_decodes_exact_sequences (line 77) - Score: 90
+    - Test 'pdf20_actualtext_utf8_bom_decodes_exact_sequences' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  pdf20_utf8_without_bom_remains_pdfdocencoding (line 89) - Score: 90
+    i Test 'pdf20_utf8_without_bom_remains_pdfdocencoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'pdf20_utf8_without_bom_remains_pdfdocencoding' does not call any production code
+  pdf17_does_not_silently_apply_pdf20_utf8_semantics (line 94) - Score: 90
+    i Test 'pdf17_does_not_silently_apply_pdf20_utf8_semantics' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'pdf17_does_not_silently_apply_pdf20_utf8_semantics' does not call any production code
+  utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding (line 98) - Score: 90
+    i Test 'utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+  catalog_version_upgrade_enables_utf8_and_downgrade_does_not_disable_it (line 118) - Score: 100
+    i Test 'catalog_version_upgrade_enables_utf8_and_downgrade_does_not_disable_it' uses .unwrap() which silently discards error information
+  malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix (line 131) - Score: 90
+    i Test 'malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix' has multiple assertions without diagnostic messages
+    - Test 'malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix' does not call any production code
+  pdf20_outline_title_uses_effective_document_version (line 154) - Score: 100
+    i Test 'pdf20_outline_title_uses_effective_document_version' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'pdf20_outline_title_uses_effective_document_version' uses .unwrap() which silently discards error information
+  stored_pdf20_form_value_can_be_decoded_with_effective_version (line 161) - Score: 100
+    i Test 'stored_pdf20_form_value_can_be_decoded_with_effective_version' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'stored_pdf20_form_value_can_be_decoded_with_effective_version' has multiple assertions without diagnostic messages
+    i Test 'stored_pdf20_form_value_can_be_decoded_with_effective_version' uses .unwrap() which silently discards error information
+  upgraded_catalog_and_named_actualtext_properties_share_version_context (line 199) - Score: 90
+    i Test 'upgraded_catalog_and_named_actualtext_properties_share_version_context' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'upgraded_catalog_and_named_actualtext_properties_share_version_context' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  malformed_catalog_version_names_do_not_enable_utf8 (line 216) - Score: 100
+    i Test 'malformed_catalog_version_names_do_not_enable_utf8' uses .unwrap() which silently discards error information
+  structure_actualtext_on_page_uses_catalog_version (line 250) - Score: 100
+    i Test 'structure_actualtext_on_page_uses_catalog_version' asserts against a hardcoded constant instead of a computed expected value
+  structure_actualtext_in_form_uses_its_own_parent_tree_key (line 261) - Score: 100
+    i Test 'structure_actualtext_in_form_uses_its_own_parent_tree_key' asserts against a hardcoded constant instead of a computed expected value
+  inline_utf8_actualtext_overrides_structure_in_page_and_form (line 272) - Score: 100
+    i Test 'inline_utf8_actualtext_overrides_structure_in_page_and_form' asserts against a hardcoded constant instead of a computed expected value
+  indirect_catalog_version_is_resolved (line 286) - Score: 90
+    - Test 'indirect_catalog_version_is_resolved' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'indirect_catalog_version_is_resolved' uses .unwrap() which silently discards error information
+  utf8_named_field_remains_addressable_to_form_filler (line 307) - Score: 100
+    i Test 'utf8_named_field_remains_addressable_to_form_filler' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'utf8_named_field_remains_addressable_to_form_filler' has multiple assertions without diagnostic messages
+    i Test 'utf8_named_field_remains_addressable_to_form_filler' uses .unwrap() which silently discards error information
+  signature_metadata_uses_pdf20_text_strings (line 336) - Score: 100
+    i Test 'signature_metadata_uses_pdf20_text_strings' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'signature_metadata_uses_pdf20_text_strings' has multiple assertions without diagnostic messages
+    i Test 'signature_metadata_uses_pdf20_text_strings' uses .unwrap() which silently discards error information
+  indirect_version_resolution_is_bounded_and_rejects_cycles (line 371) - Score: 100
+    i Test 'indirect_version_resolution_is_bounded_and_rejects_cycles' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'indirect_version_resolution_is_bounded_and_rejects_cycles' has multiple assertions without diagnostic messages
+    i Test 'indirect_version_resolution_is_bounded_and_rejects_cycles' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

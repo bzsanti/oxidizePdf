@@ -603,10 +603,10 @@ fn builtin_decoding_preserves_afm_widths_and_following_origins() {
     }
 }
 
-// Compatibility recovery, not a normative Unicode mapping for custom fonts.
-// Type3 names and intrinsic encodings need a separate font-program contract.
+// Unknown glyph names have no Unicode evidence, including custom Type3
+// programs. Preserve known names and explicit ToUnicode without inventing bytes.
 #[test]
-fn custom_type3_names_keep_existing_byte_recovery_and_mapping_precedence() {
+fn custom_type3_names_preserve_unknown_markers_and_mapping_precedence() {
     for base in ["", "/BaseEncoding /WinAnsiEncoding"] {
         for options in [ParseOptions::strict(), ParseOptions::lenient()] {
             let definition = format!("<< /Type /Font /Subtype /Type3 /FontBBox [0 0 500 700] /FontMatrix [0.001 0 0 0.001 0 0] /FirstChar 65 /LastChar 67 /Widths [500 500 500] /Encoding << {base} /Differences [65 /customA /Euro /customC] >> /CharProcs << /customA 6 0 R /Euro 6 0 R /customC 6 0 R >> /Resources << >> >>");
@@ -617,14 +617,14 @@ fn custom_type3_names_keep_existing_byte_recovery_and_mapping_precedence() {
                     options
                 )
                 .text,
-                "A€C"
+                "�€�"
             );
         }
     }
 }
 
 #[test]
-fn unknown_intrinsic_type1_encoding_keeps_existing_recovery() {
+fn unknown_intrinsic_type1_names_preserve_markers_and_explicit_unicode() {
     for options in [ParseOptions::strict(), ParseOptions::lenient()] {
         let definition = "<< /Type /Font /Subtype /Type1 /BaseFont /CustomFont /Encoding << /Differences [65 /customA /Euro /customC] >> >>";
         assert_eq!(
@@ -633,7 +633,7 @@ fn unknown_intrinsic_type1_encoding_keeps_existing_recovery() {
                 options.clone()
             )
             .text,
-            "A€C"
+            "�€�"
         );
         let definition = "<< /Type /Font /Subtype /Type1 /BaseFont /CustomFont /Encoding << /Differences [65 /customA /Euro /customC] >> /ToUnicode 6 0 R >>";
         assert_eq!(

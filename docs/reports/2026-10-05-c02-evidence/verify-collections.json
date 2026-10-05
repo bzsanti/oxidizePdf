@@ -1,0 +1,212 @@
+[
+  {
+    "cmap": "90ms-RKSJ-H",
+    "registry": "Adobe",
+    "ordering": "Japan1",
+    "sha256": "e0b104bcc8dfb3c2d3e025e12c59182d7e0ee1b5df6f55bc8550d4b3fc83ecd3"
+  },
+  {
+    "cmap": "90ms-RKSJ-V",
+    "registry": "Adobe",
+    "ordering": "Japan1",
+    "sha256": "a588f7d20d0c8dbf09693480e62bf3ab80b7453858e4425d4b47650d48e7757b"
+  },
+  {
+    "cmap": "90pv-RKSJ-H",
+    "registry": "Adobe",
+    "ordering": "Japan1",
+    "sha256": "bda3f87262c61ef5a34097737f7306fb160d769f357b72ad251d11384a3848d2"
+  },
+  {
+    "cmap": "90pv-RKSJ-V",
+    "registry": "Adobe",
+    "ordering": "Japan1",
+    "sha256": "36ab76110635e300971cfeaaa9bc049e28ba3214d2a880dd3b97cf1a041cbca2"
+  },
+  {
+    "cmap": "B5pc-H",
+    "registry": "Adobe",
+    "ordering": "CNS1",
+    "sha256": "7a2af623d66158fd9b2eae590d3b0373b2e73125f008befda26c40a6c5d396fb"
+  },
+  {
+    "cmap": "B5pc-V",
+    "registry": "Adobe",
+    "ordering": "CNS1",
+    "sha256": "f1b09f3752437a802f0992297a18361fd3bceed8e208cfbb97f2e6c035a29d2e"
+  },
+  {
+    "cmap": "ETen-B5-H",
+    "registry": "Adobe",
+    "ordering": "CNS1",
+    "sha256": "b6e5e42d94f6642842f6a42445c1df29d3874c6d1a91a38a05c9d7e4b57f0ce6"
+  },
+  {
+    "cmap": "ETen-B5-V",
+    "registry": "Adobe",
+    "ordering": "CNS1",
+    "sha256": "0e6f041edd60516e92c9470254c4d45522b4cf079f1809b82862d43a3f1e1663"
+  },
+  {
+    "cmap": "GB-EUC-H",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "9c2b268c5fbcc9a23aa76d2f199c97fa9fbfcc0ef43f9f320bb367a6b0a47b20"
+  },
+  {
+    "cmap": "GB-EUC-V",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "5acf07ba8e65be8aad1c7a4535574e41cb326abd295e9e5c1eb3e96037260397"
+  },
+  {
+    "cmap": "GBK-EUC-H",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "6c88b308f122966de14696d819800bc89be2538fa14fa41f474e36b20cea11c6"
+  },
+  {
+    "cmap": "GBK-EUC-V",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "73381a5bc2d0aacbf6b2ec211f34e042e7c74895342fcee073b0f9be2dbc8703"
+  },
+  {
+    "cmap": "GBKp-EUC-H",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "d6ef0e6c393bd065f5b646b7dc87fe8df88f3608a9264fb5727b552418352d5a"
+  },
+  {
+    "cmap": "GBKp-EUC-V",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "43c8fa12dcef0b1b584fdd077996fff388fc0e9a9d332e08556640ceefa9fa0e"
+  },
+  {
+    "cmap": "KSC-EUC-H",
+    "registry": "Adobe",
+    "ordering": "Korea1",
+    "sha256": "90e9250027a7a84fc7a2542f91fe61e3a71299214aaa75c617e12a55dfaa0943"
+  },
+  {
+    "cmap": "KSC-EUC-V",
+    "registry": "Adobe",
+    "ordering": "Korea1",
+    "sha256": "a51f69ff435ff83b3c200b2043572492be05ac08e98f4662f3938b3f6a1b9a6c"
+  },
+  {
+    "cmap": "KSCms-UHC-H",
+    "registry": "Adobe",
+    "ordering": "Korea1",
+    "sha256": "f3e3719b2db01f1c27e5f8b85cfec0d6f018239fb999cd03bbe10084a9f4645a"
+  },
+  {
+    "cmap": "KSCms-UHC-V",
+    "registry": "Adobe",
+    "ordering": "Korea1",
+    "sha256": "1ca4c9a90aa3079ffdc8ceb7e288f034d0afbc7142a7fae705416368fc581186"
+  },
+  {
+    "cmap": "UniAKR-UTF16-H",
+    "registry": "Adobe",
+    "ordering": "KR",
+    "sha256": "f6f25740407e835538a8ec2bee34b82ee92969ba28771cf138fb2cc966998ef7"
+  },
+  {
+    "cmap": "UniCNS-UCS2-H",
+    "registry": "Adobe",
+    "ordering": "CNS1",
+    "sha256": "fe9c7f1557d58875bc4a16edf377ee0d8c579eaee778135adefbbed1f868c017"
+  },
+  {
+    "cmap": "UniCNS-UCS2-V",
+    "registry": "Adobe",
+    "ordering": "CNS1",
+    "sha256": "745fd7a922bedd2d124006a4b5e6a909aaaa9f11eebefbb0477c22a01439a3a8"
+  },
+  {
+    "cmap": "UniCNS-UTF16-H",
+    "registry": "Adobe",
+    "ordering": "CNS1",
+    "sha256": "074d175c8c6827184d064f2c48cbe0ba4957bd525fd864184717518acf4db970"
+  },
+  {
+    "cmap": "UniCNS-UTF16-V",
+    "registry": "Adobe",
+    "ordering": "CNS1",
+    "sha256": "d21175d1f8a083b606a9a1e17fa98d1cb901a0e833e19d47a6c08fb452c91c11"
+  },
+  {
+    "cmap": "UniGB-UCS2-H",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "d2b100a68c016190347c6e0ecee3e7d6d1accd7395d7e803bf88b7ffef156725"
+  },
+  {
+    "cmap": "UniGB-UCS2-V",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "d94d2e56a9a5cb89e0a68c31eba1ff40aa604b3a504be844c67de64af64eec96"
+  },
+  {
+    "cmap": "UniGB-UTF16-H",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "3750279409a96fb3a8ce1fbc25eb95bab4ff7ade023e4e0df6bd33258a3a8726"
+  },
+  {
+    "cmap": "UniGB-UTF16-V",
+    "registry": "Adobe",
+    "ordering": "GB1",
+    "sha256": "cc9608b7c8c11133c1148eda883c10433e1d0dc2c964f41744eae89fe75f77d3"
+  },
+  {
+    "cmap": "UniJIS-UCS2-H",
+    "registry": "Adobe",
+    "ordering": "Japan1",
+    "sha256": "05d064e6b373edf83890e26d7d2a2339482fad265eaf0a2b92ab528af33b5a54"
+  },
+  {
+    "cmap": "UniJIS-UCS2-V",
+    "registry": "Adobe",
+    "ordering": "Japan1",
+    "sha256": "b487b2602348ef9c69222fd1a82cd45eea4f756d98e974b94183390c9bd8b6c3"
+  },
+  {
+    "cmap": "UniJIS-UTF16-H",
+    "registry": "Adobe",
+    "ordering": "Japan1",
+    "sha256": "5cf77ed38c25262dba845676738a887afe45e44425c3dd2489334c4d8c510fcb"
+  },
+  {
+    "cmap": "UniJIS-UTF16-V",
+    "registry": "Adobe",
+    "ordering": "Japan1",
+    "sha256": "03bfb4e91452da537f347b8676e52adfa5dd10f8b920fa2cc34d343580354056"
+  },
+  {
+    "cmap": "UniKS-UCS2-H",
+    "registry": "Adobe",
+    "ordering": "Korea1",
+    "sha256": "bb28e3e84154f49c311128a5700cc0187ce4957b10f18dee88089002db7e5501"
+  },
+  {
+    "cmap": "UniKS-UCS2-V",
+    "registry": "Adobe",
+    "ordering": "Korea1",
+    "sha256": "76c08c4aace48d92a252e686f9d748ebde009337b59361ec286c4bdc037e5933"
+  },
+  {
+    "cmap": "UniKS-UTF16-H",
+    "registry": "Adobe",
+    "ordering": "Korea1",
+    "sha256": "0a1dc38d8dd4e1f55b5a3ab978a2b091109f88f4d08587bbb7864370cda8cfd5"
+  },
+  {
+    "cmap": "UniKS-UTF16-V",
+    "registry": "Adobe",
+    "ordering": "Korea1",
+    "sha256": "681aecd86956265504f7875af43eae3985ab263175aa782baa884b0f514f2aa6"
+  }
+]

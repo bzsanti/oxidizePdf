@@ -1,0 +1,809 @@
+{
+  "versions": [
+    "4.60.1",
+    "1.26.5",
+    "1.26.10"
+  ],
+  "results": [
+    {
+      "case": "private-fd0-full-h-fallback.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "\ufffd\ufffd",
+      "text_oracle": "unknown; observation only",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd0-full-h-unicode.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd0-full-v-fallback.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "\ufffd\ufffd",
+      "text_oracle": "unknown; observation only",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd0-full-v-unicode.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd3-full-h-fallback.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "\ufffd\ufffd",
+      "text_oracle": "unknown; observation only",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd3-full-h-unicode.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd3-full-v-fallback.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "\ufffd\ufffd",
+      "text_oracle": "unknown; observation only",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd3-full-v-unicode.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd0-subset-h-fallback.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "\ufffd\ufffd",
+      "text_oracle": "unknown; observation only",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd0-subset-h-unicode.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd0-subset-v-fallback.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "\ufffd\ufffd",
+      "text_oracle": "unknown; observation only",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd0-subset-v-unicode.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd3-subset-h-fallback.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "\ufffd\ufffd",
+      "text_oracle": "unknown; observation only",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd3-subset-h-unicode.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd3-subset-v-fallback.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "\ufffd\ufffd",
+      "text_oracle": "unknown; observation only",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "private-fd3-subset-v-unicode.pdf",
+      "mupdf_cid_selectors": [
+        17,
+        29
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd0-full-h-fallback.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "AB",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd0-full-h-unicode.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd0-full-v-fallback.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "AB",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd0-full-v-unicode.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd3-full-h-fallback.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "AB",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd3-full-h-unicode.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd3-full-v-fallback.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "AB",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd3-full-v-unicode.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd0-subset-h-fallback.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "AB",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd0-subset-h-unicode.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd0-subset-v-fallback.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "AB",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd0-subset-v-unicode.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd3-subset-h-fallback.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "AB",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd3-subset-h-unicode.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "dc3d6f895a99076a1e5cbaaec72e29e0759e6f02d1ae39585c1ef23ccbe84bd8",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd3-subset-v-fallback.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "AB",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "Japan1-fd3-subset-v-unicode.pdf",
+      "mupdf_cid_selectors": [
+        34,
+        35
+      ],
+      "charstring_gids": [
+        1,
+        2
+      ],
+      "origins": [
+        [
+          98.0,
+          100.79998779296875
+        ],
+        [
+          96.5,
+          112.79998779296875
+        ]
+      ],
+      "text_observed": "XY",
+      "text_oracle": "explicit/Adobe collection",
+      "raster_sha256": "ae3ef225a48b6a4223b67a983805a9b2ca2622a98cfd0d1073a2611ea4555189",
+      "qpdf": "structure only"
+    }
+  ]
+}

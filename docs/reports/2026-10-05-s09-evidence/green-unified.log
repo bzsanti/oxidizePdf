@@ -1,0 +1,166 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 18.38s
+     Running tests/inline_font_resources_test.rs (target/debug/deps/inline_font_resources_test-ddfbb7c9b2a8cfa6)
+
+running 5 tests
+test plain_text_extractor_resolves_an_indirect_font_subdictionary ... ok
+test text_extractor_reads_tounicode_from_an_inline_font_dictionary ... ok
+test plain_text_extractor_reads_tounicode_from_an_inline_font_dictionary ... ok
+test text_extractor_reads_inline_font_behind_an_indirect_font_subdictionary ... ok
+test a_document_written_by_this_library_stays_readable_to_this_library ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.63s
+
+     Running tests/issue_452_text_state_graphics_state_test.rs (target/debug/deps/issue_452_text_state_graphics_state_test-df41da3d6bbc58cd)
+
+running 10 tests
+test a_q_block_inside_a_text_object_restores_state_without_moving_the_pen ... ok
+test both_public_extractors_restore_the_leading_on_q ... ok
+test q_restores_the_font_size_set_inside_the_block ... ok
+test a_form_xobject_does_not_leak_its_text_state_into_the_page ... ok
+test nested_q_blocks_restore_their_own_leading_at_each_level ... ok
+test an_unbalanced_q_inside_a_form_xobject_cannot_consume_the_pages_saved_state ... ok
+test an_unbalanced_q_does_not_break_either_extractor ... ok
+test q_restores_the_horizontal_scale_set_inside_the_block ... ok
+test q_restores_the_initial_leading_when_none_was_set_outside ... ok
+test q_restores_the_leading_set_inside_the_block ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_455_graphics_state_stack_cap_test.rs (target/debug/deps/issue_455_graphics_state_stack_cap_test-9c22a151108d2dfa)
+
+running 5 tests
+test the_overflow_count_does_not_cross_a_form_xobject_boundary ... ok
+test q_operators_matching_dropped_pushes_restore_nothing ... ok
+test the_plain_extractor_also_keeps_q_and_q_paired_under_a_flood ... ok
+test unbalanced_q_after_a_flood_does_not_break_extraction ... ok
+test the_levels_within_the_cap_still_restore_exactly ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/issue_456_text_state_params_test.rs (target/debug/deps/issue_456_text_state_params_test-980bb364dd2569ae)
+
+running 5 tests
+test word_spacing_advances_pen_once_per_space ... ok
+test char_spacing_advances_pen_once_per_glyph ... ok
+test word_spacing_does_not_advance_on_non_space_glyphs ... ok
+test char_spacing_advances_pen_in_show_text_array ... ok
+test text_rise_offsets_the_baseline_y ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_564_plaintext_quality_test.rs (target/debug/deps/issue_564_plaintext_quality_test-30ccf37136f0db7a)
+
+running 4 tests
+test layout_plaintext_propagates_extraction_errors ... ok
+test layout_plaintext_uses_standard14_metrics_for_positioned_runs ... ok
+test layout_plaintext_filters_artifacts_and_honors_actualtext ... ok
+test layout_plaintext_reads_interleaved_columns_left_then_right ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)
+
+running 9 tests
+test test_combine_streams_corner_cases ... ok
+test streaming_recovers_after_bad_stream_without_losing_split_operands ... ok
+test streaming_skips_inline_image_data_across_stream_boundaries ... ok
+test test_content_parser_parse_content_streams ... ok
+test test_stream_text_multistream_boundary ... ok
+test test_multistream_operand_operator_split_text_extraction ... ok
+test test_combined_content_stream_helpers ... ok
+test test_multistream_operand_split_coordinates_text_extraction ... ok
+test test_multistream_plaintext_extraction ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_617_stream_recovery_test.rs (target/debug/deps/issue_617_stream_recovery_test-0551afa372ca0a6e)
+
+running 4 tests
+test strict_content_parser_still_rejects_malformed_content ... ok
+test healthy_streams_keep_operands_after_recovery_and_empty_streams ... ok
+test recovery_keeps_prefix_operations_but_discards_incomplete_operands ... ok
+test later_valid_text_survives_lexical_error_in_every_extraction_facade ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/plaintext_quote_operators_test.rs (target/debug/deps/plaintext_quote_operators_test-709122de75d03a20)
+
+running 5 tests
+test the_double_quote_operands_do_not_disturb_the_leading ... ok
+test the_double_quote_operator_emits_its_text ... ok
+test the_apostrophe_operator_emits_its_text ... ok
+test the_quote_operators_start_a_new_line ... ok
+test both_public_extractors_agree_on_documents_using_quote_operators ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/plaintext_td_operator_test.rs (target/debug/deps/plaintext_td_operator_test-5825cd90c7f14181)
+
+running 5 tests
+test plaintext_td_sets_leading_for_subsequent_t_star ... ok
+test plaintext_td_leading_magnitude_does_not_exceed_ty ... FAILED
+test plaintext_td_breaks_the_line_so_words_do_not_fuse ... ok
+test plaintext_td_does_not_fuse_words_under_the_default_config ... ok
+test plaintext_td_is_equivalent_to_tl_plus_td_lowercase ... ok
+
+failures:
+
+---- plaintext_td_leading_magnitude_does_not_exceed_ty stdout ----
+
+thread 'plaintext_td_leading_magnitude_does_not_exceed_ty' (1412) panicked at oxidize-pdf-core/tests/plaintext_td_operator_test.rs:121:5:
+a 6-unit TD is below the 10-unit newline threshold, so neither it nor the T* that inherits its leading may break the line; got "one\ntwothree"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    plaintext_td_leading_magnitude_does_not_exceed_ty
+
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test plaintext_td_operator_test`
+     Running tests/plaintext_tj_array_test.rs (target/debug/deps/plaintext_tj_array_test-f344bba4006d31d8)
+
+running 5 tests
+test plaintext_tj_array_emits_text ... ok
+test plaintext_tj_wide_kerning_emits_space ... ok
+test plaintext_tj_space_threshold_custom_value ... ok
+test plaintext_tj_narrow_kerning_no_space ... ok
+test plaintext_higgs_title_has_word_boundaries ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_output_api_contract_test.rs (target/debug/deps/text_output_api_contract_test-193dd67eae72543e)
+
+running 10 tests
+test plain_outputs_propagate_unrepresentable_geometry_errors ... ok
+test plain_outputs_keep_certified_zero_width_tracking ... FAILED
+test document_api_resets_same_resource_name_between_pages ... ok
+test type3_output_preserves_multiscalar_mapping_and_real_charprocs ... ok
+test mixed_page_and_nested_cid_forms_preserve_semantic_text_in_all_apis ... ok
+test all_standard14_styles_have_consistent_output_apis ... ok
+test embedded_type1_and_cff_outputs_preserve_encoding_precedence ... ok
+test symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences ... ok
+test cid_cff_inheritance_outputs_preserve_child_and_parent_text ... ok
+test cid_type0_and_type2_program_variants_have_consistent_output_apis ... ok
+
+failures:
+
+---- plain_outputs_keep_certified_zero_width_tracking stdout ----
+
+thread 'plain_outputs_keep_certified_zero_width_tracking' (1427) panicked at oxidize-pdf-core/tests/text_output_api_contract_test.rs:48:17:
+assertion `left == right` failed: zero-width tracking: layout=true
+  left: "A B C"
+ right: "ABC"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    plain_outputs_keep_certified_zero_width_tracking
+
+test result: FAILED. 9 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_output_api_contract_test`
+error: 2 targets failed:
+    `-p oxidize-pdf --test plaintext_td_operator_test`
+    `-p oxidize-pdf --test text_output_api_contract_test`

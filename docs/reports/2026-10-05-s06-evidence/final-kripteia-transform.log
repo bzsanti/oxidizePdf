@@ -1,0 +1,83 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 78 | Tests: 15 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_transform_contract_test.rs           15     78
+
+--- Worst Offenders ---
+  tm_rotation_rotates_glyph_advance (oxidize-pdf-core/tests/text_transform_contract_test.rs:54) - Score: 65
+    - Test 'tm_rotation_rotates_glyph_advance' does not call any production code
+    - Test 'tm_rotation_rotates_glyph_advance' executes production code without asserting on its behaviour
+  tm_shear_preserves_both_advance_components (oxidize-pdf-core/tests/text_transform_contract_test.rs:61) - Score: 65
+    - Test 'tm_shear_preserves_both_advance_components' does not call any production code
+    - Test 'tm_shear_preserves_both_advance_components' executes production code without asserting on its behaviour
+  ctm_nonuniform_scale_and_translation_apply_to_text_origins (oxidize-pdf-core/tests/text_transform_contract_test.rs:68) - Score: 65
+    - Test 'ctm_nonuniform_scale_and_translation_apply_to_text_origins' does not call any production code
+    - Test 'ctm_nonuniform_scale_and_translation_apply_to_text_origins' executes production code without asserting on its behaviour
+  ctm_shear_and_translation_apply_to_text_origins (oxidize-pdf-core/tests/text_transform_contract_test.rs:75) - Score: 65
+    - Test 'ctm_shear_and_translation_apply_to_text_origins' does not call any production code
+    - Test 'ctm_shear_and_translation_apply_to_text_origins' executes production code without asserting on its behaviour
+  ctm_scale_composes_with_rotated_tm_in_pdf_order (oxidize-pdf-core/tests/text_transform_contract_test.rs:82) - Score: 65
+    - Test 'ctm_scale_composes_with_rotated_tm_in_pdf_order' does not call any production code
+    - Test 'ctm_scale_composes_with_rotated_tm_in_pdf_order' executes production code without asserting on its behaviour
+
+--- Details ---
+oxidize-pdf-core/tests/text_transform_contract_test.rs:
+  tm_rotation_rotates_glyph_advance (line 54) - Score: 65
+    - Test 'tm_rotation_rotates_glyph_advance' does not call any production code
+    - Test 'tm_rotation_rotates_glyph_advance' executes production code without asserting on its behaviour
+  tm_shear_preserves_both_advance_components (line 61) - Score: 65
+    - Test 'tm_shear_preserves_both_advance_components' does not call any production code
+    - Test 'tm_shear_preserves_both_advance_components' executes production code without asserting on its behaviour
+  ctm_nonuniform_scale_and_translation_apply_to_text_origins (line 68) - Score: 65
+    - Test 'ctm_nonuniform_scale_and_translation_apply_to_text_origins' does not call any production code
+    - Test 'ctm_nonuniform_scale_and_translation_apply_to_text_origins' executes production code without asserting on its behaviour
+  ctm_shear_and_translation_apply_to_text_origins (line 75) - Score: 65
+    - Test 'ctm_shear_and_translation_apply_to_text_origins' does not call any production code
+    - Test 'ctm_shear_and_translation_apply_to_text_origins' executes production code without asserting on its behaviour
+  ctm_scale_composes_with_rotated_tm_in_pdf_order (line 82) - Score: 65
+    - Test 'ctm_scale_composes_with_rotated_tm_in_pdf_order' does not call any production code
+    - Test 'ctm_scale_composes_with_rotated_tm_in_pdf_order' executes production code without asserting on its behaviour
+  q_and_q_restore_ctm_before_the_next_text_object (line 89) - Score: 65
+    - Test 'q_and_q_restore_ctm_before_the_next_text_object' does not call any production code
+    - Test 'q_and_q_restore_ctm_before_the_next_text_object' executes production code without asserting on its behaviour
+  bt_resets_text_matrix_and_retains_text_state (line 93) - Score: 65
+    - Test 'bt_resets_text_matrix_and_retains_text_state' does not call any production code
+    - Test 'bt_resets_text_matrix_and_retains_text_state' executes production code without asserting on its behaviour
+  nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state (line 116) - Score: 90
+    - Test 'nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state' has low assert-to-setup ratio (17%): 4 asserts vs 20 setup lines
+  nonrepresentable_text_geometry_returns_an_error (line 140) - Score: 80
+    - Test 'nonrepresentable_text_geometry_returns_an_error' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'nonrepresentable_text_geometry_returns_an_error' uses .unwrap() which silently discards error information
+    - Test 'nonrepresentable_text_geometry_returns_an_error' has low assert-to-setup ratio (9%): 2 asserts vs 20 setup lines
+  large_representable_transform_does_not_overflow_norm_calculation (line 177) - Score: 90
+    - Test 'large_representable_transform_does_not_overflow_norm_calculation' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'large_representable_transform_does_not_overflow_norm_calculation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'large_representable_transform_does_not_overflow_norm_calculation' has multiple assertions without diagnostic messages
+    i Test 'large_representable_transform_does_not_overflow_norm_calculation' uses .unwrap() which silently discards error information
+  integer_syntax_outside_i32_keeps_real_valued_transform_operands (line 206) - Score: 100
+    i Test 'integer_syntax_outside_i32_keeps_real_valued_transform_operands' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'integer_syntax_outside_i32_keeps_real_valued_transform_operands' uses .unwrap() which silently discards error information
+  composed_overflow_and_integer_overflow_do_not_return_success (line 237) - Score: 90
+    i Test 'composed_overflow_and_integer_overflow_do_not_return_success' uses .unwrap() which silently discards error information
+    - Test 'composed_overflow_and_integer_overflow_do_not_return_success' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  degenerate_reflected_and_rotated_transforms_preserve_text_for_simple_and_cid_fonts (line 257) - Score: 90
+    i Test 'degenerate_reflected_and_rotated_transforms_preserve_text_for_simple_and_cid_fonts' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'degenerate_reflected_and_rotated_transforms_preserve_text_for_simple_and_cid_fonts' has multiple assertions without diagnostic messages
+    i Test 'degenerate_reflected_and_rotated_transforms_preserve_text_for_simple_and_cid_fonts' uses .unwrap() which silently discards error information
+    - Test 'degenerate_reflected_and_rotated_transforms_preserve_text_for_simple_and_cid_fonts' has low assert-to-setup ratio (18%): 6 asserts vs 27 setup lines
+  paragraph_extent_overflow_returns_an_error (line 314) - Score: 80
+    - Test 'paragraph_extent_overflow_returns_an_error' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'paragraph_extent_overflow_returns_an_error' uses .unwrap() which silently discards error information
+    - Test 'paragraph_extent_overflow_returns_an_error' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

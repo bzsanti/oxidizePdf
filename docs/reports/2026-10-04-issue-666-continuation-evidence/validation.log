@@ -1,0 +1,54 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 2.56s
+     Running tests/text_cmap_boundary_contract_test.rs (target/debug/deps/text_cmap_boundary_contract_test-6d539187c231099f)
+
+running 9 tests
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... ok
+test notdef_range_selects_one_cid_without_incrementing ... ok
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... ok
+test child_notdef_char_overrides_only_its_parent_fallback_code ... ok
+test inherited_notdef_range_retains_parent_cid_and_width ... ok
+test ordinary_child_mapping_wins_over_inherited_notdef ... ok
+test ordinary_parent_mapping_wins_over_child_notdef ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_competing_cmap_contract_test.rs (target/debug/deps/text_competing_cmap_contract_test-aecb06698f9cba06)
+
+running 6 tests
+test bmp_wins_when_full_unicode_is_absent ... ok
+test competing_program_matches_independent_fonttools_tables_and_hash ... ok
+test fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority ... ok
+test selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables ... ok
+test generic_unicode_wins_when_windows_unicode_is_absent ... ok
+test full_unicode_wins_in_all_120_subtable_orders ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_symbolic_truetype_contract_test.rs (target/debug/deps/text_symbolic_truetype_contract_test-91e7fc73a19c3ad3)
+
+running 8 tests
+test macintosh_byte_cmap_preserves_original_glyph_selection ... ok
+test windows_symbol_cmap_preserves_private_codes_and_gids ... ok
+test windows_unicode_bmp_cmap_preserves_gids_and_metrics ... ok
+test windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font ... ok
+test all_symbolic_programs_and_pdfs_match_frozen_hashes ... ok
+test multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance ... ok
+test symbolic_tounicode_preserves_sequences_independently_of_glyph_names ... ok
+test nonsymbolic_winansi_and_explicit_unicode_have_separate_contracts ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_truetype_contract_test.rs (target/debug/deps/text_truetype_contract_test-5b7b919e731860a6)
+
+running 5 tests
+test subset_truetype_decodes_composite_glyph_without_tounicode ... ok
+test full_truetype_decodes_composite_glyph_without_tounicode ... ok
+test full_and_subset_tounicode_override_font_encoding ... ok
+test full_and_subset_preserve_advance_and_explicit_space ... ok
+test full_and_subset_are_pinned_distinct_truetype_programs ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+

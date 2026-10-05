@@ -1,0 +1,8 @@
+{
+  "oxidize-pdf-core/src/text/cmap_collection.rs": "593183583ad6f2d546fcc474333beeb91a26c30404b2d13335e1c00ca90284ba",
+  "oxidize-pdf-core/src/text/encoding_cmap.rs": "7b0d889595e16b6da748482c966be1f0fe8956a543cd0a1ecec2797d4265dddf",
+  "oxidize-pdf-core/src/text/extraction_cmap.rs": "fd3f07f056f4b71afaaedd9bfa9678e1d2975a378e8f5fcb66b4e5c3ac3fa355",
+  "oxidize-pdf-core/src/text/mod.rs": "68371affb494dc826ecbf715fcd76071d952eac1cc453e27bd59c16da41272e6",
+  "oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs": "0ce2602b5a44c2c04845e09308cb6cb60beb55d9e6abf0fc7200ec9afd32e1e6",
+  "oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs": "2c2780df026eb6b45e0e83df5d57ca53b8c2aa0f3d332829e08a721f98fa2c03"
+}

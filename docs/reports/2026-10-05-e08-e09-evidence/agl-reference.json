@@ -1,0 +1,33 @@
+{
+  "tool": "FontTools4.60.1",
+  "cases": [
+    [
+      "Lcommaaccent_uni20AC0308_u1040C.alternate",
+      "Ļ€̈𐐌"
+    ],
+    [
+      "f_f_i",
+      "ffi"
+    ],
+    [
+      "A_unknowncomponent_B",
+      "AB"
+    ],
+    [
+      "uni20ac",
+      ""
+    ],
+    [
+      "uniD801DC0C",
+      ""
+    ],
+    [
+      "u110000",
+      ""
+    ]
+  ],
+  "zapf": [
+    "a1_a2",
+    "✁✂"
+  ]
+}

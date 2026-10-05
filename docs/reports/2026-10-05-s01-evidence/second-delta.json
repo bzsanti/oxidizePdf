@@ -1,0 +1,6 @@
+[
+  "oxidize-pdf-core/src/fonts/resolved.rs",
+  "oxidize-pdf-core/src/text/extraction.rs",
+  "oxidize-pdf-core/src/text/extraction_cmap.rs",
+  "oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs"
+]

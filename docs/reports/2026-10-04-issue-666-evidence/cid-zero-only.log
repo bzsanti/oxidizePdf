@@ -1,0 +1,24 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.82s
+     Running tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-576d6b91ec72df24)
+
+running 1 test
+test identity_cid_zero_only_does_not_fall_back_to_source_bytes ... FAILED
+
+failures:
+
+---- identity_cid_zero_only_does_not_fall_back_to_source_bytes stdout ----
+
+thread 'identity_cid_zero_only_does_not_fall_back_to_source_bytes' (156) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:230:9:
+assertion `left == right` failed
+  left: " "
+ right: ""
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    identity_cid_zero_only_does_not_fall_back_to_source_bytes
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cjk_contract_test`

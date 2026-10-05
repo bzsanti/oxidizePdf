@@ -1,0 +1,30 @@
+{
+  "revision": "2dd5e53fb74a01718b9dfd448a0d1cce6fff2aa5",
+  "sources": {
+    "Adobe-CNS1-UCS2": {
+      "sha256": "8375afd535e153a7e3bcf448be93e5012b26229547a20d52520e46e3c386351f",
+      "entries": 19179,
+      "url": "https://github.com/adobe-type-tools/mapping-resources-pdf/blob/2dd5e53fb74a01718b9dfd448a0d1cce6fff2aa5/pdf2unicode/Adobe-CNS1-UCS2"
+    },
+    "Adobe-GB1-UCS2": {
+      "sha256": "368b40ec05568faf323cfbbddf23c60d566bbc88e366981eb6541b026381a3b8",
+      "entries": 30284,
+      "url": "https://github.com/adobe-type-tools/mapping-resources-pdf/blob/2dd5e53fb74a01718b9dfd448a0d1cce6fff2aa5/pdf2unicode/Adobe-GB1-UCS2"
+    },
+    "Adobe-Japan1-UCS2": {
+      "sha256": "6a9693361647a37996312cc57071bb79f8c06411207be7c730a83fda1254cd82",
+      "entries": 23060,
+      "url": "https://github.com/adobe-type-tools/mapping-resources-pdf/blob/2dd5e53fb74a01718b9dfd448a0d1cce6fff2aa5/pdf2unicode/Adobe-Japan1-UCS2"
+    },
+    "Adobe-Korea1-UCS2": {
+      "sha256": "45bcf869acdcec2507f75836919e589e7137b9f9dbaa8e4975747035024248ef",
+      "entries": 18076,
+      "url": "https://github.com/adobe-type-tools/mapping-resources-pdf/blob/2dd5e53fb74a01718b9dfd448a0d1cce6fff2aa5/pdf2unicode/Adobe-Korea1-UCS2"
+    },
+    "Adobe-KR-UCS2": {
+      "sha256": "6861a3208f331ecd73369c5d51eacf3b72c820fe3c87524f79c9ac1bb16830ec",
+      "entries": 22897,
+      "url": "https://github.com/adobe-type-tools/mapping-resources-pdf/blob/2dd5e53fb74a01718b9dfd448a0d1cce6fff2aa5/pdf2unicode/Adobe-KR-UCS2"
+    }
+  }
+}

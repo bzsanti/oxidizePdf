@@ -1,5 +1,6 @@
 pub mod cid_to_unicode;
 pub mod cmap;
+mod cmap_collection;
 pub(crate) mod encoding;
 pub(crate) mod encoding_cmap;
 pub mod extraction;
@@ -1069,3 +1070,6 @@ mod tests {
         );
     }
 }
+
+mod font_program_names;
+mod intrinsic_encoding;

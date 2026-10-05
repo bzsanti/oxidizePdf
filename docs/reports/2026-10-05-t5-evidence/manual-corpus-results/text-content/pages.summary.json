@@ -1,0 +1,44 @@
+{
+  "schema": "anchored-content-v1",
+  "manifest_sha256": "0b224d7f3ed5b50fdb1ea60ae38d2f9b305dbc2d29c89278facf2462c3717517",
+  "probe_sha256": "c513e33d46e3459ffeb48ab3036db92ba387a5f791332554d14d458f986d1235",
+  "runner_sha256": "96012a9c77ed056d11ecc25a186ad9d50306e9a3bdf61dbeacccc27cf6754b4d",
+  "inputs_unchanged": true,
+  "reference_version": "pdftotext version 24.02.0\nCopyright 2005-2024 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC\n",
+  "limits": {
+    "worker_seconds": 45,
+    "command_seconds": 20,
+    "content_scalars": 100000
+  },
+  "files": 1802,
+  "file_statuses": {
+    "complete": 1519,
+    "partial": 83,
+    "excluded": 200
+  },
+  "page_statuses": {
+    "compared": 6934,
+    "extraction_error": 152,
+    "page_count_mismatch": 10
+  },
+  "comparable_page_totals": {
+    "reference_scalars": 4223056,
+    "candidate_scalars": 4249929,
+    "reference_whitespace": 851335,
+    "candidate_whitespace": 847104,
+    "reference_replacements": 0,
+    "candidate_replacements": 20540,
+    "matched": 3711595,
+    "substitutions": 13175,
+    "deletions": 498286,
+    "insertions": 525159,
+    "multiset_deficit": 33576,
+    "multiset_excess": 60449
+  },
+  "rates_over_comparable_reference": {
+    "substitutions": 0.003119778662655669,
+    "deletions": 0.11799180498672052,
+    "insertions": 0.12435520627716043,
+    "multiset_deficit": 0.007950640484047571
+  }
+}

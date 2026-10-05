@@ -1,0 +1,10 @@
+
+running 1 test
+test declared_widths_override_implicit_metrics_for_all_fourteen_fonts ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.03s
+
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+   Compiling issue666-standard14-mutations v0.0.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-standard14-mutations)
+    Finished `test` profile [unoptimized] target(s) in 15.32s
+     Running contracts.rs (target/debug/deps/contracts-49674f8595f11193)

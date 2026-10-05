@@ -1,0 +1,39 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 4 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/fonts/type3.rs                               4     98
+
+--- Worst Offenders ---
+  predefined_glyph_names_preserve_encoding_specific_mappings (oxidize-pdf-core/src/fonts/type3.rs:789) - Score: 90
+    i Test 'predefined_glyph_names_preserve_encoding_specific_mappings' has multiple assertions without diagnostic messages
+    - Test 'predefined_glyph_names_preserve_encoding_specific_mappings' does not call any production code
+  named_standard_encoding_maps_ascii_glyph_names (oxidize-pdf-core/src/fonts/type3.rs:781) - Score: 100
+    i Test 'named_standard_encoding_maps_ascii_glyph_names' has multiple assertions without diagnostic messages
+  effective_glyph_name_applies_differences_before_base_encoding (oxidize-pdf-core/src/fonts/type3.rs:806) - Score: 100
+    i Test 'effective_glyph_name_applies_differences_before_base_encoding' has multiple assertions without diagnostic messages
+  differences_override_base_encoding (oxidize-pdf-core/src/fonts/type3.rs:819) - Score: 100
+    i Test 'differences_override_base_encoding' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/src/fonts/type3.rs:
+  named_standard_encoding_maps_ascii_glyph_names (line 781) - Score: 100
+    i Test 'named_standard_encoding_maps_ascii_glyph_names' has multiple assertions without diagnostic messages
+  predefined_glyph_names_preserve_encoding_specific_mappings (line 789) - Score: 90
+    i Test 'predefined_glyph_names_preserve_encoding_specific_mappings' has multiple assertions without diagnostic messages
+    - Test 'predefined_glyph_names_preserve_encoding_specific_mappings' does not call any production code
+  effective_glyph_name_applies_differences_before_base_encoding (line 806) - Score: 100
+    i Test 'effective_glyph_name_applies_differences_before_base_encoding' has multiple assertions without diagnostic messages
+  differences_override_base_encoding (line 819) - Score: 100
+    i Test 'differences_override_base_encoding' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

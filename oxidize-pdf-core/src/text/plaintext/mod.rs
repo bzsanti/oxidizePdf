@@ -23,7 +23,7 @@
 //!
 //! - **Simple output**: Returns `String` and `Vec<String>`, not `Vec<TextFragment>`
 //! - **Comparable performance**: Uses same content stream parser as TextExtractor
-//! - Memory efficient (no position data stored)
+//! - Default mode avoids layout fragments; layout mode collects reading-order line groups
 //! - Configurable space/newline detection
 //!
 //! # Quick Start

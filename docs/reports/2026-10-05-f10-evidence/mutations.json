@@ -1,0 +1,18 @@
+[
+  {
+    "mutation": "control",
+    "exit": 0
+  },
+  {
+    "mutation": "gid",
+    "exit": 101
+  },
+  {
+    "mutation": "width",
+    "exit": 101
+  },
+  {
+    "mutation": "unicode",
+    "exit": 101
+  }
+]

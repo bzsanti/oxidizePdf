@@ -1,0 +1,31 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.69s
+     Running tests/text_recovery_boundary_contract_test.rs (target/debug/deps/text_recovery_boundary_contract_test-7dd20d1680fef3b8)
+
+running 8 tests
+test simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace ... FAILED
+test complete_codes_and_empty_string_remain_valid ... ok
+test encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping ... ok
+test identity_collection_preserves_odd_tail_including_after_notdef ... ok
+test unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible ... ok
+test never_joins_partial_codes_across_tj_strings ... ok
+test complete_unmapped_code_does_not_reinterpret_its_suffix ... ok
+test preserves_valid_text_and_marks_every_incomplete_tail_once ... ok
+
+failures:
+
+---- simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace stdout ----
+
+thread 'simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace' (123) panicked at oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:143:9:
+assertion `left == right` failed
+  left: "�"
+ right: "�A"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace
+
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_recovery_boundary_contract_test`

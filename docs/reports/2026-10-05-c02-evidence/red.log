@@ -1,0 +1,34 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.15s
+     Running tests/text_cid_collection_policy_contract_test.rs (target/debug/deps/text_cid_collection_policy_contract_test-f30f06a374652993)
+
+running 3 tests
+test named_gb1_cmap_cannot_decode_cids_through_a_different_collection ... FAILED
+test invalid_explicit_supplement_does_not_certify_collection_unicode ... FAILED
+test cumulative_supplements_do_not_require_equality_or_invent_a_new_collection ... ok
+
+failures:
+
+---- named_gb1_cmap_cannot_decode_cids_through_a_different_collection stdout ----
+
+thread 'named_gb1_cmap_cannot_decode_cids_through_a_different_collection' (152) panicked at oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs:34:17:
+assertion `left == right` failed: Adobe/Japan1 /Supplement 6
+  left: "グ"
+ right: "�"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- invalid_explicit_supplement_does_not_certify_collection_unicode stdout ----
+
+thread 'invalid_explicit_supplement_does_not_certify_collection_unicode' (151) panicked at oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs:34:17:
+assertion `left == right` failed: Adobe/GB1 /Supplement -1
+  left: "啊"
+ right: "�"
+
+
+failures:
+    invalid_explicit_supplement_does_not_certify_collection_unicode
+    named_gb1_cmap_cannot_decode_cids_through_a_different_collection
+
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cid_collection_policy_contract_test`

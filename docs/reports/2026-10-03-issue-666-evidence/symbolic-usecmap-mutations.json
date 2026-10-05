@@ -1,0 +1,54 @@
+{
+  "scope": "input discrimination, not product mutation coverage",
+  "originals_unchanged": true,
+  "runs": [
+    {
+      "suite": "symbolic_truetype",
+      "mutation": "unicode",
+      "mutated": false,
+      "exit_code": 0,
+      "assertion": null,
+      "log": "symbolic_truetype-mutation-unicode-False.log"
+    },
+    {
+      "suite": "symbolic_truetype",
+      "mutation": "unicode",
+      "mutated": true,
+      "exit_code": 101,
+      "assertion": "fj\ud83d\ude00",
+      "log": "symbolic_truetype-mutation-unicode-True.log"
+    },
+    {
+      "suite": "symbolic_truetype",
+      "mutation": "advance",
+      "mutated": false,
+      "exit_code": 0,
+      "assertion": null,
+      "log": "symbolic_truetype-mutation-advance-False.log"
+    },
+    {
+      "suite": "symbolic_truetype",
+      "mutation": "advance",
+      "mutated": true,
+      "exit_code": 101,
+      "assertion": "got (109,700)",
+      "log": "symbolic_truetype-mutation-advance-True.log"
+    },
+    {
+      "suite": "usecmap",
+      "mutation": "cid-width",
+      "mutated": false,
+      "exit_code": 0,
+      "assertion": null,
+      "log": "usecmap-mutation-cid-width-False.log"
+    },
+    {
+      "suite": "usecmap",
+      "mutation": "cid-width",
+      "mutated": true,
+      "exit_code": 101,
+      "assertion": "expected second origin 104, got 109",
+      "log": "usecmap-mutation-cid-width-True.log"
+    }
+  ]
+}

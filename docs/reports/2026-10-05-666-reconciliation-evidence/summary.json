@@ -1,0 +1,26 @@
+{
+  "issue": 666,
+  "closed_rows": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "E07"
+  ],
+  "validated_rows": 25,
+  "partial_rows": 21,
+  "tests": {
+    "passed": 79,
+    "failed": 0,
+    "ignored": 0,
+    "targets": 7
+  },
+  "product_changes": 0,
+  "findings_corrected": 2,
+  "nan_guard": "before accepts mutation; after rejects; both controls pass",
+  "ci": "deferred",
+  "next": "E08/E09",
+  "report": "docs/reports/2026-10-05-666-reconciliation.md"
+}

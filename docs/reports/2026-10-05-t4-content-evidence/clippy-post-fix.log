@@ -1,0 +1,40 @@
+    Blocking waiting for file lock on build directory
+    Checking oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+error: octal-looking escape in a literal
+  --> oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:44:46
+   |
+44 |         ContentParser::parse_strict(b"BT\0/F1\010\0Tf\0<41\042>\0Tj\0(A\0B) Tj ET").unwrap();
+   |                                              ^^^^
+   |
+   = help: octal escapes are not supported, `\0` is always null
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#octal_escapes
+   = note: `-D clippy::octal-escapes` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::octal_escapes)]`
+help: if an octal escape is intended, use a hex escape instead
+   |
+44 -         ContentParser::parse_strict(b"BT\0/F1\010\0Tf\0<41\042>\0Tj\0(A\0B) Tj ET").unwrap();
+44 +         ContentParser::parse_strict(b"BT\0/F1\x08\0Tf\0<41\042>\0Tj\0(A\0B) Tj ET").unwrap();
+   |
+help: if a null escape is intended, disambiguate using
+   |
+44 |         ContentParser::parse_strict(b"BT\0/F1\x0010\0Tf\0<41\042>\0Tj\0(A\0B) Tj ET").unwrap();
+   |                                               ++
+
+error: octal-looking escape in a literal
+  --> oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:44:59
+   |
+44 |         ContentParser::parse_strict(b"BT\0/F1\010\0Tf\0<41\042>\0Tj\0(A\0B) Tj ET").unwrap();
+   |                                                           ^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#octal_escapes
+help: if an octal escape is intended, use a hex escape instead
+   |
+44 -         ContentParser::parse_strict(b"BT\0/F1\010\0Tf\0<41\042>\0Tj\0(A\0B) Tj ET").unwrap();
+44 +         ContentParser::parse_strict(b"BT\0/F1\010\0Tf\0<41\x22>\0Tj\0(A\0B) Tj ET").unwrap();
+   |
+help: if a null escape is intended, disambiguate using
+   |
+44 |         ContentParser::parse_strict(b"BT\0/F1\010\0Tf\0<41\x0042>\0Tj\0(A\0B) Tj ET").unwrap();
+   |                                                            ++
+
+error: could not compile `oxidize-pdf` (test "text_inline_image_boundary_contract_test") due to 2 previous errors

@@ -1,0 +1,12 @@
+{
+  "oxidize-pdf-core/src/text/cid_to_unicode.rs": {
+    "sha256": "7e7fa6e6843e6d0cc6246ed93dc525d46d32f29631023bb57ea221e91d6c9d04",
+    "identical": true,
+    "regenerated_path": "target/issue676-regeneration-20261004/cid_to_unicode.rs"
+  },
+  "oxidize-pdf-core/src/text/cid_to_unicode.provenance.json": {
+    "sha256": "55624e08bfff7a1c8cc4a24659ef1ed856b52a008a2aac3a106736886b6e3f55",
+    "identical": true,
+    "regenerated_path": "target/issue676-regeneration-20261004/cid_to_unicode.provenance.json"
+  }
+}

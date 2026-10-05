@@ -1,0 +1,48 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 89 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-core/tests/text_cid_collection_policy_contract_test.rs        7     89
+
+--- Worst Offenders ---
+  program_metadata_is_static_scoped_and_must_agree_with_dictionary (oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs:176) - Score: 80
+    - Test 'program_metadata_is_static_scoped_and_must_agree_with_dictionary' has low assert-to-setup ratio (17%): 7 asserts vs 35 setup lines
+    - Test 'program_metadata_is_static_scoped_and_must_agree_with_dictionary' does not call any production code
+  named_gb1_cmap_cannot_decode_cids_through_a_different_collection (oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs:64) - Score: 90
+    - Test 'named_gb1_cmap_cannot_decode_cids_through_a_different_collection' does not call any production code
+  cumulative_supplements_do_not_require_equality_or_invent_a_new_collection (oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs:71) - Score: 90
+    - Test 'cumulative_supplements_do_not_require_equality_or_invent_a_new_collection' does not call any production code
+  invalid_explicit_supplement_does_not_certify_collection_unicode (oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs:78) - Score: 90
+    - Test 'invalid_explicit_supplement_does_not_certify_collection_unicode' does not call any production code
+  embedded_dictionary_metadata_must_not_authorize_another_collection (oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs:126) - Score: 90
+    - Test 'embedded_dictionary_metadata_must_not_authorize_another_collection' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs:
+  named_gb1_cmap_cannot_decode_cids_through_a_different_collection (line 64) - Score: 90
+    - Test 'named_gb1_cmap_cannot_decode_cids_through_a_different_collection' does not call any production code
+  cumulative_supplements_do_not_require_equality_or_invent_a_new_collection (line 71) - Score: 90
+    - Test 'cumulative_supplements_do_not_require_equality_or_invent_a_new_collection' does not call any production code
+  invalid_explicit_supplement_does_not_certify_collection_unicode (line 78) - Score: 90
+    - Test 'invalid_explicit_supplement_does_not_certify_collection_unicode' does not call any production code
+  embedded_dictionary_metadata_must_not_authorize_another_collection (line 126) - Score: 90
+    - Test 'embedded_dictionary_metadata_must_not_authorize_another_collection' does not call any production code
+  embedded_metadata_cannot_conflict_with_a_named_parent (line 148) - Score: 90
+    - Test 'embedded_metadata_cannot_conflict_with_a_named_parent' does not call any production code
+  incompatible_collection_cid_zero_does_not_silently_erase_unknown_text (line 161) - Score: 90
+    i Test 'incompatible_collection_cid_zero_does_not_silently_erase_unknown_text' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'incompatible_collection_cid_zero_does_not_silently_erase_unknown_text' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  program_metadata_is_static_scoped_and_must_agree_with_dictionary (line 176) - Score: 80
+    - Test 'program_metadata_is_static_scoped_and_must_agree_with_dictionary' has low assert-to-setup ratio (17%): 7 asserts vs 35 setup lines
+    - Test 'program_metadata_is_static_scoped_and_must_agree_with_dictionary' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

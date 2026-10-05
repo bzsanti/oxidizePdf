@@ -1,0 +1,15 @@
+{
+  "status": "partial",
+  "passed": 69,
+  "failed": 0,
+  "targets": 6,
+  "changed_previous_files": [
+    "TASKS.md",
+    "oxidize-pdf-core/src/text/encoding_cmap.rs",
+    "oxidize-pdf-core/src/text/extraction_cmap.rs",
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json",
+    "oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs",
+    "oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs"
+  ],
+  "next": "Program metadata parsing, final QR and aggregate/corpus before closing C08."
+}

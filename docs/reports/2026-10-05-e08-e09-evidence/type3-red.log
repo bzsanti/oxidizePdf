@@ -1,0 +1,28 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.68s
+     Running tests/text_unicode_policy_contract_test.rs (target/debug/deps/text_unicode_policy_contract_test-e891f611c11033b0)
+
+running 5 tests
+test agl_components_suffixes_and_scalar_boundaries_follow_independent_examples ... ok
+test differences_sequences_reach_both_consumers_without_multiplying_advances ... ok
+test malformed_tounicode_destinations_never_become_utf8_or_base_text ... ok
+test valid_utf16_sequences_preserve_precedence_and_scalar_content ... ok
+test unknown_difference_replaces_base_in_all_simple_subtypes ... FAILED
+
+failures:
+
+---- unknown_difference_replaces_base_in_all_simple_subtypes stdout ----
+
+thread 'unknown_difference_replaces_base_in_all_simple_subtypes' (145) panicked at oxidize-pdf-core/tests/text_unicode_policy_contract_test.rs:141:17:
+assertion `left == right` failed: Type3/unknowncomponent
+  left: "A"
+ right: "�"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    unknown_difference_replaces_base_in_all_simple_subtypes
+
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_unicode_policy_contract_test`

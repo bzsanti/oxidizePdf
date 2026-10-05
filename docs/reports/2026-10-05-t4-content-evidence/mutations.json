@@ -1,0 +1,32 @@
+[
+  {
+    "case": "control",
+    "exit": 0,
+    "source_sha256": "26cd05416088719b77901fd4038a96911b30e4fc87fcebe522f2bfb80e60ac82"
+  },
+  {
+    "case": "autojunk",
+    "exit": 1,
+    "source_sha256": "4e141b023f215846b1e85e5367939f5f0e5d278a035853213bb1916611de38bc"
+  },
+  {
+    "case": "case-folding",
+    "exit": 1,
+    "source_sha256": "2443581d94913bf765badd0715ba2864d646c4fd7dfc7f1566b3182e5e595b6d"
+  },
+  {
+    "case": "bytes-not-scalars",
+    "exit": 1,
+    "source_sha256": "a4db520265ae17d20708a414d7a41aeaf2bc5b11f23f8513d767517e2e481f50"
+  },
+  {
+    "case": "invented-denominator",
+    "exit": 1,
+    "source_sha256": "4d4e14b0a11ab06bd26d9fab6914033d9e6fa349ba5837eab48eb7420a10f193"
+  },
+  {
+    "case": "unverified-input",
+    "exit": 1,
+    "source_sha256": "e36ed5b135f49e3953fea94c717ecca667c575f6021b96a3083236ae18440f16"
+  }
+]

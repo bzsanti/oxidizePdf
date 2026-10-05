@@ -1,0 +1,16 @@
+{
+  "targets": 60,
+  "passed": 7429,
+  "failed": 0,
+  "ignored": 3,
+  "changed_product_sources": [],
+  "changed_test_sources": [
+    "oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs"
+  ],
+  "test_source_change": "Clippy-only disambiguation of NUL followed by digits: \\010 -> \\x0010 and \\042 -> \\x0042. Same byte strings; final target rerun passes2/2.",
+  "real_gates": {
+    "flat_extraction_does_not_fuse_more_words_than_poppler": true,
+    "flat_extraction_does_not_transpose_more_words_than_poppler": true,
+    "reading_order_option_does_not_transpose_more_words_than_poppler": true
+  }
+}

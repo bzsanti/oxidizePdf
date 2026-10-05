@@ -1,0 +1,15 @@
+{
+  "status": "locally-complete",
+  "row": "C01",
+  "passed": 40,
+  "failed": 0,
+  "ignored": 0,
+  "targets": 5,
+  "new_tests": 2,
+  "product_changes": 0,
+  "new_findings": 0,
+  "changed_previous_files": [
+    "TASKS.md",
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json"
+  ]
+}

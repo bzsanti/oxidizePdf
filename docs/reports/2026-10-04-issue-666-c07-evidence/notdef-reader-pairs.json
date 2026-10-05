@@ -1,0 +1,141 @@
+{
+  "versions": [
+    "1.26.5",
+    "1.26.10",
+    null
+  ],
+  "cases": [
+    {
+      "case": "notdef-char",
+      "explicit_cid_control": false,
+      "sha256": "f63317e1005762c59688c749003d7759567f6db822f57e0ed9d9d3d08428dd59",
+      "mupdf": {
+        "text": "B\n",
+        "trace": [
+          {
+            "unicode": 66,
+            "gid": 29,
+            "origin": [
+              100.0,
+              92.0
+            ]
+          }
+        ],
+        "warnings": "cannot encode character\n... repeated 3 times...",
+        "raster_sha256": "4693b46bc4eaed2335bd8c3ae6091a08e340f9c6e30d50c737c8a0ce664a4d86"
+      },
+      "poppler": {
+        "text": "�B\n\f",
+        "stderr": "",
+        "exit": 0
+      },
+      "qpdf": {
+        "exit": 0,
+        "stderr": ""
+      }
+    },
+    {
+      "case": "notdef-char",
+      "explicit_cid_control": true,
+      "sha256": "fbb6a5172d144d219df753e1f11a858a22e6c9f7204634f278b1a628f534e910",
+      "mupdf": {
+        "text": "\u0000B\n",
+        "trace": [
+          {
+            "unicode": 65533,
+            "gid": 0,
+            "origin": [
+              100.0,
+              92.0
+            ]
+          },
+          {
+            "unicode": 66,
+            "gid": 29,
+            "origin": [
+              105.0,
+              92.0
+            ]
+          }
+        ],
+        "warnings": "",
+        "raster_sha256": "ce43cc7a2b4d3057713b71819a7dc40162e933b1899bab29988b95e6d452d7f5"
+      },
+      "poppler": {
+        "text": "�B\n\f",
+        "stderr": "",
+        "exit": 0
+      },
+      "qpdf": {
+        "exit": 0,
+        "stderr": ""
+      }
+    },
+    {
+      "case": "notdef-range",
+      "explicit_cid_control": false,
+      "sha256": "22bd30db936a26e7af5b17dec099955fd71bebd70f854ef8fcb50942d6a42c2c",
+      "mupdf": {
+        "text": "B\n",
+        "trace": [
+          {
+            "unicode": 66,
+            "gid": 29,
+            "origin": [
+              100.0,
+              92.0
+            ]
+          }
+        ],
+        "warnings": "cannot encode character\n... repeated 3 times...",
+        "raster_sha256": "4693b46bc4eaed2335bd8c3ae6091a08e340f9c6e30d50c737c8a0ce664a4d86"
+      },
+      "poppler": {
+        "text": "�B\n\f",
+        "stderr": "",
+        "exit": 0
+      },
+      "qpdf": {
+        "exit": 0,
+        "stderr": ""
+      }
+    },
+    {
+      "case": "notdef-range",
+      "explicit_cid_control": true,
+      "sha256": "1968cfdd91c985cf0062031412b6c4a35e725df6fe05e3bcc50f8c70f63f031c",
+      "mupdf": {
+        "text": "\u0000B\n",
+        "trace": [
+          {
+            "unicode": 65533,
+            "gid": 0,
+            "origin": [
+              100.0,
+              92.0
+            ]
+          },
+          {
+            "unicode": 66,
+            "gid": 29,
+            "origin": [
+              105.0,
+              92.0
+            ]
+          }
+        ],
+        "warnings": "",
+        "raster_sha256": "ce43cc7a2b4d3057713b71819a7dc40162e933b1899bab29988b95e6d452d7f5"
+      },
+      "poppler": {
+        "text": "�B\n\f",
+        "stderr": "",
+        "exit": 0
+      },
+      "qpdf": {
+        "exit": 0,
+        "stderr": ""
+      }
+    }
+  ]
+}

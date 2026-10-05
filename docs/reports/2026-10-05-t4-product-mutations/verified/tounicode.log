@@ -1,0 +1,24 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core)
+    Finished `test` profile [unoptimized] target(s) in 5.99s
+     Running tests/text_encoding_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_encoding_contract_test-0bf3ae362130d2a3)
+
+running 1 test
+test tounicode_overrides_differences_and_supports_unicode_sequences ... FAILED
+
+failures:
+
+---- tounicode_overrides_differences_and_supports_unicode_sequences stdout ----
+
+thread 'tounicode_overrides_differences_and_supports_unicode_sequences' (3625) panicked at core/tests/text_encoding_contract_test.rs:172:9:
+assertion `left == right` failed: ToUnicode over Differences/StandardEncoding; no normalization
+  left: "€ﬁA"
+ right: "fi😀e\u{301}"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tounicode_overrides_differences_and_supports_unicode_sequences
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `--test text_encoding_contract_test`

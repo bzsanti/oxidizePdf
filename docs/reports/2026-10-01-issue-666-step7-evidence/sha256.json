@@ -1,0 +1,19 @@
+{
+  "tools/generate_text_cid_cff.py": "2217daf61186cc9353c0c149bd796c2ab0c52f6d033bd12b003a870ff48ffc1d",
+  "tools/text_contracts/cases.json": "5be485ebb0cb35a1982437d44f4cd9f5ad4bed449133153602b7710454ae947b",
+  "oxidize-pdf-core/tests/text_cid_cff_contract_test.rs": "b01c9a7fef84690e710747dbd67d66d5e21d976e0edcae3c5481a34904e358ee",
+  "oxidize-pdf-core/tests/fixtures/text_contracts/fonts/ContractCID.cff": "6ffca49f6b854be45cc6da2ad2edc5618698df14cbcc89ed1a3960816e6d2824",
+  "oxidize-pdf-core/tests/fixtures/text_contracts/fonts/cid-cff-provenance.json": "8bd4e415491ba7aa127049f38f396ba056f8510cb0494ca4530c2d5b16ae9968",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/readers.json": "f78ac706f08c53eb1e180f5ae20881c6ecda29da335ca84251709831b4262dcf",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/external.json": "4c077db0c8d90f0188266e39bca4908b8109c17c08c6a12177f2db5e611a26ac",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/clippy.log": "c8f459df967c25fe0d050e1cafe9eb5a87d6551ae2047aebff34cf78f39c3359",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/pr665-final.log": "de7078fa278651acf685aa4da9598e241f94e9ffb7b16f1a2f3a9ad6e16cc6ec",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-identity.pdf": "a5f168c879a0b05ec1bcf5719bb549de0ac933473e207a5768b1cd5c83818959",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/pr664-final.log": "30680fd8fda34b5a01cb832a4b3b39f1eda234bc4f98147ef8d0b128b69566ff",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-vertical.pdf": "2503abf866ed8eb364421ce9d838dce007d95a6f423084dad499982256509778",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/base-final.log": "e1f4b8c9bd6f8f9ec575bcd98ef5a01065a65d08d2a6b502c0eeef4532a58adb",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/fixture_probe.rs": "4003d59dbddc073e766f08eeb2448dcdba8af1bcd9cc2774b0a4309e0ceb8943",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-equivalent.pdf": "758ac8a23fbef9d2ca8b3a89fd52914f4a98f9eb48d52d2e62f4f871e912fdcd",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-remapped.pdf": "2f1d0c783fbef40e1dfd717aea553847299380047fc226d5be77ace62e4174a1",
+  "docs/reports/2026-10-01-issue-666-step7-evidence/issue666_step7_support/font.rs": "54a7a7cca207c16c5a6a768b503ae87302f435210da2646e4da8102aa59e2c08"
+}

@@ -1,0 +1,66 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 01s
+     Running tests/cid_cmap_test.rs (target/debug/deps/cid_cmap_test-f27e990f8a7501dd)
+
+running 9 tests
+test test_cns1_basic_latin_cids ... ok
+test cid_zero_is_not_text_in_collection_fallbacks ... ok
+test test_cid_collection_from_ordering ... ok
+test test_gb1_exists_and_has_entries ... ok
+test test_cns1_known_cid_mappings ... ok
+test test_japan1_exists_and_has_entries ... ok
+test test_korea1_exists_and_has_entries ... ok
+test test_unknown_cid_returns_none ... ok
+test test_issue_157_cid_keyed_font_text_extraction ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+
+     Running tests/text_composite_font_contract_test.rs (target/debug/deps/text_composite_font_contract_test-8168be6f19c1ad07)
+
+running 6 tests
+test six_real_programs_and_fourteen_pdfs_match_their_frozen_hashes ... ok
+test full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct ... ok
+test full_and_subset_truetype_support_identity_cid_to_gid_map ... ok
+test full_and_subset_truetype_support_stream_cid_to_gid_map ... ok
+test cff_fixtures_preserve_identity_cid_text_and_pdf_widths ... ok
+test cff_fixtures_preserve_remapped_cid_text_and_pdf_widths ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_qr_regression_contract_test.rs (target/debug/deps/text_qr_regression_contract_test-afa95a00ec074ab8)
+
+running 15 tests
+test legacy_collection_matches_stay_exhaustive ... ok
+test inherited_adobe_kr_dictionary ... ok
+test inherited_adobe_kr_operator ... ok
+test resolved_intrinsic_cff ... ok
+test resolved_flat_control ... ok
+test resolved_encoding_parent ... ok
+test resolved_intrinsic_type1 ... ok
+test resolved_named_parent ... ok
+test resolved_vertical_advance ... ok
+test strict_public_extraction_rejects_cyclic_usecmap ... ok
+test resolved_unicode_parent ... ok
+test page_and_form_strict_cycles_error_while_lenient_keeps_child ... ok
+test resolved_intrinsic_differences_and_tounicode_precedence ... ok
+test indirect_cid_collection_matches_direct_extraction ... ok
+test type1_procedure_is_not_executed ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+
+     Running tests/text_transform_contract_test.rs (target/debug/deps/text_transform_contract_test-57da4620cfd91d58)
+
+running 9 tests
+test ctm_nonuniform_scale_and_translation_apply_to_text_origins ... ok
+test ctm_shear_and_translation_apply_to_text_origins ... ok
+test q_and_q_restore_ctm_before_the_next_text_object ... ok
+test bt_resets_text_matrix_and_retains_text_state ... ok
+test font_switch_changes_advance_without_resetting_text_matrix ... ok
+test tm_shear_preserves_both_advance_components ... ok
+test nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state ... ok
+test tm_rotation_rotates_glyph_advance ... ok
+test ctm_scale_composes_with_rotated_tm_in_pdf_order ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

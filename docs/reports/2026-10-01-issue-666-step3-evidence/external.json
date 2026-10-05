@@ -1,0 +1,94 @@
+[
+  {
+    "file": "issue666-step3-embedded-unicode.pdf",
+    "qpdf": {
+      "exit": 0,
+      "stdout": "checking /tmp/issue666-step3-embedded-unicode.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+      "stderr": ""
+    },
+    "fonts": {
+      "exit": 0,
+      "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nSourceSans3-Regular                  Type 1C (OT)      WinAnsi          yes no  yes      4  0\n",
+      "stderr": ""
+    },
+    "metadata": {
+      "exit": 0,
+      "stdout": "Custom Metadata: no\nMetadata Stream: no\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           1\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       336372 bytes\nOptimized:       no\nPDF version:     1.7\n",
+      "stderr": ""
+    },
+    "text": {
+      "exit": 0,
+      "stdout": "fi😀\n\f",
+      "stderr": ""
+    }
+  },
+  {
+    "file": "issue666-step3-embedded.pdf",
+    "qpdf": {
+      "exit": 0,
+      "stdout": "checking /tmp/issue666-step3-embedded.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+      "stderr": ""
+    },
+    "fonts": {
+      "exit": 0,
+      "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nSourceSans3-Regular                  Type 1C (OT)      WinAnsi          yes no  no       4  0\n",
+      "stderr": ""
+    },
+    "metadata": {
+      "exit": 0,
+      "stdout": "Custom Metadata: no\nMetadata Stream: no\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           1\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       335939 bytes\nOptimized:       no\nPDF version:     1.7\n",
+      "stderr": ""
+    },
+    "text": {
+      "exit": 0,
+      "stdout": "AB\n\f",
+      "stderr": ""
+    }
+  },
+  {
+    "file": "issue666-step3-metadata-pdfdoc.pdf",
+    "qpdf": {
+      "exit": 0,
+      "stdout": "checking /tmp/issue666-step3-metadata-pdfdoc.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+      "stderr": ""
+    },
+    "fonts": {
+      "exit": 0,
+      "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\n",
+      "stderr": ""
+    },
+    "metadata": {
+      "exit": 0,
+      "stdout": "Title:           •€\nAuthor:          •€\nCustom Metadata: no\nMetadata Stream: no\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           1\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       520 bytes\nOptimized:       no\nPDF version:     1.4\n",
+      "stderr": ""
+    },
+    "text": {
+      "exit": 0,
+      "stdout": "\f",
+      "stderr": ""
+    }
+  },
+  {
+    "file": "issue666-step3-metadata-utf16.pdf",
+    "qpdf": {
+      "exit": 0,
+      "stdout": "checking /tmp/issue666-step3-metadata-utf16.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+      "stderr": ""
+    },
+    "fonts": {
+      "exit": 0,
+      "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\n",
+      "stderr": ""
+    },
+    "metadata": {
+      "exit": 0,
+      "stdout": "Title:           😀\nAuthor:          😀\nCustom Metadata: no\nMetadata Stream: no\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           1\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       536 bytes\nOptimized:       no\nPDF version:     1.4\n",
+      "stderr": ""
+    },
+    "text": {
+      "exit": 0,
+      "stdout": "\f",
+      "stderr": ""
+    }
+  }
+]

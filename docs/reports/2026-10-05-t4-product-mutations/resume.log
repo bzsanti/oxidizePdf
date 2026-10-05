@@ -1,0 +1,10 @@
+control: verified
+positive-metrics: verified
+strict-mode: verified
+descendant: verified
+explicit-space: verified
+macroman-currency: verified
+differences: verified
+tounicode: verified
+tj-sign: verified
+fragment-scale: verified

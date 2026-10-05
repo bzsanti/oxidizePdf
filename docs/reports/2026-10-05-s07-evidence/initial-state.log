@@ -1,0 +1,37 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.68s
+     Running tests/text_state_contract_test.rs (target/debug/deps/text_state_contract_test-8ca206f874cc9015)
+
+running 14 tests
+test bt_retains_spacing_and_scale_while_resetting_text_position ... ok
+test changes_apply_only_to_subsequent_advances_and_can_return_to_defaults ... ok
+test character_spacing_applies_once_to_a_multiscalar_source_glyph ... ok
+test default_spacing_and_scale_leave_declared_width_unchanged ... ok
+test double_quote_sets_word_and_character_spacing_in_pdf_operand_order ... ok
+test consecutive_tj_and_tj_arrays_keep_one_continuous_pen ... FAILED
+test actualtext_accumulates_scaled_source_widths ... ok
+test mapped_unicode_space_does_not_receive_word_spacing ... ok
+test q_restores_text_parameters_but_not_the_text_object_pen ... ok
+test negative_spacing_is_in_text_units_and_scaled_once ... ok
+test tracking_inference_does_not_leak_between_consecutive_tj_arrays ... ok
+test zero_and_reflected_horizontal_scale_reach_fragment_extent ... ok
+test word_spacing_changes_and_reset_affect_only_later_source_spaces ... ok
+test word_spacing_uses_source_byte32_even_when_tounicode_changes_it ... ok
+
+failures:
+
+---- consecutive_tj_and_tj_arrays_keep_one_continuous_pen stdout ----
+
+thread 'consecutive_tj_and_tj_arrays_keep_one_continuous_pen' (131) panicked at oxidize-pdf-core/tests/text_state_contract_test.rs:38:9:
+assertion `left == right` failed: [TextFragment { text: "A", x: 100.0, y: 700.0, width: 5.0, height: 10.0, font_size: 10.0, font_name: Some("F1"), is_bold: false, is_italic: false, color: None, render_mode: Fill, space_decisions: [], mcid: None, struct_tag: None }, TextFragment { text: "B ", x: 105.0, y: 700.0, width: 8.0, height: 10.0, font_size: 10.0, font_name: Some("F1"), is_bold: false, is_italic: false, color: None, render_mode: Stroke, space_decisions: [], mcid: None, struct_tag: None }, TextFragment { text: "C", x: 113.0, y: 700.0, width: 5.0, height: 10.0, font_size: 10.0, font_name: Some("F1"), is_bold: false, is_italic: false, color: None, render_mode: FillStroke, space_decisions: [], mcid: None, struct_tag: None }]
+  left: 3
+ right: 4
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    consecutive_tj_and_tj_arrays_keep_one_continuous_pen
+
+test result: FAILED. 13 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_state_contract_test`

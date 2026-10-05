@@ -1,0 +1,15 @@
+
+running 1 test
+test regression::nul_separates_tokens_and_hex_digits_but_remains_literal_data ... FAILED
+
+failures:
+
+failures:
+    regression::nul_separates_tokens_and_hex_digits_but_remains_literal_data
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 101 filtered out; finished in 0.00s
+
+
+thread 'regression::nul_separates_tokens_and_hex_digits_but_remains_literal_data' (95) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-length-parser-mutations/regression.rs:45:89:
+called `Result::unwrap()` on an `Err` value: SyntaxError { position: 16, message: "Invalid character in hex string: '\\0'" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

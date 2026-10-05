@@ -1,0 +1,809 @@
+{
+  "versions": [
+    "4.60.1",
+    "1.26.5",
+    "1.26.10"
+  ],
+  "cases": [
+    {
+      "path": "full-private-identity-h-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-identity-h-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-identity-v-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-identity-v-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-stream-h-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-stream-h-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-stream-v-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-stream-v-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-remapped-h-fallback.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.5,
+          92.0
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "aca33f588aa5d618005e85ec2a4fef125b2240cebf749d141d1e6cebd346ef08",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-remapped-h-unicode.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "aca33f588aa5d618005e85ec2a4fef125b2240cebf749d141d1e6cebd346ef08",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-remapped-v-fallback.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          96.25,
+          100.79998779296875
+        ],
+        [
+          97.75,
+          109.79998779296875
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "fc5740c8debff49813989b37d4a7bfc6de4d785a175178e9c45ad0c4bdf7bf0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-private-remapped-v-unicode.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          96.25,
+          100.79998779296875
+        ],
+        [
+          97.75,
+          109.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "fc5740c8debff49813989b37d4a7bfc6de4d785a175178e9c45ad0c4bdf7bf0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-Japan1-stream-h-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "AB",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-Japan1-stream-h-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-Japan1-stream-v-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "AB",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-Japan1-stream-v-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-Japan1-remapped-h-fallback.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.5,
+          92.0
+        ]
+      ],
+      "observed_text": "BA",
+      "raster_sha256": "aca33f588aa5d618005e85ec2a4fef125b2240cebf749d141d1e6cebd346ef08",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-Japan1-remapped-h-unicode.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "aca33f588aa5d618005e85ec2a4fef125b2240cebf749d141d1e6cebd346ef08",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-Japan1-remapped-v-fallback.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          96.25,
+          100.79998779296875
+        ],
+        [
+          97.75,
+          109.79998779296875
+        ]
+      ],
+      "observed_text": "BA",
+      "raster_sha256": "fc5740c8debff49813989b37d4a7bfc6de4d785a175178e9c45ad0c4bdf7bf0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "full-Japan1-remapped-v-unicode.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          96.25,
+          100.79998779296875
+        ],
+        [
+          97.75,
+          109.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "fc5740c8debff49813989b37d4a7bfc6de4d785a175178e9c45ad0c4bdf7bf0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-identity-h-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-identity-h-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-identity-v-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-identity-v-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-stream-h-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-stream-h-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-stream-v-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-stream-v-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-remapped-h-fallback.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.5,
+          92.0
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "aca33f588aa5d618005e85ec2a4fef125b2240cebf749d141d1e6cebd346ef08",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-remapped-h-unicode.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "aca33f588aa5d618005e85ec2a4fef125b2240cebf749d141d1e6cebd346ef08",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-remapped-v-fallback.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          96.25,
+          100.79998779296875
+        ],
+        [
+          97.75,
+          109.79998779296875
+        ]
+      ],
+      "observed_text": "\ufffd\ufffd",
+      "raster_sha256": "fc5740c8debff49813989b37d4a7bfc6de4d785a175178e9c45ad0c4bdf7bf0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-private-remapped-v-unicode.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          96.25,
+          100.79998779296875
+        ],
+        [
+          97.75,
+          109.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "fc5740c8debff49813989b37d4a7bfc6de4d785a175178e9c45ad0c4bdf7bf0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-Japan1-stream-h-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "AB",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-Japan1-stream-h-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "a3d646191bc101eef60758d661149ecd8c3e09b5148ccb8aff03d6060cfde124",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-Japan1-stream-v-fallback.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "AB",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-Japan1-stream-v-unicode.pdf",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          97.75,
+          100.79998779296875
+        ],
+        [
+          96.25,
+          112.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "5948f33d8d92603ef6dfbf8a2f6a28094d8889caf651faf3ad14c8a73fb3be0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-Japan1-remapped-h-fallback.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.5,
+          92.0
+        ]
+      ],
+      "observed_text": "BA",
+      "raster_sha256": "aca33f588aa5d618005e85ec2a4fef125b2240cebf749d141d1e6cebd346ef08",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-Japan1-remapped-h-unicode.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.5,
+          92.0
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "aca33f588aa5d618005e85ec2a4fef125b2240cebf749d141d1e6cebd346ef08",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-Japan1-remapped-v-fallback.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          96.25,
+          100.79998779296875
+        ],
+        [
+          97.75,
+          109.79998779296875
+        ]
+      ],
+      "observed_text": "BA",
+      "raster_sha256": "fc5740c8debff49813989b37d4a7bfc6de4d785a175178e9c45ad0c4bdf7bf0a",
+      "qpdf": "pass"
+    },
+    {
+      "path": "subset-Japan1-remapped-v-unicode.pdf",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          96.25,
+          100.79998779296875
+        ],
+        [
+          97.75,
+          109.79998779296875
+        ]
+      ],
+      "observed_text": "fi\ud83d\ude00",
+      "raster_sha256": "fc5740c8debff49813989b37d4a7bfc6de4d785a175178e9c45ad0c4bdf7bf0a",
+      "qpdf": "pass"
+    }
+  ]
+}

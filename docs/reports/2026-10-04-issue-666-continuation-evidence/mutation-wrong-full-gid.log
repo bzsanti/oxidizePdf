@@ -1,0 +1,33 @@
+
+running 6 tests
+test bmp_wins_when_full_unicode_is_absent ... ok
+test fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority ... ok
+test full_unicode_wins_in_all_120_subtable_orders ... FAILED
+test generic_unicode_wins_when_windows_unicode_is_absent ... ok
+test selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables ... ok
+test competing_program_matches_independent_fonttools_tables_and_hash ... FAILED
+
+failures:
+
+---- full_unicode_wins_in_all_120_subtable_orders stdout ----
+
+thread 'full_unicode_wins_in_all_120_subtable_orders' (70) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-competing-mutations/wrong-full-gid.rs:37:13:
+assertion `left == right` failed
+  left: Some(2)
+ right: Some(3)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- competing_program_matches_independent_fonttools_tables_and_hash stdout ----
+
+thread 'competing_program_matches_independent_fonttools_tables_and_hash' (68) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-competing-mutations/wrong-full-gid.rs:96:5:
+assertion `left == right` failed
+  left: "74a92f758f710a69ede03211f4666edcfea8f2feb74d88b5789bef988a41d526"
+ right: "c5489d43d43b9453cb1ed405b3733a8e8e576be301f7e7021f91085467fb1fc7"
+
+
+failures:
+    competing_program_matches_independent_fonttools_tables_and_hash
+    full_unicode_wins_in_all_120_subtable_orders
+
+test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

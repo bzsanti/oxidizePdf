@@ -1,0 +1,57 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 85 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/text_recovery_boundary_contract_test.rs        8     85
+
+--- Worst Offenders ---
+  identity_collection_preserves_odd_tail_including_after_notdef (oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:72) - Score: 80
+    - Test 'identity_collection_preserves_odd_tail_including_after_notdef' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'identity_collection_preserves_odd_tail_including_after_notdef' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping (oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:93) - Score: 80
+    - Test 'encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible (oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:116) - Score: 80
+    - Test 'unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace (oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:136) - Score: 80
+    - Test 'simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  preserves_valid_text_and_marks_every_incomplete_tail_once (oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:49) - Score: 90
+    - Test 'preserves_valid_text_and_marks_every_incomplete_tail_once' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:
+  preserves_valid_text_and_marks_every_incomplete_tail_once (line 49) - Score: 90
+    - Test 'preserves_valid_text_and_marks_every_incomplete_tail_once' does not call any production code
+  complete_unmapped_code_does_not_reinterpret_its_suffix (line 56) - Score: 90
+    - Test 'complete_unmapped_code_does_not_reinterpret_its_suffix' does not call any production code
+  never_joins_partial_codes_across_tj_strings (line 62) - Score: 90
+    - Test 'never_joins_partial_codes_across_tj_strings' does not call any production code
+  complete_codes_and_empty_string_remain_valid (line 67) - Score: 90
+    - Test 'complete_codes_and_empty_string_remain_valid' does not call any production code
+  identity_collection_preserves_odd_tail_including_after_notdef (line 72) - Score: 80
+    - Test 'identity_collection_preserves_odd_tail_including_after_notdef' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'identity_collection_preserves_odd_tail_including_after_notdef' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping (line 93) - Score: 80
+    - Test 'encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible (line 116) - Score: 80
+    - Test 'unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace (line 136) - Score: 80
+    - Test 'simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

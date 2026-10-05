@@ -1,0 +1,103 @@
+{
+  "common_pages": 6937,
+  "only_before": 0,
+  "only_after": 0,
+  "changed": [
+    {
+      "path": "format-corpus/preserve_029016.pdf",
+      "page": 17,
+      "before": {
+        "reference_scalars": 519,
+        "candidate_scalars": 0,
+        "reference_whitespace": 121,
+        "candidate_whitespace": 0,
+        "reference_replacements": 0,
+        "candidate_replacements": 0,
+        "matched": 0,
+        "substitutions": 0,
+        "deletions": 519,
+        "insertions": 0,
+        "multiset_deficit": 519,
+        "multiset_excess": 0
+      },
+      "after": {
+        "reference_scalars": 519,
+        "candidate_scalars": 619,
+        "reference_whitespace": 121,
+        "candidate_whitespace": 61,
+        "reference_replacements": 0,
+        "candidate_replacements": 320,
+        "matched": 187,
+        "substitutions": 75,
+        "deletions": 257,
+        "insertions": 357,
+        "multiset_deficit": 220,
+        "multiset_excess": 320
+      }
+    },
+    {
+      "path": "format-corpus/preserve_247224.pdf",
+      "page": 10,
+      "before": {
+        "reference_scalars": 504,
+        "candidate_scalars": 0,
+        "reference_whitespace": 149,
+        "candidate_whitespace": 0,
+        "reference_replacements": 0,
+        "candidate_replacements": 0,
+        "matched": 0,
+        "substitutions": 0,
+        "deletions": 504,
+        "insertions": 0,
+        "multiset_deficit": 504,
+        "multiset_excess": 0
+      },
+      "after": {
+        "reference_scalars": 504,
+        "candidate_scalars": 504,
+        "reference_whitespace": 149,
+        "candidate_whitespace": 83,
+        "reference_replacements": 0,
+        "candidate_replacements": 0,
+        "matched": 215,
+        "substitutions": 7,
+        "deletions": 282,
+        "insertions": 282,
+        "multiset_deficit": 0,
+        "multiset_excess": 0
+      }
+    },
+    {
+      "path": "format-corpus/preserve_447403.pdf",
+      "page": 0,
+      "before": {
+        "reference_scalars": 9387,
+        "candidate_scalars": 7915,
+        "reference_whitespace": 2714,
+        "candidate_whitespace": 3132,
+        "reference_replacements": 0,
+        "candidate_replacements": 440,
+        "matched": 2433,
+        "substitutions": 188,
+        "deletions": 6766,
+        "insertions": 5294,
+        "multiset_deficit": 1921,
+        "multiset_excess": 449
+      },
+      "after": {
+        "reference_scalars": 9387,
+        "candidate_scalars": 9619,
+        "reference_whitespace": 2714,
+        "candidate_whitespace": 3529,
+        "reference_replacements": 0,
+        "candidate_replacements": 440,
+        "matched": 3023,
+        "substitutions": 369,
+        "deletions": 5995,
+        "insertions": 6227,
+        "multiset_deficit": 223,
+        "multiset_excess": 455
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "passed": 7317,
+  "failed": 0,
+  "ignored": 3,
+  "targets": 44,
+  "validated_hashes": "validation-start-hashes.json",
+  "log": "final-aggregate.log",
+  "hashes_match": true
+}

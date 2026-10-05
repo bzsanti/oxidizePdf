@@ -1,0 +1,44 @@
+[
+  {
+    "case": "control",
+    "exit": 0,
+    "source_sha256": "164d76c1a2759090ef4aeef19c7786ea221be6af7b73826e27cca371c57f46d5",
+    "command": [
+      "rustc",
+      "--edition=2021",
+      "--test",
+      "-A",
+      "dead_code",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-parser-mutations/wrapper.rs",
+      "-L",
+      "dependency=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps",
+      "--extern",
+      "oxidize_pdf=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/liboxidize_pdf-8d56b1627bc9922c.rlib",
+      "--extern",
+      "tracing=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/libtracing-d897a9a4c4ad859a.rlib",
+      "-o",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-parser-mutations/control"
+    ]
+  },
+  {
+    "case": "nul-not-whitespace",
+    "exit": 101,
+    "source_sha256": "1833829efb7bfe72192dc51968b0d126859d7fdb71a97abbdc743c31a31ed1b4",
+    "command": [
+      "rustc",
+      "--edition=2021",
+      "--test",
+      "-A",
+      "dead_code",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-parser-mutations/wrapper.rs",
+      "-L",
+      "dependency=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps",
+      "--extern",
+      "oxidize_pdf=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/liboxidize_pdf-8d56b1627bc9922c.rlib",
+      "--extern",
+      "tracing=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/libtracing-d897a9a4c4ad859a.rlib",
+      "-o",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-parser-mutations/nul-not-whitespace"
+    ]
+  }
+]

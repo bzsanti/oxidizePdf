@@ -1,0 +1,23 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core)
+    Finished `test` profile [unoptimized] target(s) in 6.09s
+     Running tests/text_encoding_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_encoding_contract_test-0bf3ae362130d2a3)
+
+running 1 test
+test macroman_encoding_matches_independent_table ... FAILED
+
+failures:
+
+---- macroman_encoding_matches_independent_table stdout ----
+MacRomanEncoding: 208 defined codes exercised, 1 mismatches
+
+thread 'macroman_encoding_matches_independent_table' (2839) panicked at core/tests/text_encoding_contract_test.rs:118:5:
+MacRomanEncoding 0xDB /currency: expected "¤", actual "€"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    macroman_encoding_matches_independent_table
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.09s
+
+error: test failed, to rerun pass `--test text_encoding_contract_test`

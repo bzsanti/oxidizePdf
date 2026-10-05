@@ -1,0 +1,42 @@
+{
+  "scope": "input discrimination, not product mutation coverage",
+  "original_unchanged": true,
+  "runs": [
+    {
+      "mutation": "width",
+      "mutated": false,
+      "exit_code": 0,
+      "log": "standard14-mutation-width-False.log"
+    },
+    {
+      "mutation": "width",
+      "mutated": true,
+      "exit_code": 101,
+      "log": "standard14-mutation-width-True.log"
+    },
+    {
+      "mutation": "code",
+      "mutated": false,
+      "exit_code": 0,
+      "log": "standard14-mutation-code-False.log"
+    },
+    {
+      "mutation": "code",
+      "mutated": true,
+      "exit_code": 101,
+      "log": "standard14-mutation-code-True.log"
+    },
+    {
+      "mutation": "font",
+      "mutated": false,
+      "exit_code": 0,
+      "log": "standard14-mutation-font-False.log"
+    },
+    {
+      "mutation": "font",
+      "mutated": true,
+      "exit_code": 101,
+      "log": "standard14-mutation-font-True.log"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...pdf-core/tests/text_standard14_metrics_contract_test.rs        7    100
+
+--- Worst Offenders ---
+  helvetica_styles_follow_adobe_implicit_metrics (oxidize-pdf-core/tests/text_standard14_metrics_contract_test.rs:63) - Score: 100
+  times_styles_follow_adobe_implicit_metrics (oxidize-pdf-core/tests/text_standard14_metrics_contract_test.rs:70) - Score: 100
+  courier_styles_follow_adobe_monospaced_metrics (oxidize-pdf-core/tests/text_standard14_metrics_contract_test.rs:77) - Score: 100
+  symbol_and_zapf_follow_adobe_metrics (oxidize-pdf-core/tests/text_standard14_metrics_contract_test.rs:84) - Score: 100
+  declared_widths_override_implicit_metrics_for_all_fourteen_fonts (oxidize-pdf-core/tests/text_standard14_metrics_contract_test.rs:91) - Score: 100
+
+--- Details ---
+oxidize-pdf-core/tests/text_standard14_metrics_contract_test.rs:
+  frozen_afm_sources_license_and_pdfs_are_unchanged (line 99) - Score: 100
+    i Test 'frozen_afm_sources_license_and_pdfs_are_unchanged' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'frozen_afm_sources_license_and_pdfs_are_unchanged' has multiple assertions without diagnostic messages
+    i Test 'frozen_afm_sources_license_and_pdfs_are_unchanged' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

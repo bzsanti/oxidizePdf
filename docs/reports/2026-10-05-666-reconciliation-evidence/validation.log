@@ -1,0 +1,123 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.69s
+     Running tests/text_embedded_font_contract_test.rs (target/debug/deps/text_embedded_font_contract_test-bb27c925769a6a3b)
+
+running 4 tests
+test embedded_cff_simple_font_decodes_without_tounicode ... ok
+test embedded_cff_advance_matches_declared_font_metrics ... ok
+test embedded_cff_tounicode_has_precedence ... ok
+test embedded_font_is_the_pinned_opentype_cff_program ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-8b823f1d04deae6c)
+
+running 24 tests
+test builtin_font_selection_does_not_match_unrelated_names_or_type3 ... ok
+test builtin_symbol_subset_names_and_explicit_tounicode_are_distinct ... ok
+test differences_restart_the_code_counter_and_preserve_unmodified_codes ... ok
+test builtin_decoding_preserves_afm_widths_and_following_origins ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test differences_override_the_base_encoding ... ok
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test builtin_symbol_and_zapf_keep_encoding_and_differences_precedence ... ok
+test custom_type3_names_keep_existing_byte_recovery_and_mapping_precedence ... ok
+test macroman_overrides_cover_undefined_and_currency_codes ... ok
+test tounicode_overrides_builtin_symbol_and_dingbats ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test unknown_intrinsic_type1_encoding_keeps_existing_recovery ... ok
+test unresolved_differences_replace_instead_of_restoring_the_base_glyph ... ok
+test macroman_undefined_codes_preserve_neighbors_with_replacement ... ok
+test zapf_differences_resolve_adobe_names_before_builtin_codes ... ok
+test standard_encoding_matches_independent_table ... ok
+test symbol_builtin_encoding_matches_independent_table ... ok
+test macroman_encoding_matches_independent_table ... ok
+test winansi_encoding_matches_independent_table ... ok
+test zapfdingbats_builtin_encoding_matches_independent_table ... ok
+test all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding ... ok
+test simple_encoding_undefined_codes_recover_without_losing_neighbors ... ok
+test latin_standard14_fonts_use_complete_explicit_pdf_encodings_in_both_modes ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.84s
+
+     Running tests/text_expert_contract_test.rs (target/debug/deps/text_expert_contract_test-61ced53d1b848098)
+
+running 5 tests
+test expert_program_and_independent_name_inventory_are_pinned ... ok
+test tounicode_can_choose_non_pua_text_for_expert_glyphs ... ok
+test macexpert_unambiguous_glyph_names_decode_without_tounicode ... ok
+test all_expert_codes_preserve_their_explicit_tounicode_values ... ok
+test all_macexpert_codes_follow_agl_or_explicit_undefined_recovery ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+
+     Running tests/text_qr_regression_contract_test.rs (target/debug/deps/text_qr_regression_contract_test-afa95a00ec074ab8)
+
+running 15 tests
+test legacy_collection_matches_stay_exhaustive ... ok
+test inherited_adobe_kr_dictionary ... ok
+test inherited_adobe_kr_operator ... ok
+test resolved_flat_control ... ok
+test resolved_intrinsic_cff ... ok
+test resolved_encoding_parent ... ok
+test resolved_intrinsic_type1 ... ok
+test resolved_named_parent ... ok
+test strict_public_extraction_rejects_cyclic_usecmap ... ok
+test resolved_unicode_parent ... ok
+test resolved_vertical_advance ... ok
+test type1_procedure_is_not_executed ... ok
+test resolved_intrinsic_differences_and_tounicode_precedence ... ok
+test page_and_form_strict_cycles_error_while_lenient_keeps_child ... ok
+test indirect_cid_collection_matches_direct_extraction ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_spacing_contract_test.rs (target/debug/deps/text_spacing_contract_test-040fabcda5bb0cc2)
+
+running 14 tests
+test glyph_origins_follow_declared_widths_kerns_and_horizontal_scale ... ok
+test absent_widths_never_certify_tracking_for_standard_fonts ... ok
+test a_single_transition_does_not_certify_uniform_tracking ... ok
+test declared_positive_widths_keep_word_separators ... ok
+test excess_advance_remains_a_word_separator ... ok
+test explicit_word_spacing_disables_tracking_inference ... ok
+test partial_em_adjustments_do_not_trigger_unknown_width_recovery ... ok
+test declared_zero_widths_allow_uniform_advances ... ok
+test lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances ... ok
+test explicit_character_spacing_disables_tracking_inference ... ok
+test strict_mode_does_not_enable_unknown_width_recovery ... ok
+test unresolved_type0_without_space_reaches_and_rejects_the_fallback ... ok
+test known_zero_width_single_word_needs_no_literal_space ... ok
+test ordinary_small_kerning_does_not_add_spaces ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_standard14_metrics_contract_test.rs (target/debug/deps/text_standard14_metrics_contract_test-77fe3bfd266fac8a)
+
+running 7 tests
+test symbol_and_zapf_follow_adobe_metrics ... ok
+test helvetica_styles_follow_adobe_implicit_metrics ... ok
+test courier_styles_follow_adobe_monospaced_metrics ... ok
+test times_styles_follow_adobe_implicit_metrics ... ok
+test declared_widths_override_implicit_metrics_for_all_fourteen_fonts ... ok
+test frozen_afm_sources_license_and_pdfs_are_unchanged ... ok
+test every_font_pair_and_return_transition_selects_the_current_metrics ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running tests/text_type1_intrinsic_contract_test.rs (target/debug/deps/text_type1_intrinsic_contract_test-05b76f25adf8696c)
+
+running 10 tests
+test pfb_records_are_removed_from_pdf_fontfile_payloads ... ok
+test all_program_and_pdf_bytes_match_the_independent_provenance ... ok
+test explicit_pdf_encoding_overrides_the_embedded_encoding ... ok
+test explicit_encoding_glyph_width_advances_the_text_pen ... ok
+test absent_pdf_encoding_uses_the_embedded_program_encoding ... ok
+test differences_glyph_width_advances_the_text_pen ... ok
+test differences_without_base_inherits_unmodified_codes_from_the_program ... ok
+test intrinsic_glyph_width_advances_the_text_pen ... ok
+test tounicode_does_not_change_glyph_advances ... ok
+test tounicode_overrides_pdf_differences_and_intrinsic_encoding ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

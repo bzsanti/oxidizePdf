@@ -1,0 +1,100 @@
+{
+  "fixtures": [
+    {
+      "file": "issue666-step4-navigation.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step4-navigation.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\n",
+        "stderr": ""
+      },
+      "text": {
+        "exit": 0,
+        "stdout": "\f",
+        "stderr": ""
+      }
+    },
+    {
+      "file": "issue666-step4-ttf-false-false.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step4-ttf-false-false.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nSourceSans3-Regular                  TrueType          WinAnsi          yes no  no       4  0\n",
+        "stderr": ""
+      },
+      "text": {
+        "exit": 0,
+        "stdout": "AéB\n\f",
+        "stderr": ""
+      }
+    },
+    {
+      "file": "issue666-step4-ttf-false-true.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step4-ttf-false-true.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nSourceSans3-Regular                  TrueType          WinAnsi          yes no  yes      4  0\n",
+        "stderr": ""
+      },
+      "text": {
+        "exit": 0,
+        "stdout": "fié😀\n\f",
+        "stderr": ""
+      }
+    },
+    {
+      "file": "issue666-step4-ttf-true-false.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step4-ttf-true-false.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nABCDEF+ContractSansSubset-Regular    TrueType          WinAnsi          yes yes no       4  0\n",
+        "stderr": ""
+      },
+      "text": {
+        "exit": 0,
+        "stdout": "AéB\n\f",
+        "stderr": ""
+      }
+    },
+    {
+      "file": "issue666-step4-ttf-true-true.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step4-ttf-true-true.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nABCDEF+ContractSansSubset-Regular    TrueType          WinAnsi          yes yes yes      4  0\n",
+        "stderr": ""
+      },
+      "text": {
+        "exit": 0,
+        "stdout": "fié😀\n\f",
+        "stderr": ""
+      }
+    }
+  ],
+  "raster_comparison": {
+    "renderer": "pdftoppm -singlefile -r 72 -gray",
+    "equal": true,
+    "sha256": "c91a99d7956a9439c019432b68bd13ede5119b618305d07121fb3003a1076cd2",
+    "bytes": 484719
+  }
+}

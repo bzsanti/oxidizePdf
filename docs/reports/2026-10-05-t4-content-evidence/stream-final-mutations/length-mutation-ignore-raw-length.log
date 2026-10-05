@@ -1,0 +1,15 @@
+
+running 1 test
+test regression::unfiltered_length_keeps_embedded_ei_inside_pixels_and_recovers_tight_end_marker ... FAILED
+
+failures:
+
+failures:
+    regression::unfiltered_length_keeps_embedded_ei_inside_pixels_and_recovers_tight_end_marker
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 101 filtered out; finished in 0.00s
+
+
+thread 'regression::unfiltered_length_keeps_embedded_ei_inside_pixels_and_recovers_tight_end_marker' (139) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-length-parser-mutations/regression.rs:67:60:
+called `Result::unwrap()` on an `Err` value: SyntaxError { position: 37, message: "Unexpected '>'" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

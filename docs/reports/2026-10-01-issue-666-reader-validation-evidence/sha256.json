@@ -1,0 +1,12 @@
+{
+  "tools/text_contracts/cases.json": "13ed3abd3789ae814ce9a582803847866aa2e00dcf0249a26fc72a2957db8941",
+  "tools/text_contracts/validate_readers.py": "b4832a152e19e7a6a1cb8ea239555c9a0ebfa263f42aa57429e4ebf463d37228",
+  "tools/text_contracts/requirements.txt": "4458e08eb845f502fd9671cb22fca26ce5429800e9c3150637e1ce3e82edf135",
+  "tools/text_contracts/README.md": "ec8b76ae88cba1f8fcf59bad0ca92ac3e090da76d2dde95409e0b97ecd1aafc2",
+  "tools/text_contracts/tests/test_validate_readers.py": "07dfe8d51e50ce167ccc47ae61bdb3f59f28b45eb0d40f54c6bd50f2b1333400",
+  "docs/reports/2026-10-01-issue-666-reader-validation-evidence/readers.json": "868b1511766a90093685dd60695f0a7928466f5aacdbc8b09ad18e02d81ec433",
+  "docs/reports/2026-10-01-issue-666-reader-validation-evidence/wrong-expectation.json": "072b4c686a181680f6da7af4c68e2404b9f5e949bd934d9fe23be3f79a945476",
+  "docs/reports/2026-10-01-issue-666-reader-validation-evidence/missing-mupdf.json": "9826e25d91946760b61f4e0a39e126260aa0c24a2a6ede8d2ecf511417a3ead2",
+  "docs/reports/2026-10-01-issue-666-reader-validation-evidence/tdd-red.log": "3e2fb7d92485ec72810e31ab816d5cb9f084104f44ec766b3f9589d8426e65ee",
+  "docs/reports/2026-10-01-issue-666-reader-validation-evidence/tdd-green.log": "278b2b5006fd5148a80afa0b4c651564e6c87d135c3f94c84e295c21a6ea9f11"
+}

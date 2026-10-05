@@ -1,0 +1,78 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 89 | Tests: 16 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_cjk_contract_test.rs                 16     89
+
+--- Worst Offenders ---
+  cns1_all_declared_maps_reject_an_unrelated_unicode_collection (oxidize-pdf-core/tests/text_cjk_contract_test.rs:323) - Score: 65
+    - Test 'cns1_all_declared_maps_reject_an_unrelated_unicode_collection' does not call any production code
+    - Test 'cns1_all_declared_maps_reject_an_unrelated_unicode_collection' executes production code without asserting on its behaviour
+  japan1_all_declared_maps_reject_an_unrelated_unicode_collection (oxidize-pdf-core/tests/text_cjk_contract_test.rs:340) - Score: 65
+    - Test 'japan1_all_declared_maps_reject_an_unrelated_unicode_collection' does not call any production code
+    - Test 'japan1_all_declared_maps_reject_an_unrelated_unicode_collection' executes production code without asserting on its behaviour
+  korea1_all_declared_maps_reject_an_unrelated_unicode_collection (oxidize-pdf-core/tests/text_cjk_contract_test.rs:357) - Score: 65
+    - Test 'korea1_all_declared_maps_reject_an_unrelated_unicode_collection' does not call any production code
+    - Test 'korea1_all_declared_maps_reject_an_unrelated_unicode_collection' executes production code without asserting on its behaviour
+  adobe_cns1_named_cmaps_decode_collection_cids (oxidize-pdf-core/tests/text_cjk_contract_test.rs:124) - Score: 90
+    - Test 'adobe_cns1_named_cmaps_decode_collection_cids' does not call any production code
+  adobe_japan1_named_cmaps_decode_collection_cids (oxidize-pdf-core/tests/text_cjk_contract_test.rs:128) - Score: 90
+    - Test 'adobe_japan1_named_cmaps_decode_collection_cids' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_cjk_contract_test.rs:
+  cjk_samples_have_pinned_identity_and_distinct_collections (line 71) - Score: 100
+    i Test 'cjk_samples_have_pinned_identity_and_distinct_collections' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cjk_samples_have_pinned_identity_and_distinct_collections' has multiple assertions without diagnostic messages
+    i Test 'cjk_samples_have_pinned_identity_and_distinct_collections' uses .unwrap() which silently discards error information
+  adobe_cns1_named_cmaps_decode_collection_cids (line 124) - Score: 90
+    - Test 'adobe_cns1_named_cmaps_decode_collection_cids' does not call any production code
+  adobe_japan1_named_cmaps_decode_collection_cids (line 128) - Score: 90
+    - Test 'adobe_japan1_named_cmaps_decode_collection_cids' does not call any production code
+  adobe_korea1_named_cmaps_decode_collection_cids (line 132) - Score: 90
+    - Test 'adobe_korea1_named_cmaps_decode_collection_cids' does not call any production code
+  adobe_kr_is_a_separate_collection (line 136) - Score: 90
+    - Test 'adobe_kr_is_a_separate_collection' does not call any production code
+  explicit_unicode_overrides_all_five_collection_fallbacks (line 140) - Score: 90
+    - Test 'explicit_unicode_overrides_all_five_collection_fallbacks' does not call any production code
+  resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences (line 147) - Score: 100
+    i Test 'resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences' has multiple assertions without diagnostic messages
+    i Test 'resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences' uses .unwrap() which silently discards error information
+  cid_zero_fallback_preserves_following_text_and_explicit_unicode (line 196) - Score: 100
+    i Test 'cid_zero_fallback_preserves_following_text_and_explicit_unicode' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_zero_fallback_preserves_following_text_and_explicit_unicode' has multiple assertions without diagnostic messages
+    i Test 'cid_zero_fallback_preserves_following_text_and_explicit_unicode' uses .unwrap() which silently discards error information
+  named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity (line 227) - Score: 100
+    i Test 'named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity' has multiple assertions without diagnostic messages
+    i Test 'named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity' uses .unwrap() which silently discards error information
+  cid_zero_only_does_not_fall_back_to_source_bytes (line 251) - Score: 90
+    i Test 'cid_zero_only_does_not_fall_back_to_source_bytes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'cid_zero_only_does_not_fall_back_to_source_bytes' has low assert-to-setup ratio (7%): 1 asserts vs 13 setup lines
+  cns1_all_declared_maps_reject_an_unrelated_unicode_collection (line 323) - Score: 65
+    - Test 'cns1_all_declared_maps_reject_an_unrelated_unicode_collection' does not call any production code
+    - Test 'cns1_all_declared_maps_reject_an_unrelated_unicode_collection' executes production code without asserting on its behaviour
+  japan1_all_declared_maps_reject_an_unrelated_unicode_collection (line 340) - Score: 65
+    - Test 'japan1_all_declared_maps_reject_an_unrelated_unicode_collection' does not call any production code
+    - Test 'japan1_all_declared_maps_reject_an_unrelated_unicode_collection' executes production code without asserting on its behaviour
+  korea1_all_declared_maps_reject_an_unrelated_unicode_collection (line 357) - Score: 65
+    - Test 'korea1_all_declared_maps_reject_an_unrelated_unicode_collection' does not call any production code
+    - Test 'korea1_all_declared_maps_reject_an_unrelated_unicode_collection' executes production code without asserting on its behaviour
+  kr_and_korea1_are_not_interchangeable_in_either_direction (line 374) - Score: 90
+    - Test 'kr_and_korea1_are_not_interchangeable_in_either_direction' does not call any production code
+  kr_extended_official_maps_preserve_identity_and_unicode_authority (line 393) - Score: 100
+    i Test 'kr_extended_official_maps_preserve_identity_and_unicode_authority' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'kr_extended_official_maps_preserve_identity_and_unicode_authority' has multiple assertions without diagnostic messages
+    i Test 'kr_extended_official_maps_preserve_identity_and_unicode_authority' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

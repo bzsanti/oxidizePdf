@@ -1,0 +1,50 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/text_symbolic_truetype_contract_test.rs        8     96
+
+--- Worst Offenders ---
+  windows_symbol_cmap_preserves_private_codes_and_gids (oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs:88) - Score: 90
+    - Test 'windows_symbol_cmap_preserves_private_codes_and_gids' does not call any production code
+  macintosh_byte_cmap_preserves_original_glyph_selection (oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs:93) - Score: 90
+    - Test 'macintosh_byte_cmap_preserves_original_glyph_selection' does not call any production code
+  windows_unicode_bmp_cmap_preserves_gids_and_metrics (oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs:98) - Score: 90
+    - Test 'windows_unicode_bmp_cmap_preserves_gids_and_metrics' does not call any production code
+  windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font (oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs:103) - Score: 100
+    i Test 'windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font' has multiple assertions without diagnostic messages
+    i Test 'windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font' uses .unwrap() which silently discards error information
+  symbolic_tounicode_preserves_sequences_independently_of_glyph_names (oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs:118) - Score: 100
+    i Test 'symbolic_tounicode_preserves_sequences_independently_of_glyph_names' asserts against a hardcoded constant instead of a computed expected value
+
+--- Details ---
+oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs:
+  windows_symbol_cmap_preserves_private_codes_and_gids (line 88) - Score: 90
+    - Test 'windows_symbol_cmap_preserves_private_codes_and_gids' does not call any production code
+  macintosh_byte_cmap_preserves_original_glyph_selection (line 93) - Score: 90
+    - Test 'macintosh_byte_cmap_preserves_original_glyph_selection' does not call any production code
+  windows_unicode_bmp_cmap_preserves_gids_and_metrics (line 98) - Score: 90
+    - Test 'windows_unicode_bmp_cmap_preserves_gids_and_metrics' does not call any production code
+  windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font (line 103) - Score: 100
+    i Test 'windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font' has multiple assertions without diagnostic messages
+    i Test 'windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font' uses .unwrap() which silently discards error information
+  symbolic_tounicode_preserves_sequences_independently_of_glyph_names (line 118) - Score: 100
+    i Test 'symbolic_tounicode_preserves_sequences_independently_of_glyph_names' asserts against a hardcoded constant instead of a computed expected value
+  multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance (line 152) - Score: 100
+    i Test 'multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance' uses .unwrap() which silently discards error information
+  all_symbolic_programs_and_pdfs_match_frozen_hashes (line 187) - Score: 100
+    i Test 'all_symbolic_programs_and_pdfs_match_frozen_hashes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_symbolic_programs_and_pdfs_match_frozen_hashes' has multiple assertions without diagnostic messages
+    i Test 'all_symbolic_programs_and_pdfs_match_frozen_hashes' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

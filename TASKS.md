@@ -1,3 +1,34 @@
+## T5 — Integración y mantenimiento (terminada)
+
+- Issue: #666 — test(text): build normative encoding and glyph-spacing contract batteries — https://github.com/bzsanti/oxidizePdf/issues/666
+- Estado: implementación, QR y aceptación CI completados; seis hallazgos corregidos y revalidados. Prioridad P1. Responsable Codex.
+- Criterio de cierre: cumplido; baterías deterministas conectadas a CI, perfiles default/minimal (`compression`)/SPI, MSRV 1.88, Linux/Windows/macOS y corpus manual/programado demostrados. Merge/release excluidos del alcance por la issue.
+- Última validación: código a2562e2; CI 29 SUCCESS/0 FAILURE y dos jobs programados omitidos en PR. Matriz nativa 12/12: 403 PASS en 40 targets default/minimal, 417 en 41 SPI, cero fallos/ignorados/vacíos; 34 checks Python. Suite local completa: 10.367 PASS/0 FAIL/71 ignorados preexistentes. Corpus manual 37382367497 SUCCESS, incluidos T2/T3, fusión/orden y contenido; 1.802 PDFs, 6.934 páginas comparadas. Las 6.892 páginas con PDF/hash común al snapshot local tienen métricas idénticas. Informe: docs/reports/2026-10-05-t5-review.md.
+- Siguiente acción: revisión de mantenimiento e integración del PR #681; no quedan fases de implementación, hallazgos QR ni validaciones obligatorias de #666 pendientes. La issue permanece abierta hasta su integración; merge/release no ejecutados.
+- Procesos actuales: ninguno pendiente de aceptación. La evidencia final identifica el commit de código validado; el cierre documental no modifica producto, tests, oráculos ni workflows.
+- Restricciones: preservar WIP, oráculos y baselines; no comparar agregados de poblaciones distintas como si fueran iguales. Corregir regresiones inmediatamente bajo #666.
+
+### Criterios de aceptación de T5
+
+| Requisito y fuente | Estado y evidencia | Siguiente acción |
+| --- | --- | --- |
+| Suite rápida portable, issue666/T5 | Demostrado: runner con 40/41 targets efectivos, cero ignorados/vacíos | Conservar evidencia |
+| Default/minimal/SPI y MSRV 1.88, plan T5 | Demostrado: matriz nativa run37382295498, 12/12 | Ninguna corrección pendiente |
+| Linux/Windows/macOS, plan T5 | Demostrado: tres perfiles por plataforma y CI general SUCCESS | Ninguna verificación pendiente |
+| Corpus pesado manual/programado, issue666/T5 | Demostrado: run37382367497 SUCCESS; mismo job para nightly | Ejecución periódica ya configurada |
+| QR y hallazgos resueltos, usuario | Demostrado: fases anteriores y T5 cerradas, seis hallazgos T5 revalidados | Ningún bloqueante pendiente |
+| Entrega versionada, aceptación issue666 | Demostrado: PR681 y evidencia publicada; merge/release excluidos | Revisión e integración por mantenimiento |
+
+## T4 — Discriminación y corpus (terminada localmente)
+
+- Issue: #666 — test(text): build normative encoding and glyph-spacing contract batteries — https://github.com/bzsanti/oxidizePdf/issues/666
+- Estado: implementación y QR pasados, ocho hallazgos corregidos y revalidados. Prioridad P1. Responsable Codex.
+- Criterio de cierre: cumplido; mutaciones discriminantes, población congelada y métricas separadas con errores/exclusiones visibles.
+- Última validación: 7.453 PASS/0 FAIL/3 ignoradas en62 targets; tres gates históricos pasan. Medidor13/13, nueve mutaciones de producto, cinco del parser y seis del medidor discriminan. Corpus1.802 PDFs,6.937 páginas comparables; hashes intactos. Clippy, formato, Kripteia/Security y trazabilidad pasan. Informe: docs/reports/2026-10-05-t4-review.md.
+- Correcciones de producto: NUL como whitespace; longitud/padding y parámetros tipados de imágenes inline; regresión incremental de whitespace virtual resuelta. Tres páginas reales recuperan texto. Los440 reemplazos Type3 del PDF diagnosticado corresponden a nombres C0…C255 sin ToUnicode, conforme a política.
+- Siguiente acción exacta: T5 completada según el registro superior; conservar evidencia T4. Ningún proceso T4 pendiente.
+- Restricciones: preservar WIP y baselines; no afirmar igualdad con Poppler ni interpretar exclusiones como mejora. Sin merge/release autorizados. #666 sigue abierta.
+
 ## #668 sobre develop integrado — 2026-10-01
 
 - Issue: #668 — fix(text): decode normative simple-font encodings and built-in Symbol/Zapf — https://github.com/bzsanti/oxidizePdf/issues/668

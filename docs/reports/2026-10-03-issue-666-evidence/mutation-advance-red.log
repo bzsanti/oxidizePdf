@@ -1,0 +1,21 @@
+
+running 1 test
+test explicit_encoding_glyph_width_advances_the_text_pen ... FAILED
+
+failures:
+
+---- explicit_encoding_glyph_width_advances_the_text_pen stdout ----
+
+thread 'explicit_encoding_glyph_width_advances_the_text_pen' (440) panicked at contracts.rs:114:17:
+pfb-full: expected (104,700), actual (109,700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    explicit_encoding_glyph_width_advances_the_text_pen
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized] target(s) in 0.08s
+     Running contracts.rs (target/debug/deps/contracts-e6990da33d84a623)
+error: test failed, to rerun pass `--test contracts`

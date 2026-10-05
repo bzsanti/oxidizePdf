@@ -1,0 +1,18 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 0 | Files: 0
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+--- Taint Flows (1 total, 1 unguarded) ---
+  path → std::fs::read (confidence: 100%) oxidize-pdf-core/examples/text_content_probe.rs:12
+    via: path
+

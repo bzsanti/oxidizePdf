@@ -1,0 +1,19 @@
+{
+  "mupdf_text": "BA\n",
+  "warnings": "",
+  "versions": [
+    "1.26.5",
+    "1.26.10",
+    null
+  ],
+  "qpdf": {
+    "exit": 0,
+    "stdout": "checking docs/reports/2026-10-04-issue-666-qr-evidence/type1-procedure.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "stderr": ""
+  },
+  "poppler": {
+    "exit": 0,
+    "stdout": "AB\n\f",
+    "stderr": ""
+  }
+}

@@ -1,0 +1,28 @@
+
+running 1 test
+test explicit_pdf_encoding_overrides_the_embedded_encoding ... FAILED
+
+failures:
+
+---- explicit_pdf_encoding_overrides_the_embedded_encoding stdout ----
+
+thread 'explicit_pdf_encoding_overrides_the_embedded_encoding' (392) panicked at contracts.rs:71:5:
+pfb-full strict: expected "AB", got "BB"
+pfb-full lenient: expected "AB", got "BB"
+pfb-subset strict: expected "AB", got "BB"
+pfb-subset lenient: expected "AB", got "BB"
+cff-full strict: expected "AB", got "BB"
+cff-full lenient: expected "AB", got "BB"
+cff-subset strict: expected "AB", got "BB"
+cff-subset lenient: expected "AB", got "BB"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    explicit_pdf_encoding_overrides_the_embedded_encoding
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.01s
+
+    Finished `test` profile [unoptimized] target(s) in 0.07s
+     Running contracts.rs (target/debug/deps/contracts-e6990da33d84a623)
+error: test failed, to rerun pass `--test contracts`

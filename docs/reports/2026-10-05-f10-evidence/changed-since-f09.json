@@ -1,0 +1,5 @@
+[
+  "TASKS.md",
+  "oxidize-pdf-core/src/text/extraction_cmap.rs",
+  "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json"
+]

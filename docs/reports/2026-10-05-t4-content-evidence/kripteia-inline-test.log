@@ -1,0 +1,35 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 2 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-core/tests/text_inline_image_boundary_contract_test.rs        2     95
+
+--- Worst Offenders ---
+  pdf_whitespace_delimits_inline_image_without_swallowing_following_text (oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:9) - Score: 90
+    - Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' has a match arm with empty body, ignoring potential error cases
+    i Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' uses .unwrap() which silently discards error information
+  nul_separates_tokens_and_hex_digits_but_remains_literal_data (oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:42) - Score: 100
+    i Test 'nul_separates_tokens_and_hex_digits_but_remains_literal_data' has multiple assertions without diagnostic messages
+    i Test 'nul_separates_tokens_and_hex_digits_but_remains_literal_data' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:
+  pdf_whitespace_delimits_inline_image_without_swallowing_following_text (line 9) - Score: 90
+    - Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' has a match arm with empty body, ignoring potential error cases
+    i Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' uses .unwrap() which silently discards error information
+  nul_separates_tokens_and_hex_digits_but_remains_literal_data (line 42) - Score: 100
+    i Test 'nul_separates_tokens_and_hex_digits_but_remains_literal_data' has multiple assertions without diagnostic messages
+    i Test 'nul_separates_tokens_and_hex_digits_but_remains_literal_data' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

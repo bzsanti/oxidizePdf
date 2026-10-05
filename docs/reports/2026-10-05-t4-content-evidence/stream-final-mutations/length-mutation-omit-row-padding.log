@@ -1,0 +1,17 @@
+
+running 1 test
+test regression::unfiltered_length_uses_components_and_per_row_bit_padding ... FAILED
+
+failures:
+
+failures:
+    regression::unfiltered_length_uses_components_and_per_row_bit_padding
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 101 filtered out; finished in 0.00s
+
+
+thread 'regression::unfiltered_length_uses_components_and_per_row_bit_padding' (183) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-length-parser-mutations/regression.rs:69:63:
+assertion `left == right` failed
+  left: [255, 255, 69, 73, 32, 66, 84, 32, 47, 70, 49, 32, 49, 48, 32, 84, 102, 32, 49, 48, 48, 32, 55, 48, 48, 32, 84, 100, 32, 40, 65, 70, 84, 69, 82, 41, 32, 84, 106, 32, 69, 84]
+ right: [255, 255]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

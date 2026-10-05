@@ -1,0 +1,543 @@
+{
+  "schema_version": 1,
+  "issue": 666,
+  "cases": [
+    {
+      "id": "Type1-reset",
+      "path": "Type1-reset.pdf",
+      "sha256": "c07643e226e29e37f8f27714e9a82b3e280a48d8ce796a461352a291ec26bf60",
+      "expected_text": "BBA",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            110,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            110,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Type1-boundaries",
+      "path": "Type1-boundaries.pdf",
+      "sha256": "938d3119b67dc301bee00ff6e5206efa97f51e084198ca56b32fe85ee44844f6",
+      "expected_text": "AB",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Type1-continuation",
+      "path": "Type1-continuation.pdf",
+      "sha256": "fa5f2aed16f73edadfad982fd367e761898cb562dcb40d2f74cc87df1118fcde",
+      "expected_text": "AB",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Type1-last-entry",
+      "path": "Type1-last-entry.pdf",
+      "sha256": "165e635314453c93ef5ebda7ceff9b99ecd224d436a8005b827f8a0e7e5b2b5d",
+      "expected_text": "B",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Type1-unicode",
+      "path": "Type1-unicode.pdf",
+      "sha256": "cd2d36b9cd702c93a622fbc796679f33ee3c0cba75cbb92345a53b020d0cb9be",
+      "expected_text": "fi😀",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "fi",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "😀",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TrueType-reset",
+      "path": "TrueType-reset.pdf",
+      "sha256": "535199b676824be2238345d1cbefebe7bb7e001f2ea70d19fe972c47964c1592",
+      "expected_text": "BBA",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            110,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            110,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TrueType-boundaries",
+      "path": "TrueType-boundaries.pdf",
+      "sha256": "bb5b9152f4acca2f8481ff1d0f9a0d0348e6982a15f15479b248b967b00c728f",
+      "expected_text": "AB",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TrueType-continuation",
+      "path": "TrueType-continuation.pdf",
+      "sha256": "368b5aa6a9b27b77bb41e25bf63c1a0346c4527e06028d644273ed50bff1b92c",
+      "expected_text": "AB",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TrueType-last-entry",
+      "path": "TrueType-last-entry.pdf",
+      "sha256": "b5f61d327565bf9b994ceec9a87837d89f710cf7262a91687f2c9c3cb43676ac",
+      "expected_text": "B",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TrueType-unicode",
+      "path": "TrueType-unicode.pdf",
+      "sha256": "9e88b494d8aff294fd3729e8b793b729d474dcea71f599bc84f301d0cb03fc5b",
+      "expected_text": "fi😀",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "fi",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "😀",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Type3-reset",
+      "path": "Type3-reset.pdf",
+      "sha256": "990f47d9b94ca523589547892dd5d47a1fb052eb86f7977cfcc2a8929cee4d97",
+      "expected_text": "BBA",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            110,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            110,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Type3-boundaries",
+      "path": "Type3-boundaries.pdf",
+      "sha256": "223797fe15fa519f64eab0a6d0d160d4bb7faf186a3bb33302b0cec93eb608f8",
+      "expected_text": "AB",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Type3-continuation",
+      "path": "Type3-continuation.pdf",
+      "sha256": "6bcfdcde4bf9c03efd35830ddc9a00a7ef06d87d3196d8d1be3dad6eb4a06bcb",
+      "expected_text": "AB",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Type3-last-entry",
+      "path": "Type3-last-entry.pdf",
+      "sha256": "c8ba94f498354321297790668a9ebaa8e75ec4750627baa8fe50e9444674fbf6",
+      "expected_text": "B",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        }
+      ],
+      "expected_trace_origins": [
+        {
+          "text": "B",
+          "origin": [
+            100,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Type3-unicode",
+      "path": "Type3-unicode.pdf",
+      "sha256": "e938168e33a8f0fd6cc588e010f1c27ccb74d72a54889921c2008a076deda3fa",
+      "expected_text": "fi😀",
+      "expectation_source": "ISO32000-1 9.6.6 Differences integer resets/name increments and ToUnicode precedence; explicit Widths500 at10pt; independent literal source codes and destinations.",
+      "expected_source_origins": [
+        {
+          "text": "fi",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "😀",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    }
+  ]
+}

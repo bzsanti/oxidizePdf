@@ -1,0 +1,32 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ize-pdf-core/tests/text_composite_font_contract_test.rs        7    100
+
+--- Worst Offenders ---
+  cff_fixtures_preserve_identity_cid_text_and_pdf_widths (oxidize-pdf-core/tests/text_composite_font_contract_test.rs:86) - Score: 100
+  cff_fixtures_preserve_remapped_cid_text_and_pdf_widths (oxidize-pdf-core/tests/text_composite_font_contract_test.rs:90) - Score: 100
+  full_and_subset_truetype_support_identity_cid_to_gid_map (oxidize-pdf-core/tests/text_composite_font_contract_test.rs:94) - Score: 100
+  full_and_subset_truetype_support_stream_cid_to_gid_map (oxidize-pdf-core/tests/text_composite_font_contract_test.rs:98) - Score: 100
+  full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct (oxidize-pdf-core/tests/text_composite_font_contract_test.rs:102) - Score: 100
+
+--- Details ---
+oxidize-pdf-core/tests/text_composite_font_contract_test.rs:
+  six_real_programs_and_fourteen_pdfs_match_their_frozen_hashes (line 106) - Score: 100
+    i Test 'six_real_programs_and_fourteen_pdfs_match_their_frozen_hashes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'six_real_programs_and_fourteen_pdfs_match_their_frozen_hashes' uses .unwrap() which silently discards error information
+  cff_renderer_resolves_charset_cids_to_actual_glyph_indices (line 134) - Score: 100
+    i Test 'cff_renderer_resolves_charset_cids_to_actual_glyph_indices' has multiple assertions without diagnostic messages
+    i Test 'cff_renderer_resolves_charset_cids_to_actual_glyph_indices' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

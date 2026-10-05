@@ -1,0 +1,68 @@
+{
+  "generator": "tools/generate_text_competing_cmaps.py",
+  "fonttools": "4.60.1",
+  "origin": "Original synthetic glyf outlines; no external font input",
+  "sha256": "c5489d43d43b9453cb1ed405b3733a8e8e576be301f7e7021f91085467fb1fc7",
+  "glyph_order": [
+    ".notdef",
+    "space",
+    "A",
+    "B",
+    "C"
+  ],
+  "widths_by_gid": [
+    500,
+    250,
+    400,
+    700,
+    600
+  ],
+  "subtables": [
+    {
+      "platform": 0,
+      "encoding": 3,
+      "format": 4,
+      "mapping": {
+        "65": "C"
+      }
+    },
+    {
+      "platform": 1,
+      "encoding": 0,
+      "format": 0,
+      "mapping": {
+        "65": "space"
+      }
+    },
+    {
+      "platform": 3,
+      "encoding": 0,
+      "format": 4,
+      "mapping": {
+        "61505": "A"
+      }
+    },
+    {
+      "platform": 3,
+      "encoding": 1,
+      "format": 4,
+      "mapping": {
+        "65": "A"
+      }
+    },
+    {
+      "platform": 3,
+      "encoding": 10,
+      "format": 12,
+      "mapping": {
+        "65": "B",
+        "128512": "C"
+      }
+    }
+  ],
+  "independent_best_cmap": {
+    "65": "B",
+    "128512": "C"
+  },
+  "policy": "API priority (3,10) > (3,1) > (0,any); first fallback only when preferred platforms absent. Not a universal PDF symbolic-font oracle."
+}

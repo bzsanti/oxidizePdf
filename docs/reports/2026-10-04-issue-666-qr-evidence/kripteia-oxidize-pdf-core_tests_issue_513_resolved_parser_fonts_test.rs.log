@@ -1,0 +1,97 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 16 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs       16     96
+
+--- Worst Offenders ---
+  resolves_non_identity_encoding_cmap_and_default_identity_gid (oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs:116) - Score: 90
+    - Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' has multiple assertions without diagnostic messages
+    i Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' uses .unwrap() which silently discards error information
+  type3_uses_tounicode_when_decoding_glyphs (oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs:186) - Score: 90
+    - Test 'type3_uses_tounicode_when_decoding_glyphs' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'type3_uses_tounicode_when_decoding_glyphs' uses .unwrap() which silently discards error information
+  unmapped_composite_code_uses_default_cid_width (oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs:202) - Score: 90
+    - Test 'unmapped_composite_code_uses_default_cid_width' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unmapped_composite_code_uses_default_cid_width' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unmapped_composite_code_uses_default_cid_width' has multiple assertions without diagnostic messages
+    i Test 'unmapped_composite_code_uses_default_cid_width' uses .unwrap() which silently discards error information
+  rejects_non_cid_descendant_in_type0_font (oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs:220) - Score: 90
+    - Test 'rejects_non_cid_descendant_in_type0_font' has identical neighborhood to 'rejects_type0_font_without_required_encoding'
+    i Test 'rejects_non_cid_descendant_in_type0_font' uses .unwrap() which silently discards error information
+  rejects_type0_font_without_required_encoding (oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs:246) - Score: 90
+    - Test 'rejects_type0_font_without_required_encoding' has identical neighborhood to 'rejects_non_cid_descendant_in_type0_font'
+    i Test 'rejects_type0_font_without_required_encoding' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs:
+  resolves_inherited_identity_type2_into_renderer_glyphs (line 34) - Score: 100
+    i Test 'resolves_inherited_identity_type2_into_renderer_glyphs' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolves_inherited_identity_type2_into_renderer_glyphs' has multiple assertions without diagnostic messages
+    i Test 'resolves_inherited_identity_type2_into_renderer_glyphs' uses .unwrap() which silently discards error information
+  resolves_cidfont_type0_open_type_program_and_vertical_mode (line 71) - Score: 100
+    i Test 'resolves_cidfont_type0_open_type_program_and_vertical_mode' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolves_cidfont_type0_open_type_program_and_vertical_mode' has multiple assertions without diagnostic messages
+    i Test 'resolves_cidfont_type0_open_type_program_and_vertical_mode' uses .unwrap() which silently discards error information
+  resolves_symbol_difference_as_a_bullet_not_latin_x (line 96) - Score: 100
+    i Test 'resolves_symbol_difference_as_a_bullet_not_latin_x' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolves_symbol_difference_as_a_bullet_not_latin_x' has multiple assertions without diagnostic messages
+    i Test 'resolves_symbol_difference_as_a_bullet_not_latin_x' uses .unwrap() which silently discards error information
+  resolves_non_identity_encoding_cmap_and_default_identity_gid (line 116) - Score: 90
+    - Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' has multiple assertions without diagnostic messages
+    i Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' uses .unwrap() which silently discards error information
+  named_unicode_encoding_resolves_cid_before_width_and_unicode (line 139) - Score: 100
+    i Test 'named_unicode_encoding_resolves_cid_before_width_and_unicode' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'named_unicode_encoding_resolves_cid_before_width_and_unicode' has multiple assertions without diagnostic messages
+    i Test 'named_unicode_encoding_resolves_cid_before_width_and_unicode' uses .unwrap() which silently discards error information
+  decodes_win_ansi_without_confusing_code_and_unicode (line 156) - Score: 100
+    i Test 'decodes_win_ansi_without_confusing_code_and_unicode' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'decodes_win_ansi_without_confusing_code_and_unicode' has multiple assertions without diagnostic messages
+    i Test 'decodes_win_ansi_without_confusing_code_and_unicode' uses .unwrap() which silently discards error information
+  exposes_type3_through_the_coherent_resource_model (line 172) - Score: 100
+    i Test 'exposes_type3_through_the_coherent_resource_model' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'exposes_type3_through_the_coherent_resource_model' has multiple assertions without diagnostic messages
+    i Test 'exposes_type3_through_the_coherent_resource_model' uses .unwrap() which silently discards error information
+  type3_uses_tounicode_when_decoding_glyphs (line 186) - Score: 90
+    - Test 'type3_uses_tounicode_when_decoding_glyphs' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'type3_uses_tounicode_when_decoding_glyphs' uses .unwrap() which silently discards error information
+  unmapped_composite_code_uses_default_cid_width (line 202) - Score: 90
+    - Test 'unmapped_composite_code_uses_default_cid_width' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unmapped_composite_code_uses_default_cid_width' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unmapped_composite_code_uses_default_cid_width' has multiple assertions without diagnostic messages
+    i Test 'unmapped_composite_code_uses_default_cid_width' uses .unwrap() which silently discards error information
+  rejects_non_cid_descendant_in_type0_font (line 220) - Score: 90
+    - Test 'rejects_non_cid_descendant_in_type0_font' has identical neighborhood to 'rejects_type0_font_without_required_encoding'
+    i Test 'rejects_non_cid_descendant_in_type0_font' uses .unwrap() which silently discards error information
+  rejects_odd_cid_to_gid_map_without_panicking (line 232) - Score: 100
+    i Test 'rejects_odd_cid_to_gid_map_without_panicking' uses .unwrap() which silently discards error information
+  rejects_type0_font_without_required_encoding (line 246) - Score: 90
+    - Test 'rejects_type0_font_without_required_encoding' has identical neighborhood to 'rejects_non_cid_descendant_in_type0_font'
+    i Test 'rejects_type0_font_without_required_encoding' uses .unwrap() which silently discards error information
+  rejects_oversized_cid_to_gid_map_after_bounded_decompression (line 257) - Score: 90
+    - Test 'rejects_oversized_cid_to_gid_map_after_bounded_decompression' has identical neighborhood to 'rejects_oversized_embedded_font_after_bounded_decompression'
+    i Test 'rejects_oversized_cid_to_gid_map_after_bounded_decompression' uses .unwrap() which silently discards error information
+  rejects_circular_font_resource_without_panicking (line 276) - Score: 100
+    i Test 'rejects_circular_font_resource_without_panicking' uses .unwrap() which silently discards error information
+  rejects_oversized_embedded_font_after_bounded_decompression (line 283) - Score: 90
+    - Test 'rejects_oversized_embedded_font_after_bounded_decompression' has identical neighborhood to 'rejects_oversized_cid_to_gid_map_after_bounded_decompression'
+    i Test 'rejects_oversized_embedded_font_after_bounded_decompression' uses .unwrap() which silently discards error information
+  cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings (line 300) - Score: 100
+    i Test 'cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings' has multiple assertions without diagnostic messages
+    i Test 'cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

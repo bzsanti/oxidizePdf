@@ -1,0 +1,10 @@
+{
+  "oxidize-pdf-core/src/fonts/resolved.rs": "4a164c5f9363781bc4b709ef99adc385ae2aa66bc30604ff1684da06bc0f8510",
+  "oxidize-pdf-core/src/text/cid_to_unicode.rs": "7e7fa6e6843e6d0cc6246ed93dc525d46d32f29631023bb57ea221e91d6c9d04",
+  "oxidize-pdf-core/src/text/extraction_cmap.rs": "efcbb760dcce1a6652d7e5907641814cad4adb163859f506357f4c236d805148",
+  "oxidize-pdf-core/src/text/extraction.rs": "2544a1f588a1e7b0e97c000d49139cc3ca30a5942c5e6938b5147d21e03e6105",
+  "oxidize-pdf-core/tests/cid_cmap_test.rs": "ef551cafe66d5fdd059d0b0329a5d1f92aae7a7a49e820382cc53fb4aaa85402",
+  "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs": "ff280c0981e54d53edf0e5e84d7fc4955e185765d59377dd84d10f22c7c1032a",
+  "oxidize-pdf-core/tests/text_cjk_contract_test.rs": "921c4461a5685288a488cf6e4d511530173ef5727129a34b525ae9c9b673db2c",
+  "tools/generate_adobe_pdf_cid_tables.py": "513090cb56db9327f1974f88fa420e2c8e35ef1e42a3abd1c2a567bece3d7933"
+}

@@ -1,0 +1,15 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 12.92s
+     Running tests/text_cid_collection_policy_contract_test.rs (target/debug/deps/text_cid_collection_policy_contract_test-f30f06a374652993)
+
+running 7 tests
+test incompatible_collection_cid_zero_does_not_silently_erase_unknown_text ... ok
+test named_gb1_cmap_cannot_decode_cids_through_a_different_collection ... ok
+test invalid_explicit_supplement_does_not_certify_collection_unicode ... ok
+test cumulative_supplements_do_not_require_equality_or_invent_a_new_collection ... ok
+test embedded_dictionary_metadata_must_not_authorize_another_collection ... ok
+test embedded_metadata_cannot_conflict_with_a_named_parent ... ok
+test program_metadata_is_static_scoped_and_must_agree_with_dictionary ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+

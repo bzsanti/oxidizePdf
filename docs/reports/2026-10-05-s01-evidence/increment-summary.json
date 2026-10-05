@@ -1,0 +1,14 @@
+{
+  "status": "partial",
+  "passed": 7280,
+  "failed": 0,
+  "ignored": 3,
+  "changed_previous_files": [
+    "TASKS.md",
+    "oxidize-pdf-core/src/fonts/resolved.rs",
+    "oxidize-pdf-core/src/text/extraction_cmap.rs",
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json",
+    "oxidize-pdf-core/tests/text_standard14_metrics_contract_test.rs"
+  ],
+  "next": "FirstChar/Widths/W/DW structural bounds, absent metrics and MissingWidth; final QR before S02."
+}

@@ -432,6 +432,29 @@ struct TextState {
 }
 
 impl TextState {
+    fn validate_geometry(&self) -> ParseResult<()> {
+        let scalars = [
+            self.font_size,
+            self.leading,
+            self.char_space,
+            self.word_space,
+            self.horizontal_scale,
+            self.text_rise,
+        ];
+        if self
+            .text_matrix
+            .iter()
+            .chain(self.text_line_matrix.iter())
+            .chain(self.ctm.iter())
+            .chain(scalars.iter())
+            .all(|v| v.is_finite())
+        {
+            Ok(())
+        } else {
+            Err(geometry_error())
+        }
+    }
+
     /// `q` (§8.4.4): snapshot the graphics state.
     ///
     /// The snapshot is built lazily so that past the depth cap it is not built
@@ -466,12 +489,9 @@ impl TextState {
 /// text OBJECT state, established by `BT` and discarded by `ET` (§9.4.1), not
 /// graphics state. Restoring them on `Q` would be a different bug.
 ///
-/// Four of the text-state fields — `char_space`, `word_space`, `text_rise` and
-/// `render_mode` — are currently written by their operators but never read by
-/// the extractor, so restoring them changes no output today and no test can
-/// guard them. They are here because they are graphics state: whoever wires
-/// them into the pen advance, the y offset or invisible-text filtering should
-/// not have to rediscover this bug.
+/// Character/word spacing and text rise affect the emitted geometry; render
+/// mode is retained on fragments. Restoring these fields is observable after
+/// both explicit q/Q and the implicit save around a Form XObject.
 struct SavedGraphicsState {
     ctm: [f64; 6],
     fill_color: Option<Color>,
@@ -699,6 +719,8 @@ pub struct TextExtractor {
     /// not on the public [`ExtractionOptions`], so enabling it is a
     /// non-breaking method addition rather than a breaking struct-field addition.
     reading_order: bool,
+    /// PlainTextConfig uses only its explicit vertical threshold for line breaks.
+    infer_backward_line_wraps: bool,
     /// Policy for CR bytes decoded from text-showing strings. Held outside the
     /// public `ExtractionOptions` so adding it does not break exhaustive struct
     /// literals in downstream crates.
@@ -722,6 +744,7 @@ impl TextExtractor {
             include_unreliable_figure_text: false,
             include_link_annotations: false,
             reading_order: false,
+            infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
@@ -737,6 +760,7 @@ impl TextExtractor {
             include_unreliable_figure_text: false,
             include_link_annotations: false,
             reading_order: false,
+            infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
@@ -762,6 +786,11 @@ impl TextExtractor {
     /// one group. `/Rotate ≠ 0` pages are ordered in unrotated page space.
     pub fn with_reading_order(mut self, enable: bool) -> Self {
         self.reading_order = enable;
+        self
+    }
+
+    pub(crate) fn with_backward_line_wraps(mut self, enable: bool) -> Self {
+        self.infer_backward_line_wraps = enable;
         self
     }
 
@@ -1299,7 +1328,10 @@ impl TextExtractor {
         Ok(results)
     }
 
-    /// Extract text from a specific page
+    /// Extract text from a specific page.
+    ///
+    /// Non-finite or unrepresentable text geometry returns an error in both
+    /// strict and lenient modes, including overflow during layout reconstruction.
     pub fn extract_from_page<R: Read + Seek>(
         &mut self,
         document: &PdfDocument<R>,
@@ -1462,6 +1494,8 @@ impl TextExtractor {
                 fragments = self.merge_into_paragraphs(&lines);
             }
 
+            validate_fragment_geometry(&fragments)?;
+
             // Reconstruct text from sorted fragments if layout is preserved
             if self.options.preserve_layout && !fragments.is_empty() {
                 extracted_text = self.reconstruct_text_from_fragments(&fragments);
@@ -1479,6 +1513,7 @@ impl TextExtractor {
                 && !fragments.is_empty()
             {
                 self.sort_and_merge_fragments(&mut fragments);
+                validate_fragment_geometry(&fragments)?;
                 extracted_text = self.reconstruct_text_from_fragments(&fragments);
                 fragments.clear();
             }
@@ -1691,8 +1726,9 @@ impl TextExtractor {
                                 let same_y_wrap = dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
                                 let large_backward_jump =
                                     dx < -(self.options.newline_threshold * 2.0);
-                                let line_wrap =
-                                    large_backward_jump && (dy > SAME_LINE_EPS || same_y_wrap);
+                                let line_wrap = self.infer_backward_line_wraps
+                                    && large_backward_jump
+                                    && (dy > SAME_LINE_EPS || same_y_wrap);
                                 let positioned_run_boundary = large_backward_jump
                                     && dy <= SAME_LINE_EPS
                                     && at_text_object_start;
@@ -1774,7 +1810,7 @@ impl TextExtractor {
                                 &mut state,
                                 self.options.include_artifacts,
                                 skip_text,
-                            );
+                            )?;
                         }
 
                         // Record the run into the reading-order line groups
@@ -1802,7 +1838,8 @@ impl TextExtractor {
                         // Advance the text matrix and track the true post-advance
                         // pen point (folds in Tz and CTM scale, issue #386; a
                         // full point so rotated baselines advance y too, #443).
-                        (last_x, last_y) = advance_pen(&mut state, text_width);
+                        (last_x, last_y) =
+                            self.advance_text_pen(&mut state, text_bytes, text_width);
                         last_shown_font_name = state.font_name.clone();
                         at_text_object_start = false;
                     }
@@ -1829,6 +1866,7 @@ impl TextExtractor {
                         // `TextElement::Spacing` already turns into a space. A
                         // leading kern does NOT clear this (see the Spacing arm).
                         // See the boundary gate below.
+                        let first_array_fragment = fragments.len();
                         let mut at_array_start = true;
                         for item in array {
                             match item {
@@ -1874,8 +1912,9 @@ impl TextExtractor {
                                         dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
                                     let large_backward_jump =
                                         dx < -(self.options.newline_threshold * 2.0);
-                                    let line_wrap =
-                                        large_backward_jump && (dy > SAME_LINE_EPS || same_y_wrap);
+                                    let line_wrap = self.infer_backward_line_wraps
+                                        && large_backward_jump
+                                        && (dy > SAME_LINE_EPS || same_y_wrap);
                                     let positioned_run_boundary = large_backward_jump
                                         && dy <= SAME_LINE_EPS
                                         && at_text_object_start
@@ -2021,7 +2060,7 @@ impl TextExtractor {
                                             &mut state,
                                             self.options.include_artifacts,
                                             skip_text,
-                                        );
+                                        )?;
                                     }
 
                                     // Record the run into the reading-order line
@@ -2050,7 +2089,8 @@ impl TextExtractor {
                                     // `Tj`/`TJ` measures its gap from the right origin
                                     // (issue #381: a stale `last_y` dropped newlines;
                                     // issue #386: the pen must fold in Tz/CTM scale).
-                                    (last_x, last_y) = advance_pen(&mut state, text_width);
+                                    (last_x, last_y) =
+                                        self.advance_text_pen(&mut state, &text_bytes, text_width);
                                     last_shown_font_name = state.font_name.clone();
                                     at_array_start = false;
                                     at_text_object_start = false;
@@ -2084,7 +2124,13 @@ impl TextExtractor {
 
                                     let skip_tj_space =
                                         skip_artifact_text(&state, self.options.include_artifacts);
+                                    let vertical = state
+                                        .font_name
+                                        .as_ref()
+                                        .and_then(|name| self.font_cache.get(name))
+                                        .is_some_and(is_vertical_font);
                                     if !skip_tj_space
+                                        && !vertical
                                         && gap_tx
                                             > self.options.tj_space_threshold * state.font_size
                                         && !extracted_text.is_empty()
@@ -2146,16 +2192,27 @@ impl TextExtractor {
                                                 &mut state,
                                                 self.options.include_artifacts,
                                                 skip_text,
-                                            );
+                                            )?;
                                         }
                                     }
 
-                                    state.text_matrix = multiply_matrix(
-                                        &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
-                                        &state.text_matrix,
-                                    );
+                                    // TJ uses the same horizontal scale as a
+                                    // shown glyph advance (ISO 32000-1 9.4.4).
+                                    // Keep gap inference in unscaled text units;
+                                    // scale only when moving the text matrix.
+                                    if vertical {
+                                        state.text_matrix = multiply_matrix(
+                                            &[1.0, 0.0, 0.0, 1.0, 0.0, tx],
+                                            &state.text_matrix,
+                                        );
+                                    } else {
+                                        advance_pen(&mut state, tx);
+                                    }
                                 }
                             }
+                        }
+                        if tracking_baseline_em > 0.0 {
+                            coalesce_tracked_array(&mut fragments, first_array_fragment)?;
                         }
                     }
                 }
@@ -2236,7 +2293,7 @@ impl TextExtractor {
                                 &mut state,
                                 self.options.include_artifacts,
                                 skip_text,
-                            );
+                            )?;
                         }
 
                         // Record into the reading-order line groups (issue #448).
@@ -2260,7 +2317,7 @@ impl TextExtractor {
                             }
                         }
 
-                        (last_x, last_y) = advance_pen(&mut state, text_width);
+                        (last_x, last_y) = self.advance_text_pen(&mut state, &text, text_width);
                         at_text_object_start = false;
                     }
                 }
@@ -2344,7 +2401,7 @@ impl TextExtractor {
                                 &mut state,
                                 self.options.include_artifacts,
                                 skip_text,
-                            );
+                            )?;
                         }
 
                         // Record into the reading-order line groups (issue #448).
@@ -2368,7 +2425,7 @@ impl TextExtractor {
                             }
                         }
 
-                        (last_x, last_y) = advance_pen(&mut state, text_width);
+                        (last_x, last_y) = self.advance_text_pen(&mut state, &text, text_width);
                         at_text_object_start = false;
                     }
                 }
@@ -2641,7 +2698,7 @@ impl TextExtractor {
                                 ];
                             }
                             if let Some(ref xr) = xobj_res {
-                                self.cache_fonts_from_resources::<R>(xr, document);
+                                self.cache_fonts_from_resources::<R>(xr, document)?;
                             }
 
                             let sub = OpRunState {
@@ -2693,6 +2750,7 @@ impl TextExtractor {
                     // Other operations don't affect text extraction
                 }
             }
+            state.validate_geometry()?;
         }
 
         Ok(OpRunState {
@@ -3366,11 +3424,11 @@ impl TextExtractor {
         if let Some(res_ref) = page.dict.get("Resources").and_then(|o| o.as_reference()) {
             if let Ok(PdfObject::Dictionary(resources)) = document.get_object(res_ref.0, res_ref.1)
             {
-                self.cache_fonts_from_resources::<R>(&resources, document);
+                self.cache_fonts_from_resources::<R>(&resources, document)?;
             }
         } else if let Some(resources) = page.get_resources() {
             // Fallback to get_resources() if Resources is not a reference
-            self.cache_fonts_from_resources::<R>(resources, document);
+            self.cache_fonts_from_resources::<R>(resources, document)?;
         }
 
         Ok(())
@@ -3388,41 +3446,38 @@ impl TextExtractor {
         &mut self,
         resources: &PdfDictionary,
         document: &PdfDocument<R>,
-    ) {
+    ) -> ParseResult<()> {
         for (font_name, entry) in
             crate::text::extraction_cmap::resolve_font_entries(resources, document)
         {
-            match entry {
+            let result = match entry {
                 crate::text::extraction_cmap::FontEntry::Indirect(num, gen) => {
-                    self.cache_font_by_ref::<R>(&font_name, (num, gen), document);
+                    self.cache_font_by_ref::<R>(&font_name, (num, gen), document)
                 }
                 crate::text::extraction_cmap::FontEntry::Inline(font_dict) => {
-                    self.cache_inline_font::<R>(&font_name, &font_dict, document);
+                    self.cache_inline_font::<R>(&font_name, &font_dict, document)
                 }
+            };
+            if let Err(error) = result {
+                if document.options().strict_mode {
+                    return Err(error);
+                }
+                tracing::warn!(font = %font_name, %error, "Skipping unresolved font in lenient extraction");
             }
         }
+        Ok(())
     }
 
-    /// Cache a font written directly into the page's resources.
-    ///
-    /// Unlike [`Self::cache_font_by_ref`] this cannot touch the persistent
-    /// cache: an inline dictionary has no object id to key on, and two pages
-    /// may write different fonts under the same name. It is parsed per page.
+    /// Cache an inline font per page; it has no stable object id.
     fn cache_inline_font<R: Read + Seek>(
         &mut self,
         font_name: &str,
         font_dict: &PdfDictionary,
         document: &PdfDocument<R>,
-    ) {
-        let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
-        if let Ok(font_info) = cmap_extractor.extract_font_info(font_dict, document) {
-            tracing::debug!(
-                "Parsed inline font {} (ToUnicode: {})",
-                font_name,
-                font_info.to_unicode.is_some()
-            );
-            self.cache_page_font(font_name, font_info);
-        }
+    ) -> ParseResult<()> {
+        let font_info = CMapTextExtractor::new().extract_font_info(font_dict, document)?;
+        self.cache_page_font(font_name, font_info);
+        Ok(())
     }
 
     /// Cache a font, reusing the persistent object cache when possible.
@@ -3431,43 +3486,68 @@ impl TextExtractor {
         font_name: &str,
         font_ref: (u32, u16),
         document: &PdfDocument<R>,
-    ) {
-        // Check persistent object cache first — avoids re-parsing across pages
+    ) -> ParseResult<()> {
         if let Some(cached) = self.font_object_cache.get(&font_ref) {
-            let cached = cached.clone();
-            tracing::debug!(
-                "Reused cached font object ({}, {}): {} (ToUnicode: {})",
-                font_ref.0,
-                font_ref.1,
-                font_name,
-                cached.to_unicode.is_some()
-            );
-            self.cache_page_font(font_name, cached);
-            return;
+            self.cache_page_font(font_name, cached.clone());
+            return Ok(());
         }
-
-        // Parse font object
-        if let Ok(PdfObject::Dictionary(font_dict)) = document.get_object(font_ref.0, font_ref.1) {
-            let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
-            if let Ok(font_info) = cmap_extractor.extract_font_info(&font_dict, document) {
-                let has_to_unicode = font_info.to_unicode.is_some();
-                // Store in persistent cache
-                self.font_object_cache.insert(font_ref, font_info.clone());
-                // Store in per-page name cache
-                self.cache_page_font(font_name, font_info);
-                tracing::debug!(
-                    "Parsed and cached font ({}, {}): {} (ToUnicode: {})",
-                    font_ref.0,
-                    font_ref.1,
-                    font_name,
-                    has_to_unicode
-                );
-            }
-        }
+        let object = document.get_object(font_ref.0, font_ref.1)?;
+        let font_dict = object
+            .as_dict()
+            .ok_or_else(|| crate::parser::ParseError::SyntaxError {
+                position: 0,
+                message: "Font resource must be a dictionary".into(),
+            })?;
+        let font_info = CMapTextExtractor::new().extract_font_info(font_dict, document)?;
+        self.font_object_cache.insert(font_ref, font_info.clone());
+        self.cache_page_font(font_name, font_info);
+        Ok(())
     }
 
-    /// Add a parsed font to the page-local caches, deriving the Type0 fallback
-    /// width once rather than on every text-showing boundary.
+    /// Move the source text pen. Vertical metrics are CID indexed, while
+    /// fragment width remains a horizontal glyph extent, not a negative advance.
+    fn advance_text_pen(
+        &self,
+        state: &mut TextState,
+        codes: &[u8],
+        horizontal_width: f64,
+    ) -> (f64, f64) {
+        let font = state
+            .font_name
+            .as_ref()
+            .and_then(|name| self.font_cache.get(name));
+        let Some(font) = font.filter(|font| is_vertical_font(font)) else {
+            return advance_pen(state, horizontal_width);
+        };
+        let metrics = font
+            .descendant_font
+            .as_deref()
+            .unwrap_or(font)
+            .metrics
+            .cid_widths
+            .as_ref();
+        let default = metrics.map_or(-1000.0, |widths| widths.vertical.default_advance);
+        let advance = if let Some(glyphs) = source_cids_for_codes(codes, font) {
+            glyphs
+                .into_iter()
+                .map(|(code, cid)| {
+                    metrics.map_or(default, |widths| widths.vertical.advance_for(cid)) / 1000.0
+                        * state.font_size
+                        + state.char_space
+                        + if code == b" " { state.word_space } else { 0.0 }
+                })
+                .sum()
+        } else {
+            // Unknown named encodings retain a bounded source-unit recovery.
+            // Never count Unicode scalars: a glyph may map to a whole sequence.
+            codes.chunks(2).count() as f64 * (default / 1000.0 * state.font_size + state.char_space)
+        };
+        state.text_matrix =
+            multiply_matrix(&[1.0, 0.0, 0.0, 1.0, 0.0, advance], &state.text_matrix);
+        text_origin(state)
+    }
+
+    /// Add a parsed font to page-local caches and derive its Type0 fallback width.
     fn cache_page_font(&mut self, font_name: &str, font_info: FontInfo) {
         if font_info.font_type == "Type0" || font_info.descendant_font.is_some() {
             let cid_font = font_info.descendant_font.as_deref().unwrap_or(&font_info);
@@ -3529,7 +3609,12 @@ impl TextExtractor {
                         &decoded,
                         self.carriage_return_handling,
                     );
-                    if crate::text::extraction_cmap::decode_is_usable(&sanitized) {
+                    if crate::text::extraction_cmap::decode_is_usable(&sanitized)
+                        || (decoded.is_empty()
+                            && crate::text::extraction_cmap::collection_notdef_only(
+                                text, font_info,
+                            ))
+                    {
                         tracing::debug!(
                             "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
                             font_name,
@@ -3705,8 +3790,8 @@ fn skip_artifact_text(state: &TextState, include_artifacts: bool) -> bool {
 /// scale of the `x`/`y` origins.
 fn combined_text_scale(state: &TextState) -> (f64, f64) {
     let combined = multiply_matrix(&state.text_matrix, &state.ctm);
-    let x_scale = (combined[0] * combined[0] + combined[1] * combined[1]).sqrt();
-    let y_scale = (combined[2] * combined[2] + combined[3] * combined[3]).sqrt();
+    let x_scale = combined[0].hypot(combined[1]);
+    let y_scale = combined[2].hypot(combined[3]);
     (x_scale, y_scale)
 }
 
@@ -3955,6 +4040,25 @@ fn clamp_to_budget(text: &mut String, limit: Option<usize>, truncated: &mut bool
     }
 }
 
+fn validate_fragment_geometry(fragments: &[TextFragment]) -> ParseResult<()> {
+    if fragments.iter().all(|f| {
+        [f.x, f.y, f.width, f.height, f.font_size]
+            .iter()
+            .all(|v| v.is_finite())
+    }) {
+        Ok(())
+    } else {
+        Err(geometry_error())
+    }
+}
+
+fn geometry_error() -> crate::parser::ParseError {
+    crate::parser::ParseError::SyntaxError {
+        position: 0,
+        message: "Text geometry is not finite or representable".into(),
+    }
+}
+
 fn emit_text_fragment(
     fragments: &mut Vec<TextFragment>,
     decoded: &str,
@@ -3964,14 +4068,14 @@ fn emit_text_fragment(
     state: &mut TextState,
     include_artifacts: bool,
     skip_text: bool,
-) {
+) -> ParseResult<()> {
     if decoded.is_empty() || skip_text {
-        return;
+        return Ok(());
     }
 
     // Artifact filter (default: skip emission for Artifact subtrees).
     if !include_artifacts && state.mc_stack.iter().any(|e| e.is_artifact) {
-        return;
+        return Ok(());
     }
 
     let (is_bold, is_italic) = state
@@ -3986,10 +4090,19 @@ fn emit_text_fragment(
     // already page-space (caller transforms via `text_origin`); we still need
     // to scale the size/width fields by the combined `text_matrix × CTM`.
     let combined = multiply_matrix(&state.text_matrix, &state.ctm);
-    let x_scale = (combined[0] * combined[0] + combined[1] * combined[1]).sqrt();
-    let y_scale = (combined[2] * combined[2] + combined[3] * combined[3]).sqrt();
-    let effective_width = text_width * x_scale;
+    let x_scale = combined[0].hypot(combined[1]);
+    let y_scale = combined[2].hypot(combined[3]);
+    // Tz scales horizontal glyph extent independently of the text matrix.
+    // A reflected scale reverses the pen direction, not the extent magnitude.
+    let effective_width = text_width * (state.horizontal_scale / 100.0).abs() * x_scale;
     let effective_size = state.font_size * y_scale;
+
+    if ![x, y, effective_width, effective_size]
+        .iter()
+        .all(|v| v.is_finite())
+    {
+        return Err(geometry_error());
+    }
 
     // If a pending ActualText run is active in the current scope, accumulate
     // into it instead of emitting a fragment now. The run is flushed on the
@@ -4012,7 +4125,10 @@ fn emit_text_fragment(
             pending.populated = true;
         }
         pending.width += effective_width;
-        return;
+        if !pending.width.is_finite() {
+            return Err(geometry_error());
+        }
+        return Ok(());
     }
 
     let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
@@ -4033,6 +4149,7 @@ fn emit_text_fragment(
         mcid,
         struct_tag,
     });
+    Ok(())
 }
 
 /// Pen origin (user-space coordinates) of the next glyph in the current
@@ -4195,6 +4312,30 @@ fn pen_delta(state: &TextState, last: (f64, f64), cur: (f64, f64)) -> (f64, f64)
     }
     let (ux, uy) = (bx / norm, by / norm);
     (dxu * ux + dyu * uy, -dxu * uy + dyu * ux)
+}
+
+/// A certified tracking array is a single semantic run. Preserve its inferred
+/// separators before geometric layout heuristics can interpret tracking as word
+/// gaps again. TJ cannot change font, render mode or marked-content metadata.
+/// The merged advance spans the actual glyph origins; individual glyph metrics
+/// and the text pen remain unchanged. Rotations and reflections retain stream
+/// order and use distance along the (constant) array baseline.
+fn coalesce_tracked_array(fragments: &mut Vec<TextFragment>, start: usize) -> ParseResult<()> {
+    if fragments.len().saturating_sub(start) < 2 {
+        return Ok(());
+    }
+    let mut run = fragments[start].clone();
+    for fragment in &fragments[start + 1..] {
+        let extent = (fragment.x - run.x).hypot(fragment.y - run.y) + fragment.width;
+        if !extent.is_finite() {
+            return Err(geometry_error());
+        }
+        run.width = run.width.max(extent);
+        run.text.push_str(&fragment.text);
+    }
+    fragments.truncate(start);
+    fragments.push(run);
+    Ok(())
 }
 
 /// Multiply two transformation matrices
@@ -4465,28 +4606,14 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
     text.len() as f64 * font_size * 0.5
 }
 
-/// Compute advance width from the original character **codes**, not the decoded
-/// Unicode text.
-///
-/// A simple font's `Widths` array is indexed by character code (`first_char..=
-/// last_char`), i.e. the byte value in the content stream — not by the Unicode
-/// codepoint the code decodes to. [`calculate_text_width`] indexes by the decoded
-/// codepoint (`ch as u32`), which is correct only when code == codepoint (ASCII /
-/// WinAnsi fonts). For custom-encoded fonts (Type1 with `Differences`, embedded
-/// Computer Modern in LaTeX PDFs, ToUnicode remaps) the codepoint diverges from
-/// the code, so the wrong slot — or `missing_width` — is read, desyncing glyph
-/// advance and scrambling word order once fragments are sorted by position
-/// (issue #302).
-///
-/// `decoded` is the already-decoded text for this run; it is only consulted for
-/// composite (Type0) fonts, whose multi-byte codes cannot be indexed byte-wise
-/// and whose width path is unchanged here to avoid regressing CJK extraction.
-/// Unscaled text-space advance of a run (before `Th`), including the text-state
-/// spacing parameters (ISO 32000-1 §9.4.4): the glyph displacement is
-/// `w0/1000 * Tfs + Tc + Tw`, so `char_space` (`Tc`) is added once per glyph and
-/// `word_space` (`Tw`) once per *single-byte* space (code 32, §9.3.3). Both are
-/// unscaled text-space units, added directly (not multiplied by the font size);
-/// the caller's `advance_pen` applies `Th`.
+/// Whether the font selects vertical writing through its named or embedded CMap.
+fn is_vertical_font(font: &FontInfo) -> bool {
+    font.encoding
+        .as_deref()
+        .is_some_and(|name| name.ends_with("-V"))
+        || matches!(&font.cid_encoding, Some(crate::text::encoding_cmap::CidEncoding::Cmap(map)) if map.wmode == 1)
+}
+
 /// Decode a Type0 text-showing string's raw bytes into CIDs, for CID-indexed
 /// `/W` width lookup (issue #496). Mirrors the code-length/lookup rules
 /// `decode_text_with_font` already uses for Unicode decoding, but stops at
@@ -4496,18 +4623,18 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 /// those cases guessing would select unrelated `/W` entries, so the caller
 /// retains the legacy fallback.
 fn cids_for_codes<'a>(codes: &'a [u8], font: &FontInfo) -> Option<Vec<(&'a [u8], u32)>> {
-    use crate::text::encoding_cmap::CidEncoding;
-
-    if matches!(font.cid_encoding, Some(CidEncoding::Utf16Be))
-        || font
-            .encoding
-            .as_deref()
-            .is_some_and(|name| name.ends_with("-V"))
-        || matches!(&font.cid_encoding, Some(CidEncoding::Cmap(cmap)) if cmap.wmode == 1)
-    {
+    if is_vertical_font(font) {
         return None;
     }
-    let identity = font.encoding.as_deref() == Some("Identity-H");
+    source_cids_for_codes(codes, font)
+}
+
+fn source_cids_for_codes<'a>(codes: &'a [u8], font: &FontInfo) -> Option<Vec<(&'a [u8], u32)>> {
+    use crate::text::encoding_cmap::CidEncoding;
+    if matches!(font.cid_encoding, Some(CidEncoding::Utf16Be)) {
+        return None;
+    }
+    let identity = matches!(font.encoding.as_deref(), Some("Identity-H" | "Identity-V"));
     if font.cid_encoding.is_none() && !identity {
         return None;
     }
@@ -4594,6 +4721,28 @@ fn glyph_zero_width_status(codes: &[u8], font: &FontInfo) -> GlyphZeroWidthStatu
     }
 }
 
+/// Compute advance width from the original character **codes**, not the decoded
+/// Unicode text.
+///
+/// A simple font's `Widths` array is indexed by character code (`first_char..=
+/// last_char`), i.e. the byte value in the content stream — not by the Unicode
+/// codepoint the code decodes to. [`calculate_text_width`] indexes by the decoded
+/// codepoint (`ch as u32`), which is correct only when code == codepoint (ASCII /
+/// WinAnsi fonts). For custom-encoded fonts (Type1 with `Differences`, embedded
+/// Computer Modern in LaTeX PDFs, ToUnicode remaps) the codepoint diverges from
+/// the code, so the wrong slot — or `missing_width` — is read, desyncing glyph
+/// advance and scrambling word order once fragments are sorted by position
+/// (issue #302).
+///
+/// `decoded` is the already-decoded text for this run; it is only consulted for
+/// composite (Type0) fonts, whose multi-byte codes cannot be indexed byte-wise
+/// and whose width path is unchanged here to avoid regressing CJK extraction.
+/// Unscaled text-space advance of a run (before `Th`), including the text-state
+/// spacing parameters (ISO 32000-1 §9.4.4): the glyph displacement is
+/// `w0/1000 * Tfs + Tc + Tw`, so `char_space` (`Tc`) is added once per glyph and
+/// `word_space` (`Tw`) once per *single-byte* space (code 32, §9.3.3). Both are
+/// unscaled text-space units, added directly (not multiplied by the font size);
+/// the caller's `advance_pen` applies `Th`.
 fn calculate_text_width_from_codes(
     codes: &[u8],
     decoded: &str,
@@ -4700,6 +4849,9 @@ fn calculate_text_width_from_codes(
                 })
                 .sum::<f64>();
             return total_width + spacing(codes);
+        }
+        if let Some(width) = font.metrics.missing_width {
+            return codes.len() as f64 * width / 1000.0 * font_size + spacing(codes);
         }
     }
 

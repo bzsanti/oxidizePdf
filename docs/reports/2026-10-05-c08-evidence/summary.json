@@ -1,0 +1,18 @@
+{
+  "row": "C08",
+  "status": "locally-complete",
+  "passed": 7274,
+  "failed": 0,
+  "ignored": 3,
+  "targets": 42,
+  "findings_resolved": 3,
+  "changed_previous_files": [
+    "TASKS.md",
+    "oxidize-pdf-core/src/text/encoding_cmap.rs",
+    "oxidize-pdf-core/src/text/extraction_cmap.rs",
+    "oxidize-pdf-core/src/text/mod.rs",
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json",
+    "oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs",
+    "oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs"
+  ]
+}

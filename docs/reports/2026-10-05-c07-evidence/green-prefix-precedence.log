@@ -1,0 +1,59 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 14.93s
+     Running tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-576d6b91ec72df24)
+
+running 16 tests
+test cjk_samples_have_pinned_identity_and_distinct_collections ... ok
+test cid_zero_only_does_not_fall_back_to_source_bytes ... ok
+test cid_zero_fallback_preserves_following_text_and_explicit_unicode ... ok
+test adobe_kr_is_a_separate_collection ... ok
+test adobe_korea1_named_cmaps_decode_collection_cids ... ok
+test adobe_japan1_named_cmaps_decode_collection_cids ... ok
+test adobe_cns1_named_cmaps_decode_collection_cids ... ok
+test named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity ... ok
+test adobe_gb1_named_cmaps_decode_collection_cids ... ok
+test korea1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test japan1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test kr_and_korea1_are_not_interchangeable_in_either_direction ... ok
+test resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences ... ok
+test explicit_unicode_overrides_all_five_collection_fallbacks ... ok
+test cns1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test kr_extended_official_maps_preserve_identity_and_unicode_authority ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.22s
+
+     Running tests/text_cmap_boundary_contract_test.rs (target/debug/deps/text_cmap_boundary_contract_test-6d539187c231099f)
+
+running 13 tests
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... ok
+test child_notdef_char_overrides_only_its_parent_fallback_code ... ok
+test large_cidrange_offsets_do_not_alias_the_first_cid ... ok
+test inherited_notdef_range_retains_parent_cid_and_width ... ok
+test notdef_range_selects_one_cid_without_incrementing ... ok
+test codespace_length_uses_the_full_prefix_not_just_the_first_byte ... ok
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... ok
+test ordinary_child_mapping_wins_over_inherited_notdef ... ok
+test ordinary_parent_mapping_wins_over_child_notdef ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+test later_mappings_override_earlier_entries_within_the_same_layer ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... ok
+test out_of_range_cids_never_wrap_into_valid_glyphs ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_usecmap_contract_test.rs (target/debug/deps/text_usecmap_contract_test-d04affbc6085c30f)
+
+running 10 tests
+test explicit_cid_mapping_precedes_notdef_range ... ok
+test both_maps_follow_two_parent_levels ... ok
+test child_unicode_overrides_one_code_and_inherits_the_other ... ok
+test child_cid_mapping_overrides_parent_width_selection ... ok
+test encoding_inherits_parent_codespace_and_cids ... ok
+test tounicode_inherits_parent_mapping ... ok
+test flat_maps_are_the_control ... ok
+test identity_parent_operator_preserves_two_byte_codes_and_cid_widths ... ok
+test fixture_bytes_match_frozen_provenance ... ok
+test identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

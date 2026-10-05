@@ -1,0 +1,87 @@
+
+running 9 tests
+test bt_resets_text_matrix_and_retains_text_state ... FAILED
+test font_switch_changes_advance_without_resetting_text_matrix ... FAILED
+test tm_rotation_rotates_glyph_advance ... FAILED
+test q_and_q_restore_ctm_before_the_next_text_object ... FAILED
+test ctm_nonuniform_scale_and_translation_apply_to_text_origins ... FAILED
+test ctm_shear_and_translation_apply_to_text_origins ... FAILED
+test ctm_scale_composes_with_rotated_tm_in_pdf_order ... FAILED
+test nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state ... FAILED
+test tm_shear_preserves_both_advance_components ... FAILED
+
+failures:
+
+---- bt_resets_text_matrix_and_retains_text_state stdout ----
+
+thread 'bt_resets_text_matrix_and_retains_text_state' (84) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/nan-mutation.rs:51:5:
+A expected (100,200), actual "A" at (NaN,NaN)
+B expected (10,20), actual "B" at (NaN,NaN)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- font_switch_changes_advance_without_resetting_text_matrix stdout ----
+
+thread 'font_switch_changes_advance_without_resetting_text_matrix' (88) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/nan-mutation.rs:51:5:
+A expected (100,200), actual "A" at (NaN,NaN)
+B expected (105,200), actual "B" at (NaN,NaN)
+C expected (113,200), actual "C" at (NaN,NaN)
+
+---- tm_rotation_rotates_glyph_advance stdout ----
+
+thread 'tm_rotation_rotates_glyph_advance' (91) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/nan-mutation.rs:51:5:
+A expected (300,100), actual "A" at (NaN,NaN)
+B expected (300,105), actual "B" at (NaN,NaN)
+
+---- q_and_q_restore_ctm_before_the_next_text_object stdout ----
+
+thread 'q_and_q_restore_ctm_before_the_next_text_object' (90) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/nan-mutation.rs:51:5:
+A expected (210,220), actual "A" at (NaN,NaN)
+B expected (100,100), actual "B" at (NaN,NaN)
+
+---- ctm_nonuniform_scale_and_translation_apply_to_text_origins stdout ----
+
+thread 'ctm_nonuniform_scale_and_translation_apply_to_text_origins' (85) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/nan-mutation.rs:51:5:
+A expected (210,620), actual "A" at (NaN,NaN)
+B expected (220,620), actual "B" at (NaN,NaN)
+
+---- ctm_shear_and_translation_apply_to_text_origins stdout ----
+
+thread 'ctm_shear_and_translation_apply_to_text_origins' (87) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/nan-mutation.rs:51:5:
+A expected (160,270), actual "A" at (NaN,NaN)
+B expected (165,272.5), actual "B" at (NaN,NaN)
+
+---- ctm_scale_composes_with_rotated_tm_in_pdf_order stdout ----
+
+thread 'ctm_scale_composes_with_rotated_tm_in_pdf_order' (86) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/nan-mutation.rs:51:5:
+A expected (210,320), actual "A" at (NaN,NaN)
+B expected (210,335), actual "B" at (NaN,NaN)
+
+---- nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state stdout ----
+
+thread 'nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state' (89) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/nan-mutation.rs:51:5:
+A expected (100,200), actual "A" at (NaN,NaN)
+B expected (75,106), actual "B" at (NaN,NaN)
+C expected (91,106), actual "C" at (NaN,NaN)
+D expected (100,300), actual "D" at (NaN,NaN)
+E expected (105,300), actual "E" at (NaN,NaN)
+
+---- tm_shear_preserves_both_advance_components stdout ----
+
+thread 'tm_shear_preserves_both_advance_components' (92) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/nan-mutation.rs:51:5:
+A expected (100,200), actual "A" at (NaN,NaN)
+B expected (105,202.5), actual "B" at (NaN,NaN)
+
+
+failures:
+    bt_resets_text_matrix_and_retains_text_state
+    ctm_nonuniform_scale_and_translation_apply_to_text_origins
+    ctm_scale_composes_with_rotated_tm_in_pdf_order
+    ctm_shear_and_translation_apply_to_text_origins
+    font_switch_changes_advance_without_resetting_text_matrix
+    nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state
+    q_and_q_restore_ctm_before_the_next_text_object
+    tm_rotation_rotates_glyph_advance
+    tm_shear_preserves_both_advance_components
+
+test result: FAILED. 0 passed; 9 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

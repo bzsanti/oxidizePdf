@@ -1,0 +1,39 @@
+{
+  "issue": 666,
+  "block": "F10",
+  "status": "locally-complete",
+  "ci": "deferred until all #666 implementation complete",
+  "next_block": "not activated",
+  "runs": {
+    "validation": {
+      "targets": 39,
+      "passed": 7248,
+      "failed": 0,
+      "ignored": 3
+    },
+    "final-code": {
+      "targets": 37,
+      "passed": 7176,
+      "failed": 0,
+      "ignored": 3
+    }
+  },
+  "red": {
+    "passed": 5,
+    "failed": 1
+  },
+  "new_tests": 7,
+  "external_pdfs": 40,
+  "regenerated_identical_files": 43,
+  "mutations_detected": 3,
+  "findings_corrected": 1,
+  "clippy": "pass -D warnings",
+  "format": "pass",
+  "kripteia": {
+    "scopes": 5,
+    "new_test_score": 99,
+    "security_alerts": 0,
+    "python_scanner_recognized_files": 0
+  },
+  "corpus": "72 tests pass; fusion and both order gates executed; baselines unchanged"
+}

@@ -1,0 +1,14 @@
+{
+  "review_complete": true,
+  "candidate_approved": false,
+  "findings": 13,
+  "rust_focused_pass": 69,
+  "python_pass": 13,
+  "probes_pass": 1,
+  "probes_fail": 9,
+  "nan_mutation_tests_pass": 9,
+  "kripteia_scope_runs": 44,
+  "security_alerts": 0,
+  "source_files_verified_unchanged": 554,
+  "product_files_modified": 0
+}

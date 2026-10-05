@@ -1,0 +1,7 @@
+{
+  ".github/workflows/text-contracts.yml": "1b3f99027d3df1364231f858e0f30865e640c8452713302f613ed78d2652d5d4",
+  ".github/workflows/corpus-tests.yml": "acf76befabe2e835164ea69c171472ac546e2ab4447ea7a063206ddd96fb7e25",
+  ".gitattributes": "caa0edb00533358282ec6312569c970d93983b3cc31c08cf3a0b9954ec58d13b",
+  "tools/text_contracts/run_fast.py": "09cbbf3671d40c80ca41fd7769fbe11520420ba3baac82aada8f9058b6b1d725",
+  "tools/tests/test_fast_contract_runner.py": "c534ec4cfa3b7c4921aeb111ff3006fa9d36e1f0c2b5a373bb8f4a421ac50e74"
+}

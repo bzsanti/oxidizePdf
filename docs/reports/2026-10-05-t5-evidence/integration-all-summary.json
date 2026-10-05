@@ -1,0 +1,18 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--all",
+    "--features",
+    "internal-testing",
+    "--no-fail-fast"
+  ],
+  "exit": 0,
+  "result_blocks": 411,
+  "passed": 10367,
+  "failed": 0,
+  "ignored": 71,
+  "note": "Includes library, integration targets and doctests; ignores are existing tests, fast contracts separately require zero ignores."
+}

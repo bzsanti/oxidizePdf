@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-05-t4-product-mutations/run.py", line 92, in <module>
+    assert originals[module].count(before) == 1, (name, originals[module].count(before))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('descendant', 2)

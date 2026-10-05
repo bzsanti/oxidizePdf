@@ -1,0 +1,52 @@
+
+running 9 tests
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... ok
+test child_notdef_char_overrides_only_its_parent_fallback_code ... FAILED
+test ordinary_child_mapping_wins_over_inherited_notdef ... FAILED
+test inherited_notdef_range_retains_parent_cid_and_width ... FAILED
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... ok
+test notdef_range_selects_one_cid_without_incrementing ... FAILED
+test ordinary_parent_mapping_wins_over_child_notdef ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+
+failures:
+
+---- child_notdef_char_overrides_only_its_parent_fallback_code stdout ----
+
+thread 'child_notdef_char_overrides_only_its_parent_fallback_code' (279) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/notdef-cid-input.rs:54:13:
+assertion `left == right` failed: source code 3
+  left: Some(29)
+ right: Some(17)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- ordinary_child_mapping_wins_over_inherited_notdef stdout ----
+
+thread 'ordinary_child_mapping_wins_over_inherited_notdef' (285) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/notdef-cid-input.rs:54:13:
+assertion `left == right` failed: source code 3
+  left: Some(29)
+ right: Some(17)
+
+---- inherited_notdef_range_retains_parent_cid_and_width stdout ----
+
+thread 'inherited_notdef_range_retains_parent_cid_and_width' (282) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/notdef-cid-input.rs:54:13:
+assertion `left == right` failed: source code 3
+  left: Some(29)
+ right: Some(17)
+
+---- notdef_range_selects_one_cid_without_incrementing stdout ----
+
+thread 'notdef_range_selects_one_cid_without_incrementing' (284) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/notdef-cid-input.rs:54:13:
+assertion `left == right` failed: source code 3
+  left: Some(29)
+ right: Some(17)
+
+
+failures:
+    child_notdef_char_overrides_only_its_parent_fallback_code
+    inherited_notdef_range_retains_parent_cid_and_width
+    notdef_range_selects_one_cid_without_incrementing
+    ordinary_child_mapping_wins_over_inherited_notdef
+
+test result: FAILED. 5 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

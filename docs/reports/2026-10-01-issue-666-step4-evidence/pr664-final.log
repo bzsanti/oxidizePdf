@@ -1,0 +1,705 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-review-664-20261001/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.40s
+     Running tests/text_document_string_contract_test.rs (target/debug/deps/text_document_string_contract_test-4bb9f5f742bc9015)
+
+running 10 tests
+test document_oracle_preserves_defined_and_undefined_positions ... ok
+test empty_bookmarks_and_form_values_remain_empty ... ok
+test actualtext_utf16be_bom_sequences_are_exact ... ok
+test empty_document_strings_remain_empty ... ok
+test metadata_utf16be_bom_sequences_are_exact ... ok
+test bookmarks_and_form_values_preserve_utf16be_sequences ... ok
+ActualText: 232 defined positions, 38 mismatches
+
+thread 'actualtext_matches_pdfdocencoding_normative_table' (231) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:125:5:
+ActualText 0x18: expected "˘", actual "\u{18}"
+ActualText 0x19: expected "ˇ", actual "\u{19}"
+ActualText 0x1A: expected "ˆ", actual "\u{1a}"
+ActualText 0x1B: expected "˙", actual "\u{1b}"
+ActualText 0x1C: expected "˝", actual "\u{1c}"
+ActualText 0x1D: expected "˛", actual "\u{1d}"
+ActualText 0x1E: expected "˚", actual "\u{1e}"
+ActualText 0x1F: expected "˜", actual "\u{1f}"
+ActualText 0x80: expected "•", actual "€"
+ActualText 0x81: expected "†", actual "\u{81}"
+ActualText 0x82: expected "‡", actual "‚"
+ActualText 0x83: expected "…", actual "ƒ"
+ActualText 0x84: expected "—", actual "„"
+ActualText 0x85: expected "–", actual "…"
+ActualText 0x86: expected "ƒ", actual "†"
+ActualText 0x87: expected "⁄", actual "‡"
+ActualText 0x88: expected "‹", actual "ˆ"
+ActualText 0x89: expected "›", actual "‰"
+ActualText 0x8A: expected "−", actual "Š"
+ActualText 0x8B: expected "‰", actual "‹"
+ActualText 0x8C: expected "„", actual "Œ"
+ActualText 0x8D: expected "“", actual "\u{8d}"
+ActualText 0x8E: expected "”", actual "Ž"
+ActualText 0x8F: expected "‘", actual "\u{8f}"
+ActualText 0x90: expected "’", actual "\u{90}"
+ActualText 0x91: expected "‚", actual "‘"
+ActualText 0x92: expected "™", actual "’"
+ActualText 0x93: expected "ﬁ", actual "“"
+ActualText 0x94: expected "ﬂ", actual "”"
+ActualText 0x95: expected "Ł", actual "•"
+ActualText 0x96: expected "Œ", actual "–"
+ActualText 0x97: expected "Š", actual "—"
+ActualText 0x98: expected "Ÿ", actual "˜"
+ActualText 0x99: expected "Ž", actual "™"
+ActualText 0x9A: expected "ı", actual "š"
+ActualText 0x9B: expected "ł", actual "›"
+ActualText 0x9D: expected "š", actual "\u{9d}"
+ActualText 0xA0: expected "€", actual "\u{a0}"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test actualtext_matches_pdfdocencoding_normative_table ... FAILED
+bookmark: 232 defined positions, 38 mismatches
+
+thread 'bookmark_titles_match_pdfdocencoding_normative_table' (233) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:125:5:
+bookmark 0x18: expected "˘", actual "\u{18}"
+bookmark 0x19: expected "ˇ", actual "\u{19}"
+bookmark 0x1A: expected "ˆ", actual "\u{1a}"
+bookmark 0x1B: expected "˙", actual "\u{1b}"
+bookmark 0x1C: expected "˝", actual "\u{1c}"
+bookmark 0x1D: expected "˛", actual "\u{1d}"
+bookmark 0x1E: expected "˚", actual "\u{1e}"
+bookmark 0x1F: expected "˜", actual "\u{1f}"
+bookmark 0x80: expected "•", actual "€"
+bookmark 0x81: expected "†", actual "\u{81}"
+bookmark 0x82: expected "‡", actual "‚"
+bookmark 0x83: expected "…", actual "ƒ"
+bookmark 0x84: expected "—", actual "„"
+bookmark 0x85: expected "–", actual "…"
+bookmark 0x86: expected "ƒ", actual "†"
+bookmark 0x87: expected "⁄", actual "‡"
+bookmark 0x88: expected "‹", actual "ˆ"
+bookmark 0x89: expected "›", actual "‰"
+bookmark 0x8A: expected "−", actual "Š"
+bookmark 0x8B: expected "‰", actual "‹"
+bookmark 0x8C: expected "„", actual "Œ"
+bookmark 0x8D: expected "“", actual "\u{8d}"
+bookmark 0x8E: expected "”", actual "Ž"
+bookmark 0x8F: expected "‘", actual "\u{8f}"
+bookmark 0x90: expected "’", actual "\u{90}"
+bookmark 0x91: expected "‚", actual "‘"
+bookmark 0x92: expected "™", actual "’"
+bookmark 0x93: expected "ﬁ", actual "“"
+bookmark 0x94: expected "ﬂ", actual "”"
+bookmark 0x95: expected "Ł", actual "•"
+bookmark 0x96: expected "Œ", actual "–"
+bookmark 0x97: expected "Š", actual "—"
+bookmark 0x98: expected "Ÿ", actual "˜"
+bookmark 0x99: expected "Ž", actual "™"
+bookmark 0x9A: expected "ı", actual "š"
+bookmark 0x9B: expected "ł", actual "›"
+bookmark 0x9D: expected "š", actual "\u{9d}"
+bookmark 0xA0: expected "€", actual "\u{a0}"
+test bookmark_titles_match_pdfdocencoding_normative_table ... FAILED
+metadata: 232 defined positions, 38 mismatches
+
+thread 'metadata_matches_pdfdocencoding_normative_table' (238) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:125:5:
+metadata 0x18: expected "˘", actual "\u{18}"
+metadata 0x19: expected "ˇ", actual "\u{19}"
+metadata 0x1A: expected "ˆ", actual "\u{1a}"
+metadata 0x1B: expected "˙", actual "\u{1b}"
+metadata 0x1C: expected "˝", actual "\u{1c}"
+metadata 0x1D: expected "˛", actual "\u{1d}"
+metadata 0x1E: expected "˚", actual "\u{1e}"
+metadata 0x1F: expected "˜", actual "\u{1f}"
+metadata 0x80: expected "•", actual "€"
+metadata 0x81: expected "†", actual "\u{81}"
+metadata 0x82: expected "‡", actual "‚"
+metadata 0x83: expected "…", actual "ƒ"
+metadata 0x84: expected "—", actual "„"
+metadata 0x85: expected "–", actual "…"
+metadata 0x86: expected "ƒ", actual "†"
+metadata 0x87: expected "⁄", actual "‡"
+metadata 0x88: expected "‹", actual "ˆ"
+metadata 0x89: expected "›", actual "‰"
+metadata 0x8A: expected "−", actual "Š"
+metadata 0x8B: expected "‰", actual "‹"
+metadata 0x8C: expected "„", actual "Œ"
+metadata 0x8D: expected "“", actual "\u{8d}"
+metadata 0x8E: expected "”", actual "Ž"
+metadata 0x8F: expected "‘", actual "\u{8f}"
+metadata 0x90: expected "’", actual "\u{90}"
+metadata 0x91: expected "‚", actual "‘"
+metadata 0x92: expected "™", actual "’"
+metadata 0x93: expected "ﬁ", actual "“"
+metadata 0x94: expected "ﬂ", actual "”"
+metadata 0x95: expected "Ł", actual "•"
+metadata 0x96: expected "Œ", actual "–"
+metadata 0x97: expected "Š", actual "—"
+metadata 0x98: expected "Ÿ", actual "˜"
+metadata 0x99: expected "Ž", actual "™"
+metadata 0x9A: expected "ı", actual "š"
+metadata 0x9B: expected "ł", actual "›"
+metadata 0x9D: expected "š", actual "\u{9d}"
+metadata 0xA0: expected "€", actual "\u{a0}"
+test metadata_matches_pdfdocencoding_normative_table ... FAILED
+form V: 232 defined positions, 38 mismatches
+
+thread 'stored_form_values_match_pdfdocencoding_normative_table' (240) panicked at oxidize-pdf-core/tests/text_document_string_contract_test.rs:125:5:
+form V 0x18: expected "˘", actual "\u{18}"
+form V 0x19: expected "ˇ", actual "\u{19}"
+form V 0x1A: expected "ˆ", actual "\u{1a}"
+form V 0x1B: expected "˙", actual "\u{1b}"
+form V 0x1C: expected "˝", actual "\u{1c}"
+form V 0x1D: expected "˛", actual "\u{1d}"
+form V 0x1E: expected "˚", actual "\u{1e}"
+form V 0x1F: expected "˜", actual "\u{1f}"
+form V 0x80: expected "•", actual "€"
+form V 0x81: expected "†", actual "\u{81}"
+form V 0x82: expected "‡", actual "‚"
+form V 0x83: expected "…", actual "ƒ"
+form V 0x84: expected "—", actual "„"
+form V 0x85: expected "–", actual "…"
+form V 0x86: expected "ƒ", actual "†"
+form V 0x87: expected "⁄", actual "‡"
+form V 0x88: expected "‹", actual "ˆ"
+form V 0x89: expected "›", actual "‰"
+form V 0x8A: expected "−", actual "Š"
+form V 0x8B: expected "‰", actual "‹"
+form V 0x8C: expected "„", actual "Œ"
+form V 0x8D: expected "“", actual "\u{8d}"
+form V 0x8E: expected "”", actual "Ž"
+form V 0x8F: expected "‘", actual "\u{8f}"
+form V 0x90: expected "’", actual "\u{90}"
+form V 0x91: expected "‚", actual "‘"
+form V 0x92: expected "™", actual "’"
+form V 0x93: expected "ﬁ", actual "“"
+form V 0x94: expected "ﬂ", actual "”"
+form V 0x95: expected "Ł", actual "•"
+form V 0x96: expected "Œ", actual "–"
+form V 0x97: expected "Š", actual "—"
+form V 0x98: expected "Ÿ", actual "˜"
+form V 0x99: expected "Ž", actual "™"
+form V 0x9A: expected "ı", actual "š"
+form V 0x9B: expected "ł", actual "›"
+form V 0x9D: expected "š", actual "\u{9d}"
+form V 0xA0: expected "€", actual "\u{a0}"
+test stored_form_values_match_pdfdocencoding_normative_table ... FAILED
+
+failures:
+
+failures:
+    actualtext_matches_pdfdocencoding_normative_table
+    bookmark_titles_match_pdfdocencoding_normative_table
+    metadata_matches_pdfdocencoding_normative_table
+    stored_form_values_match_pdfdocencoding_normative_table
+
+test result: FAILED. 6 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_document_string_contract_test`
+     Running tests/text_embedded_font_contract_test.rs (target/debug/deps/text_embedded_font_contract_test-bb27c925769a6a3b)
+
+running 4 tests
+test embedded_cff_simple_font_decodes_without_tounicode ... ok
+test embedded_cff_advance_matches_declared_font_metrics ... ok
+test embedded_cff_tounicode_has_precedence ... ok
+test embedded_font_is_the_pinned_opentype_cff_program ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-8b823f1d04deae6c)
+
+running 11 tests
+test tounicode_overrides_builtin_symbol_and_dingbats ... ok
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test differences_restart_the_code_counter_and_preserve_unmodified_codes ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test differences_override_the_base_encoding ... ok
+StandardEncoding: 149 defined codes exercised, 47 mismatches
+
+thread 'standard_encoding_matches_independent_table' (252) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:118:5:
+StandardEncoding 0x27 /quoteright: expected "’", actual "'"
+StandardEncoding 0x60 /quoteleft: expected "‘", actual "`"
+StandardEncoding 0xA4 /fraction: expected "⁄", actual "¤"
+StandardEncoding 0xA6 /florin: expected "ƒ", actual "¦"
+StandardEncoding 0xA8 /currency: expected "¤", actual "¨"
+StandardEncoding 0xA9 /quotesingle: expected "'", actual "©"
+StandardEncoding 0xAA /quotedblleft: expected "“", actual "ª"
+StandardEncoding 0xAC /guilsinglleft: expected "‹", actual "¬"
+StandardEncoding 0xAD /guilsinglright: expected "›", actual "\u{ad}"
+StandardEncoding 0xAE /fi: expected "ﬁ", actual "®"
+StandardEncoding 0xAF /fl: expected "ﬂ", actual "¯"
+StandardEncoding 0xB1 /endash: expected "–", actual "±"
+StandardEncoding 0xB2 /dagger: expected "†", actual "²"
+StandardEncoding 0xB3 /daggerdbl: expected "‡", actual "³"
+StandardEncoding 0xB4 /periodcentered: expected "·", actual "´"
+StandardEncoding 0xB7 /bullet: expected "•", actual "·"
+StandardEncoding 0xB8 /quotesinglbase: expected "‚", actual "¸"
+StandardEncoding 0xB9 /quotedblbase: expected "„", actual "¹"
+StandardEncoding 0xBA /quotedblright: expected "”", actual "º"
+StandardEncoding 0xBC /ellipsis: expected "…", actual "¼"
+StandardEncoding 0xBD /perthousand: expected "‰", actual "½"
+StandardEncoding 0xC1 /grave: expected "`", actual "Á"
+StandardEncoding 0xC2 /acute: expected "´", actual "Â"
+StandardEncoding 0xC3 /circumflex: expected "ˆ", actual "Ã"
+StandardEncoding 0xC4 /tilde: expected "˜", actual "Ä"
+StandardEncoding 0xC5 /macron: expected "¯", actual "Å"
+StandardEncoding 0xC6 /breve: expected "˘", actual "Æ"
+StandardEncoding 0xC7 /dotaccent: expected "˙", actual "Ç"
+StandardEncoding 0xC8 /dieresis: expected "¨", actual "È"
+StandardEncoding 0xCA /ring: expected "˚", actual "Ê"
+StandardEncoding 0xCB /cedilla: expected "¸", actual "Ë"
+StandardEncoding 0xCD /hungarumlaut: expected "˝", actual "Í"
+StandardEncoding 0xCE /ogonek: expected "˛", actual "Î"
+StandardEncoding 0xCF /caron: expected "ˇ", actual "Ï"
+StandardEncoding 0xD0 /emdash: expected "—", actual "Ð"
+StandardEncoding 0xE1 /AE: expected "Æ", actual "á"
+StandardEncoding 0xE3 /ordfeminine: expected "ª", actual "ã"
+StandardEncoding 0xE8 /Lslash: expected "Ł", actual "è"
+StandardEncoding 0xE9 /Oslash: expected "Ø", actual "é"
+StandardEncoding 0xEA /OE: expected "Œ", actual "ê"
+StandardEncoding 0xEB /ordmasculine: expected "º", actual "ë"
+StandardEncoding 0xF1 /ae: expected "æ", actual "ñ"
+StandardEncoding 0xF5 /dotlessi: expected "ı", actual "õ"
+StandardEncoding 0xF8 /lslash: expected "ł", actual "ø"
+StandardEncoding 0xF9 /oslash: expected "ø", actual "ù"
+StandardEncoding 0xFA /oe: expected "œ", actual "ú"
+StandardEncoding 0xFB /germandbls: expected "ß", actual "û"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test standard_encoding_matches_independent_table ... FAILED
+WinAnsiEncoding: 224 defined codes exercised, 8 mismatches
+
+thread 'winansi_encoding_matches_independent_table' (256) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:118:5:
+WinAnsiEncoding 0x7F /bullet: expected "•", actual ""
+WinAnsiEncoding 0x81 /bullet: expected "•", actual "�"
+WinAnsiEncoding 0x8D /bullet: expected "•", actual "�"
+WinAnsiEncoding 0x8F /bullet: expected "•", actual "�"
+WinAnsiEncoding 0x90 /bullet: expected "•", actual "�"
+WinAnsiEncoding 0x93 /quotedblleft: expected "“", actual "\""
+WinAnsiEncoding 0x94 /quotedblright: expected "”", actual "\""
+WinAnsiEncoding 0x9D /bullet: expected "•", actual "�"
+test winansi_encoding_matches_independent_table ... FAILED
+SymbolEncoding: 189 defined codes exercised, 154 mismatches
+
+thread 'symbol_builtin_encoding_matches_independent_table' (253) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:118:5:
+SymbolEncoding 0x22 /universal: expected "∀", actual "\""
+SymbolEncoding 0x24 /existential: expected "∃", actual "$"
+SymbolEncoding 0x27 /suchthat: expected "∋", actual "'"
+SymbolEncoding 0x2A /asteriskmath: expected "∗", actual "*"
+SymbolEncoding 0x2D /minus: expected "−", actual "-"
+SymbolEncoding 0x40 /congruent: expected "≅", actual "@"
+SymbolEncoding 0x41 /Alpha: expected "Α", actual "A"
+SymbolEncoding 0x42 /Beta: expected "Β", actual "B"
+SymbolEncoding 0x43 /Chi: expected "Χ", actual "C"
+SymbolEncoding 0x44 /Delta: expected "∆", actual "D"
+SymbolEncoding 0x45 /Epsilon: expected "Ε", actual "E"
+SymbolEncoding 0x46 /Phi: expected "Φ", actual "F"
+SymbolEncoding 0x47 /Gamma: expected "Γ", actual "G"
+SymbolEncoding 0x48 /Eta: expected "Η", actual "H"
+SymbolEncoding 0x49 /Iota: expected "Ι", actual "I"
+SymbolEncoding 0x4A /theta1: expected "ϑ", actual "J"
+SymbolEncoding 0x4B /Kappa: expected "Κ", actual "K"
+SymbolEncoding 0x4C /Lambda: expected "Λ", actual "L"
+SymbolEncoding 0x4D /Mu: expected "Μ", actual "M"
+SymbolEncoding 0x4E /Nu: expected "Ν", actual "N"
+SymbolEncoding 0x4F /Omicron: expected "Ο", actual "O"
+SymbolEncoding 0x50 /Pi: expected "Π", actual "P"
+SymbolEncoding 0x51 /Theta: expected "Θ", actual "Q"
+SymbolEncoding 0x52 /Rho: expected "Ρ", actual "R"
+SymbolEncoding 0x53 /Sigma: expected "Σ", actual "S"
+SymbolEncoding 0x54 /Tau: expected "Τ", actual "T"
+SymbolEncoding 0x55 /Upsilon: expected "Υ", actual "U"
+SymbolEncoding 0x56 /sigma1: expected "ς", actual "V"
+SymbolEncoding 0x57 /Omega: expected "Ω", actual "W"
+SymbolEncoding 0x58 /Xi: expected "Ξ", actual "X"
+SymbolEncoding 0x59 /Psi: expected "Ψ", actual "Y"
+SymbolEncoding 0x5A /Zeta: expected "Ζ", actual "Z"
+SymbolEncoding 0x5C /therefore: expected "∴", actual "\\"
+SymbolEncoding 0x5E /perpendicular: expected "⊥", actual "^"
+SymbolEncoding 0x60 /radicalex: expected "\u{f8e5}", actual "`"
+SymbolEncoding 0x61 /alpha: expected "α", actual "a"
+SymbolEncoding 0x62 /beta: expected "β", actual "b"
+SymbolEncoding 0x63 /chi: expected "χ", actual "c"
+SymbolEncoding 0x64 /delta: expected "δ", actual "d"
+SymbolEncoding 0x65 /epsilon: expected "ε", actual "e"
+SymbolEncoding 0x66 /phi: expected "φ", actual "f"
+SymbolEncoding 0x67 /gamma: expected "γ", actual "g"
+SymbolEncoding 0x68 /eta: expected "η", actual "h"
+SymbolEncoding 0x69 /iota: expected "ι", actual "i"
+SymbolEncoding 0x6A /phi1: expected "ϕ", actual "j"
+SymbolEncoding 0x6B /kappa: expected "κ", actual "k"
+SymbolEncoding 0x6C /lambda: expected "λ", actual "l"
+SymbolEncoding 0x6D /mu: expected "µ", actual "m"
+SymbolEncoding 0x6E /nu: expected "ν", actual "n"
+SymbolEncoding 0x6F /omicron: expected "ο", actual "o"
+SymbolEncoding 0x70 /pi: expected "π", actual "p"
+SymbolEncoding 0x71 /theta: expected "θ", actual "q"
+SymbolEncoding 0x72 /rho: expected "ρ", actual "r"
+SymbolEncoding 0x73 /sigma: expected "σ", actual "s"
+SymbolEncoding 0x74 /tau: expected "τ", actual "t"
+SymbolEncoding 0x75 /upsilon: expected "υ", actual "u"
+SymbolEncoding 0x76 /omega1: expected "ϖ", actual "v"
+SymbolEncoding 0x77 /omega: expected "ω", actual "w"
+SymbolEncoding 0x78 /xi: expected "ξ", actual "x"
+SymbolEncoding 0x79 /psi: expected "ψ", actual "y"
+SymbolEncoding 0x7A /zeta: expected "ζ", actual "z"
+SymbolEncoding 0x7E /similar: expected "∼", actual "~"
+SymbolEncoding 0xA0 /Euro: expected "€", actual "\u{a0}"
+SymbolEncoding 0xA1 /Upsilon1: expected "ϒ", actual "¡"
+SymbolEncoding 0xA2 /minute: expected "′", actual "¢"
+SymbolEncoding 0xA3 /lessequal: expected "≤", actual "£"
+SymbolEncoding 0xA4 /fraction: expected "⁄", actual "¤"
+SymbolEncoding 0xA5 /infinity: expected "∞", actual "¥"
+SymbolEncoding 0xA6 /florin: expected "ƒ", actual "¦"
+SymbolEncoding 0xA7 /club: expected "♣", actual "§"
+SymbolEncoding 0xA8 /diamond: expected "♦", actual "¨"
+SymbolEncoding 0xA9 /heart: expected "♥", actual "©"
+SymbolEncoding 0xAA /spade: expected "♠", actual "ª"
+SymbolEncoding 0xAB /arrowboth: expected "↔", actual "«"
+SymbolEncoding 0xAC /arrowleft: expected "←", actual "¬"
+SymbolEncoding 0xAD /arrowup: expected "↑", actual "\u{ad}"
+SymbolEncoding 0xAE /arrowright: expected "→", actual "®"
+SymbolEncoding 0xAF /arrowdown: expected "↓", actual "¯"
+SymbolEncoding 0xB2 /second: expected "″", actual "²"
+SymbolEncoding 0xB3 /greaterequal: expected "≥", actual "³"
+SymbolEncoding 0xB4 /multiply: expected "×", actual "´"
+SymbolEncoding 0xB5 /proportional: expected "∝", actual "µ"
+SymbolEncoding 0xB6 /partialdiff: expected "∂", actual "¶"
+SymbolEncoding 0xB7 /bullet: expected "•", actual "·"
+SymbolEncoding 0xB8 /divide: expected "÷", actual "¸"
+SymbolEncoding 0xB9 /notequal: expected "≠", actual "¹"
+SymbolEncoding 0xBA /equivalence: expected "≡", actual "º"
+SymbolEncoding 0xBB /approxequal: expected "≈", actual "»"
+SymbolEncoding 0xBC /ellipsis: expected "…", actual "¼"
+SymbolEncoding 0xBD /arrowvertex: expected "\u{f8e6}", actual "½"
+SymbolEncoding 0xBE /arrowhorizex: expected "\u{f8e7}", actual "¾"
+SymbolEncoding 0xBF /carriagereturn: expected "↵", actual "¿"
+SymbolEncoding 0xC0 /aleph: expected "ℵ", actual "À"
+SymbolEncoding 0xC1 /Ifraktur: expected "ℑ", actual "Á"
+SymbolEncoding 0xC2 /Rfraktur: expected "ℜ", actual "Â"
+SymbolEncoding 0xC3 /weierstrass: expected "℘", actual "Ã"
+SymbolEncoding 0xC4 /circlemultiply: expected "⊗", actual "Ä"
+SymbolEncoding 0xC5 /circleplus: expected "⊕", actual "Å"
+SymbolEncoding 0xC6 /emptyset: expected "∅", actual "Æ"
+SymbolEncoding 0xC7 /intersection: expected "∩", actual "Ç"
+SymbolEncoding 0xC8 /union: expected "∪", actual "È"
+SymbolEncoding 0xC9 /propersuperset: expected "⊃", actual "É"
+SymbolEncoding 0xCA /reflexsuperset: expected "⊇", actual "Ê"
+SymbolEncoding 0xCB /notsubset: expected "⊄", actual "Ë"
+SymbolEncoding 0xCC /propersubset: expected "⊂", actual "Ì"
+SymbolEncoding 0xCD /reflexsubset: expected "⊆", actual "Í"
+SymbolEncoding 0xCE /element: expected "∈", actual "Î"
+SymbolEncoding 0xCF /notelement: expected "∉", actual "Ï"
+SymbolEncoding 0xD0 /angle: expected "∠", actual "Ð"
+SymbolEncoding 0xD1 /gradient: expected "∇", actual "Ñ"
+SymbolEncoding 0xD2 /registerserif: expected "\u{f6da}", actual "Ò"
+SymbolEncoding 0xD3 /copyrightserif: expected "\u{f6d9}", actual "Ó"
+SymbolEncoding 0xD4 /trademarkserif: expected "\u{f6db}", actual "Ô"
+SymbolEncoding 0xD5 /product: expected "∏", actual "Õ"
+SymbolEncoding 0xD6 /radical: expected "√", actual "Ö"
+SymbolEncoding 0xD7 /dotmath: expected "⋅", actual "×"
+SymbolEncoding 0xD8 /logicalnot: expected "¬", actual "Ø"
+SymbolEncoding 0xD9 /logicaland: expected "∧", actual "Ù"
+SymbolEncoding 0xDA /logicalor: expected "∨", actual "Ú"
+SymbolEncoding 0xDB /arrowdblboth: expected "⇔", actual "Û"
+SymbolEncoding 0xDC /arrowdblleft: expected "⇐", actual "Ü"
+SymbolEncoding 0xDD /arrowdblup: expected "⇑", actual "Ý"
+SymbolEncoding 0xDE /arrowdblright: expected "⇒", actual "Þ"
+SymbolEncoding 0xDF /arrowdbldown: expected "⇓", actual "ß"
+SymbolEncoding 0xE0 /lozenge: expected "◊", actual "à"
+SymbolEncoding 0xE1 /angleleft: expected "〈", actual "á"
+SymbolEncoding 0xE2 /registersans: expected "\u{f8e8}", actual "â"
+SymbolEncoding 0xE3 /copyrightsans: expected "\u{f8e9}", actual "ã"
+SymbolEncoding 0xE4 /trademarksans: expected "\u{f8ea}", actual "ä"
+SymbolEncoding 0xE5 /summation: expected "∑", actual "å"
+SymbolEncoding 0xE6 /parenlefttp: expected "\u{f8eb}", actual "æ"
+SymbolEncoding 0xE7 /parenleftex: expected "\u{f8ec}", actual "ç"
+SymbolEncoding 0xE8 /parenleftbt: expected "\u{f8ed}", actual "è"
+SymbolEncoding 0xE9 /bracketlefttp: expected "\u{f8ee}", actual "é"
+SymbolEncoding 0xEA /bracketleftex: expected "\u{f8ef}", actual "ê"
+SymbolEncoding 0xEB /bracketleftbt: expected "\u{f8f0}", actual "ë"
+SymbolEncoding 0xEC /bracelefttp: expected "\u{f8f1}", actual "ì"
+SymbolEncoding 0xED /braceleftmid: expected "\u{f8f2}", actual "í"
+SymbolEncoding 0xEE /braceleftbt: expected "\u{f8f3}", actual "î"
+SymbolEncoding 0xEF /braceex: expected "\u{f8f4}", actual "ï"
+SymbolEncoding 0xF1 /angleright: expected "〉", actual "ñ"
+SymbolEncoding 0xF2 /integral: expected "∫", actual "ò"
+SymbolEncoding 0xF3 /integraltp: expected "⌠", actual "ó"
+SymbolEncoding 0xF4 /integralex: expected "\u{f8f5}", actual "ô"
+SymbolEncoding 0xF5 /integralbt: expected "⌡", actual "õ"
+SymbolEncoding 0xF6 /parenrighttp: expected "\u{f8f6}", actual "ö"
+SymbolEncoding 0xF7 /parenrightex: expected "\u{f8f7}", actual "÷"
+SymbolEncoding 0xF8 /parenrightbt: expected "\u{f8f8}", actual "ø"
+SymbolEncoding 0xF9 /bracketrighttp: expected "\u{f8f9}", actual "ù"
+SymbolEncoding 0xFA /bracketrightex: expected "\u{f8fa}", actual "ú"
+SymbolEncoding 0xFB /bracketrightbt: expected "\u{f8fb}", actual "û"
+SymbolEncoding 0xFC /bracerighttp: expected "\u{f8fc}", actual "ü"
+SymbolEncoding 0xFD /bracerightmid: expected "\u{f8fd}", actual "ý"
+SymbolEncoding 0xFE /bracerightbt: expected "\u{f8fe}", actual "þ"
+test symbol_builtin_encoding_matches_independent_table ... FAILED
+ZapfDingbatsEncoding: 188 defined codes exercised, 187 mismatches
+
+thread 'zapfdingbats_builtin_encoding_matches_independent_table' (257) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:118:5:
+ZapfDingbatsEncoding 0x21 /a1: expected "✁", actual "!"
+ZapfDingbatsEncoding 0x22 /a2: expected "✂", actual "\""
+ZapfDingbatsEncoding 0x23 /a202: expected "✃", actual "#"
+ZapfDingbatsEncoding 0x24 /a3: expected "✄", actual "$"
+ZapfDingbatsEncoding 0x25 /a4: expected "☎", actual "%"
+ZapfDingbatsEncoding 0x26 /a5: expected "✆", actual "&"
+ZapfDingbatsEncoding 0x27 /a119: expected "✇", actual "'"
+ZapfDingbatsEncoding 0x28 /a118: expected "✈", actual "("
+ZapfDingbatsEncoding 0x29 /a117: expected "✉", actual ")"
+ZapfDingbatsEncoding 0x2A /a11: expected "☛", actual "*"
+ZapfDingbatsEncoding 0x2B /a12: expected "☞", actual "+"
+ZapfDingbatsEncoding 0x2C /a13: expected "✌", actual ","
+ZapfDingbatsEncoding 0x2D /a14: expected "✍", actual "-"
+ZapfDingbatsEncoding 0x2E /a15: expected "✎", actual "."
+ZapfDingbatsEncoding 0x2F /a16: expected "✏", actual "/"
+ZapfDingbatsEncoding 0x30 /a105: expected "✐", actual "0"
+ZapfDingbatsEncoding 0x31 /a17: expected "✑", actual "1"
+ZapfDingbatsEncoding 0x32 /a18: expected "✒", actual "2"
+ZapfDingbatsEncoding 0x33 /a19: expected "✓", actual "3"
+ZapfDingbatsEncoding 0x34 /a20: expected "✔", actual "4"
+ZapfDingbatsEncoding 0x35 /a21: expected "✕", actual "5"
+ZapfDingbatsEncoding 0x36 /a22: expected "✖", actual "6"
+ZapfDingbatsEncoding 0x37 /a23: expected "✗", actual "7"
+ZapfDingbatsEncoding 0x38 /a24: expected "✘", actual "8"
+ZapfDingbatsEncoding 0x39 /a25: expected "✙", actual "9"
+ZapfDingbatsEncoding 0x3A /a26: expected "✚", actual ":"
+ZapfDingbatsEncoding 0x3B /a27: expected "✛", actual ";"
+ZapfDingbatsEncoding 0x3C /a28: expected "✜", actual "<"
+ZapfDingbatsEncoding 0x3D /a6: expected "✝", actual "="
+ZapfDingbatsEncoding 0x3E /a7: expected "✞", actual ">"
+ZapfDingbatsEncoding 0x3F /a8: expected "✟", actual "?"
+ZapfDingbatsEncoding 0x40 /a9: expected "✠", actual "@"
+ZapfDingbatsEncoding 0x41 /a10: expected "✡", actual "A"
+ZapfDingbatsEncoding 0x42 /a29: expected "✢", actual "B"
+ZapfDingbatsEncoding 0x43 /a30: expected "✣", actual "C"
+ZapfDingbatsEncoding 0x44 /a31: expected "✤", actual "D"
+ZapfDingbatsEncoding 0x45 /a32: expected "✥", actual "E"
+ZapfDingbatsEncoding 0x46 /a33: expected "✦", actual "F"
+ZapfDingbatsEncoding 0x47 /a34: expected "✧", actual "G"
+ZapfDingbatsEncoding 0x48 /a35: expected "★", actual "H"
+ZapfDingbatsEncoding 0x49 /a36: expected "✩", actual "I"
+ZapfDingbatsEncoding 0x4A /a37: expected "✪", actual "J"
+ZapfDingbatsEncoding 0x4B /a38: expected "✫", actual "K"
+ZapfDingbatsEncoding 0x4C /a39: expected "✬", actual "L"
+ZapfDingbatsEncoding 0x4D /a40: expected "✭", actual "M"
+ZapfDingbatsEncoding 0x4E /a41: expected "✮", actual "N"
+ZapfDingbatsEncoding 0x4F /a42: expected "✯", actual "O"
+ZapfDingbatsEncoding 0x50 /a43: expected "✰", actual "P"
+ZapfDingbatsEncoding 0x51 /a44: expected "✱", actual "Q"
+ZapfDingbatsEncoding 0x52 /a45: expected "✲", actual "R"
+ZapfDingbatsEncoding 0x53 /a46: expected "✳", actual "S"
+ZapfDingbatsEncoding 0x54 /a47: expected "✴", actual "T"
+ZapfDingbatsEncoding 0x55 /a48: expected "✵", actual "U"
+ZapfDingbatsEncoding 0x56 /a49: expected "✶", actual "V"
+ZapfDingbatsEncoding 0x57 /a50: expected "✷", actual "W"
+ZapfDingbatsEncoding 0x58 /a51: expected "✸", actual "X"
+ZapfDingbatsEncoding 0x59 /a52: expected "✹", actual "Y"
+ZapfDingbatsEncoding 0x5A /a53: expected "✺", actual "Z"
+ZapfDingbatsEncoding 0x5B /a54: expected "✻", actual "["
+ZapfDingbatsEncoding 0x5C /a55: expected "✼", actual "\\"
+ZapfDingbatsEncoding 0x5D /a56: expected "✽", actual "]"
+ZapfDingbatsEncoding 0x5E /a57: expected "✾", actual "^"
+ZapfDingbatsEncoding 0x5F /a58: expected "✿", actual "_"
+ZapfDingbatsEncoding 0x60 /a59: expected "❀", actual "`"
+ZapfDingbatsEncoding 0x61 /a60: expected "❁", actual "a"
+ZapfDingbatsEncoding 0x62 /a61: expected "❂", actual "b"
+ZapfDingbatsEncoding 0x63 /a62: expected "❃", actual "c"
+ZapfDingbatsEncoding 0x64 /a63: expected "❄", actual "d"
+ZapfDingbatsEncoding 0x65 /a64: expected "❅", actual "e"
+ZapfDingbatsEncoding 0x66 /a65: expected "❆", actual "f"
+ZapfDingbatsEncoding 0x67 /a66: expected "❇", actual "g"
+ZapfDingbatsEncoding 0x68 /a67: expected "❈", actual "h"
+ZapfDingbatsEncoding 0x69 /a68: expected "❉", actual "i"
+ZapfDingbatsEncoding 0x6A /a69: expected "❊", actual "j"
+ZapfDingbatsEncoding 0x6B /a70: expected "❋", actual "k"
+ZapfDingbatsEncoding 0x6C /a71: expected "●", actual "l"
+ZapfDingbatsEncoding 0x6D /a72: expected "❍", actual "m"
+ZapfDingbatsEncoding 0x6E /a73: expected "■", actual "n"
+ZapfDingbatsEncoding 0x6F /a74: expected "❏", actual "o"
+ZapfDingbatsEncoding 0x70 /a203: expected "❐", actual "p"
+ZapfDingbatsEncoding 0x71 /a75: expected "❑", actual "q"
+ZapfDingbatsEncoding 0x72 /a204: expected "❒", actual "r"
+ZapfDingbatsEncoding 0x73 /a76: expected "▲", actual "s"
+ZapfDingbatsEncoding 0x74 /a77: expected "▼", actual "t"
+ZapfDingbatsEncoding 0x75 /a78: expected "◆", actual "u"
+ZapfDingbatsEncoding 0x76 /a79: expected "❖", actual "v"
+ZapfDingbatsEncoding 0x77 /a81: expected "◗", actual "w"
+ZapfDingbatsEncoding 0x78 /a82: expected "❘", actual "x"
+ZapfDingbatsEncoding 0x79 /a83: expected "❙", actual "y"
+ZapfDingbatsEncoding 0x7A /a84: expected "❚", actual "z"
+ZapfDingbatsEncoding 0x7B /a97: expected "❛", actual "{"
+ZapfDingbatsEncoding 0x7C /a98: expected "❜", actual "|"
+ZapfDingbatsEncoding 0x7D /a99: expected "❝", actual "}"
+ZapfDingbatsEncoding 0x7E /a100: expected "❞", actual "~"
+ZapfDingbatsEncoding 0xA1 /a101: expected "❡", actual "¡"
+ZapfDingbatsEncoding 0xA2 /a102: expected "❢", actual "¢"
+ZapfDingbatsEncoding 0xA3 /a103: expected "❣", actual "£"
+ZapfDingbatsEncoding 0xA4 /a104: expected "❤", actual "¤"
+ZapfDingbatsEncoding 0xA5 /a106: expected "❥", actual "¥"
+ZapfDingbatsEncoding 0xA6 /a107: expected "❦", actual "¦"
+ZapfDingbatsEncoding 0xA7 /a108: expected "❧", actual "§"
+ZapfDingbatsEncoding 0xA8 /a112: expected "♣", actual "¨"
+ZapfDingbatsEncoding 0xA9 /a111: expected "♦", actual "©"
+ZapfDingbatsEncoding 0xAA /a110: expected "♥", actual "ª"
+ZapfDingbatsEncoding 0xAB /a109: expected "♠", actual "«"
+ZapfDingbatsEncoding 0xAC /a120: expected "①", actual "¬"
+ZapfDingbatsEncoding 0xAD /a121: expected "②", actual "\u{ad}"
+ZapfDingbatsEncoding 0xAE /a122: expected "③", actual "®"
+ZapfDingbatsEncoding 0xAF /a123: expected "④", actual "¯"
+ZapfDingbatsEncoding 0xB0 /a124: expected "⑤", actual "°"
+ZapfDingbatsEncoding 0xB1 /a125: expected "⑥", actual "±"
+ZapfDingbatsEncoding 0xB2 /a126: expected "⑦", actual "²"
+ZapfDingbatsEncoding 0xB3 /a127: expected "⑧", actual "³"
+ZapfDingbatsEncoding 0xB4 /a128: expected "⑨", actual "´"
+ZapfDingbatsEncoding 0xB5 /a129: expected "⑩", actual "µ"
+ZapfDingbatsEncoding 0xB6 /a130: expected "❶", actual "¶"
+ZapfDingbatsEncoding 0xB7 /a131: expected "❷", actual "·"
+ZapfDingbatsEncoding 0xB8 /a132: expected "❸", actual "¸"
+ZapfDingbatsEncoding 0xB9 /a133: expected "❹", actual "¹"
+ZapfDingbatsEncoding 0xBA /a134: expected "❺", actual "º"
+ZapfDingbatsEncoding 0xBB /a135: expected "❻", actual "»"
+ZapfDingbatsEncoding 0xBC /a136: expected "❼", actual "¼"
+ZapfDingbatsEncoding 0xBD /a137: expected "❽", actual "½"
+ZapfDingbatsEncoding 0xBE /a138: expected "❾", actual "¾"
+ZapfDingbatsEncoding 0xBF /a139: expected "❿", actual "¿"
+ZapfDingbatsEncoding 0xC0 /a140: expected "➀", actual "À"
+ZapfDingbatsEncoding 0xC1 /a141: expected "➁", actual "Á"
+ZapfDingbatsEncoding 0xC2 /a142: expected "➂", actual "Â"
+ZapfDingbatsEncoding 0xC3 /a143: expected "➃", actual "Ã"
+ZapfDingbatsEncoding 0xC4 /a144: expected "➄", actual "Ä"
+ZapfDingbatsEncoding 0xC5 /a145: expected "➅", actual "Å"
+ZapfDingbatsEncoding 0xC6 /a146: expected "➆", actual "Æ"
+ZapfDingbatsEncoding 0xC7 /a147: expected "➇", actual "Ç"
+ZapfDingbatsEncoding 0xC8 /a148: expected "➈", actual "È"
+ZapfDingbatsEncoding 0xC9 /a149: expected "➉", actual "É"
+ZapfDingbatsEncoding 0xCA /a150: expected "➊", actual "Ê"
+ZapfDingbatsEncoding 0xCB /a151: expected "➋", actual "Ë"
+ZapfDingbatsEncoding 0xCC /a152: expected "➌", actual "Ì"
+ZapfDingbatsEncoding 0xCD /a153: expected "➍", actual "Í"
+ZapfDingbatsEncoding 0xCE /a154: expected "➎", actual "Î"
+ZapfDingbatsEncoding 0xCF /a155: expected "➏", actual "Ï"
+ZapfDingbatsEncoding 0xD0 /a156: expected "➐", actual "Ð"
+ZapfDingbatsEncoding 0xD1 /a157: expected "➑", actual "Ñ"
+ZapfDingbatsEncoding 0xD2 /a158: expected "➒", actual "Ò"
+ZapfDingbatsEncoding 0xD3 /a159: expected "➓", actual "Ó"
+ZapfDingbatsEncoding 0xD4 /a160: expected "➔", actual "Ô"
+ZapfDingbatsEncoding 0xD5 /a161: expected "→", actual "Õ"
+ZapfDingbatsEncoding 0xD6 /a163: expected "↔", actual "Ö"
+ZapfDingbatsEncoding 0xD7 /a164: expected "↕", actual "×"
+ZapfDingbatsEncoding 0xD8 /a196: expected "➘", actual "Ø"
+ZapfDingbatsEncoding 0xD9 /a165: expected "➙", actual "Ù"
+ZapfDingbatsEncoding 0xDA /a192: expected "➚", actual "Ú"
+ZapfDingbatsEncoding 0xDB /a166: expected "➛", actual "Û"
+ZapfDingbatsEncoding 0xDC /a167: expected "➜", actual "Ü"
+ZapfDingbatsEncoding 0xDD /a168: expected "➝", actual "Ý"
+ZapfDingbatsEncoding 0xDE /a169: expected "➞", actual "Þ"
+ZapfDingbatsEncoding 0xDF /a170: expected "➟", actual "ß"
+ZapfDingbatsEncoding 0xE0 /a171: expected "➠", actual "à"
+ZapfDingbatsEncoding 0xE1 /a172: expected "➡", actual "á"
+ZapfDingbatsEncoding 0xE2 /a173: expected "➢", actual "â"
+ZapfDingbatsEncoding 0xE3 /a162: expected "➣", actual "ã"
+ZapfDingbatsEncoding 0xE4 /a174: expected "➤", actual "ä"
+ZapfDingbatsEncoding 0xE5 /a175: expected "➥", actual "å"
+ZapfDingbatsEncoding 0xE6 /a176: expected "➦", actual "æ"
+ZapfDingbatsEncoding 0xE7 /a177: expected "➧", actual "ç"
+ZapfDingbatsEncoding 0xE8 /a178: expected "➨", actual "è"
+ZapfDingbatsEncoding 0xE9 /a179: expected "➩", actual "é"
+ZapfDingbatsEncoding 0xEA /a193: expected "➪", actual "ê"
+ZapfDingbatsEncoding 0xEB /a180: expected "➫", actual "ë"
+ZapfDingbatsEncoding 0xEC /a199: expected "➬", actual "ì"
+ZapfDingbatsEncoding 0xED /a181: expected "➭", actual "í"
+ZapfDingbatsEncoding 0xEE /a200: expected "➮", actual "î"
+ZapfDingbatsEncoding 0xEF /a182: expected "➯", actual "ï"
+ZapfDingbatsEncoding 0xF1 /a201: expected "➱", actual "ñ"
+ZapfDingbatsEncoding 0xF2 /a183: expected "➲", actual "ò"
+ZapfDingbatsEncoding 0xF3 /a184: expected "➳", actual "ó"
+ZapfDingbatsEncoding 0xF4 /a197: expected "➴", actual "ô"
+ZapfDingbatsEncoding 0xF5 /a185: expected "➵", actual "õ"
+ZapfDingbatsEncoding 0xF6 /a194: expected "➶", actual "ö"
+ZapfDingbatsEncoding 0xF7 /a198: expected "➷", actual "÷"
+ZapfDingbatsEncoding 0xF8 /a186: expected "➸", actual "ø"
+ZapfDingbatsEncoding 0xF9 /a195: expected "➹", actual "ù"
+ZapfDingbatsEncoding 0xFA /a187: expected "➺", actual "ú"
+ZapfDingbatsEncoding 0xFB /a188: expected "➻", actual "û"
+ZapfDingbatsEncoding 0xFC /a189: expected "➼", actual "ü"
+ZapfDingbatsEncoding 0xFD /a190: expected "➽", actual "ý"
+ZapfDingbatsEncoding 0xFE /a191: expected "➾", actual "þ"
+test zapfdingbats_builtin_encoding_matches_independent_table ... FAILED
+MacRomanEncoding: 208 defined codes exercised, 1 mismatches
+
+thread 'macroman_encoding_matches_independent_table' (251) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:118:5:
+MacRomanEncoding 0xDB /currency: expected "¤", actual "€"
+test macroman_encoding_matches_independent_table ... FAILED
+
+failures:
+
+failures:
+    macroman_encoding_matches_independent_table
+    standard_encoding_matches_independent_table
+    symbol_builtin_encoding_matches_independent_table
+    winansi_encoding_matches_independent_table
+    zapfdingbats_builtin_encoding_matches_independent_table
+
+test result: FAILED. 6 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_encoding_contract_test`
+     Running tests/text_font_program_contract_test.rs (target/debug/deps/text_font_program_contract_test-905eb1f36d6ff5ce)
+
+running 5 tests
+test bfrange_array_preserves_sequences_and_surrogate_pairs ... ok
+test bfrange_sequential_destination_increments_unicode ... ok
+test type3_charproc_names_supply_unicode_without_tounicode ... ok
+test type3_tounicode_overrides_charproc_names ... ok
+test type3_advance_uses_font_matrix_and_declared_width ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_spacing_contract_test.rs (target/debug/deps/text_spacing_contract_test-040fabcda5bb0cc2)
+
+running 14 tests
+
+thread 'glyph_origins_follow_declared_widths_kerns_and_horizontal_scale' (272) panicked at oxidize-pdf-core/tests/text_spacing_contract_test.rs:175:5:
+Tz 50: expected B (104, 700), actual (105.5, 700)
+Tz 200: expected B (116, 700), actual (113, 700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test glyph_origins_follow_declared_widths_kerns_and_horizontal_scale ... FAILED
+test absent_widths_never_certify_tracking_for_standard_fonts ... ok
+
+thread 'lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances' (274) panicked at oxidize-pdf-core/tests/text_spacing_contract_test.rs:115:5:
+assertion `left == right` failed
+  left: "1 1  0"
+ right: "11 0"
+test lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances ... FAILED
+test excess_advance_remains_a_word_separator ... ok
+test a_single_transition_does_not_certify_uniform_tracking ... ok
+test partial_em_adjustments_do_not_trigger_unknown_width_recovery ... ok
+test strict_mode_does_not_enable_unknown_width_recovery ... ok
+test unresolved_type0_without_space_reaches_and_rejects_the_fallback ... ok
+test declared_positive_widths_keep_word_separators ... ok
+test explicit_character_spacing_disables_tracking_inference ... ok
+test declared_zero_widths_allow_uniform_advances ... ok
+test ordinary_small_kerning_does_not_add_spaces ... ok
+test explicit_word_spacing_disables_tracking_inference ... ok
+test known_zero_width_single_word_needs_no_literal_space ... ok
+
+failures:
+
+failures:
+    glyph_origins_follow_declared_widths_kerns_and_horizontal_scale
+    lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances
+
+test result: FAILED. 12 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_spacing_contract_test`
+     Running tests/text_truetype_contract_test.rs (target/debug/deps/text_truetype_contract_test-5b7b919e731860a6)
+
+running 5 tests
+test subset_truetype_decodes_composite_glyph_without_tounicode ... ok
+test full_and_subset_tounicode_override_font_encoding ... ok
+test full_truetype_decodes_composite_glyph_without_tounicode ... ok
+test full_and_subset_preserve_advance_and_explicit_space ... ok
+test full_and_subset_are_pinned_distinct_truetype_programs ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+error: 3 targets failed:
+    `-p oxidize-pdf --test text_document_string_contract_test`
+    `-p oxidize-pdf --test text_encoding_contract_test`
+    `-p oxidize-pdf --test text_spacing_contract_test`

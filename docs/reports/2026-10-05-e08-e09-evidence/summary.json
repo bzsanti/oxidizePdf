@@ -1,0 +1,23 @@
+{
+  "issue": 666,
+  "rows": [
+    "E08",
+    "E09"
+  ],
+  "status": "locally-complete",
+  "tests": {
+    "passed": 7255,
+    "failed": 0,
+    "ignored": 3,
+    "targets": 40
+  },
+  "new_tests": 7,
+  "findings_corrected": 5,
+  "external_agl_controls": 7,
+  "kripteia_scopes": 5,
+  "security_alerts": 0,
+  "clippy": "pass -D warnings",
+  "format": "pass",
+  "ci": "deferred",
+  "corpus": "fusion and both order gates pass; baselines unchanged"
+}

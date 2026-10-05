@@ -1,0 +1,18 @@
+[
+  {
+    "mutation": "control",
+    "exit": 0
+  },
+  {
+    "mutation": "charset",
+    "exit": 101
+  },
+  {
+    "mutation": "fdselect",
+    "exit": 101
+  },
+  {
+    "mutation": "charstring",
+    "exit": 101
+  }
+]

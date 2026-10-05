@@ -1,0 +1,22 @@
+{
+  "cmap_revision": "f5cf3bca7fdfeaceb77aa82847e974f2306c20b4",
+  "unicode_revision": "2dd5e53fb74a01718b9dfd448a0d1cce6fff2aa5",
+  "sources_sha256": {
+    "Adobe-KR-0": "ca58ef1abc2de732d5ff285ded96bb70700e293c19c416a89bae92a163037618",
+    "Adobe-KR-1": "3b470c60b3d6196322be671571325b5025097fa97bedc51964948a7c6f927f7d",
+    "Adobe-KR-2": "12d13fd0610ef3006add8169c59f4faaddc19c2629939417caaf70e9dfcec290",
+    "Adobe-KR-3": "b922373bf0b75b6b8ab57bb5c7200e9ba10c9067a63561577739218692459603",
+    "Adobe-KR-4": "6d7ebdae3b448592e18871ebd42eb62e4bd4e6c2a2846e7bbae6fdfcc7cede78",
+    "Adobe-KR-5": "579d94396eafb215c694430bcd08e6fd612eadcdb53ca34a6f9f8e2ada378a74",
+    "Adobe-KR-6": "6b8c3481b89d3aed99a19120ba365f649b2d82aacb1e15ec71c29697db97e9df",
+    "Adobe-KR-7": "a6a76ebf76ace408bde2e69f04a17f47c3439e60100391297b10dbf7ec8b4574",
+    "Adobe-KR-8": "ce6c2a24761aa8376e37a97c3c8740de1e84e9c7fea63a33265d91de97809a7e",
+    "Adobe-KR-9": "ee0486530d138fbd4f3ae6c58f96cf5766dcd83eff72e39677d1ab5ec3906e10",
+    "UniAKR-UTF8-H": "0a4c6316bc6c6aa98dc359a724cccc32b18956321a52e985296858c4c4fe1acf",
+    "UniAKR-UTF32-H": "43a55f98fa1b83b03741c97f9a1bac1f1369c6c2ae825799fd3e6460ce9f2059"
+  },
+  "samples": 43,
+  "maps": 12,
+  "samples_sha256": "2e96c5cb4d21b0d69efd52779f1eefd78127000d1a69766f61e08a608bf08edf",
+  "scope": "Additional KR maps in the fixed revision; representative decoding, not shaping."
+}

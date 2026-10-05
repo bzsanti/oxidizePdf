@@ -1,0 +1,30 @@
+{
+  "passed": 30,
+  "failed": 0,
+  "targets": 4,
+  "new_tests": 5,
+  "total_contracts": 251,
+  "contract_targets": 27,
+  "external_pdfs": 8,
+  "qpdf_valid": 8,
+  "distinct_basic_rasters": 5,
+  "input_mutation_failures": [
+    6,
+    1,
+    1
+  ],
+  "control_passed": 10,
+  "prior_snapshot_changed": [
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json",
+    "oxidize-pdf-core/tests/text_font_program_contract_test.rs"
+  ],
+  "production_changed": false,
+  "source": {
+    "url": "https://github.com/ArtifexSoftware/mupdf/blob/1.26.10/source/pdf/pdf-type3.c#L153",
+    "sha256": "4a9ae179f47a828889f2ddf6c07ce852ba63afa66754ac461202385d86622c5c"
+  },
+  "comments": [
+    "https://github.com/bzsanti/oxidizePdf/issues/666#issuecomment-5983561647",
+    "https://github.com/bzsanti/oxidizePdf/issues/677#issuecomment-5983561825"
+  ]
+}

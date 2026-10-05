@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "versions": {
+    "poppler": "24.02.0",
+    "qpdf": "11.9.0"
+  },
+  "environment_errors": [
+    "MuPDF unavailable: No module named 'pymupdf'"
+  ],
+  "accepted": false,
+  "cases": []
+}

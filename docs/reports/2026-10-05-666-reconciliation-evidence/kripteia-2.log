@@ -1,0 +1,61 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 94 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/text/intrinsic_encoding.rs                   7     94
+
+--- Worst Offenders ---
+  unexecuted_scopes_cannot_supply_the_intrinsic_encoding (oxidize-pdf-core/src/text/intrinsic_encoding.rs:360) - Score: 90
+    - Test 'unexecuted_scopes_cannot_supply_the_intrinsic_encoding' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unexecuted_scopes_cannot_supply_the_intrinsic_encoding' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unexecuted_scopes_cannot_supply_the_intrinsic_encoding' has multiple assertions without diagnostic messages
+  type1_static_array_and_standard_copy_preserve_boundaries (oxidize-pdf-core/src/text/intrinsic_encoding.rs:378) - Score: 90
+    i Test 'type1_static_array_and_standard_copy_preserve_boundaries' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'type1_static_array_and_standard_copy_preserve_boundaries' uses .unwrap() which silently discards error information
+    - Test 'type1_static_array_and_standard_copy_preserve_boundaries' does not call any production code
+  cff_custom_formats_and_supplements_use_charset_sids (oxidize-pdf-core/src/text/intrinsic_encoding.rs:403) - Score: 90
+    i Test 'cff_custom_formats_and_supplements_use_charset_sids' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cff_custom_formats_and_supplements_use_charset_sids' uses .unwrap() which silently discards error information
+    - Test 'cff_custom_formats_and_supplements_use_charset_sids' does not call any production code
+  cff_expert_is_distinct_from_standard_and_macexpert (oxidize-pdf-core/src/text/intrinsic_encoding.rs:422) - Score: 90
+    i Test 'cff_expert_is_distinct_from_standard_and_macexpert' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cff_expert_is_distinct_from_standard_and_macexpert' uses .unwrap() which silently discards error information
+    - Test 'cff_expert_is_distinct_from_standard_and_macexpert' does not call any production code
+  type1_rejects_computed_procedures_and_invalid_codes (oxidize-pdf-core/src/text/intrinsic_encoding.rs:389) - Score: 100
+    i Test 'type1_rejects_computed_procedures_and_invalid_codes' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/src/text/intrinsic_encoding.rs:
+  unexecuted_scopes_cannot_supply_the_intrinsic_encoding (line 360) - Score: 90
+    - Test 'unexecuted_scopes_cannot_supply_the_intrinsic_encoding' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unexecuted_scopes_cannot_supply_the_intrinsic_encoding' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unexecuted_scopes_cannot_supply_the_intrinsic_encoding' has multiple assertions without diagnostic messages
+  type1_static_array_and_standard_copy_preserve_boundaries (line 378) - Score: 90
+    i Test 'type1_static_array_and_standard_copy_preserve_boundaries' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'type1_static_array_and_standard_copy_preserve_boundaries' uses .unwrap() which silently discards error information
+    - Test 'type1_static_array_and_standard_copy_preserve_boundaries' does not call any production code
+  type1_rejects_computed_procedures_and_invalid_codes (line 389) - Score: 100
+    i Test 'type1_rejects_computed_procedures_and_invalid_codes' has multiple assertions without diagnostic messages
+  cff_custom_formats_and_supplements_use_charset_sids (line 403) - Score: 90
+    i Test 'cff_custom_formats_and_supplements_use_charset_sids' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cff_custom_formats_and_supplements_use_charset_sids' uses .unwrap() which silently discards error information
+    - Test 'cff_custom_formats_and_supplements_use_charset_sids' does not call any production code
+  cff_expert_is_distinct_from_standard_and_macexpert (line 422) - Score: 90
+    i Test 'cff_expert_is_distinct_from_standard_and_macexpert' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cff_expert_is_distinct_from_standard_and_macexpert' uses .unwrap() which silently discards error information
+    - Test 'cff_expert_is_distinct_from_standard_and_macexpert' does not call any production code
+  malformed_cff_ranges_offsets_and_truncation_do_not_panic (line 431) - Score: 100
+    i Test 'malformed_cff_ranges_offsets_and_truncation_do_not_panic' has multiple assertions without diagnostic messages
+  opentype_directory_bounds_and_cff_table_selection (line 451) - Score: 100
+    i Test 'opentype_directory_bounds_and_cff_table_selection' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

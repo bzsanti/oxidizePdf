@@ -1,0 +1,96 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 92 | Tests: 22 | Files: 2
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/text/plaintext/extractor.rs                 12     89
+oxidize-pdf-core/src/text/plaintext/types.rs                     10     95
+
+--- Worst Offenders ---
+  test_apply_line_break_mode_preserve_all (oxidize-pdf-core/src/text/plaintext/extractor.rs:375) - Score: 80
+    - Test 'test_apply_line_break_mode_preserve_all' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_apply_line_break_mode_preserve_all' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_apply_line_break_mode_normalize (oxidize-pdf-core/src/text/plaintext/extractor.rs:386) - Score: 80
+    - Test 'test_apply_line_break_mode_normalize' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_apply_line_break_mode_normalize' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_apply_line_break_mode_normalize' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_apply_line_break_mode_auto (oxidize-pdf-core/src/text/plaintext/extractor.rs:397) - Score: 80
+    - Test 'test_apply_line_break_mode_auto' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_apply_line_break_mode_auto' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_new (oxidize-pdf-core/src/text/plaintext/extractor.rs:312) - Score: 90
+    i Test 'test_new' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_new' does not call any production code
+  test_default (oxidize-pdf-core/src/text/plaintext/extractor.rs:325) - Score: 90
+    - Test 'test_default' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/src/text/plaintext/extractor.rs:
+  test_new (line 312) - Score: 90
+    i Test 'test_new' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_new' does not call any production code
+  test_default (line 325) - Score: 90
+    - Test 'test_default' does not call any production code
+  test_normalize_line_breaks_hyphenated (line 331) - Score: 90
+    - Test 'test_normalize_line_breaks_hyphenated' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_normalize_line_breaks_hyphenated' asserts against a hardcoded constant instead of a computed expected value
+  test_normalize_line_breaks_no_hyphen (line 339) - Score: 90
+    - Test 'test_normalize_line_breaks_no_hyphen' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_normalize_line_breaks_no_hyphen' asserts against a hardcoded constant instead of a computed expected value
+  test_auto_line_breaks_punctuation (line 347) - Score: 90
+    - Test 'test_auto_line_breaks_punctuation' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_auto_line_breaks_punctuation' asserts against a hardcoded constant instead of a computed expected value
+  test_auto_line_breaks_wrapped (line 358) - Score: 90
+    - Test 'test_auto_line_breaks_wrapped' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_auto_line_breaks_wrapped' has multiple assertions without diagnostic messages
+  test_auto_line_breaks_empty_lines (line 367) - Score: 90
+    - Test 'test_auto_line_breaks_empty_lines' only exercises the happy path — no None, Err, or edge-case inputs
+  test_apply_line_break_mode_preserve_all (line 375) - Score: 80
+    - Test 'test_apply_line_break_mode_preserve_all' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_apply_line_break_mode_preserve_all' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_apply_line_break_mode_normalize (line 386) - Score: 80
+    - Test 'test_apply_line_break_mode_normalize' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_apply_line_break_mode_normalize' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_apply_line_break_mode_normalize' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_apply_line_break_mode_auto (line 397) - Score: 80
+    - Test 'test_apply_line_break_mode_auto' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_apply_line_break_mode_auto' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+
+oxidize-pdf-core/src/text/plaintext/types.rs:
+  test_config_default (line 338) - Score: 90
+    i Test 'test_config_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_config_default' has multiple assertions without diagnostic messages
+    - Test 'test_config_default' does not call any production code
+  test_config_new (line 347) - Score: 90
+    - Test 'test_config_new' does not call any production code
+  test_config_dense (line 353) - Score: 100
+    i Test 'test_config_dense' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_config_dense' has multiple assertions without diagnostic messages
+  test_config_loose (line 361) - Score: 100
+    i Test 'test_config_loose' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_config_loose' has multiple assertions without diagnostic messages
+  test_config_preserve_layout (line 369) - Score: 100
+    i Test 'test_config_preserve_layout' has multiple assertions without diagnostic messages
+  test_plain_text_result_counts_unicode_scalars_and_trailing_newline (line 376) - Score: 90
+    i Test 'test_plain_text_result_counts_unicode_scalars_and_trailing_newline' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_plain_text_result_counts_unicode_scalars_and_trailing_newline' does not call any production code
+  test_plain_text_result_new (line 387) - Score: 90
+    i Test 'test_plain_text_result_new' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_plain_text_result_new' does not call any production code
+  test_plain_text_result_empty (line 395) - Score: 100
+    i Test 'test_plain_text_result_empty' asserts against a hardcoded constant instead of a computed expected value
+  test_plain_text_result_is_empty (line 404) - Score: 100
+    i Test 'test_plain_text_result_is_empty' has multiple assertions without diagnostic messages
+  test_plain_text_result_line_count (line 413) - Score: 90
+    i Test 'test_plain_text_result_line_count' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_plain_text_result_line_count' has multiple assertions without diagnostic messages
+    - Test 'test_plain_text_result_line_count' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

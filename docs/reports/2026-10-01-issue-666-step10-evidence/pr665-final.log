@@ -1,0 +1,53 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-review-20261001/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.10s
+     Running tests/text_pdf20_string_contract_test.rs (target/debug/deps/text_pdf20_string_contract_test-c18f4e3693b98cf4)
+
+running 5 tests
+test pdf17_does_not_silently_apply_pdf20_utf8_semantics ... ok
+test pdf20_utf8_without_bom_remains_pdfdocencoding ... ok
+test utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding ... ok
+
+thread 'pdf20_metadata_utf8_bom_decodes_exact_sequences' (198) panicked at oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs:67:5:
+EFBBBF: expected "", actual "ï»¿"
+EFBBBF41: expected "A", actual "ï»¿A"
+EFBBBFC3A9: expected "é", actual "ï»¿Ã©"
+EFBBBFF09F9880: expected "😀", actual "ï»¿ðŸ˜€"
+EFBBBF65CC81: expected "e\u{301}", actual "ï»¿eÌ\u{81}"
+EFBBBFEFBBBF41: expected "\u{feff}A", actual "ï»¿ï»¿A"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test pdf20_metadata_utf8_bom_decodes_exact_sequences ... FAILED
+
+thread 'pdf20_actualtext_utf8_bom_decodes_exact_sequences' (197) panicked at oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs:79:5:
+EFBBBF: expected "", actual "ï»¿"
+EFBBBF41: expected "A", actual "ï»¿A"
+EFBBBFC3A9: expected "é", actual "ï»¿Ã©"
+EFBBBFF09F9880: expected "😀", actual "ï»¿ðŸ˜€"
+EFBBBF65CC81: expected "e\u{301}", actual "ï»¿eÌ\u{81}"
+EFBBBFEFBBBF41: expected "\u{feff}A", actual "ï»¿ï»¿A"
+test pdf20_actualtext_utf8_bom_decodes_exact_sequences ... FAILED
+
+failures:
+
+failures:
+    pdf20_actualtext_utf8_bom_decodes_exact_sequences
+    pdf20_metadata_utf8_bom_decodes_exact_sequences
+
+test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_pdf20_string_contract_test`
+     Running tests/text_script_contract_test.rs (target/debug/deps/text_script_contract_test-9acd821e1c141adf)
+
+running 8 tests
+test arabic_preserves_logical_sequence_marks_and_arabic_indic_digits ... ok
+test hebrew_preserves_logical_sequence_marks_and_mixed_digits ... ok
+test greek_and_cyrillic_keep_accents_and_mixed_digits ... ok
+test devanagari_and_thai_preserve_combining_sequences ... ok
+test extended_latin_preserves_polish_czech_turkish_and_vietnamese ... ok
+test canonically_equivalent_sequences_remain_distinct ... ok
+test western_latin_accents_currency_and_punctuation_are_exact ... ok
+test supplementary_variation_selectors_and_joiners_are_not_dropped ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: 1 target failed:
+    `-p oxidize-pdf --test text_pdf20_string_contract_test`

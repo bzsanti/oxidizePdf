@@ -1,0 +1,16 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 8.84s
+     Running tests/text_metrics_boundary_contract_test.rs (target/debug/deps/text_metrics_boundary_contract_test-3369e698de7e0c21)
+
+running 8 tests
+test implicit_standard14_metrics_reach_both_consumers ... ok
+test simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth ... ok
+test cid_metrics_resolve_indirect_array_range_and_default_values ... ok
+test declared_missingwidth_applies_when_private_font_has_no_widths_array ... ok
+test invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity ... ok
+test explicit_invalid_simple_font_bounds_do_not_wrap_or_default_to_zero ... ok
+test cid_invalid_widths_fail_strict_and_recover_finitely_without_losing_unicode ... ok
+test malformed_cid_width_tables_cannot_clamp_or_overflow_into_a_valid_cid ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+

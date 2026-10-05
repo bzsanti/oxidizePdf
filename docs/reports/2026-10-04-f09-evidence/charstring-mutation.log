@@ -1,0 +1,20 @@
+
+running 1 test
+test real_full_and_subset_cff_select_distinct_font_dicts_and_charstrings ... FAILED
+
+failures:
+
+---- real_full_and_subset_cff_select_distinct_font_dicts_and_charstrings stdout ----
+
+thread 'real_full_and_subset_cff_select_distinct_font_dicts_and_charstrings' (180) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f09-mutations/charstring.rs:36:9:
+assertion `left == right` failed: subset preserves selected Type2 programs
+  left: ([248, 37, 189, 22, 247, 192, 6, 251, 42, 248, 236, 5, 14], [249, 80, 189, 22, 248, 236, 6, 251, 192, 248, 236, 5, 14])
+ right: ([248, 36, 189, 22, 247, 192, 6, 251, 42, 248, 236, 5, 14], [249, 80, 189, 22, 248, 236, 6, 251, 192, 248, 236, 5, 14])
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    real_full_and_subset_cff_select_distinct_font_dicts_and_charstrings
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+

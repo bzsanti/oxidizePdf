@@ -1,0 +1,42 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.65s
+     Running tests/text_symbolic_truetype_contract_test.rs (target/debug/deps/text_symbolic_truetype_contract_test-91e7fc73a19c3ad3)
+
+running 11 tests
+test macintosh_byte_cmap_preserves_original_glyph_selection ... ok
+test explicit_symbolic_encodings_and_differences_remain_evidence ... FAILED
+test arbitrary_symbolic_text_uses_replacement_without_losing_advance ... FAILED
+test windows_symbol_cmap_preserves_private_codes_and_gids ... ok
+test windows_unicode_bmp_cmap_preserves_gids_and_metrics ... ok
+test windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font ... ok
+test all_symbolic_programs_and_pdfs_match_frozen_hashes ... ok
+test multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance ... ok
+test arbitrary_symbolic_truetype_has_no_implicit_adobe_symbol_unicode ... ok
+test symbolic_tounicode_preserves_sequences_independently_of_glyph_names ... ok
+test nonsymbolic_winansi_and_explicit_unicode_have_separate_contracts ... ok
+
+failures:
+
+---- explicit_symbolic_encodings_and_differences_remain_evidence stdout ----
+
+thread 'explicit_symbolic_encodings_and_differences_remain_evidence' (158) panicked at oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs:246:13:
+assertion `left == right` failed
+  left: [None, None]
+ right: [Some("A"), Some("B")]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- arbitrary_symbolic_text_uses_replacement_without_losing_advance stdout ----
+
+thread 'arbitrary_symbolic_text_uses_replacement_without_losing_advance' (156) panicked at oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs:231:21:
+assertion `left == right` failed
+  left: ["A", "B"]
+ right: ["�", "�"]
+
+
+failures:
+    arbitrary_symbolic_text_uses_replacement_without_losing_advance
+    explicit_symbolic_encodings_and_differences_remain_evidence
+
+test result: FAILED. 9 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_symbolic_truetype_contract_test`

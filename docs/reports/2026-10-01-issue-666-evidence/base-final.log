@@ -1,0 +1,204 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-text-contracts-20261001/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.85s
+     Running tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-8b823f1d04deae6c)
+
+running 7 tests
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test differences_override_the_base_encoding ... ok
+StandardEncoding: 149 defined codes exercised, 47 mismatches
+
+thread 'standard_encoding_matches_independent_table' (117) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:122:5:
+StandardEncoding 0x27 /quoteright: expected "’", actual "'"
+StandardEncoding 0x60 /quoteleft: expected "‘", actual "`"
+StandardEncoding 0xA4 /fraction: expected "⁄", actual "¤"
+StandardEncoding 0xA6 /florin: expected "ƒ", actual "¦"
+StandardEncoding 0xA8 /currency: expected "¤", actual "¨"
+StandardEncoding 0xA9 /quotesingle: expected "'", actual "©"
+StandardEncoding 0xAA /quotedblleft: expected "“", actual "ª"
+StandardEncoding 0xAC /guilsinglleft: expected "‹", actual "¬"
+StandardEncoding 0xAD /guilsinglright: expected "›", actual "\u{ad}"
+StandardEncoding 0xAE /fi: expected "ﬁ", actual "®"
+StandardEncoding 0xAF /fl: expected "ﬂ", actual "¯"
+StandardEncoding 0xB1 /endash: expected "–", actual "±"
+StandardEncoding 0xB2 /dagger: expected "†", actual "²"
+StandardEncoding 0xB3 /daggerdbl: expected "‡", actual "³"
+StandardEncoding 0xB4 /periodcentered: expected "·", actual "´"
+StandardEncoding 0xB7 /bullet: expected "•", actual "·"
+StandardEncoding 0xB8 /quotesinglbase: expected "‚", actual "¸"
+StandardEncoding 0xB9 /quotedblbase: expected "„", actual "¹"
+StandardEncoding 0xBA /quotedblright: expected "”", actual "º"
+StandardEncoding 0xBC /ellipsis: expected "…", actual "¼"
+StandardEncoding 0xBD /perthousand: expected "‰", actual "½"
+StandardEncoding 0xC1 /grave: expected "`", actual "Á"
+StandardEncoding 0xC2 /acute: expected "´", actual "Â"
+StandardEncoding 0xC3 /circumflex: expected "ˆ", actual "Ã"
+StandardEncoding 0xC4 /tilde: expected "˜", actual "Ä"
+StandardEncoding 0xC5 /macron: expected "¯", actual "Å"
+StandardEncoding 0xC6 /breve: expected "˘", actual "Æ"
+StandardEncoding 0xC7 /dotaccent: expected "˙", actual "Ç"
+StandardEncoding 0xC8 /dieresis: expected "¨", actual "È"
+StandardEncoding 0xCA /ring: expected "˚", actual "Ê"
+StandardEncoding 0xCB /cedilla: expected "¸", actual "Ë"
+StandardEncoding 0xCD /hungarumlaut: expected "˝", actual "Í"
+StandardEncoding 0xCE /ogonek: expected "˛", actual "Î"
+StandardEncoding 0xCF /caron: expected "ˇ", actual "Ï"
+StandardEncoding 0xD0 /emdash: expected "—", actual "Ð"
+StandardEncoding 0xE1 /AE: expected "Æ", actual "á"
+StandardEncoding 0xE3 /ordfeminine: expected "ª", actual "ã"
+StandardEncoding 0xE8 /Lslash: expected "Ł", actual "è"
+StandardEncoding 0xE9 /Oslash: expected "Ø", actual "é"
+StandardEncoding 0xEA /OE: expected "Œ", actual "ê"
+StandardEncoding 0xEB /ordmasculine: expected "º", actual "ë"
+StandardEncoding 0xF1 /ae: expected "æ", actual "ñ"
+StandardEncoding 0xF5 /dotlessi: expected "ı", actual "õ"
+StandardEncoding 0xF8 /lslash: expected "ł", actual "ø"
+StandardEncoding 0xF9 /oslash: expected "ø", actual "ù"
+StandardEncoding 0xFA /oe: expected "œ", actual "ú"
+StandardEncoding 0xFB /germandbls: expected "ß", actual "û"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test standard_encoding_matches_independent_table ... FAILED
+MacRomanEncoding: 208 defined codes exercised, 76 mismatches
+
+thread 'macroman_encoding_matches_independent_table' (116) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:122:5:
+MacRomanEncoding 0xA0 /dagger: expected "†", actual "\u{a0}"
+MacRomanEncoding 0xA1 /degree: expected "°", actual "¡"
+MacRomanEncoding 0xA4 /section: expected "§", actual "¤"
+MacRomanEncoding 0xA5 /bullet: expected "•", actual "¥"
+MacRomanEncoding 0xA6 /paragraph: expected "¶", actual "¦"
+MacRomanEncoding 0xA7 /germandbls: expected "ß", actual "§"
+MacRomanEncoding 0xA8 /registered: expected "®", actual "¨"
+MacRomanEncoding 0xAA /trademark: expected "™", actual "ª"
+MacRomanEncoding 0xAB /acute: expected "´", actual "«"
+MacRomanEncoding 0xAC /dieresis: expected "¨", actual "¬"
+MacRomanEncoding 0xAE /AE: expected "Æ", actual "®"
+MacRomanEncoding 0xAF /Oslash: expected "Ø", actual "¯"
+MacRomanEncoding 0xB4 /yen: expected "¥", actual "´"
+MacRomanEncoding 0xBB /ordfeminine: expected "ª", actual "»"
+MacRomanEncoding 0xBC /ordmasculine: expected "º", actual "¼"
+MacRomanEncoding 0xBE /ae: expected "æ", actual "¾"
+MacRomanEncoding 0xBF /oslash: expected "ø", actual "¿"
+MacRomanEncoding 0xC0 /questiondown: expected "¿", actual "À"
+MacRomanEncoding 0xC1 /exclamdown: expected "¡", actual "Á"
+MacRomanEncoding 0xC2 /logicalnot: expected "¬", actual "Â"
+MacRomanEncoding 0xC4 /florin: expected "ƒ", actual "Ä"
+MacRomanEncoding 0xC7 /guillemotleft: expected "«", actual "Ç"
+MacRomanEncoding 0xC8 /guillemotright: expected "»", actual "È"
+MacRomanEncoding 0xC9 /ellipsis: expected "…", actual "É"
+MacRomanEncoding 0xCA /nbspace: expected "\u{a0}", actual "Ê"
+MacRomanEncoding 0xCB /Agrave: expected "À", actual "Ë"
+MacRomanEncoding 0xCC /Atilde: expected "Ã", actual "Ì"
+MacRomanEncoding 0xCD /Otilde: expected "Õ", actual "Í"
+MacRomanEncoding 0xCE /OE: expected "Œ", actual "Î"
+MacRomanEncoding 0xCF /oe: expected "œ", actual "Ï"
+MacRomanEncoding 0xD0 /endash: expected "–", actual "Ð"
+MacRomanEncoding 0xD1 /emdash: expected "—", actual "Ñ"
+MacRomanEncoding 0xD2 /quotedblleft: expected "“", actual "Ò"
+MacRomanEncoding 0xD3 /quotedblright: expected "”", actual "Ó"
+MacRomanEncoding 0xD4 /quoteleft: expected "‘", actual "Ô"
+MacRomanEncoding 0xD5 /quoteright: expected "’", actual "Õ"
+MacRomanEncoding 0xD6 /divide: expected "÷", actual "Ö"
+MacRomanEncoding 0xD8 /ydieresis: expected "ÿ", actual "Ø"
+MacRomanEncoding 0xD9 /Ydieresis: expected "Ÿ", actual "Ù"
+MacRomanEncoding 0xDA /fraction: expected "⁄", actual "Ú"
+MacRomanEncoding 0xDB /currency: expected "¤", actual "Û"
+MacRomanEncoding 0xDC /guilsinglleft: expected "‹", actual "Ü"
+MacRomanEncoding 0xDD /guilsinglright: expected "›", actual "Ý"
+MacRomanEncoding 0xDE /fi: expected "ﬁ", actual "Þ"
+MacRomanEncoding 0xDF /fl: expected "ﬂ", actual "ß"
+MacRomanEncoding 0xE0 /daggerdbl: expected "‡", actual "à"
+MacRomanEncoding 0xE1 /periodcentered: expected "·", actual "á"
+MacRomanEncoding 0xE2 /quotesinglbase: expected "‚", actual "â"
+MacRomanEncoding 0xE3 /quotedblbase: expected "„", actual "ã"
+MacRomanEncoding 0xE4 /perthousand: expected "‰", actual "ä"
+MacRomanEncoding 0xE5 /Acircumflex: expected "Â", actual "å"
+MacRomanEncoding 0xE6 /Ecircumflex: expected "Ê", actual "æ"
+MacRomanEncoding 0xE7 /Aacute: expected "Á", actual "ç"
+MacRomanEncoding 0xE8 /Edieresis: expected "Ë", actual "è"
+MacRomanEncoding 0xE9 /Egrave: expected "È", actual "é"
+MacRomanEncoding 0xEA /Iacute: expected "Í", actual "ê"
+MacRomanEncoding 0xEB /Icircumflex: expected "Î", actual "ë"
+MacRomanEncoding 0xEC /Idieresis: expected "Ï", actual "ì"
+MacRomanEncoding 0xED /Igrave: expected "Ì", actual "í"
+MacRomanEncoding 0xEE /Oacute: expected "Ó", actual "î"
+MacRomanEncoding 0xEF /Ocircumflex: expected "Ô", actual "ï"
+MacRomanEncoding 0xF1 /Ograve: expected "Ò", actual "ñ"
+MacRomanEncoding 0xF2 /Uacute: expected "Ú", actual "ò"
+MacRomanEncoding 0xF3 /Ucircumflex: expected "Û", actual "ó"
+MacRomanEncoding 0xF4 /Ugrave: expected "Ù", actual "ô"
+MacRomanEncoding 0xF5 /dotlessi: expected "ı", actual "õ"
+MacRomanEncoding 0xF6 /circumflex: expected "ˆ", actual "ö"
+MacRomanEncoding 0xF7 /tilde: expected "˜", actual "÷"
+MacRomanEncoding 0xF8 /macron: expected "¯", actual "ø"
+MacRomanEncoding 0xF9 /breve: expected "˘", actual "ù"
+MacRomanEncoding 0xFA /dotaccent: expected "˙", actual "ú"
+MacRomanEncoding 0xFB /ring: expected "˚", actual "û"
+MacRomanEncoding 0xFC /cedilla: expected "¸", actual "ü"
+MacRomanEncoding 0xFD /hungarumlaut: expected "˝", actual "ý"
+MacRomanEncoding 0xFE /ogonek: expected "˛", actual "þ"
+MacRomanEncoding 0xFF /caron: expected "ˇ", actual "ÿ"
+test macroman_encoding_matches_independent_table ... FAILED
+WinAnsiEncoding: 224 defined codes exercised, 8 mismatches
+
+thread 'winansi_encoding_matches_independent_table' (119) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:122:5:
+WinAnsiEncoding 0x7F /bullet: expected "•", actual ""
+WinAnsiEncoding 0x81 /bullet: expected "•", actual "�"
+WinAnsiEncoding 0x8D /bullet: expected "•", actual "�"
+WinAnsiEncoding 0x8F /bullet: expected "•", actual "�"
+WinAnsiEncoding 0x90 /bullet: expected "•", actual "�"
+WinAnsiEncoding 0x93 /quotedblleft: expected "“", actual "\""
+WinAnsiEncoding 0x94 /quotedblright: expected "”", actual "\""
+WinAnsiEncoding 0x9D /bullet: expected "•", actual "�"
+test winansi_encoding_matches_independent_table ... FAILED
+
+failures:
+
+failures:
+    macroman_encoding_matches_independent_table
+    standard_encoding_matches_independent_table
+    winansi_encoding_matches_independent_table
+
+test result: FAILED. 4 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_encoding_contract_test`
+     Running tests/text_spacing_contract_test.rs (target/debug/deps/text_spacing_contract_test-040fabcda5bb0cc2)
+
+running 14 tests
+
+thread 'glyph_origins_follow_declared_widths_kerns_and_horizontal_scale' (128) panicked at oxidize-pdf-core/tests/text_spacing_contract_test.rs:175:5:
+Tz 50: expected B (104, 700), actual (105.5, 700)
+Tz 200: expected B (116, 700), actual (113, 700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test glyph_origins_follow_declared_widths_kerns_and_horizontal_scale ... FAILED
+test declared_positive_widths_keep_word_separators ... ok
+test declared_zero_widths_allow_uniform_advances ... ok
+test a_single_transition_does_not_certify_uniform_tracking ... ok
+
+thread 'lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances' (130) panicked at oxidize-pdf-core/tests/text_spacing_contract_test.rs:115:5:
+assertion `left == right` failed
+  left: "1 1  0"
+ right: "11 0"
+test lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances ... FAILED
+test absent_widths_never_certify_tracking_for_standard_fonts ... ok
+test partial_em_adjustments_do_not_trigger_unknown_width_recovery ... ok
+test strict_mode_does_not_enable_unknown_width_recovery ... ok
+test unresolved_type0_without_space_reaches_and_rejects_the_fallback ... ok
+test excess_advance_remains_a_word_separator ... ok
+test explicit_word_spacing_disables_tracking_inference ... ok
+test explicit_character_spacing_disables_tracking_inference ... ok
+test known_zero_width_single_word_needs_no_literal_space ... ok
+test ordinary_small_kerning_does_not_add_spaces ... ok
+
+failures:
+
+failures:
+    glyph_origins_follow_declared_widths_kerns_and_horizontal_scale
+    lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances
+
+test result: FAILED. 12 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_spacing_contract_test`
+error: 2 targets failed:
+    `-p oxidize-pdf --test text_encoding_contract_test`
+    `-p oxidize-pdf --test text_spacing_contract_test`

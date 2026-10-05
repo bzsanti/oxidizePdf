@@ -1,0 +1,9 @@
+{
+  "head": "a2562e2aea63417276c68897c949f7b4f1a4b3a1",
+  "changed_since_t4_hash_snapshot": [
+    "oxidize-pdf-core/tests/issue_496_cid_width_lookup_test.rs",
+    "tools/text_contracts/content_differential.py"
+  ],
+  "product_unchanged": true,
+  "reason": "CID test now checks both existing strict/recovery policies; measurement only normalizes a rejected path diagnostic. Numeric measurement and product code unchanged."
+}

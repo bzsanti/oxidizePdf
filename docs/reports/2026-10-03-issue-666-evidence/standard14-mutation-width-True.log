@@ -1,0 +1,76 @@
+
+running 1 test
+test declared_widths_override_implicit_metrics_for_all_fourteen_fonts ... FAILED
+
+failures:
+
+---- declared_widths_override_implicit_metrics_for_all_fourteen_fonts stdout ----
+
+thread 'declared_widths_override_implicit_metrics_for_all_fourteen_fonts' (395) panicked at contracts.rs:60:5:
+Courier-Bold-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Courier-Bold-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Courier-Bold-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Courier-Bold-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Courier-BoldOblique-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Courier-BoldOblique-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Courier-BoldOblique-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Courier-BoldOblique-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Courier-Oblique-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Courier-Oblique-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Courier-Oblique-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Courier-Oblique-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Courier-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Courier-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Courier-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Courier-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Helvetica-Bold-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Helvetica-Bold-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Helvetica-Bold-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Helvetica-Bold-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Helvetica-BoldOblique-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Helvetica-BoldOblique-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Helvetica-BoldOblique-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Helvetica-BoldOblique-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Helvetica-Oblique-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Helvetica-Oblique-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Helvetica-Oblique-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Helvetica-Oblique-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Helvetica-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Helvetica-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Helvetica-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Helvetica-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Symbol-explicit.pdf: expected "α" at(103.91,700), got "α" at(107.91,700)
+Symbol-explicit.pdf: expected "Ω" at(107.82,700), got "Ω" at(115.82,700)
+Symbol-explicit.pdf: expected "α" at(103.91,700), got "α" at(107.91,700)
+Symbol-explicit.pdf: expected "Ω" at(107.82,700), got "Ω" at(115.82,700)
+Times-Bold-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Times-Bold-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Times-Bold-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Times-Bold-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Times-BoldItalic-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Times-BoldItalic-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Times-BoldItalic-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Times-BoldItalic-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Times-Italic-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Times-Italic-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Times-Italic-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Times-Italic-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Times-Roman-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Times-Roman-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+Times-Roman-explicit.pdf: expected "i" at(103.91,700), got "i" at(107.91,700)
+Times-Roman-explicit.pdf: expected "W" at(107.82,700), got "W" at(115.82,700)
+ZapfDingbats-explicit.pdf: expected "✂" at(103.91,700), got "✂" at(107.91,700)
+ZapfDingbats-explicit.pdf: expected "✃" at(107.82,700), got "✃" at(115.82,700)
+ZapfDingbats-explicit.pdf: expected "✂" at(103.91,700), got "✂" at(107.91,700)
+ZapfDingbats-explicit.pdf: expected "✃" at(107.82,700), got "✃" at(115.82,700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    declared_widths_override_implicit_metrics_for_all_fourteen_fonts
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.03s
+
+    Finished `test` profile [unoptimized] target(s) in 0.08s
+     Running contracts.rs (target/debug/deps/contracts-49674f8595f11193)
+error: test failed, to rerun pass `--test contracts`

@@ -1,0 +1,90 @@
+[
+  {
+    "case": "control",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core/Cargo.toml",
+      "--target-dir",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build",
+      "--test",
+      "text_encoding_contract_test",
+      "--test",
+      "text_spacing_contract_test",
+      "--test",
+      "text_state_contract_test",
+      "--test",
+      "text_tj_scale_contract_test",
+      "--test",
+      "text_tracking_recovery_contract_test"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "case": "positive-metrics",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core/Cargo.toml",
+      "--target-dir",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build",
+      "--test",
+      "text_spacing_contract_test",
+      "declared_positive_widths_keep_word_separators",
+      "--",
+      "--exact"
+    ],
+    "exit": 101,
+    "expected": 101,
+    "assertion_detected": true
+  },
+  {
+    "case": "strict-mode",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core/Cargo.toml",
+      "--target-dir",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build",
+      "--test",
+      "text_tracking_recovery_contract_test",
+      "damaged_type0_recovery_covers_full_em_tolerance_and_mode",
+      "--",
+      "--exact"
+    ],
+    "exit": 101,
+    "expected": 101,
+    "assertion_detected": true
+  },
+  {
+    "case": "descendant",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core/Cargo.toml",
+      "--target-dir",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build",
+      "--test",
+      "text_tracking_recovery_contract_test",
+      "resolved_descendant_without_widths_does_not_enable_recovery",
+      "--",
+      "--exact"
+    ],
+    "exit": 0,
+    "expected": 101,
+    "assertion_detected": false
+  }
+]
