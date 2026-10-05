@@ -1309,6 +1309,7 @@
       "contract": "Cero explícito / no cero / ausente / inválido; Widths y W/DW",
       "status": "validated",
       "tests": [
+        "issue_496_cid_width_lookup_test",
         "text_spacing_contract_test",
         "text_vertical_contract_test",
         "text_standard14_metrics_contract_test",
