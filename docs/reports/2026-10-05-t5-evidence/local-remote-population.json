@@ -1,0 +1,17 @@
+{
+  "same_paths": true,
+  "same_hashes": 1793,
+  "changed": [
+    "format-corpus/preserve_lorem-ipsum.pdf",
+    "poppler/poppler_type3.pdf",
+    "qpdf/qpdf_1.pdf",
+    "qpdf/qpdf_2.pdf",
+    "qpdf/qpdf_annotations-out.pdf",
+    "qpdf/qpdf_field-types.pdf",
+    "qpdf/qpdf_in.pdf",
+    "qpdf/qpdf_input.pdf",
+    "qpdf/qpdf_out.pdf"
+  ],
+  "only_local": [],
+  "only_remote": []
+}

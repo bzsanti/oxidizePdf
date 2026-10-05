@@ -1,0 +1,716 @@
+{
+  "tier": "t3-stress",
+  "timestamp": "2026-10-05T22:30:52.273416875+00:00",
+  "total": 1802,
+  "parsed": 1761,
+  "panics": 0,
+  "timeouts": 0,
+  "text_extracted": 1559,
+  "graceful_failures": 41,
+  "pass_rate": 0.9772475027746947,
+  "total_duration_ms": 131649,
+  "by_pdf_version": {
+    "1.4": {
+      "total": 389,
+      "passed": 389
+    },
+    "1.5": {
+      "total": 180,
+      "passed": 180
+    },
+    "1.1": {
+      "total": 2,
+      "passed": 2
+    },
+    "1.6": {
+      "total": 98,
+      "passed": 98
+    },
+    "1.7": {
+      "total": 600,
+      "passed": 600
+    },
+    "1.3": {
+      "total": 397,
+      "passed": 397
+    },
+    "2.0": {
+      "total": 35,
+      "passed": 35
+    },
+    "unknown": {
+      "total": 73,
+      "passed": 32
+    },
+    "1.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "1.2": {
+      "total": 27,
+      "passed": 27
+    }
+  },
+  "by_generator": {
+    "Acrobat Distiller 7.0 (Windows)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Foxit Reader PDF Printer": {
+      "total": 1,
+      "passed": 1
+    },
+    "LibreOffice 7.4": {
+      "total": 1,
+      "passed": 1
+    },
+    "Something Else": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Sign": {
+      "total": 2,
+      "passed": 2
+    },
+    "cairo 1.14.10 (http://cairographics.org)": {
+      "total": 1,
+      "passed": 1
+    },
+    "cairo 1.7.1 (http://cairographics.org)": {
+      "total": 1,
+      "passed": 1
+    },
+    "PDF Editor Foxit PhantomPDF Advanced Editor V5.2.0.0401 - Foxit Corporation": {
+      "total": 5,
+      "passed": 5
+    },
+    "LibreOffice 6.3": {
+      "total": 2,
+      "passed": 2
+    },
+    "Foxit PhantomPDF - Foxit Corporation": {
+      "total": 21,
+      "passed": 21
+    },
+    "Neevia PDFcompress v4.1 build 564 (http://neeviaPDF.com)": {
+      "total": 1,
+      "passed": 1
+    },
+    "www.adlibsoftware.com:EXS3210-Windows 2003:TNG": {
+      "total": 1,
+      "passed": 1
+    },
+    "Skia/PDF m135": {
+      "total": 2,
+      "passed": 2
+    },
+    "Foxit PhantomPDF Creator Version 7.0.6.1107": {
+      "total": 4,
+      "passed": 4
+    },
+    "Skia/PDF m61": {
+      "total": 1,
+      "passed": 1
+    },
+    "LibreOffice 5.3": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe PDF Library 6.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "pdfTeX-1.40.19; modified using iText 2.1.7 by 1T3XT": {
+      "total": 2,
+      "passed": 2
+    },
+    "cairo 1.18.0 (https://cairographics.org)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Mac OS X 10.3.9 Quartz PDFContext": {
+      "total": 7,
+      "passed": 7
+    },
+    "=_…IÜ�ÐD³%9©•}": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe Acrobat 9.0.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "OpenOffice.org 1.1.2": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 4.0 for Windows": {
+      "total": 1,
+      "passed": 1
+    },
+    "pdfTeX-1.40.18": {
+      "total": 1,
+      "passed": 1
+    },
+    "Foxit PhantomPDF Printer Version 7.0.1.831": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 6.0.1 for Macintosh": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat PDFWriter 5.0 for Windows NT": {
+      "total": 2,
+      "passed": 2
+    },
+    "QPDF library": {
+      "total": 1,
+      "passed": 1
+    },
+    "PDF Editor Foxit PhantomPDF Advanced Editor V5.0.0.0517 - Foxit Corporation": {
+      "total": 4,
+      "passed": 4
+    },
+    "Adobe PDF library 5.00": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe Acrobat 11.0.6 Image Conversion Plug-in": {
+      "total": 3,
+      "passed": 3
+    },
+    "Acrobat Distiller 7.0 for Macintosh": {
+      "total": 2,
+      "passed": 2
+    },
+    "Foxit PhantomPDF Creator Version 7.1.0.112": {
+      "total": 6,
+      "passed": 6
+    },
+    "OpenOffice.org 2.2": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe Acrobat 6.0 Image Conversion Plug-in": {
+      "total": 1,
+      "passed": 1
+    },
+    "By hand": {
+      "total": 2,
+      "passed": 2
+    },
+    "PDF Editor � - Foxit Software": {
+      "total": 1,
+      "passed": 1
+    },
+    "Foxit PhantomPDF Printer Version 7.1.0.112": {
+      "total": 34,
+      "passed": 34
+    },
+    "Skia/PDF m69": {
+      "total": 1,
+      "passed": 1
+    },
+    "Written Manully": {
+      "total": 4,
+      "passed": 4
+    },
+    "Adobe PDF Library 10.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe Acrobat Pro 11.0.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "LuaTeX-1.0.4": {
+      "total": 1,
+      "passed": 1
+    },
+    "PDFlib 2.10 (Mac)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe PDF Library 23.1.175": {
+      "total": 1,
+      "passed": 1
+    },
+    "ImageMagick 6.8.9-8 Q16 x64 2014-08-26 http://www.imagemagick.org": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 5.0 (Windows)": {
+      "total": 1,
+      "passed": 1
+    },
+    "ELAN PDF 2.3": {
+      "total": 1,
+      "passed": 1
+    },
+    "Apex PDFWriter": {
+      "total": 26,
+      "passed": 26
+    },
+    "Adobe LiveCycle Designer 11.0": {
+      "total": 35,
+      "passed": 35
+    },
+    "OpenOffice.org 3.4": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat Distiller 5.0.5 (Windows)": {
+      "total": 3,
+      "passed": 3
+    },
+    "Acrobat Distiller 6.0 prealpha (Windows)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Mac OS X 10.4.11 Quartz PDFContext": {
+      "total": 1,
+      "passed": 1
+    },
+    "TCPDF 6.2.11 (http://www.tcpdf.org)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Manual": {
+      "total": 5,
+      "passed": 5
+    },
+    "PDFKit": {
+      "total": 1,
+      "passed": 1
+    },
+    "Apache FOP Version 1.1": {
+      "total": 1,
+      "passed": 1
+    },
+    "Hand-edit": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 7.0.5 (Windows)": {
+      "total": 4,
+      "passed": 4
+    },
+    "Adobe Acrobat Pro Extended 9.1.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "Foxit Reader - Foxit Software Inc.": {
+      "total": 30,
+      "passed": 30
+    },
+    "": {
+      "total": 54,
+      "passed": 54
+    },
+    "Experimental": {
+      "total": 2,
+      "passed": 2
+    },
+    "Foxit PhantomPDF - Foxit Software Inc.": {
+      "total": 208,
+      "passed": 208
+    },
+    "Acrobat Distiller 4.05 for Windows": {
+      "total": 1,
+      "passed": 1
+    },
+    "LibreOffice 3.5": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 6.0 (Windows)": {
+      "total": 2,
+      "passed": 2
+    },
+    "PDF Reader - Foxit Software": {
+      "total": 4,
+      "passed": 4
+    },
+    "cairo 1.15.8 (http://cairographics.org)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Skia/PDF m54": {
+      "total": 33,
+      "passed": 33
+    },
+    "pdfTeX-1.40.3": {
+      "total": 2,
+      "passed": 2
+    },
+    "LibreOffice 6.0": {
+      "total": 14,
+      "passed": 14
+    },
+    "cairo 1.16.0 (https://cairographics.org)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Python PDF Library - http://pybrary.net/pyPdf/": {
+      "total": 1,
+      "passed": 1
+    },
+    "Ibex PDF Creator 4.3.4/4747 [.NET 2.0]/R": {
+      "total": 1,
+      "passed": 1
+    },
+    "Foxit PhantomPDF Printer Version 7.0.6.1107": {
+      "total": 1,
+      "passed": 1
+    },
+    "Skia/PDF m71": {
+      "total": 13,
+      "passed": 13
+    },
+    "Acrobat Distiller 8.1.0 (Windows)": {
+      "total": 1,
+      "passed": 1
+    },
+    "LibreOffice 6.1": {
+      "total": 36,
+      "passed": 36
+    },
+    "GNU Ghostscript 5.50": {
+      "total": 3,
+      "passed": 3
+    },
+    "ÿþB�y� �h�a�n�d�": {
+      "total": 1,
+      "passed": 1
+    },
+    "pdfTeX-1.40.10": {
+      "total": 1,
+      "passed": 1
+    },
+    "unknown": {
+      "total": 1057,
+      "passed": 1016
+    },
+    "OpenOffice.org 3.2": {
+      "total": 10,
+      "passed": 10
+    },
+    "pdfTeX-1.40.24": {
+      "total": 25,
+      "passed": 25
+    },
+    "pdfTeX-1.50.0": {
+      "total": 3,
+      "passed": 3
+    },
+    "Acrobat Distiller 9.5.2 (Windows)": {
+      "total": 10,
+      "passed": 10
+    },
+    "TCPDF 6.2.6 (http://www.tcpdf.org)": {
+      "total": 65,
+      "passed": 65
+    },
+    "Mac OS X 10.2 Quartz PDFContext� - ENHANCED": {
+      "total": 1,
+      "passed": 1
+    },
+    "Foxit PhantomPDF打印机版本 6.0.4.1129": {
+      "total": 2,
+      "passed": 2
+    }
+  },
+  "parse_time_p50_ms": 0.0,
+  "parse_time_p95_ms": 17.0,
+  "parse_time_p99_ms": 69.0,
+  "failures": [
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/format-corpus/preserve_T01_001_header-invalid-major-version.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Unsupported PDF version: 2.4",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/format-corpus/preserve_T01_002_header-invalid-minor-version.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Unsupported PDF version: 1.9",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/format-corpus/preserve_T01_004_header_invalid-syntax-no-dash.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/format-corpus/preserve_T01_005_header-invalid-syntax-replace-char.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/format-corpus/preserve_T01_006_header-invalid-syntax-no-pdf.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/format-corpus/preserve_T01_007_header-no-version-info.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/format-corpus/preserve_minimal_test.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid xref table",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/format-corpus/preserve_pdf-17-header18.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Unsupported PDF version: 1.8",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/pdfium/pdfium_FRC_3.5_CF_Strf_stmf_DefaultCryptFilter.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "PDF is encrypted and could not be decrypted (unsupported encryption or password required)",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/pdfium/pdfium_FRC_3.5_EncryptMetadata_T.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "PDF is encrypted and could not be decrypted (unsupported encryption or password required)",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/pdfium/pdfium_FRC_3.5_Encrypt_is_damage.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "PDF is encrypted and could not be decrypted (unsupported encryption or password required)",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/pdfium/pdfium_FRC_3.5_Filter_PubSec_SubFilter_s5.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "PDF is encrypted and could not be decrypted (unsupported encryption or password required)",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/pdfium/pdfium_FRC_3.5_Filter_PubSec_Sub_SubFilter_s4.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "PDF is encrypted and could not be decrypted (unsupported encryption or password required)",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/pdfium/pdfium_bug_493126_endobj_bug.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Missing required key: Size",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/pdfium/pdfium_bug_493126_endobj_bug_weirdWS.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Missing required key: Size",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/pdfium/pdfium_bug_511_jbig_null_crash.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/pdfium/pdfium_bug_cm_rotate.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_3.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_bad-direct-root.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_bad.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_bad1.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_bad10.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Missing required key: Size",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_bad9.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Missing required key: Size",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_extensions-adbe-force-1.8.5.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Unsupported PDF version: 1.8",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_extensions-adbe-other-force-1.8.5.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Unsupported PDF version: 1.8",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_extensions-none-force-1.8.5.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Unsupported PDF version: 1.8",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_extensions-other-force-1.8.5.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Unsupported PDF version: 1.8",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_fuzz-16214.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_inspect.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-141a.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-141b.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid xref table",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-143.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-146.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Unsupported PDF version: 1.40",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-147.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-148.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-150.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-1503.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-263.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-335a.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_issue-335b.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t3-stress/qpdf/qpdf_leading-junk.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    }
+  ]
+}

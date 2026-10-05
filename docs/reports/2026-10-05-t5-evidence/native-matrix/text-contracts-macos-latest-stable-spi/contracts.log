@@ -1,0 +1,786 @@
+[1m[92m   Compiling[0m syn v2.0.117
+[1m[92m   Compiling[0m stable_deref_trait v1.2.1
+[1m[92m   Compiling[0m find-msvc-tools v0.1.9
+[1m[92m   Compiling[0m shlex v2.0.1
+[1m[92m   Compiling[0m cc v1.2.63
+[1m[92m   Compiling[0m zerocopy v0.8.50
+[1m[92m   Compiling[0m writeable v0.6.3
+[1m[92m   Compiling[0m litemap v0.8.2
+[1m[92m   Compiling[0m getrandom v0.3.4
+[1m[92m   Compiling[0m serde v1.0.228
+[1m[92m   Compiling[0m utf8_iter v1.0.4
+[1m[92m   Compiling[0m icu_normalizer_data v2.2.0
+[1m[92m   Compiling[0m crossbeam-utils v0.8.21
+[1m[92m   Compiling[0m icu_properties_data v2.2.0
+[1m[92m   Compiling[0m synstructure v0.13.2
+[1m[92m   Compiling[0m ring v0.17.14
+[1m[92m   Compiling[0m smallvec v1.15.1
+[1m[92m   Compiling[0m zerofrom-derive v0.1.7
+[1m[92m   Compiling[0m zerofrom v0.1.8
+[1m[92m   Compiling[0m yoke-derive v0.8.2
+[1m[92m   Compiling[0m yoke v0.8.3
+[1m[92m   Compiling[0m zerovec-derive v0.11.3
+[1m[92m   Compiling[0m zerovec v0.11.6
+[1m[92m   Compiling[0m displaydoc v0.2.6
+[1m[92m   Compiling[0m tinystr v0.8.3
+[1m[92m   Compiling[0m zerocopy-derive v0.8.50
+[1m[92m   Compiling[0m zeroize_derive v1.4.3
+[1m[92m   Compiling[0m zeroize v1.8.2
+[1m[92m   Compiling[0m icu_locale_core v2.2.0
+[1m[92m   Compiling[0m zerotrie v0.2.4
+[1m[92m   Compiling[0m potential_utf v0.1.5
+[1m[92m   Compiling[0m icu_collections v2.2.0
+[1m[92m   Compiling[0m icu_provider v2.2.0
+[1m[92m   Compiling[0m serde_derive v1.0.228
+[1m[92m   Compiling[0m rustls-pki-types v1.14.1
+[1m[92m   Compiling[0m regex-automata v0.4.14
+[1m[92m   Compiling[0m utf8parse v0.2.2
+[1m[92m   Compiling[0m anstyle-parse v1.0.0
+[1m[92m   Compiling[0m icu_properties v2.2.0
+[1m[92m   Compiling[0m crossbeam-epoch v0.9.18
+[1m[92m   Compiling[0m icu_normalizer v2.2.0
+[1m[92m   Compiling[0m rand_core v0.9.5
+[1m[92m   Compiling[0m tracing-core v0.1.36
+[1m[92m   Compiling[0m getrandom v0.2.17
+[1m[92m   Compiling[0m log v0.4.32
+[1m[92m   Compiling[0m rayon-core v1.13.0
+[1m[92m   Compiling[0m is_terminal_polyfill v1.70.2
+[1m[92m   Compiling[0m colorchoice v1.0.5
+[1m[92m   Compiling[0m anstyle v1.0.14
+[1m[92m   Compiling[0m anstyle-query v1.1.5
+[1m[92m   Compiling[0m either v1.16.0
+[1m[92m   Compiling[0m untrusted v0.9.0
+[1m[92m   Compiling[0m anstream v1.0.0
+[1m[92m   Compiling[0m idna_adapter v1.2.2
+[1m[92m   Compiling[0m crossbeam-deque v0.8.6
+[1m[92m   Compiling[0m half v2.7.1
+[1m[92m   Compiling[0m tracing-attributes v0.1.31
+[1m[92m   Compiling[0m alloca v0.4.0
+[1m[92m   Compiling[0m rustls v0.23.40
+[1m[92m   Compiling[0m strsim v0.11.1
+[1m[92m   Compiling[0m plotters-backend v0.3.7
+[1m[92m   Compiling[0m ciborium-io v0.2.2
+[1m[92m   Compiling[0m heck v0.5.0
+[1m[92m   Compiling[0m clap_lex v1.1.0
+[1m[92m   Compiling[0m percent-encoding v2.3.2
+[1m[92m   Compiling[0m portable-atomic v1.13.1
+[1m[92m   Compiling[0m form_urlencoded v1.2.2
+[1m[92m   Compiling[0m clap_derive v4.6.1
+[1m[92m   Compiling[0m clap_builder v4.6.0
+[1m[92m   Compiling[0m ciborium-ll v0.2.2
+[1m[92m   Compiling[0m plotters-svg v0.3.7
+[1m[92m   Compiling[0m tracing v0.1.44
+[1m[92m   Compiling[0m rustls-webpki v0.103.13
+[1m[92m   Compiling[0m idna v1.1.0
+[1m[92m   Compiling[0m itertools v0.13.0
+[1m[92m   Compiling[0m regex v1.12.3
+[1m[92m   Compiling[0m webpki-roots v1.0.7
+[1m[92m   Compiling[0m ppv-lite86 v0.2.21
+[1m[92m   Compiling[0m thiserror-impl v2.0.18
+[1m[92m   Compiling[0m wait-timeout v0.2.1
+[1m[92m   Compiling[0m bit-vec v0.8.0
+[1m[92m   Compiling[0m fnv v1.0.7
+[1m[92m   Compiling[0m unicode-width v0.2.2
+[1m[92m   Compiling[0m quick-error v1.2.3
+[1m[92m   Compiling[0m cast v0.3.0
+[1m[92m   Compiling[0m same-file v1.0.6
+[1m[92m   Compiling[0m criterion-plot v0.8.2
+[1m[92m   Compiling[0m walkdir v2.5.0
+[1m[92m   Compiling[0m console v0.16.3
+[1m[92m   Compiling[0m rusty-fork v0.3.1
+[1m[92m   Compiling[0m thiserror v2.0.18
+[1m[92m   Compiling[0m bit-set v0.8.0
+[1m[92m   Compiling[0m rand_chacha v0.9.0
+[1m[92m   Compiling[0m webpki-roots v0.26.11
+[1m[92m   Compiling[0m rayon v1.12.0
+[1m[92m   Compiling[0m url v2.5.8
+[1m[92m   Compiling[0m clap v4.6.1
+[1m[92m   Compiling[0m plotters v0.3.7
+[1m[92m   Compiling[0m ciborium v0.2.2
+[1m[92m   Compiling[0m chrono v0.4.45
+[1m[92m   Compiling[0m sharded-slab v0.1.7
+[1m[92m   Compiling[0m tinytemplate v1.2.1
+[1m[92m   Compiling[0m tracing-log v0.2.0
+[1m[92m   Compiling[0m rand v0.9.4
+[1m[92m   Compiling[0m rand_xorshift v0.4.0
+[1m[92m   Compiling[0m matchers v0.2.0
+[1m[92m   Compiling[0m page_size v0.6.0
+[1m[92m   Compiling[0m thread_local v1.1.9
+[1m[92m   Compiling[0m nu-ansi-term v0.50.3
+[1m[92m   Compiling[0m unarray v0.1.4
+[1m[92m   Compiling[0m oorandom v11.1.5
+[1m[92m   Compiling[0m unit-prefix v0.5.2
+[1m[92m   Compiling[0m anes v0.1.6
+[1m[92m   Compiling[0m base64 v0.22.1
+[1m[92m   Compiling[0m oxidize-pdf v5.1.3 (/Users/runner/work/oxidizePdf/oxidizePdf/oxidize-pdf-core)
+[1m[92m   Compiling[0m ureq v2.12.1
+[1m[92m   Compiling[0m criterion v0.8.2
+[1m[92m   Compiling[0m indicatif v0.18.4
+[1m[92m   Compiling[0m tracing-subscriber v0.3.23
+[1m[92m   Compiling[0m proptest v1.11.0
+[1m[92m   Compiling[0m sha1 v0.10.6
+[1m[92m   Compiling[0m weezl v0.1.12
+[1m[92m    Finished[0m `test` profile [unoptimized] target(s) in 1m 01s
+[1m[92m     Running[0m tests/analysis_spi_test.rs (target/debug/deps/analysis_spi_test-5ac004ee126f6176)
+
+running 14 tests
+test class_label_string_ergonomics ... ok
+test custom_strategy_is_object_safe_and_groups_per_element ... ok
+test decorator_wraps_default_and_refines ... ok
+test classifier_runs_before_chunking_and_sets_class_label ... ok
+test default_pipeline_has_no_classifier_and_leaves_labels_unset ... ok
+test custom_strategy_drives_chunk_count_and_pipeline_owns_ids ... ok
+test enricher::enrichers_run_in_order_last_writer_wins_per_key ... ok
+test enricher::enricher_writes_namespaced_keys_into_extra ... ok
+test hybrid_chunker_is_the_default_strategy ... ok
+test default_pipeline_matches_rag_chunks ... ok
+test enricher::no_enricher_leaves_extra_empty ... ok
+test pipeline_context_mode_threads_through_spi_path ... ok
+test pipeline_owns_oversized_flag_regardless_of_strategy ... ok
+test seams_compose::classifier_drives_strategy_boundaries_and_enricher_reads_through ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/issue_496_cid_width_lookup_test.rs (target/debug/deps/issue_496_cid_width_lookup_test-50d5e8f2792cf68a)
+
+running 7 tests
+test flat_path_uses_the_mapped_type0_space_cid_width_for_narrow_word_gaps ... ok
+test dw_only_no_w_array_is_honored ... ok
+test missing_dw_uses_the_normative_1000_unit_default ... ok
+test preserve_layout_path_also_benefits_from_cid_widths ... ok
+test oversized_w_range_does_not_hang_or_allocate_unboundedly ... ok
+test wide_cid_glyph_does_not_get_a_spurious_space_when_w_is_present ... ok
+test real_widths_fix_the_wide_cid_and_expose_the_narrow_word_gap ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/issue_564_plaintext_quality_test.rs (target/debug/deps/issue_564_plaintext_quality_test-9cb92e2fc307cbdc)
+
+running 4 tests
+test layout_plaintext_propagates_extraction_errors ... ok
+test layout_plaintext_filters_artifacts_and_honors_actualtext ... ok
+test layout_plaintext_reads_interleaved_columns_left_then_right ... ok
+test layout_plaintext_uses_standard14_metrics_for_positioned_runs ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/issue_615_punctuation_boundaries_test.rs (target/debug/deps/issue_615_punctuation_boundaries_test-25da952b8eaa2a56)
+
+running 4 tests
+test explicit_spaces_and_word_boundaries_survive ... ok
+test exact_em_boundary_keeps_existing_operator_thresholds ... ok
+test backwards_positioned_objects_keep_their_separator ... ok
+test punctuation_suppression_covers_tj_font_change_and_em_boundary ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/plaintext_td_operator_test.rs (target/debug/deps/plaintext_td_operator_test-b7ae3d759e3b9496)
+
+running 5 tests
+test plaintext_td_breaks_the_line_so_words_do_not_fuse ... ok
+test plaintext_td_does_not_fuse_words_under_the_default_config ... ok
+test plaintext_td_is_equivalent_to_tl_plus_td_lowercase ... ok
+test plaintext_td_leading_magnitude_does_not_exceed_ty ... ok
+test plaintext_td_sets_leading_for_subsequent_t_star ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/text_cff_program_contract_test.rs (target/debug/deps/text_cff_program_contract_test-3e9b14264f67a0df)
+
+running 8 tests
+test cff_index_rejects_zero_descending_out_of_file_and_overflowing_offsets ... ok
+test charset_formats_zero_one_two_preserve_nonidentity_cids ... ok
+test charset_rejects_duplicates_reserved_zero_ranges_and_truncation ... ok
+test fdselect_requires_full_ordered_coverage_and_existing_font_dicts ... ok
+test name_keyed_opentype_cff_used_as_cidfont_keeps_identity_glyph_indices ... ok
+test real_full_and_subset_cff_select_distinct_font_dicts_and_charstrings ... ok
+test cid_cff_selection_fixtures_retain_frozen_identity ... ok
+test cid_cff_collection_unicode_direction_and_subset_matrix ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+[1m[92m     Running[0m tests/text_cid_cff_contract_test.rs (target/debug/deps/text_cid_cff_contract_test-6d849966fb3d6382)
+
+running 9 tests
+test cid_cff_widths_use_cids_not_charstring_indices ... ok
+test cid_cff_vertical_advance_uses_w2 ... ok
+test cid_keyed_cff_matches_its_independently_generated_program ... ok
+test identity_h_cid_cff_preserves_explicit_unicode ... ok
+test embedded_encoding_remaps_codes_before_selecting_cff_cids ... ok
+test cff_renderer_keeps_cid_gid_unicode_and_vertical_advance_separate ... ok
+test invalid_cff_program_is_rejected_without_discarding_explicit_text_metadata ... ok
+test remapped_cid_cff_widths_follow_encoding_cids ... ok
+test private_cid_cff_without_tounicode_does_not_turn_cids_or_bytes_into_text ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/text_cid_collection_policy_contract_test.rs (target/debug/deps/text_cid_collection_policy_contract_test-e58949c222caac9c)
+
+running 7 tests
+test cumulative_supplements_do_not_require_equality_or_invent_a_new_collection ... ok
+test incompatible_collection_cid_zero_does_not_silently_erase_unknown_text ... ok
+test embedded_dictionary_metadata_must_not_authorize_another_collection ... ok
+test invalid_explicit_supplement_does_not_certify_collection_unicode ... ok
+test named_gb1_cmap_cannot_decode_cids_through_a_different_collection ... ok
+test embedded_metadata_cannot_conflict_with_a_named_parent ... ok
+test program_metadata_is_static_scoped_and_must_agree_with_dictionary ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+[1m[92m     Running[0m tests/text_cid_contract_test.rs (target/debug/deps/text_cid_contract_test-b659dc71628f1d48)
+
+running 5 tests
+test identity_h_codes_are_cids_not_unicode_scalars ... ok
+test cidrange_maps_are_equivalent_to_cidchar_maps ... ok
+test changing_gid_map_does_not_change_explicit_unicode ... ok
+test mixed_one_to_four_byte_codes_use_tounicode_source_codes ... ok
+test widths_are_indexed_by_cid_after_encoding_mapping ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/text_cid_truetype_program_contract_test.rs (target/debug/deps/text_cid_truetype_program_contract_test-c54eba7260171f51)
+
+running 7 tests
+test absent_direct_and_indirect_identity_preserve_compatibility ... ok
+test frozen_original_fonts_and_forty_pdfs_are_unchanged ... ok
+test invalid_maps_fail_resolution_but_preserve_explicit_text_metadata ... ok
+test private_unknown_recovery_consumes_whole_codes_and_truncated_tails ... ok
+test stream_map_distinguishes_zero_missing_and_big_endian_limits ... ok
+test full_subset_identity_stream_and_remapped_hv_select_real_glyphs ... ok
+test explicit_collection_and_unknown_text_preserve_source_glyph_positions ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+[1m[92m     Running[0m tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-5d75d115dbceec68)
+
+running 16 tests
+test adobe_japan1_named_cmaps_decode_collection_cids ... ok
+test adobe_cns1_named_cmaps_decode_collection_cids ... ok
+test adobe_gb1_named_cmaps_decode_collection_cids ... ok
+test cid_zero_fallback_preserves_following_text_and_explicit_unicode ... ok
+test adobe_korea1_named_cmaps_decode_collection_cids ... ok
+test cid_zero_only_does_not_fall_back_to_source_bytes ... ok
+test cjk_samples_have_pinned_identity_and_distinct_collections ... ok
+test adobe_kr_is_a_separate_collection ... ok
+test japan1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test cns1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test explicit_unicode_overrides_all_five_collection_fallbacks ... ok
+test korea1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity ... ok
+test kr_and_korea1_are_not_interchangeable_in_either_direction ... ok
+test resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences ... ok
+test kr_extended_official_maps_preserve_identity_and_unicode_authority ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.38s
+
+[1m[92m     Running[0m tests/text_cmap_boundary_contract_test.rs (target/debug/deps/text_cmap_boundary_contract_test-3e61ff68cb388721)
+
+running 14 tests
+test child_notdef_char_overrides_only_its_parent_fallback_code ... ok
+test cid_maximum_is_valid_but_five_byte_pdf_codes_are_rejected_by_renderer ... ok
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+test inherited_notdef_range_retains_parent_cid_and_width ... ok
+test codespace_length_uses_the_full_prefix_not_just_the_first_byte ... ok
+test large_cidrange_offsets_do_not_alias_the_first_cid ... ok
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... ok
+test notdef_range_selects_one_cid_without_incrementing ... ok
+test ordinary_child_mapping_wins_over_inherited_notdef ... ok
+test ordinary_parent_mapping_wins_over_child_notdef ... ok
+test later_mappings_override_earlier_entries_within_the_same_layer ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... ok
+test out_of_range_cids_never_wrap_into_valid_glyphs ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+[1m[92m     Running[0m tests/text_competing_cmap_contract_test.rs (target/debug/deps/text_competing_cmap_contract_test-7f607b7a4773d6f4)
+
+running 6 tests
+test fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority ... ok
+test bmp_wins_when_full_unicode_is_absent ... ok
+test competing_program_matches_independent_fonttools_tables_and_hash ... ok
+test generic_unicode_wins_when_windows_unicode_is_absent ... ok
+test selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables ... ok
+test full_unicode_wins_in_all_120_subtable_orders ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/text_composite_font_contract_test.rs (target/debug/deps/text_composite_font_contract_test-3458e9e7c8c21d12)
+
+running 7 tests
+test cff_fixtures_preserve_identity_cid_text_and_pdf_widths ... ok
+test cff_fixtures_preserve_remapped_cid_text_and_pdf_widths ... ok
+test full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct ... ok
+test cff_renderer_resolves_charset_cids_to_actual_glyph_indices ... ok
+test six_real_programs_and_fourteen_pdfs_match_their_frozen_hashes ... ok
+test full_and_subset_truetype_support_identity_cid_to_gid_map ... ok
+test full_and_subset_truetype_support_stream_cid_to_gid_map ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_differences_boundary_contract_test.rs (target/debug/deps/text_differences_boundary_contract_test-9e92e5a6f87da3c7)
+
+running 7 tests
+test fifteen_independently_verified_fixtures_match_frozen_hashes ... ok
+test invalid_counter_recovery_must_not_alias_valid_byte_mappings ... ok
+test integer_resets_do_not_remap_intermediate_base_encoding_codes ... ok
+test first_and_last_byte_codes_are_valid_differences_positions ... ok
+test later_difference_entry_overrides_earlier_entry_for_same_code ... ok
+test name_sequence_can_end_exactly_at_code_255 ... ok
+test tounicode_overrides_differences_without_multiplying_source_advances ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_document_string_contract_test.rs (target/debug/deps/text_document_string_contract_test-61e98ec29b124944)
+
+running 12 tests
+test actualtext_utf16be_bom_sequences_are_exact ... ok
+test bookmarks_and_form_values_preserve_utf16be_sequences ... ok
+test document_oracle_preserves_defined_and_undefined_positions ... ok
+test empty_bookmarks_and_form_values_remain_empty ... ok
+test empty_document_strings_remain_empty ... ok
+test malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail ... ok
+test metadata_matches_pdfdocencoding_normative_table ... ok
+test metadata_utf16be_bom_sequences_are_exact ... ok
+test actualtext_matches_pdfdocencoding_normative_table ... ok
+test undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes ... ok
+test bookmark_titles_match_pdfdocencoding_normative_table ... ok
+test stored_form_values_match_pdfdocencoding_normative_table ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+[1m[92m     Running[0m tests/text_embedded_font_contract_test.rs (target/debug/deps/text_embedded_font_contract_test-b7e98be541fbf23c)
+
+running 4 tests
+test embedded_cff_simple_font_decodes_without_tounicode ... ok
+test embedded_cff_advance_matches_declared_font_metrics ... ok
+test embedded_cff_tounicode_has_precedence ... ok
+test embedded_font_is_the_pinned_opentype_cff_program ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-f7d1d21b203677a4)
+
+running 24 tests
+test builtin_decoding_preserves_afm_widths_and_following_origins ... ok
+test builtin_font_selection_does_not_match_unrelated_names_or_type3 ... ok
+test builtin_symbol_subset_names_and_explicit_tounicode_are_distinct ... ok
+test builtin_symbol_and_zapf_keep_encoding_and_differences_precedence ... ok
+test custom_type3_names_preserve_unknown_markers_and_mapping_precedence ... ok
+test differences_restart_the_code_counter_and_preserve_unmodified_codes ... ok
+test differences_override_the_base_encoding ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test macroman_encoding_matches_independent_table ... ok
+test macroman_overrides_cover_undefined_and_currency_codes ... ok
+test macroman_undefined_codes_preserve_neighbors_with_replacement ... ok
+test all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding ... ok
+test standard_encoding_matches_independent_table ... ok
+test symbol_builtin_encoding_matches_independent_table ... ok
+test tounicode_overrides_builtin_symbol_and_dingbats ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test unknown_intrinsic_type1_names_preserve_markers_and_explicit_unicode ... ok
+test unresolved_differences_replace_instead_of_restoring_the_base_glyph ... ok
+test winansi_encoding_matches_independent_table ... ok
+test simple_encoding_undefined_codes_recover_without_losing_neighbors ... ok
+test zapf_differences_resolve_adobe_names_before_builtin_codes ... ok
+test zapfdingbats_builtin_encoding_matches_independent_table ... ok
+test latin_standard14_fonts_use_complete_explicit_pdf_encodings_in_both_modes ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s
+
+[1m[92m     Running[0m tests/text_expert_contract_test.rs (target/debug/deps/text_expert_contract_test-cf3cbba16c2211d0)
+
+running 5 tests
+test expert_program_and_independent_name_inventory_are_pinned ... ok
+test macexpert_unambiguous_glyph_names_decode_without_tounicode ... ok
+test tounicode_can_choose_non_pua_text_for_expert_glyphs ... ok
+test all_expert_codes_preserve_their_explicit_tounicode_values ... ok
+test all_macexpert_codes_follow_agl_or_explicit_undefined_recovery ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+[1m[92m     Running[0m tests/text_font_program_contract_test.rs (target/debug/deps/text_font_program_contract_test-0e4ca6506d4cd819)
+
+running 10 tests
+test bfrange_sequential_destination_increments_unicode ... ok
+test bfrange_array_preserves_sequences_and_surrogate_pairs ... ok
+test type3_charproc_names_supply_unicode_without_tounicode ... ok
+test type3_advance_uses_font_matrix_and_declared_width ... ok
+test resolved_type3_retains_full_matrix_but_reports_horizontal_advance ... ok
+test type3_nonuniform_font_matrix_combines_with_character_and_horizontal_scaling ... ok
+test type3_text_matrix_rotates_the_pen_even_when_font_matrix_does_not ... ok
+test type3_tounicode_overrides_charproc_names ... ok
+test type3_tj_adjustment_is_in_text_units_not_glyph_matrix_units ... ok
+test type3_non_scalar_matrices_preserve_horizontal_text_pen_contract ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_identity_contract_test.rs (target/debug/deps/text_identity_contract_test-4a59cb1d041ff71e)
+
+running 2 tests
+test identity_never_treats_cids_as_unicode_or_combines_surrogate_looking_codes ... ok
+test identity_empty_and_odd_tail_have_explicit_consumer_policies ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+[1m[92m     Running[0m tests/text_inline_image_boundary_contract_test.rs (target/debug/deps/text_inline_image_boundary_contract_test-2ae578cab93f82f7)
+
+running 6 tests
+test nul_separates_tokens_and_hex_digits_but_remains_literal_data ... ok
+test indexed_inline_palette_is_one_component_and_retains_its_binary_lookup ... ok
+test unfiltered_length_keeps_embedded_ei_inside_pixels_and_recovers_tight_end_marker ... ok
+test filters_unknown_color_spaces_and_overflow_do_not_guess_raw_length ... ok
+test unfiltered_length_uses_components_and_per_row_bit_padding ... ok
+test pdf_whitespace_delimits_inline_image_without_swallowing_following_text ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_metrics_boundary_contract_test.rs (target/debug/deps/text_metrics_boundary_contract_test-201cebd9a15d29ac)
+
+running 16 tests
+test cid_metrics_resolve_indirect_array_range_and_default_values ... ok
+test cid_width_array_may_end_at_maximum_cid ... ok
+test cid_missing_and_explicit_zero_defaults_remain_distinct ... ok
+test declared_missingwidth_applies_when_private_font_has_no_widths_array ... ok
+test implicit_standard14_metrics_reach_both_consumers ... ok
+test explicit_invalid_simple_font_bounds_do_not_wrap_or_default_to_zero ... ok
+test cid_invalid_widths_fail_strict_and_recover_finitely_without_losing_unicode ... ok
+test invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity ... ok
+test lastchar_limits_explicit_widths_and_retains_missingwidth ... ok
+test null_cid_metrics_and_gid_map_keep_the_absent_defaults ... ok
+test null_dictionary_metrics_are_absent_instead_of_invalid_values ... ok
+test null_missingwidth_and_program_entries_match_omission ... ok
+test simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth ... ok
+test simple_negative_widths_are_preserved ... ok
+test unspecified_private_metrics_use_documented_consumer_recovery ... ok
+test malformed_cid_width_tables_cannot_clamp_or_overflow_into_a_valid_cid ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+[1m[92m     Running[0m tests/text_output_api_contract_test.rs (target/debug/deps/text_output_api_contract_test-6fac15f4433f959c)
+
+running 12 tests
+test cid_type0_and_type2_program_variants_have_consistent_output_apis ... ok
+test document_api_resets_same_resource_name_between_pages ... ok
+test all_standard14_styles_have_consistent_output_apis ... ok
+test cid_cff_inheritance_outputs_preserve_child_and_parent_text ... ok
+test mixed_page_and_nested_cid_forms_preserve_semantic_text_in_all_apis ... ok
+test nonzero_metrics_keep_tj_word_spaces_in_all_output_apis ... ok
+test plain_outputs_propagate_unrepresentable_geometry_errors ... ok
+test plain_outputs_keep_certified_zero_width_tracking ... ok
+test tracking_layout_retains_outlier_spaces_and_transformed_run_extent ... ok
+test type3_output_preserves_multiscalar_mapping_and_real_charprocs ... ok
+test embedded_type1_and_cff_outputs_preserve_encoding_precedence ... ok
+test symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+[1m[92m     Running[0m tests/text_pdf20_string_contract_test.rs (target/debug/deps/text_pdf20_string_contract_test-dc86acc29b84840f)
+
+running 18 tests
+test indirect_catalog_version_is_resolved ... ok
+test catalog_version_upgrade_enables_utf8_and_downgrade_does_not_disable_it ... ok
+test malformed_catalog_version_names_do_not_enable_utf8 ... ok
+test inline_utf8_actualtext_overrides_structure_in_page_and_form ... ok
+test pdf17_does_not_silently_apply_pdf20_utf8_semantics ... ok
+test indirect_version_resolution_is_bounded_and_rejects_cycles ... ok
+test malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix ... ok
+test pdf20_outline_title_uses_effective_document_version ... ok
+test pdf20_actualtext_utf8_bom_decodes_exact_sequences ... ok
+test pdf20_utf8_without_bom_remains_pdfdocencoding ... ok
+test pdf20_metadata_utf8_bom_decodes_exact_sequences ... ok
+test signature_metadata_uses_pdf20_text_strings ... ok
+test stored_pdf20_form_value_can_be_decoded_with_effective_version ... ok
+test structure_actualtext_in_form_uses_its_own_parent_tree_key ... ok
+test structure_actualtext_on_page_uses_catalog_version ... ok
+test upgraded_catalog_and_named_actualtext_properties_share_version_context ... ok
+test utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding ... ok
+test utf8_named_field_remains_addressable_to_form_filler ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_qr_regression_contract_test.rs (target/debug/deps/text_qr_regression_contract_test-0f4dfaa9c4119635)
+
+running 15 tests
+test inherited_adobe_kr_dictionary ... ok
+test inherited_adobe_kr_operator ... ok
+test legacy_collection_matches_stay_exhaustive ... ok
+test resolved_encoding_parent ... ok
+test resolved_flat_control ... ok
+test resolved_intrinsic_cff ... ok
+test page_and_form_strict_cycles_error_while_lenient_keeps_child ... ok
+test resolved_intrinsic_type1 ... ok
+test resolved_named_parent ... ok
+test resolved_unicode_parent ... ok
+test resolved_vertical_advance ... ok
+test strict_public_extraction_rejects_cyclic_usecmap ... ok
+test resolved_intrinsic_differences_and_tounicode_precedence ... ok
+test type1_procedure_is_not_executed ... ok
+test indirect_cid_collection_matches_direct_extraction ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+[1m[92m     Running[0m tests/text_recovery_boundary_contract_test.rs (target/debug/deps/text_recovery_boundary_contract_test-f32b7f7504fd90ed)
+
+running 13 tests
+test complete_codes_and_empty_string_remain_valid ... ok
+test encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping ... ok
+test complete_unmapped_code_does_not_reinterpret_its_suffix ... ok
+test identity_collection_preserves_odd_tail_including_after_notdef ... ok
+test never_joins_partial_codes_across_tj_strings ... ok
+test simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace ... ok
+test tounicode_reference_chain_preserves_authoritative_mapping ... ok
+test invalid_tounicode_resource_cannot_silently_restore_base_unicode ... ok
+test tounicode_reference_depth_and_cycles_have_explicit_mode_policy ... ok
+test unavailable_font_program_does_not_discard_authoritative_text_metadata ... ok
+test unusable_tounicode_stream_keeps_encoding_cmap_source_boundaries ... ok
+test unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible ... ok
+test preserves_valid_text_and_marks_every_incomplete_tail_once ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+[1m[92m     Running[0m tests/text_script_contract_test.rs (target/debug/deps/text_script_contract_test-1e9492010a5c4145)
+
+running 8 tests
+test arabic_preserves_logical_sequence_marks_and_arabic_indic_digits ... ok
+test devanagari_and_thai_preserve_combining_sequences ... ok
+test canonically_equivalent_sequences_remain_distinct ... ok
+test greek_and_cyrillic_keep_accents_and_mixed_digits ... ok
+test hebrew_preserves_logical_sequence_marks_and_mixed_digits ... ok
+test extended_latin_preserves_polish_czech_turkish_and_vietnamese ... ok
+test western_latin_accents_currency_and_punctuation_are_exact ... ok
+test supplementary_variation_selectors_and_joiners_are_not_dropped ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+[1m[92m     Running[0m tests/text_spacing_contract_test.rs (target/debug/deps/text_spacing_contract_test-2b5187bf6b720009)
+
+running 25 tests
+test absent_widths_never_certify_tracking_for_standard_fonts ... ok
+test a_single_transition_does_not_certify_uniform_tracking ... ok
+test declared_positive_widths_keep_word_separators ... ok
+test declared_zero_widths_allow_uniform_advances ... ok
+test excess_advance_remains_a_word_separator ... ok
+test explicit_character_spacing_disables_tracking_inference ... ok
+test glyph_origins_follow_declared_widths_kerns_and_horizontal_scale ... ok
+test explicit_word_spacing_disables_tracking_inference ... ok
+test lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances ... ok
+test known_zero_width_single_word_needs_no_literal_space ... ok
+test leading_and_trailing_kerns_do_not_certify_tracking ... ok
+test literal_spaces_and_adjustments_have_distinct_evidence ... ok
+test minimum_support_and_strict_majority_are_both_required ... ok
+test one_source_glyph_is_not_the_same_as_one_unicode_scalar ... ok
+test ordinary_small_kerning_does_not_add_spaces ... ok
+test nonuniform_advances_without_a_majority_keep_ordinary_gaps ... ok
+test partial_em_adjustments_do_not_trigger_unknown_width_recovery ... ok
+test multiple_source_glyphs_disable_simple_font_tracking ... ok
+test resolved_cid_tracking_counts_source_glyphs_per_string ... ok
+test strict_mode_does_not_enable_unknown_width_recovery ... ok
+test tracking_outlier_compares_only_excess_against_strict_threshold ... ok
+test separator_evidence_follows_unicode_not_the_source_byte ... ok
+test unresolved_type0_without_space_reaches_and_rejects_the_fallback ... ok
+test ordinary_tj_gap_threshold_is_strict_for_both_signs ... ok
+test tracking_threshold_and_backward_kern_controls ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+[1m[92m     Running[0m tests/text_standard14_metrics_contract_test.rs (target/debug/deps/text_standard14_metrics_contract_test-247a15c0a9901567)
+
+running 8 tests
+test courier_styles_follow_adobe_monospaced_metrics ... ok
+test declared_widths_override_implicit_metrics_for_all_fourteen_fonts ... ok
+test helvetica_styles_follow_adobe_implicit_metrics ... ok
+test resolved_standard14_widths_match_frozen_afm_and_explicit_overrides ... ok
+test symbol_and_zapf_follow_adobe_metrics ... ok
+test times_styles_follow_adobe_implicit_metrics ... ok
+test frozen_afm_sources_license_and_pdfs_are_unchanged ... ok
+test every_font_pair_and_return_transition_selects_the_current_metrics ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+[1m[92m     Running[0m tests/text_state_contract_test.rs (target/debug/deps/text_state_contract_test-73f5efa1416b9cd4)
+
+running 17 tests
+test actualtext_accumulates_scaled_source_widths ... ok
+test changes_apply_only_to_subsequent_advances_and_can_return_to_defaults ... ok
+test bt_retains_spacing_and_scale_while_resetting_text_position ... ok
+test consecutive_tj_and_tj_arrays_keep_one_continuous_pen ... ok
+test default_spacing_and_scale_leave_declared_width_unchanged ... ok
+test character_spacing_applies_once_to_a_multiscalar_source_glyph ... ok
+test double_quote_sets_word_and_character_spacing_in_pdf_operand_order ... ok
+test mapped_unicode_space_does_not_receive_word_spacing ... ok
+test negative_spacing_is_in_text_units_and_scaled_once ... ok
+test q_restores_leading_without_rewinding_the_line_matrix ... ok
+test q_restores_text_parameters_but_not_the_text_object_pen ... ok
+test q_restores_word_spacing_before_the_next_source_space ... ok
+test nested_forms_restore_font_resources_and_text_parameters_at_each_return ... ok
+test tracking_inference_does_not_leak_between_consecutive_tj_arrays ... ok
+test word_spacing_changes_and_reset_affect_only_later_source_spaces ... ok
+test word_spacing_uses_source_byte32_even_when_tounicode_changes_it ... ok
+test zero_and_reflected_horizontal_scale_reach_fragment_extent ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_symbolic_truetype_contract_test.rs (target/debug/deps/text_symbolic_truetype_contract_test-d848f8c3bcd3b90d)
+
+running 12 tests
+test all_symbolic_programs_and_pdfs_match_frozen_hashes ... ok
+test arbitrary_symbolic_truetype_has_no_implicit_adobe_symbol_unicode ... ok
+test full_and_subset_preserve_selected_symbolic_contours ... ok
+test macintosh_byte_cmap_preserves_original_glyph_selection ... ok
+test explicit_symbolic_encodings_and_differences_remain_evidence ... ok
+test multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance ... ok
+test nonsymbolic_winansi_and_explicit_unicode_have_separate_contracts ... ok
+test windows_symbol_cmap_preserves_private_codes_and_gids ... ok
+test symbolic_tounicode_preserves_sequences_independently_of_glyph_names ... ok
+test windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font ... ok
+test windows_unicode_bmp_cmap_preserves_gids_and_metrics ... ok
+test arbitrary_symbolic_text_uses_replacement_without_losing_advance ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_tj_scale_contract_test.rs (target/debug/deps/text_tj_scale_contract_test-5c425182418b7214)
+
+running 5 tests
+test fixture_hashes_are_frozen ... ok
+test backward_tj_adjustment_scales_with_tz ... ok
+test forward_tj_adjustment_scales_with_tz ... ok
+test zero_tj_control_scales_only_source_width ... ok
+test numeric_only_and_split_tj_adjustments_preserve_the_pen ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_tracking_recovery_contract_test.rs (target/debug/deps/text_tracking_recovery_contract_test-880290513218c498)
+
+running 9 tests
+test a_space_inside_a_unicode_sequence_is_not_a_space_glyph ... ok
+test larger_outlier_remains_a_word_gap_during_recovery ... ok
+test multiple_source_glyphs_cannot_certify_per_glyph_tracking ... ok
+test resolved_descendant_without_widths_does_not_enable_recovery ... ok
+test damaged_type0_recovery_covers_full_em_tolerance_and_mode ... ok
+test damaged_type0_rejects_non_em_baselines_and_explicit_spacing ... ok
+test resolved_unusable_descendant_never_enables_missing_descendant_recovery ... ok
+test truncated_identity_codes_cannot_certify_tracking ... ok
+test vertical_encoding_does_not_enable_horizontal_recovery ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/text_transform_contract_test.rs (target/debug/deps/text_transform_contract_test-2227c8d690b93ea7)
+
+running 15 tests
+test bt_resets_text_matrix_and_retains_text_state ... ok
+test ctm_nonuniform_scale_and_translation_apply_to_text_origins ... ok
+test ctm_scale_composes_with_rotated_tm_in_pdf_order ... ok
+test ctm_shear_and_translation_apply_to_text_origins ... ok
+test composed_overflow_and_integer_overflow_do_not_return_success ... ok
+test font_switch_changes_advance_without_resetting_text_matrix ... ok
+test large_representable_transform_does_not_overflow_norm_calculation ... ok
+test integer_syntax_outside_i32_keeps_real_valued_transform_operands ... ok
+test nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state ... ok
+test paragraph_extent_overflow_returns_an_error ... ok
+test q_and_q_restore_ctm_before_the_next_text_object ... ok
+test tm_rotation_rotates_glyph_advance ... ok
+test tm_shear_preserves_both_advance_components ... ok
+test nonrepresentable_text_geometry_returns_an_error ... ok
+test degenerate_reflected_and_rotated_transforms_preserve_text_for_simple_and_cid_fonts ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_truetype_contract_test.rs (target/debug/deps/text_truetype_contract_test-953b83ac29962239)
+
+running 5 tests
+test full_and_subset_tounicode_override_font_encoding ... ok
+test full_truetype_decodes_composite_glyph_without_tounicode ... ok
+test full_and_subset_preserve_advance_and_explicit_space ... ok
+test subset_truetype_decodes_composite_glyph_without_tounicode ... ok
+test full_and_subset_are_pinned_distinct_truetype_programs ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+[1m[92m     Running[0m tests/text_type1_intrinsic_contract_test.rs (target/debug/deps/text_type1_intrinsic_contract_test-b901f8c24c15c074)
+
+running 10 tests
+test all_program_and_pdf_bytes_match_the_independent_provenance ... ok
+test differences_glyph_width_advances_the_text_pen ... ok
+test differences_without_base_inherits_unmodified_codes_from_the_program ... ok
+test explicit_encoding_glyph_width_advances_the_text_pen ... ok
+test explicit_pdf_encoding_overrides_the_embedded_encoding ... ok
+test pfb_records_are_removed_from_pdf_fontfile_payloads ... ok
+test absent_pdf_encoding_uses_the_embedded_program_encoding ... ok
+test intrinsic_glyph_width_advances_the_text_pen ... ok
+test tounicode_does_not_change_glyph_advances ... ok
+test tounicode_overrides_pdf_differences_and_intrinsic_encoding ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+[1m[92m     Running[0m tests/text_type3_program_boundary_contract_test.rs (target/debug/deps/text_type3_program_boundary_contract_test-f1ff79da82a8deb4)
+
+running 14 tests
+test finite_pdf_decimals_cannot_overflow_type3_metrics ... ok
+test consistent_d0_and_d1_preserve_metrics_and_program_operations ... ok
+test inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance ... ok
+test indirect_encoding_components_match_direct_values ... ok
+test malformed_declared_widths_are_rejected_by_program_consumer ... ok
+test malformed_charprocs_fail_with_context_in_both_parser_modes ... ok
+test missing_charproc_preserves_metadata_and_does_not_hide_invalid_widths ... ok
+test type3_differences_accepts_byte_255_and_explicit_counter_resets ... ok
+test type3_differences_counter_cannot_wrap_after_byte_255 ... ok
+test type3_operation_and_token_budgets_accept_the_limit_and_reject_the_next_item ... ok
+test valid_text_metadata_survives_unrenderable_charproc ... ok
+test zero_negative_and_fractional_declared_widths_are_not_replaced_by_defaults ... ok
+test aggregate_charproc_expansion_is_bounded_for_aliases_and_distinct_streams ... ok
+test type3_decoded_byte_budget_counts_repeated_streams ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+[1m[92m     Running[0m tests/text_unicode_policy_contract_test.rs (target/debug/deps/text_unicode_policy_contract_test-5f1f24af30542fb5)
+
+running 7 tests
+test incomplete_tounicode_does_not_invent_a_base_mapping ... ok
+test agl_components_suffixes_and_scalar_boundaries_follow_independent_examples ... ok
+test differences_sequences_reach_both_consumers_without_multiplying_advances ... ok
+test malformed_tounicode_destinations_never_become_utf8_or_base_text ... ok
+test zapf_components_use_font_specific_names_in_both_consumers ... ok
+test valid_utf16_sequences_preserve_precedence_and_scalar_content ... ok
+test unknown_difference_replaces_base_in_all_simple_subtypes ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+[1m[92m     Running[0m tests/text_usecmap_contract_test.rs (target/debug/deps/text_usecmap_contract_test-fef2d090bfe2a965)
+
+running 10 tests
+test child_cid_mapping_overrides_parent_width_selection ... ok
+test both_maps_follow_two_parent_levels ... ok
+test child_unicode_overrides_one_code_and_inherits_the_other ... ok
+test encoding_inherits_parent_codespace_and_cids ... ok
+test fixture_bytes_match_frozen_provenance ... ok
+test flat_maps_are_the_control ... ok
+test explicit_cid_mapping_precedes_notdef_range ... ok
+test identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths ... ok
+test identity_parent_operator_preserves_two_byte_codes_and_cid_widths ... ok
+test tounicode_inherits_parent_mapping ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m     Running[0m tests/text_vertical_contract_test.rs (target/debug/deps/text_vertical_contract_test-84d02fff547ca867)
+
+running 15 tests
+test character_spacing_applies_on_the_vertical_axis ... ok
+test dw2_overrides_default_vertical_advance ... ok
+test embedded_wmode_one_selects_vertical_advance ... ok
+test font_size_changes_apply_to_subsequent_vertical_advances ... ok
+test identity_v_uses_default_vertical_advance ... ok
+test horizontal_scale_does_not_scale_vertical_pen_advance ... ok
+test missing_w2_entry_falls_back_to_dw2 ... ok
+test vertical_pen_follows_rotated_ctm ... ok
+test vertical_tj_adjustment_changes_y_with_the_pdf_sign ... ok
+test vertical_multiscalar_unicode_advances_once_per_source_code ... ok
+test w2_array_overrides_dw2_for_the_selected_cid ... ok
+test w2_array_uses_selected_cid_at_each_position ... ok
+test w2_range_overrides_dw2_for_the_selected_cid ... ok
+test vertical_tj_ignores_horizontal_scale_for_both_signs ... ok
+test word_spacing_does_not_apply_to_two_byte_source_codes ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

@@ -2,27 +2,29 @@
 
 Issue: #666 — test(text): build normative encoding and glyph-spacing contract batteries — https://github.com/bzsanti/oxidizePdf/issues/666
 
-Responsable: Codex / mantenimiento. Prioridad P1. Estado: implementación inicial
-de baterías; no completado. Autorización del usuario: 2026-10-01. Base de
+Responsable: Codex / mantenimiento. Prioridad P1. Estado: implementación, QR y CI
+completados; integración pendiente en PR #681. Autorización del usuario: 2026-10-01. Base de
 caracterización: develop `48d8b8f8bbf08b2976fd739e6c2462c9552a3cc6`.
 PR #664: `70f28714e2ef7115c0f0898d47a3af6cae3de953`;
 PR #665: `c7031f7645d947de03264485c8e38c4452feebe3`.
 
 ## Estado vigente — 2026-10-05
 
-Las46/46 filas de fuentes, codificaciones, CMaps, repertorios, cadenas y
-espaciado/salidas están validadas localmente, en secuencia y con QR resuelto.
-S09 cierra la matriz con7427 PASS/0 FAIL/3 ignoradas en59 targets; corpus y
-sus tres gates reales pasan. Evidencia final y hashes en
-`../reports/2026-10-05-s09-review.md` y su directorio de evidencia.
+Las 46/46 filas de fuentes, codificaciones, CMaps, repertorios, cadenas y
+espaciado/salidas están validadas, en secuencia y con QR resuelto. T4 y T5
+completadas; no quedan fases de implementación ni hallazgos pendientes.
 
-#666 sigue abierta. T4 cerrada localmente:7.453 tests pasan, ocho hallazgos
-corregidos, mutaciones discriminantes y corpus1.802 PDFs (informe T4).
-Siguiente: T5, configuraciones, MSRV,
-plataformas, CI y revisión de integración. CI diferida hasta completar la
-implementación, sin merge/release autorizados. TASKS.md es el estado diario.
-Las entradas de relevo e incrementos inferiores son históricas; la instrucción
-vigente del usuario permite corregir regresiones sobre la marcha bajo #666.
+Código validado: `a2562e2aea63417276c68897c949f7b4f1a4b3a1`. CI: 29 checks
+aprobados y dos jobs programados omitidos en PR; matriz nativa 12/12 aprobada
+(Linux/Windows/macOS, default/minimal/SPI, MSRV 1.88). Suite local completa:
+10.367 PASS/0 FAIL/71 ignorados preexistentes; contratos rápidos sin ignorados.
+Corpus manual 37382367497 aprobado, incluido el job nocturno T2/T3 y contenido.
+Evidencia y aceptación: `../reports/2026-10-05-t5-review.md` y su directorio.
+
+#666 sigue abierta para integración del [PR #681](https://github.com/bzsanti/oxidizePdf/pull/681).
+Merge y release están excluidos de esta tarea. TASKS.md es el seguimiento diario.
+Las entradas inferiores son históricas; no sustituyen este estado final.
+La instrucción vigente permite corregir regresiones sobre la marcha bajo #666.
 
 ## Base vigente al cierre — 2026-10-01
 

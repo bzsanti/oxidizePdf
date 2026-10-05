@@ -1,0 +1,7 @@
+{
+  "common_identical_input_pages": 6892,
+  "changed": [],
+  "only_local": 45,
+  "only_remote": 42,
+  "note": "Only compare identical PDF SHA256 and page identity; excluded/changed files are not improvements or regressions."
+}

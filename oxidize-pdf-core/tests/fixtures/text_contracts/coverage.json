@@ -3,7 +3,7 @@
   "issue": 666,
   "plan": "docs/plans/2026-10-01-issue-666-text-contracts-tdd.md",
   "base": "48d8b8f8bbf08b2976fd739e6c2462c9552a3cc6",
-  "scope_note": "Status is battery readiness, not product support or integration. PDF simple-encoding tables now cover all assigned and undefined positions; other families retain their explicit partial scope.",
+  "scope_note": "All 46 agreed battery rows validated; this is bounded contract evidence, not universal PDF conformance or an integration claim. Dated increments below preserve historical results. Final cross-platform acceptance is recorded in final_validation.",
   "standard14": [
     "Helvetica",
     "Helvetica-Bold",
@@ -37,7 +37,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Standard14 sin incrustar; métricas implícitas y explícitas; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
@@ -77,7 +77,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Igual; anchuras proporcionales y cambios de estilo; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
@@ -117,7 +117,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Igual; monoespaciado; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
@@ -157,7 +157,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Codificación incorporada, símbolos y griego; sin asumir Latin-1; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
@@ -197,7 +197,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Codificación incorporada y nombres aNNN; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
@@ -239,7 +239,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_embedded_font_contract_test, text_expert_contract_test, text_type1_intrinsic_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Completa/subconjunto; codificación propia; nombres reasignados; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
@@ -287,7 +287,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_truetype_contract_test. No product table generates expected values. Eight original full/subset programs and twelve checked PDFs in symbolic/.",
       "closure_criterion": "Cover every declared variant of: Completa/subconjunto; simbólica/no simbólica; cmap de fuente; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. User sequencing clarification: local block closure precedes global CI, which is deferred until all #666 implementation is complete; this does not claim CI or integration passed.",
-      "remaining": "No local implementation/review tasks. CI deferred by explicit user instruction until #666 implementation is complete; integration remains global.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-04",
         "suite_results": {
@@ -327,7 +327,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_font_program_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: CharProcs reales, FontMatrix no trivial y Widths controladas; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. User sequencing clarification: local block closure precedes global CI, which is deferred until all #666 implementation is complete; this does not claim CI or integration passed.",
-      "remaining": "No local implementation/review tasks. CI deferred by explicit user instruction until #666 implementation is complete; integration remains global.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-04",
         "suite_results": {
@@ -373,7 +373,7 @@
       ],
       "fixture_strategy": "32 original PDFs and eight CFF fonts, frozen hashes in cff_selection/manifest.json. Independent literal Rust expectations, FontTools outlines, MuPDF selection/geometry/raster and qpdf structure; three discriminating mutations.",
       "closure_criterion": "Cover every declared variant of: CFF CID, colecciones y escritura H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local completion includes contracts, external controls, mutations and QR; CI/integration are deferred globally by explicit user instruction.",
-      "remaining": "No local F09 work remains. CI and integration deferred globally until all #666 implementation is complete, per user instruction.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-04",
         "suite_results": {
@@ -422,7 +422,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cid_contract_test, text_vertical_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: CIDToGIDMap identidad/stream, completa/subconjunto, H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local contracts, discriminating controls and QR complete; CI/integration deferred globally by explicit user instruction.",
-      "remaining": "No local F10 work remains. CI/integration deferred globally by explicit user instruction until all #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "suite_results": {
@@ -465,7 +465,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: 256 posiciones; asignadas/no definidas; Annex D; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -493,7 +493,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: 256 posiciones; bullet en huecos, NBSP y soft hyphen; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -521,7 +521,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: 256 posiciones; currency 0xDB; separar Mac OS Roman; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -549,7 +549,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_expert_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: 256 posiciones; nombres expert y política Unicode/PUA; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -577,7 +577,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: 256 posiciones; nombres y Unicode de símbolos; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -605,7 +605,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: 256 posiciones; tabla Adobe de nombres aNNN; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -634,7 +634,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_type1_intrinsic_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Casos legalmente válidos por subtipo; programa incrustado; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
@@ -682,7 +682,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test, text_type1_intrinsic_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Contadores/reasignaciones, nombres compuestos, límites y precedencia; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local contracts/QR complete; CI/integration explicitly deferred globally.",
-      "remaining": "No local work remains. CI/integration deferred globally by user instruction until #666 implementation complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "suite_results": {
@@ -724,7 +724,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test, text_font_program_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: bfchar/bfrange, destinos múltiples, UTF-16BE/surrogates, parcial y precedencia; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local contracts/QR complete; CI/integration explicitly deferred globally.",
-      "remaining": "No local work remains. CI/integration deferred globally by user instruction until #666 implementation complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "suite_results": {
@@ -769,7 +769,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cid_contract_test, text_vertical_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Identity-H, Identity-V; CIDs no Unicode; con/sin ToUnicode; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local C01 work remains. CI/integration deferred globally until #666 implementation complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "40/40 in five targets; QR complete, no new findings; docs/reports/2026-10-05-c01-review.md",
@@ -801,7 +801,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: GB-EUC-H/V, GBK-EUC-H/V, GBKp-EUC-H, UniGB-UCS2-H/V, UniGB-UTF16-H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local C02 work remains. General embedded/private CMap ROS policy remains explicitly owned by C08. CI/integration deferred globally.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "QR complete; two reproduced findings fixed. Single7260/0/3 in42 targets including corpus. docs/reports/2026-10-05-c02-review.md",
@@ -836,7 +836,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: B5pc-H/V, ETen-B5-H/V, UniCNS-UCS2-H/V, UniCNS-UTF16-H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "suite_results": {
@@ -866,7 +866,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: 90ms-RKSJ-H/V, 90pv-RKSJ-H/V, UniJIS-UCS2-H/V, UniJIS-UTF16-H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "suite_results": {
@@ -896,7 +896,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: KSC-EUC-H/V, KSCms-UHC-H/V, UniKS-UCS2-H/V, UniKS-UTF16-H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "suite_results": {
@@ -927,7 +927,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Colección distinta; resolver CMaps de una revisión oficial fijada; no alias Korea1; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local work remains for this row. CI/integration deferred globally until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "suite_results": {
@@ -963,7 +963,7 @@
       ],
       "fixture_strategy": "Frozen original CFF and original eleven UseCMap PDFs; new in-memory public-API PDFs for notdef precedence and mixed code widths. CID0 ToUnicode extraction is an explicit product contract. Paired external controls replace only notdef by a direct CID mapping; no original fixture bytes or reader expectations are changed.",
       "closure_criterion": "Cover every declared variant of: 1–4 bytes, codespacerange, cidchar/cidrange, usecmap, WMode, notdef; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local work remains for this row. Recorded external-reader discrepancies remain explicit; CI/integration deferred globally until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "suite_results": {
@@ -1002,7 +1002,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cid_cff_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Registry/Ordering/Supplement, con/sin ToUnicode y sin Unicode recuperable; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local work remains for this row. Static CMap metadata forms validated; computed PostScript is never executed and cannot certify collection Unicode. CI/integration globally deferred until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "suite_results": {
@@ -1030,7 +1030,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Español, portugués, francés, alemán; ordinales, monedas y puntuación; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -1058,7 +1058,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Polaco, checo, turco, vietnamita; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -1086,7 +1086,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Acentos y mezcla de scripts y números; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -1114,7 +1114,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Marcas y cifras mixtas; decodificación separada de bidi/orden; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -1142,7 +1142,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Secuencias de marcas; sin atribuir shaping a la decodificación; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -1171,7 +1171,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Las cuatro familias; horizontal y vertical; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local work remains for this row. No shaping/typography claim; CI/integration deferred globally until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "U06 inventory/QR reconciled with C02–C08;38/38 across CJK, collection policy and vertical targets. docs/reports/2026-10-05-u06-review.md.",
@@ -1202,7 +1202,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test, text_script_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: No-BMP, combinantes, ligaduras multicaracter; sin normalizar implícitamente; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "No local work remains for this row. No shaping/bidi claim; CI/integration globally deferred until #666 implementation is complete.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-05",
         "scope": "62/62 across scripts, Unicode policy, encoding, recovery and vertical targets; QR complete. docs/reports/2026-10-05-u07-review.md.",
@@ -1232,7 +1232,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_document_string_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: 256 posiciones con tabla D.2; metadatos, marcadores, formularios; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -1261,7 +1261,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_document_string_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: Vacío, no-BMP, truncado y secuencias inválidas según contrato; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -1290,7 +1290,7 @@
       ],
       "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_pdf20_string_contract_test. No product table generates expected values.",
       "closure_criterion": "Cover every declared variant of: BOM/versión y tipos de cadena aplicables; no aplicar a Tj/TJ por defecto; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
-      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery.",
       "last_execution": {
         "date": "2026-10-03",
         "suite_results": {
@@ -1340,7 +1340,8 @@
       },
       "implemented_slice": "Simple/CID/Standard14/Type3 metrics, explicit zero/nonzero/negative/absent/invalid values; indirect values and byte/CID bounds; strict errors and bounded lenient recovery preserving Unicode. Unknown private font layout estimation documented separately from declared metrics.",
       "review": "docs/reports/2026-10-05-s01-review.md",
-      "subsequent_correction": "S08 corrects dictionary-null classification under ISO32000-1 §7.3.9; arrays retain invalid-null checks. See docs/reports/2026-10-05-s08-review.md."
+      "subsequent_correction": "S08 corrects dictionary-null classification under ISO32000-1 §7.3.9; arrays retain invalid-null checks. See docs/reports/2026-10-05-s08-review.md.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery."
     },
     {
       "id": "S02",
@@ -1385,7 +1386,8 @@
         }
       },
       "review": "docs/reports/2026-10-05-s02-review.md",
-      "implemented_slice": "Both signs, zero, strict gap threshold below/equal/above, uniform baseline/excess outlier and no majority; independent frozen geometry plus split/numeric-only TJ and zero/negative Tz. Both modes and vertical controls; finite geometry assertions."
+      "implemented_slice": "Both signs, zero, strict gap threshold below/equal/above, uniform baseline/excess outlier and no majority; independent frozen geometry plus split/numeric-only TJ and zero/negative Tz. Both modes and vertical controls; finite geometry assertions.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery."
     },
     {
       "id": "S03",
@@ -1424,7 +1426,8 @@
         }
       },
       "review": "docs/reports/2026-10-05-s03-review.md",
-      "implemented_slice": "Literal/mapped spaces and source32 remapped to a letter; Type1/TrueType/CIDFontType0/2, explicit0/500, both modes and both Unicode consumers. Adjustment-only versus uniform tracking and words without spaces;160 additional configurations with exact text."
+      "implemented_slice": "Literal/mapped spaces and source32 remapped to a letter; Type1/TrueType/CIDFontType0/2, explicit0/500, both modes and both Unicode consumers. Adjustment-only versus uniform tracking and words without spaces;160 additional configurations with exact text.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery."
     },
     {
       "id": "S04",
@@ -1463,7 +1466,8 @@
         }
       },
       "review": "docs/reports/2026-10-05-s04-review.md",
-      "implemented_slice": "Minimum two adjustments and strict majority; leading/trailing/both kerns; multiple source glyphs at each string position; one glyph with multiscalar Unicode; resolved simple/CID and damaged recovery controls."
+      "implemented_slice": "Minimum two adjustments and strict majority; leading/trailing/both kerns; multiple source glyphs at each string position; one glyph with multiscalar Unicode; resolved simple/CID and damaged recovery controls.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery."
     },
     {
       "id": "S05",
@@ -1493,7 +1497,8 @@
         }
       },
       "review": "docs/reports/2026-10-05-s05-review.md",
-      "implemented_slice": "Tf/Tz/Tc/Tw defaults, chained changes/reset, BT persistence and double-quote operand order; Tw by single-byte source32 rather than mapped Unicode, Tc per source glyph, negative spacing and zero/reflected scaling, ActualText accumulation. Tz omission in published fragment width corrected."
+      "implemented_slice": "Tf/Tz/Tc/Tw defaults, chained changes/reset, BT persistence and double-quote operand order; Tw by single-byte source32 rather than mapped Unicode, Tc per source glyph, negative spacing and zero/reflected scaling, ActualText accumulation. Tz omission in published fragment width corrected.",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery."
     },
     {
       "id": "S06",
@@ -1520,7 +1525,8 @@
           }
         }
       },
-      "review": "docs/reports/2026-10-05-s06-review.md"
+      "review": "docs/reports/2026-10-05-s06-review.md",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery."
     },
     {
       "id": "S07",
@@ -1560,7 +1566,8 @@
           }
         }
       },
-      "review": "docs/reports/2026-10-05-s07-review.md"
+      "review": "docs/reports/2026-10-05-s07-review.md",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery."
     },
     {
       "id": "S08",
@@ -1602,7 +1609,8 @@
         }
       },
       "review": "docs/reports/2026-10-05-s08-review.md",
-      "policy": "docs/text-recovery-policy.md"
+      "policy": "docs/text-recovery-policy.md",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery."
     },
     {
       "id": "S09",
@@ -1649,7 +1657,8 @@
         }
       },
       "implemented_slice": "Page/document/TextExtractor/PlainTextExtractor APIs in strict/lenient and both layout modes; mixed nested CID Forms, resource resets, all font families. Shared engine preserves facade newline/XY-cut policy; certified tracking survives fragment layout with real geometric extent and outlier spaces. Nonfinite geometry errors propagate.",
-      "review": "docs/reports/2026-10-05-s09-review.md"
+      "review": "docs/reports/2026-10-05-s09-review.md",
+      "remaining": "No implementation or required validation remains for this row. Final cross-platform/CI evidence: final_validation. PR integration and release are outside this delivery."
     }
   ],
   "first_increment": {
@@ -1998,5 +2007,19 @@
     "targets": 4,
     "evidence": "docs/reports/2026-10-04-issue-666-continuation-evidence",
     "scope": "6 new generic-selector contracts; product and frozen prior fixtures unchanged."
+  },
+  "final_validation": {
+    "date": "2026-10-05",
+    "code_head": "a2562e2aea63417276c68897c949f7b4f1a4b3a1",
+    "pr": "https://github.com/bzsanti/oxidizePdf/pull/681",
+    "review": "docs/reports/2026-10-05-t5-review.md",
+    "native_matrix": "docs/reports/2026-10-05-t5-evidence/native-matrix-summary.json",
+    "ci": "docs/reports/2026-10-05-t5-evidence/ci-final-status.json",
+    "full_suite": "docs/reports/2026-10-05-t5-evidence/integration-all-summary.json",
+    "corpus": "docs/reports/2026-10-05-t5-evidence/manual-corpus-status.json",
+    "implementation_complete": true,
+    "quality_review_findings_remaining": 0,
+    "merged": false,
+    "release_in_scope": false
   }
 }

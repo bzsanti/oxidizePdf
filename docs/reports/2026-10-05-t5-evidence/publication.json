@@ -2,10 +2,25 @@
   "pr": 681,
   "url": "https://github.com/bzsanti/oxidizePdf/pull/681",
   "draft": true,
-  "head": "f1b9b25397feaf16bda0e6a734e2e18e14e5a3ec",
+  "head": "a2562e2aea63417276c68897c949f7b4f1a4b3a1",
   "branch": "test/issue-666-text-contracts",
   "base": "develop",
   "local_matrix": "local-matrix-final.json",
-  "remote_ci": "pending",
-  "merge_or_release": false
+  "remote_ci": {
+    "status": "SUCCESS",
+    "success": 29,
+    "scheduled_skips": 2,
+    "evidence": "ci-final-status.json"
+  },
+  "merge_or_release": false,
+  "manual_corpus": {
+    "run": 37382367497,
+    "head": "a2562e2aea63417276c68897c949f7b4f1a4b3a1",
+    "url": "https://github.com/bzsanti/oxidizePdf/actions/runs/37382367497",
+    "status": "SUCCESS"
+  },
+  "native_matrix": "native-matrix-summary.json",
+  "full_suite": "integration-all-summary.json",
+  "implementation_complete": true,
+  "qr_findings_remaining": 0
 }
