@@ -1,0 +1,51 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_expert_contract_test.rs               5     98
+
+--- Worst Offenders ---
+  all_expert_codes_preserve_their_explicit_tounicode_values (oxidize-pdf-core/tests/text_expert_contract_test.rs:73) - Score: 90
+    - Test 'all_expert_codes_preserve_their_explicit_tounicode_values' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'all_expert_codes_preserve_their_explicit_tounicode_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_expert_codes_preserve_their_explicit_tounicode_values' has multiple assertions without diagnostic messages
+    i Test 'all_expert_codes_preserve_their_explicit_tounicode_values' uses .unwrap() which silently discards error information
+  expert_program_and_independent_name_inventory_are_pinned (oxidize-pdf-core/tests/text_expert_contract_test.rs:34) - Score: 100
+    i Test 'expert_program_and_independent_name_inventory_are_pinned' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'expert_program_and_independent_name_inventory_are_pinned' uses .unwrap() which silently discards error information
+  macexpert_unambiguous_glyph_names_decode_without_tounicode (oxidize-pdf-core/tests/text_expert_contract_test.rs:50) - Score: 100
+    i Test 'macexpert_unambiguous_glyph_names_decode_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  tounicode_can_choose_non_pua_text_for_expert_glyphs (oxidize-pdf-core/tests/text_expert_contract_test.rs:61) - Score: 100
+    i Test 'tounicode_can_choose_non_pua_text_for_expert_glyphs' asserts against a hardcoded constant instead of a computed expected value
+  all_macexpert_codes_follow_agl_or_explicit_undefined_recovery (oxidize-pdf-core/tests/text_expert_contract_test.rs:110) - Score: 100
+    i Test 'all_macexpert_codes_follow_agl_or_explicit_undefined_recovery' has multiple assertions without diagnostic messages
+    i Test 'all_macexpert_codes_follow_agl_or_explicit_undefined_recovery' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_expert_contract_test.rs:
+  expert_program_and_independent_name_inventory_are_pinned (line 34) - Score: 100
+    i Test 'expert_program_and_independent_name_inventory_are_pinned' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'expert_program_and_independent_name_inventory_are_pinned' uses .unwrap() which silently discards error information
+  macexpert_unambiguous_glyph_names_decode_without_tounicode (line 50) - Score: 100
+    i Test 'macexpert_unambiguous_glyph_names_decode_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  tounicode_can_choose_non_pua_text_for_expert_glyphs (line 61) - Score: 100
+    i Test 'tounicode_can_choose_non_pua_text_for_expert_glyphs' asserts against a hardcoded constant instead of a computed expected value
+  all_expert_codes_preserve_their_explicit_tounicode_values (line 73) - Score: 90
+    - Test 'all_expert_codes_preserve_their_explicit_tounicode_values' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'all_expert_codes_preserve_their_explicit_tounicode_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_expert_codes_preserve_their_explicit_tounicode_values' has multiple assertions without diagnostic messages
+    i Test 'all_expert_codes_preserve_their_explicit_tounicode_values' uses .unwrap() which silently discards error information
+  all_macexpert_codes_follow_agl_or_explicit_undefined_recovery (line 110) - Score: 100
+    i Test 'all_macexpert_codes_follow_agl_or_explicit_undefined_recovery' has multiple assertions without diagnostic messages
+    i Test 'all_macexpert_codes_follow_agl_or_explicit_undefined_recovery' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

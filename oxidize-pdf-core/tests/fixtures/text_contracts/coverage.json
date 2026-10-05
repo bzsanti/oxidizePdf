@@ -1,0 +1,2001 @@
+{
+  "schema_version": 1,
+  "issue": 666,
+  "plan": "docs/plans/2026-10-01-issue-666-text-contracts-tdd.md",
+  "base": "48d8b8f8bbf08b2976fd739e6c2462c9552a3cc6",
+  "scope_note": "Status is battery readiness, not product support or integration. PDF simple-encoding tables now cover all assigned and undefined positions; other families retain their explicit partial scope.",
+  "standard14": [
+    "Helvetica",
+    "Helvetica-Bold",
+    "Helvetica-Oblique",
+    "Helvetica-BoldOblique",
+    "Times-Roman",
+    "Times-Bold",
+    "Times-Italic",
+    "Times-BoldItalic",
+    "Courier",
+    "Courier-Bold",
+    "Courier-Oblique",
+    "Courier-BoldOblique",
+    "Symbol",
+    "ZapfDingbats"
+  ],
+  "rows": [
+    {
+      "id": "F01",
+      "scope": "Helvetica, Helvetica-Bold, Helvetica-Oblique, Helvetica-BoldOblique",
+      "contract": "Standard14 sin incrustar; métricas implícitas y explícitas",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_standard14_metrics_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "standard14/provenance.json: unchanged Adobe AFM sources pinned to mirror 0675784d24b28a55c607cad6b74596ce19ce333c;224 PDFs,448 text matches and224 MuPDF origin matches,224 qpdf checks. Zapf geometry fixtures have explicit ToUnicode.",
+        "docs/reports/2026-10-05-666-reconciliation.md; existing frozen oracles unchanged, historical RED states superseded by current GREEN and corrected QR."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Standard14 sin incrustar; métricas implícitas y explícitas; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
+        "suite_results": {
+          "text_standard14_metrics_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_spacing_contract_test": {
+            "passed": 14,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "implemented_slice": "Standard14 implicit/explicit metrics and all196 font-pair return transitions; built-in Symbol/Zapf mapping covered by exhaustive encoding contracts.224 original geometry fixtures, finite coordinates asserted."
+    },
+    {
+      "id": "F02",
+      "scope": "Times-Roman, Times-Bold, Times-Italic, Times-BoldItalic",
+      "contract": "Igual; anchuras proporcionales y cambios de estilo",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_standard14_metrics_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "standard14/provenance.json: unchanged Adobe AFM sources pinned to mirror 0675784d24b28a55c607cad6b74596ce19ce333c;224 PDFs,448 text matches and224 MuPDF origin matches,224 qpdf checks. Zapf geometry fixtures have explicit ToUnicode.",
+        "docs/reports/2026-10-05-666-reconciliation.md; existing frozen oracles unchanged, historical RED states superseded by current GREEN and corrected QR."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Igual; anchuras proporcionales y cambios de estilo; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
+        "suite_results": {
+          "text_standard14_metrics_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_spacing_contract_test": {
+            "passed": 14,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "implemented_slice": "Standard14 implicit/explicit metrics and all196 font-pair return transitions; built-in Symbol/Zapf mapping covered by exhaustive encoding contracts.224 original geometry fixtures, finite coordinates asserted."
+    },
+    {
+      "id": "F03",
+      "scope": "Courier, Courier-Bold, Courier-Oblique, Courier-BoldOblique",
+      "contract": "Igual; monoespaciado",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_standard14_metrics_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "standard14/provenance.json: unchanged Adobe AFM sources pinned to mirror 0675784d24b28a55c607cad6b74596ce19ce333c;224 PDFs,448 text matches and224 MuPDF origin matches,224 qpdf checks. Zapf geometry fixtures have explicit ToUnicode.",
+        "docs/reports/2026-10-05-666-reconciliation.md; existing frozen oracles unchanged, historical RED states superseded by current GREEN and corrected QR."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Igual; monoespaciado; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
+        "suite_results": {
+          "text_standard14_metrics_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_spacing_contract_test": {
+            "passed": 14,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "implemented_slice": "Standard14 implicit/explicit metrics and all196 font-pair return transitions; built-in Symbol/Zapf mapping covered by exhaustive encoding contracts.224 original geometry fixtures, finite coordinates asserted."
+    },
+    {
+      "id": "F04",
+      "scope": "Symbol",
+      "contract": "Codificación incorporada, símbolos y griego; sin asumir Latin-1",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test",
+        "text_standard14_metrics_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "standard14/provenance.json: unchanged Adobe AFM sources pinned to mirror 0675784d24b28a55c607cad6b74596ce19ce333c;224 PDFs,448 text matches and224 MuPDF origin matches,224 qpdf checks. Zapf geometry fixtures have explicit ToUnicode.",
+        "docs/reports/2026-10-05-666-reconciliation.md; existing frozen oracles unchanged, historical RED states superseded by current GREEN and corrected QR."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Codificación incorporada, símbolos y griego; sin asumir Latin-1; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
+        "suite_results": {
+          "text_standard14_metrics_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_spacing_contract_test": {
+            "passed": 14,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "implemented_slice": "Standard14 implicit/explicit metrics and all196 font-pair return transitions; built-in Symbol/Zapf mapping covered by exhaustive encoding contracts.224 original geometry fixtures, finite coordinates asserted."
+    },
+    {
+      "id": "F05",
+      "scope": "ZapfDingbats",
+      "contract": "Codificación incorporada y nombres aNNN",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test",
+        "text_standard14_metrics_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "standard14/provenance.json: unchanged Adobe AFM sources pinned to mirror 0675784d24b28a55c607cad6b74596ce19ce333c;224 PDFs,448 text matches and224 MuPDF origin matches,224 qpdf checks. Zapf geometry fixtures have explicit ToUnicode.",
+        "docs/reports/2026-10-05-666-reconciliation.md; existing frozen oracles unchanged, historical RED states superseded by current GREEN and corrected QR."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Codificación incorporada y nombres aNNN; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
+        "suite_results": {
+          "text_standard14_metrics_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_spacing_contract_test": {
+            "passed": 14,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "implemented_slice": "Standard14 implicit/explicit metrics and all196 font-pair return transitions; built-in Symbol/Zapf mapping covered by exhaustive encoding contracts.224 original geometry fixtures, finite coordinates asserted."
+    },
+    {
+      "id": "F06",
+      "scope": "Type1 incrustada / Type1C CFF simple",
+      "contract": "Completa/subconjunto; codificación propia; nombres reasignados",
+      "status": "validated",
+      "tests": [
+        "text_embedded_font_contract_test",
+        "text_expert_contract_test",
+        "text_type1_intrinsic_contract_test"
+      ],
+      "implemented_slice": "Full/subset original Type1/PFB and Type1C; intrinsic encoding, reassigned names, Differences inheritance, explicit Encoding and ToUnicode precedence, PDF advances. #674 and subsequent QR fixes verified through extractor and resolved consumer; unexecuted PostScript procedures ignored.10 intrinsic and15 shared QR tests pass.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "type1/provenance.json and type1/readers.json; FontTools 4.60.1, MuPDF 1.26.10 and Poppler 24.02.0",
+        "docs/reports/2026-10-05-666-reconciliation.md; existing frozen oracles unchanged, historical RED states superseded by current GREEN and corrected QR."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_embedded_font_contract_test, text_expert_contract_test, text_type1_intrinsic_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Completa/subconjunto; codificación propia; nombres reasignados; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
+        "suite_results": {
+          "text_embedded_font_contract_test": {
+            "passed": 4,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_expert_contract_test": {
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_type1_intrinsic_contract_test": {
+            "passed": 10,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_qr_regression_contract_test": {
+            "passed": 15,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "F07",
+      "scope": "TrueType simple",
+      "contract": "Completa/subconjunto; simbólica/no simbólica; cmap de fuente",
+      "status": "validated",
+      "tests": [
+        "text_truetype_contract_test",
+        "text_symbolic_truetype_contract_test",
+        "text_competing_cmap_contract_test"
+      ],
+      "implemented_slice": "Full/subset real glyf programs: symbol (3,0,4), Macintosh (1,0,0), Unicode BMP (3,1,4), UCS4 (3,10,12); exact GID/metrics, explicit ToUnicode sequences, nonsymbolic WinAnsi and source-glyph advance. Generic selector: five competing real subtables with distinct GIDs/widths; 120 full-priority orders, 24 BMP fallback orders, 6 Unicode-platform fallback orders, 2 nonpreferred fallback orders, empty input and non-BMP preservation. Conservative unknown-symbolic Unicode policy (None/U+FFFD), explicit encoding precedence and indirect Flags; exact selected contours, 16 independent glyph/raster controls and three rejected mutations.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "fonts/truetype-provenance.json; pinned SourceSans3 3.052 and original subset",
+        "symbolic/provenance.json and readers.json: original FontTools 4.60.1 programs; 12 PDFs verified by MuPDF/Poppler/qpdf.",
+        "symbolic/competing/provenance.json: original FontTools 4.60.1 program, independently re-read; documented oxidize-pdf generic-selector policy, not a normative PDF symbolic priority.",
+        "docs/reports/2026-10-04-f07-evidence/{readers.json,mutations.json,summary.json}: glyph selection, full/subset shape identity, raster controls and explicit conservative Unicode recovery policy; external heuristic text recorded separately."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_truetype_contract_test. No product table generates expected values. Eight original full/subset programs and twelve checked PDFs in symbolic/.",
+      "closure_criterion": "Cover every declared variant of: Completa/subconjunto; simbólica/no simbólica; cmap de fuente; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. User sequencing clarification: local block closure precedes global CI, which is deferred until all #666 implementation is complete; this does not claim CI or integration passed.",
+      "remaining": "No local implementation/review tasks. CI deferred by explicit user instruction until #666 implementation is complete; integration remains global.",
+      "last_execution": {
+        "date": "2026-10-04",
+        "suite_results": {
+          "text_symbolic_truetype_contract_test": {
+            "passed": 12,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_competing_cmap_contract_test": {
+            "passed": 6,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_truetype_contract_test": {
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "F07 local implementation/review completed; aggregate7180/0/3 including72 corpus cases. CI/integration remain. Local block complete under explicit CI deferral; no remote acceptance claimed."
+      }
+    },
+    {
+      "id": "F08",
+      "scope": "Type3",
+      "contract": "CharProcs reales, FontMatrix no trivial y Widths controladas",
+      "status": "validated",
+      "tests": [
+        "text_font_program_contract_test",
+        "text_type3_program_boundary_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "MuPDF1.26.10 pdf-type3.c lines153–163 and eight independently generated PDFs: qpdf8/8, texttrace coordinates, five distinct basic raster controls; docs/reports/2026-10-04-issue-666-type3-evidence/readers.json.",
+        "Type3Font public width/procedure_width contract; #509 regression; new public boundary tests and seven MuPDF1.26.10 fixtures (6 exact,1 fractional discrepancy), type3-program-evidence/readers.json.",
+        "docs/reports/2026-10-04-f08-fixes-evidence/readers.json and mutations.json: seven pinned reader controls pass; altered width, graphic operations and reader version are rejected."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_font_program_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: CharProcs reales, FontMatrix no trivial y Widths controladas; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. User sequencing clarification: local block closure precedes global CI, which is deferred until all #666 implementation is complete; this does not claim CI or integration passed.",
+      "remaining": "No local implementation/review tasks. CI deferred by explicit user instruction until #666 implementation is complete; integration remains global.",
+      "last_execution": {
+        "date": "2026-10-04",
+        "suite_results": {
+          "text_font_program_contract_test": {
+            "passed": 10,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_type3_program_boundary_contract_test": {
+            "passed": 14,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Six local QR findings corrected under #679/#666 and revalidated; CI/integration remain. Local block complete under explicit CI deferral; no remote acceptance claimed.",
+        "post_f07_regressions": {
+          "passed": 52,
+          "failed": 0,
+          "ignored": 0,
+          "targets": 5,
+          "evidence": "docs/reports/2026-10-04-f08-fixes-evidence/after-f07.json"
+        }
+      },
+      "implemented_slice": "Type3 CharProcs, scalar and non-scalar FontMatrix (rotation/shear/translation/reflection), Tc/Tz/TJ and Tm composition, multi-scalar ToUnicode, full matrix retained by ResolvedFontResource. Declared/procedure widths exposed separately; d0/d1, zero/negative/fractional widths, malformed programs/Widths, metadata-only recovery, Differences byte255 and reset boundaries. QR fixes: indirect Encoding components, metadata without CharProc, finite metrics, aggregate decoded-byte/token/operation budgets (aliases and distinct streams), exact graphical operations and discriminating external-reader checks."
+    },
+    {
+      "id": "F09",
+      "scope": "Type0 + CIDFontType0",
+      "contract": "CFF CID, colecciones y escritura H/V",
+      "status": "validated",
+      "tests": [
+        "text_cid_cff_contract_test",
+        "text_composite_font_contract_test",
+        "text_cff_program_contract_test"
+      ],
+      "implemented_slice": "CFF1 CID→GID via charset0/1/2; FDSelect0/3→Font DICT and original CharStrings observed in public consumer and borrowed CidFont API. Raw/OpenType, CID-keyed/name-keyed, full/subset, private/Adobe-Japan1, H/V, ToUnicode precedence and unknown recovery. Malformed INDEX/DICT/charset/FDSelect rejected. Independent outlines/raster validated externally; no native Type2 interpreter is claimed.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "fonts/cid-cff-provenance.json; original CID-keyed CFF",
+        "composite/provenance.json and readers.json; FontTools4.60.1 original full/subset CFF multi-FD and TTF programs,28 text matches,14 geometry matches and qpdf14.",
+        "Adobe CFF Technical Note5176 sections13/18/19; ISO32000-1 section9.7.4.2",
+        "cff_selection/manifest.json; docs/reports/2026-10-04-f09-evidence/readers.json (FontTools4.60.1, MuPDF1.26.10, qpdf;32 PDFs)"
+      ],
+      "fixture_strategy": "32 original PDFs and eight CFF fonts, frozen hashes in cff_selection/manifest.json. Independent literal Rust expectations, FontTools outlines, MuPDF selection/geometry/raster and qpdf structure; three discriminating mutations.",
+      "closure_criterion": "Cover every declared variant of: CFF CID, colecciones y escritura H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local completion includes contracts, external controls, mutations and QR; CI/integration are deferred globally by explicit user instruction.",
+      "remaining": "No local F09 work remains. CI and integration deferred globally until all #666 implementation is complete, per user instruction.",
+      "last_execution": {
+        "date": "2026-10-04",
+        "suite_results": {
+          "text_cid_cff_contract_test": {
+            "passed": 9,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_composite_font_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_cff_program_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          },
+          "issue_513_resolved_parser_fonts_test": {
+            "passed": 16,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Local F09 contracts and QR complete; evidence docs/reports/2026-10-04-f09-review.md. Shared tests do not close F10."
+      }
+    },
+    {
+      "id": "F10",
+      "scope": "Type0 + CIDFontType2",
+      "contract": "CIDToGIDMap identidad/stream, completa/subconjunto, H/V",
+      "status": "validated",
+      "tests": [
+        "text_cid_contract_test",
+        "text_vertical_contract_test",
+        "text_composite_font_contract_test",
+        "text_cid_truetype_program_contract_test"
+      ],
+      "implemented_slice": "CIDToGIDMap Identity/stream, full/subset and H/V crossed in40 original PDFs; remapped codes, private/Adobe-Japan1, explicit multi-scalar/non-BMP Unicode and unknown recovery. Real GIDs/outlines/raster independently checked. Public map bounds, malformed and compressed limits, absent-map compatibility and strict/lenient recovery covered.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "fonts/truetype-provenance.json; pinned SourceSans3 3.052 and original subset",
+        "composite/provenance.json and readers.json; FontTools4.60.1 original full/subset CFF multi-FD and TTF programs,28 text matches,14 geometry matches and qpdf14.",
+        "ISO32000-1 section9.7.4.2, table117; cid_truetype/manifest.json, original MIT fonts/PDFs",
+        "docs/reports/2026-10-05-f10-evidence/readers.json: FontTools4.60.1, PyMuPDF1.26.5/MuPDF1.26.10 and qpdf;40 selections/positions/raster controls"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cid_contract_test, text_vertical_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: CIDToGIDMap identidad/stream, completa/subconjunto, H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local contracts, discriminating controls and QR complete; CI/integration deferred globally by explicit user instruction.",
+      "remaining": "No local F10 work remains. CI/integration deferred globally by explicit user instruction until all #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "suite_results": {
+          "text_cid_truetype_program_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_cid_contract_test": {
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_vertical_contract_test": {
+            "passed": 15,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_composite_font_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "F10 locally complete, aggregate7248/0/3 in39 targets, final non-corpus7176/0/3. No next row activated."
+      }
+    },
+    {
+      "id": "E01",
+      "scope": "StandardEncoding",
+      "contract": "256 posiciones; asignadas/no definidas; Annex D",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test"
+      ],
+      "implemented_slice": "All 256 positions: assigned values from pinned Annex D/Adobe AGL; undefined codes recover as U+FFFD without losing neighbors. Corrections integrated in #664/#670; current local suite results recorded below. Overall #666 matrix remains incomplete.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Pinned Annex D/Adobe AGL tables and hashes in fixture provenance.json"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: 256 posiciones; asignadas/no definidas; Annex D; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "E02",
+      "scope": "WinAnsiEncoding",
+      "contract": "256 posiciones; bullet en huecos, NBSP y soft hyphen",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test"
+      ],
+      "implemented_slice": "All 256 positions: assigned values from pinned Annex D/Adobe AGL; undefined codes recover as U+FFFD without losing neighbors. Corrections integrated in #664/#670; current local suite results recorded below. Overall #666 matrix remains incomplete.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Pinned Annex D/Adobe AGL tables and hashes in fixture provenance.json"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: 256 posiciones; bullet en huecos, NBSP y soft hyphen; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "E03",
+      "scope": "MacRomanEncoding PDF",
+      "contract": "256 posiciones; currency 0xDB; separar Mac OS Roman",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test"
+      ],
+      "implemented_slice": "All 256 positions: assigned values from pinned Annex D/Adobe AGL; undefined codes recover as U+FFFD without losing neighbors. Corrections integrated in #664/#670; current local suite results recorded below. Overall #666 matrix remains incomplete.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Pinned Annex D/Adobe AGL tables and hashes in fixture provenance.json"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: 256 posiciones; currency 0xDB; separar Mac OS Roman; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "E04",
+      "scope": "MacExpertEncoding",
+      "contract": "256 posiciones; nombres expert y política Unicode/PUA",
+      "status": "validated",
+      "tests": [
+        "text_expert_contract_test"
+      ],
+      "implemented_slice": "All 256 positions: assigned values from pinned Annex D/Adobe AGL; undefined codes recover as U+FFFD without losing neighbors. Corrections integrated in #664/#670; current local suite results recorded below. Overall #666 matrix remains incomplete. Genuine embedded CFF; fallback retains legacy AGL PUA, explicit ToUnicode can supply semantic text.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Pinned Annex D/Adobe AGL tables and hashes in fixture provenance.json"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_expert_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: 256 posiciones; nombres expert y política Unicode/PUA; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_expert_contract_test": {
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "E05",
+      "scope": "Symbol incorporada",
+      "contract": "256 posiciones; nombres y Unicode de símbolos",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test"
+      ],
+      "implemented_slice": "All 256 positions: assigned values from pinned Annex D/Adobe AGL; undefined codes recover as U+FFFD without losing neighbors. Corrections integrated in #664/#670; current local suite results recorded below. Overall #666 matrix remains incomplete. Built-in selection, explicit encoding/ToUnicode precedence and AFM width/origin controls.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Pinned Annex D/Adobe AGL tables and hashes in fixture provenance.json"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: 256 posiciones; nombres y Unicode de símbolos; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "E06",
+      "scope": "ZapfDingbats incorporada",
+      "contract": "256 posiciones; tabla Adobe de nombres aNNN",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test"
+      ],
+      "implemented_slice": "All 256 positions: assigned values from pinned Annex D/Adobe AGL; undefined codes recover as U+FFFD without losing neighbors. Corrections integrated in #664/#670; current local suite results recorded below. Overall #666 matrix remains incomplete. Built-in selection, explicit encoding/ToUnicode precedence and AFM width/origin controls.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Pinned Annex D/Adobe AGL tables and hashes in fixture provenance.json"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: 256 posiciones; tabla Adobe de nombres aNNN; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "E07",
+      "scope": "Codificación propia sin Encoding",
+      "contract": "Casos legalmente válidos por subtipo; programa incrustado",
+      "status": "validated",
+      "tests": [
+        "text_type1_intrinsic_contract_test"
+      ],
+      "implemented_slice": "Full/subset original Type1/PFB and Type1C; intrinsic encoding, reassigned names, Differences inheritance, explicit Encoding and ToUnicode precedence, PDF advances. #674 and subsequent QR fixes verified through extractor and resolved consumer; unexecuted PostScript procedures ignored.10 intrinsic and15 shared QR tests pass.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "type1/provenance.json and type1/readers.json; FontTools 4.60.1, MuPDF 1.26.10 and Poppler 24.02.0",
+        "docs/reports/2026-10-05-666-reconciliation.md; existing frozen oracles unchanged, historical RED states superseded by current GREEN and corrected QR."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_type1_intrinsic_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Casos legalmente válidos por subtipo; programa incrustado; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local acceptance reconciled2026-10-05 against corrected QR, independent oracles and current tests; CI/integration remain global.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally by explicit user instruction until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "Local reconciliation:79/79 across seven targets; no product changes. Standard14 finite-coordinate guard fixed and NaN mutation discriminates. See docs/reports/2026-10-05-666-reconciliation.md.",
+        "suite_results": {
+          "text_embedded_font_contract_test": {
+            "passed": 4,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_expert_contract_test": {
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_type1_intrinsic_contract_test": {
+            "passed": 10,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_qr_regression_contract_test": {
+            "passed": 15,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "E08",
+      "scope": "BaseEncoding + Differences",
+      "contract": "Contadores/reasignaciones, nombres compuestos, límites y precedencia",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test",
+        "text_type1_intrinsic_contract_test",
+        "text_differences_boundary_contract_test",
+        "text_type3_program_boundary_contract_test",
+        "text_unicode_policy_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "type1/provenance.json and type1/readers.json; FontTools 4.60.1, MuPDF 1.26.10 and Poppler 24.02.0",
+        "differences/readers.json:15 valid PDFs for Type1/TrueType/Type3;30 external text matches and12 glyph geometry checks; indirect dictionaries/arrays, reset/bounds/duplicate/ToUnicode.",
+        "Adobe AGL Specification2.9 section2; PDF Reference1.7 ToUnicode UTF16BE; independent FontTools4.60.1 seven controls in docs/reports/2026-10-05-e08-e09-evidence/agl-reference.json"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test, text_type1_intrinsic_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Contadores/reasignaciones, nombres compuestos, límites y precedencia; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local contracts/QR complete; CI/integration explicitly deferred globally.",
+      "remaining": "No local work remains. CI/integration deferred globally by user instruction until #666 implementation complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "suite_results": {
+          "text_unicode_policy_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_differences_boundary_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "QR complete, five findings fixed. Single aggregate7255/0/3 including corpus; see docs/reports/2026-10-05-e08-e09-review.md."
+      },
+      "implemented_slice": "Existing reset/boundary/precedence contracts plus AGL components/suffix/scalar rules, contextual Zapf names, unknown Differences recovery, UTF16BE valid/invalid destinations and partial ToUnicode authority through extractor and resolved consumer. Full/subset intrinsic and Type3 controls retained."
+    },
+    {
+      "id": "E09",
+      "scope": "ToUnicode",
+      "contract": "bfchar/bfrange, destinos múltiples, UTF-16BE/surrogates, parcial y precedencia",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test",
+        "text_font_program_contract_test",
+        "text_differences_boundary_contract_test",
+        "text_unicode_policy_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "differences/readers.json:15 valid PDFs for Type1/TrueType/Type3;30 external text matches and12 glyph geometry checks; indirect dictionaries/arrays, reset/bounds/duplicate/ToUnicode.",
+        "Adobe AGL Specification2.9 section2; PDF Reference1.7 ToUnicode UTF16BE; independent FontTools4.60.1 seven controls in docs/reports/2026-10-05-e08-e09-evidence/agl-reference.json"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test, text_font_program_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: bfchar/bfrange, destinos múltiples, UTF-16BE/surrogates, parcial y precedencia; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement. Local contracts/QR complete; CI/integration explicitly deferred globally.",
+      "remaining": "No local work remains. CI/integration deferred globally by user instruction until #666 implementation complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "suite_results": {
+          "text_unicode_policy_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_encoding_contract_test": {
+            "passed": 24,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_differences_boundary_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "QR complete, five findings fixed. Single aggregate7255/0/3 including corpus; see docs/reports/2026-10-05-e08-e09-review.md."
+      },
+      "implemented_slice": "Existing reset/boundary/precedence contracts plus AGL components/suffix/scalar rules, contextual Zapf names, unknown Differences recovery, UTF16BE valid/invalid destinations and partial ToUnicode authority through extractor and resolved consumer. Full/subset intrinsic and Type3 controls retained."
+    },
+    {
+      "id": "C01",
+      "scope": "Identidad",
+      "contract": "Identity-H, Identity-V; CIDs no Unicode; con/sin ToUnicode",
+      "status": "validated",
+      "tests": [
+        "text_cid_contract_test",
+        "text_vertical_contract_test",
+        "text_identity_contract_test",
+        "text_cid_truetype_program_contract_test",
+        "text_cff_program_contract_test",
+        "text_recovery_boundary_contract_test"
+      ],
+      "implemented_slice": "Identity-H/V CIDs are not Unicode; real CFF/TrueType, full/subset in F09/F10; explicit/unknown Unicode, CID0/65535 and surrogate-looking CID pairs, empty/odd tails, PDF advances and per-consumer recovery. No new product changes.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "fonts/truetype-provenance.json; pinned SourceSans3 3.052 and original subset",
+        "F09/F10 independent readers/mutations and text_identity_contract_test literal Identity CID expectations; docs/reports/2026-10-05-c01-review.md"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cid_contract_test, text_vertical_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Identity-H, Identity-V; CIDs no Unicode; con/sin ToUnicode; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local C01 work remains. CI/integration deferred globally until #666 implementation complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "40/40 in five targets; QR complete, no new findings; docs/reports/2026-10-05-c01-review.md",
+        "suite_results": {
+          "text_identity_contract_test": {
+            "passed": 2,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "C02",
+      "scope": "Adobe-GB1",
+      "contract": "GB-EUC-H/V, GBK-EUC-H/V, GBKp-EUC-H, UniGB-UCS2-H/V, UniGB-UTF16-H/V",
+      "status": "validated",
+      "tests": [
+        "text_cjk_contract_test",
+        "text_cid_collection_policy_contract_test"
+      ],
+      "oracle": "cjk/provenance.json; cjk/samples.tsv",
+      "implemented_slice": "All ten declared GB1 CMaps, pinned code/CID/Unicode samples and vertical overrides; both extraction modes, resolved CID/GID/Unicode/advances and ToUnicode precedence. Predefined CMap/font collection mismatch disables ungrounded Unicode; valid cumulative supplements accepted, malformed explicit values cannot authorize Adobe fallback.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "cjk/provenance.json and cjk/samples.tsv; pinned Adobe CMap and CID-Unicode resources",
+        "2026-10-04: existing cjk/samples.tsv additionally checked through ResolvedFontResource; no changed oracle values.",
+        "Adobe TN5099 compatibility and cumulative supplements;35 pinned header annotations verified in docs/reports/2026-10-05-c02-evidence/verify-collections.json"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: GB-EUC-H/V, GBK-EUC-H/V, GBKp-EUC-H, UniGB-UCS2-H/V, UniGB-UTF16-H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local C02 work remains. General embedded/private CMap ROS policy remains explicitly owned by C08. CI/integration deferred globally.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "QR complete; two reproduced findings fixed. Single7260/0/3 in42 targets including corpus. docs/reports/2026-10-05-c02-review.md",
+        "suite_results": {
+          "text_cjk_contract_test": {
+            "passed": 11,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_cid_collection_policy_contract_test": {
+            "passed": 3,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "C03",
+      "scope": "Adobe-CNS1",
+      "contract": "B5pc-H/V, ETen-B5-H/V, UniCNS-UCS2-H/V, UniCNS-UTF16-H/V",
+      "status": "validated",
+      "tests": [
+        "text_cjk_contract_test"
+      ],
+      "oracle": "cjk/provenance.json; cjk/samples.tsv",
+      "implemented_slice": "Eight declared CNS1 maps, pinned positive samples, incompatible collection and explicit ToUnicode controls; source/CID/GID/Unicode/advance verified through public consumers.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "cjk/provenance.json and cjk/samples.tsv; pinned Adobe CMap and CID-Unicode resources",
+        "2026-10-04: existing cjk/samples.tsv additionally checked through ResolvedFontResource; no changed oracle values."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: B5pc-H/V, ETen-B5-H/V, UniCNS-UCS2-H/V, UniCNS-UTF16-H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "suite_results": {
+          "text_cjk_contract_test": {
+            "passed": 12,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "C03: eight maps explicitly enumerated, public negative controls in both parsing modes; QR completed. See docs/reports/2026-10-05-c03-review.md."
+      }
+    },
+    {
+      "id": "C04",
+      "scope": "Adobe-Japan1",
+      "contract": "90ms-RKSJ-H/V, 90pv-RKSJ-H/V, UniJIS-UCS2-H/V, UniJIS-UTF16-H/V",
+      "status": "validated",
+      "tests": [
+        "text_cjk_contract_test"
+      ],
+      "oracle": "cjk/provenance.json; cjk/samples.tsv",
+      "implemented_slice": "Eight declared Japan1 maps explicitly enumerated; pinned positive samples and unrelated collection controls with explicit ToUnicode precedence through public consumers.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "cjk/provenance.json and cjk/samples.tsv; pinned Adobe CMap and CID-Unicode resources",
+        "2026-10-04: existing cjk/samples.tsv additionally checked through ResolvedFontResource; no changed oracle values."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: 90ms-RKSJ-H/V, 90pv-RKSJ-H/V, UniJIS-UCS2-H/V, UniJIS-UTF16-H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "suite_results": {
+          "text_cjk_contract_test": {
+            "passed": 13,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "C04 reviewed after C03 closure; exact eight maps, both modes and consumers. docs/reports/2026-10-05-c04-review.md."
+      }
+    },
+    {
+      "id": "C05",
+      "scope": "Adobe-Korea1",
+      "contract": "KSC-EUC-H/V, KSCms-UHC-H/V, UniKS-UCS2-H/V, UniKS-UTF16-H/V",
+      "status": "validated",
+      "tests": [
+        "text_cjk_contract_test"
+      ],
+      "oracle": "cjk/provenance.json; cjk/samples.tsv",
+      "implemented_slice": "Eight Korea1 maps explicitly enumerated, pinned positive samples and unrelated collection controls through both public consumers; explicit ToUnicode precedence and CID/GID/advance preserved.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "cjk/provenance.json and cjk/samples.tsv; pinned Adobe CMap and CID-Unicode resources",
+        "2026-10-04: existing cjk/samples.tsv additionally checked through ResolvedFontResource; no changed oracle values."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: KSC-EUC-H/V, KSCms-UHC-H/V, UniKS-UCS2-H/V, UniKS-UTF16-H/V; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "suite_results": {
+          "text_cjk_contract_test": {
+            "passed": 14,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "C05 after C04; exact maps H/V and negative collection controls, both modes. docs/reports/2026-10-05-c05-review.md."
+      }
+    },
+    {
+      "id": "C06",
+      "scope": "Adobe-KR",
+      "contract": "Colección distinta; resolver CMaps de una revisión oficial fijada; no alias Korea1",
+      "status": "validated",
+      "tests": [
+        "text_cjk_contract_test"
+      ],
+      "oracle": "cjk/provenance.json; cjk/samples.tsv",
+      "implemented_slice": "All thirteen KR CMaps in pinned revision: Adobe-KR-0..9 and UniAKR-UTF8/16/32-H; no vertical resource exists there.43 new independent samples, original CJK oracles unchanged; KR/Korea1 incompatibility in both directions and explicit ToUnicode precedence.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "cjk/provenance.json and cjk/samples.tsv; pinned Adobe CMap and CID-Unicode resources",
+        "2026-10-04: existing cjk/samples.tsv additionally checked through ResolvedFontResource; no changed oracle values.",
+        "kr_extended/provenance.json and samples.tsv;43 additional samples from same pinned official revisions, generator independent of product; full KR tree inventory verified in docs/reports/2026-10-05-c06-evidence."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Colección distinta; resolver CMaps de una revisión oficial fijada; no alias Korea1; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local work remains for this row. CI/integration deferred globally until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "suite_results": {
+          "text_cjk_contract_test": {
+            "passed": 16,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "C06 QR and two findings resolved. Aggregate7265/0/3 in42 targets incl72 corpus; Python16/16. docs/reports/2026-10-05-c06-review.md."
+      }
+    },
+    {
+      "id": "C07",
+      "scope": "CMap incrustado",
+      "contract": "1–4 bytes, codespacerange, cidchar/cidrange, usecmap, WMode, notdef",
+      "status": "validated",
+      "tests": [
+        "text_cid_contract_test",
+        "text_vertical_contract_test",
+        "text_usecmap_contract_test",
+        "text_cmap_boundary_contract_test",
+        "text_qr_regression_contract_test",
+        "text_recovery_boundary_contract_test"
+      ],
+      "implemented_slice": "CIDFontType2, CIDToGID stream, Identity-H and embedded horizontal CMaps; long-code text independently confirmed by MuPDF; Poppler numeric limit documented; dictionary parent inheritance, two parent levels, child overrides, named Identity-H operator/dictionary and explicit mapping precedence over notdef. Nine boundary contracts now observe constant notdef CID, inherited fallback, child override, ordinary mappings before notdef, explicit ToUnicode on CID0 and pen advance, mixed1–4 byte codes, each truncated multibyte tail under both parser modes and a complete unmapped code control. Public page/Form cycle recovery is covered in the QR suite. C07 final: checked CID operands and offsets, full-prefix code lengths, last-declaration priority within layers and renderer four-byte bound; five additional public contracts.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "ISO 32000-1 9.7.5/Table 120; usecmap/readers.json and usecmap/provenance.json. MuPDF confirms nine asserted cases; five Poppler disagreements and two exploratory notdef disagreements remain explicit in external validation.",
+        "Adobe TN5014 pp53/56/76, https://adobe-type-tools.github.io/font-tech-notes/pdfs/5014.CIDFont_Spec.pdf; MuPDF1.26.10 pdf-cmap-parse.c has no notdef dispatch; paired-reader experiment in docs/reports/2026-10-04-issue-666-c07-evidence/notdef-reader-pairs.json.",
+        "#678 explicit best-effort policy: U+FFFD per undecodable code or incomplete tail; public API regression RED/GREEN in text-recovery-evidence.",
+        "Adobe TN5014 sections5/7, independent literal prefix/precedence/bounds cases; RED/GREEN in docs/reports/2026-10-05-c07-evidence. Previous fixtures and external oracles unchanged."
+      ],
+      "fixture_strategy": "Frozen original CFF and original eleven UseCMap PDFs; new in-memory public-API PDFs for notdef precedence and mixed code widths. CID0 ToUnicode extraction is an explicit product contract. Paired external controls replace only notdef by a direct CID mapping; no original fixture bytes or reader expectations are changed.",
+      "closure_criterion": "Cover every declared variant of: 1–4 bytes, codespacerange, cidchar/cidrange, usecmap, WMode, notdef; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local work remains for this row. Recorded external-reader discrepancies remain explicit; CI/integration deferred globally until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "suite_results": {
+          "text_cmap_boundary_contract_test": {
+            "passed": 14,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "C07 QR and five findings resolved; aggregate7270/0/3 in42 targets incl72 corpus. All six declared C07 targets executed. docs/reports/2026-10-05-c07-review.md."
+      },
+      "last_recovery_execution": {
+        "date": "2026-10-04",
+        "issue": 678,
+        "passed": 8,
+        "failed": 0,
+        "evidence": "docs/reports/2026-10-04-text-recovery-evidence/summary.json"
+      }
+    },
+    {
+      "id": "C08",
+      "scope": "Colección propia",
+      "contract": "Registry/Ordering/Supplement, con/sin ToUnicode y sin Unicode recuperable",
+      "status": "validated",
+      "tests": [
+        "text_cid_cff_contract_test",
+        "text_composite_font_contract_test",
+        "text_cid_collection_policy_contract_test"
+      ],
+      "implemented_slice": "Stream dictionary and static program Registry/Ordering/Supplement; indirect fields, missing/invalid/conflicting metadata and named-parent inheritance. Explicit ToUnicode and CID/advance preserved; private metadata cannot authorize Adobe fallback. Program scopes, literal/hex strings, escapes and NUL tested.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "fonts/cid-cff-provenance.json; original CID-keyed CFF",
+        "composite/provenance.json and readers.json; FontTools4.60.1 original full/subset CFF multi-FD and TTF programs,28 text matches,14 geometry matches and qpdf14.",
+        "Independent literal metadata-policy expectations in text_cid_collection_policy_contract_test; C08 RED/GREEN and final aggregate in docs/reports/2026-10-05-c08-evidence. Previous frozen fixtures/oracles unchanged."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cid_cff_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Registry/Ordering/Supplement, con/sin ToUnicode y sin Unicode recuperable; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local work remains for this row. Static CMap metadata forms validated; computed PostScript is never executed and cannot certify collection Unicode. CI/integration globally deferred until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "suite_results": {
+          "text_cid_collection_policy_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "QR completed and three findings resolved including fixture metadata correction. Final aggregate7274/0/3 across42 targets incl72 corpus, final source hashes verified. docs/reports/2026-10-05-c08-review.md."
+      }
+    },
+    {
+      "id": "U01",
+      "scope": "Latino occidental",
+      "contract": "Español, portugués, francés, alemán; ordinales, monedas y puntuación",
+      "status": "validated",
+      "tests": [
+        "text_script_contract_test"
+      ],
+      "implemented_slice": "Exact logical Unicode sequences through explicit ToUnicode, strict/lenient; independently authored UTF-16BE operands and literal expected strings. No visual bidi, typography or shaping claim.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Explicit independently authored UTF-16BE ToUnicode sequences; decoding only, no shaping/bidi claim"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Español, portugués, francés, alemán; ordinales, monedas y puntuación; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_script_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "U02",
+      "scope": "Latino ampliado",
+      "contract": "Polaco, checo, turco, vietnamita",
+      "status": "validated",
+      "tests": [
+        "text_script_contract_test"
+      ],
+      "implemented_slice": "Exact logical Unicode sequences through explicit ToUnicode, strict/lenient; independently authored UTF-16BE operands and literal expected strings. No visual bidi, typography or shaping claim.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Explicit independently authored UTF-16BE ToUnicode sequences; decoding only, no shaping/bidi claim"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Polaco, checo, turco, vietnamita; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_script_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "U03",
+      "scope": "Griego / cirílico",
+      "contract": "Acentos y mezcla de scripts y números",
+      "status": "validated",
+      "tests": [
+        "text_script_contract_test"
+      ],
+      "implemented_slice": "Exact logical Unicode sequences through explicit ToUnicode, strict/lenient; independently authored UTF-16BE operands and literal expected strings. No visual bidi, typography or shaping claim.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Explicit independently authored UTF-16BE ToUnicode sequences; decoding only, no shaping/bidi claim"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Acentos y mezcla de scripts y números; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_script_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "U04",
+      "scope": "Árabe / hebreo",
+      "contract": "Marcas y cifras mixtas; decodificación separada de bidi/orden",
+      "status": "validated",
+      "tests": [
+        "text_script_contract_test"
+      ],
+      "implemented_slice": "Exact logical Unicode sequences through explicit ToUnicode, strict/lenient; independently authored UTF-16BE operands and literal expected strings. No visual bidi, typography or shaping claim.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Explicit independently authored UTF-16BE ToUnicode sequences; decoding only, no shaping/bidi claim"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Marcas y cifras mixtas; decodificación separada de bidi/orden; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_script_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "U05",
+      "scope": "Devanagari / tailandés",
+      "contract": "Secuencias de marcas; sin atribuir shaping a la decodificación",
+      "status": "validated",
+      "tests": [
+        "text_script_contract_test"
+      ],
+      "implemented_slice": "Exact logical Unicode sequences through explicit ToUnicode, strict/lenient; independently authored UTF-16BE operands and literal expected strings. No visual bidi, typography or shaping claim.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Explicit independently authored UTF-16BE ToUnicode sequences; decoding only, no shaping/bidi claim"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_script_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Secuencias de marcas; sin atribuir shaping a la decodificación; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_script_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "U06",
+      "scope": "CJK",
+      "contract": "Las cuatro familias; horizontal y vertical",
+      "status": "validated",
+      "tests": [
+        "text_cjk_contract_test"
+      ],
+      "oracle": "cjk/provenance.json; cjk/samples.tsv",
+      "implemented_slice": "34 declared CMaps of GB1/CNS1/Japan1/Korea1 in H/V;113 frozen independent samples with CID/GID/Unicode and directional advance, explicit ToUnicode and incompatible collection controls. KR separately reconciled with C06.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "cjk/provenance.json and cjk/samples.tsv; pinned Adobe CMap and CID-Unicode resources"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_cjk_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Las cuatro familias; horizontal y vertical; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local work remains for this row. No shaping/typography claim; CI/integration deferred globally until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "U06 inventory/QR reconciled with C02–C08;38/38 across CJK, collection policy and vertical targets. docs/reports/2026-10-05-u06-review.md.",
+        "suite_results": {
+          "text_cjk_contract_test": {
+            "passed": 16,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "U07",
+      "scope": "Unicode adicional",
+      "contract": "No-BMP, combinantes, ligaduras multicaracter; sin normalizar implícitamente",
+      "status": "validated",
+      "tests": [
+        "text_encoding_contract_test",
+        "text_script_contract_test",
+        "text_unicode_policy_contract_test",
+        "text_recovery_boundary_contract_test",
+        "text_vertical_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "Explicit independently authored UTF-16BE ToUnicode sequences; decoding only, no shaping/bidi claim"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_encoding_contract_test, text_script_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: No-BMP, combinantes, ligaduras multicaracter; sin normalizar implícitamente; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "No local work remains for this row. No shaping/bidi claim; CI/integration globally deferred until #666 implementation is complete.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "62/62 across scripts, Unicode policy, encoding, recovery and vertical targets; QR complete. docs/reports/2026-10-05-u07-review.md.",
+        "suite_results": {
+          "text_script_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "implemented_slice": "Exact non-BMP, combining and multiscalar sequences including canonical-equivalence distinctions, ligatures, joiners and variation selectors in extraction and resolved Unicode; one advance per source code, malformed policies reconciled with E09/C07."
+    },
+    {
+      "id": "D01",
+      "scope": "PDFDocEncoding",
+      "contract": "256 posiciones con tabla D.2; metadatos, marcadores, formularios",
+      "status": "validated",
+      "tests": [
+        "text_document_string_contract_test"
+      ],
+      "corrective_issue": 667,
+      "recovery_policy": "Infallible text-string API emits U+FFFD for undefined bytes, unpaired surrogates and incomplete UTF-16 units; valid suffixes preserved. ParseOptions is not a Unicode validation flag.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "ISO document-string rules and pinned PDFDocEncoding table; PDF 2.0 version scope for D03; #667 integrated"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_document_string_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: 256 posiciones con tabla D.2; metadatos, marcadores, formularios; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_document_string_contract_test": {
+            "passed": 12,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "D02",
+      "scope": "UTF-16BE con BOM",
+      "contract": "Vacío, no-BMP, truncado y secuencias inválidas según contrato",
+      "status": "validated",
+      "tests": [
+        "text_document_string_contract_test"
+      ],
+      "corrective_issue": 667,
+      "recovery_policy": "Infallible text-string API emits U+FFFD for undefined bytes, unpaired surrogates and incomplete UTF-16 units; valid suffixes preserved. ParseOptions is not a Unicode validation flag.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "ISO document-string rules and pinned PDFDocEncoding table; PDF 2.0 version scope for D03; #667 integrated"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_document_string_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Vacío, no-BMP, truncado y secuencias inválidas según contrato; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_document_string_contract_test": {
+            "passed": 12,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "D03",
+      "scope": "UTF-8 PDF 2.0",
+      "contract": "BOM/versión y tipos de cadena aplicables; no aplicar a Tj/TJ por defecto",
+      "status": "validated",
+      "tests": [
+        "text_pdf20_string_contract_test"
+      ],
+      "implemented_slice": "Valid/malformed UTF-8 BOM; version-aware Info, inline/named/structure ActualText on pages and Forms, outline and stored form object decoding. Catalog upgrade/downgrade and invalid-name controls.",
+      "corrective_issue": 667,
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "ISO document-string rules and pinned PDFDocEncoding table; PDF 2.0 version scope for D03; #667 integrated"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_pdf20_string_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: BOM/versión y tipos de cadena aplicables; no aplicar a Tj/TJ por defecto; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "remaining": "Retain integrated contracts; complete cross-matrix validation/review and #666 integration before closing the overall issue.",
+      "last_execution": {
+        "date": "2026-10-03",
+        "suite_results": {
+          "text_pdf20_string_contract_test": {
+            "passed": 18,
+            "failed": 0,
+            "ignored": 0
+          }
+        },
+        "scope": "Shared suite results do not establish completion of this individual row."
+      }
+    },
+    {
+      "id": "S01",
+      "scope": "Métricas",
+      "contract": "Cero explícito / no cero / ausente / inválido; Widths y W/DW",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_vertical_contract_test",
+        "text_standard14_metrics_contract_test",
+        "text_metrics_boundary_contract_test",
+        "text_type3_program_boundary_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "standard14/provenance.json: unchanged Adobe AFM sources pinned to mirror 0675784d24b28a55c607cad6b74596ce19ce333c;224 PDFs,448 text matches and224 MuPDF origin matches,224 qpdf checks. Zapf geometry fixtures have explicit ToUnicode."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test, text_vertical_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Cero explícito / no cero / ausente / inválido; Widths y W/DW; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "Local phase implementation and QR complete;7288/0/3 in43 targets including72 corpus and three real gates. CI/integration deferred.",
+        "suite_results": {
+          "text_metrics_boundary_contract_test": {
+            "passed": 13,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_standard14_metrics_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "implemented_slice": "Simple/CID/Standard14/Type3 metrics, explicit zero/nonzero/negative/absent/invalid values; indirect values and byte/CID bounds; strict errors and bounded lenient recovery preserving Unicode. Unknown private font layout estimation documented separately from declared metrics.",
+      "review": "docs/reports/2026-10-05-s01-review.md",
+      "subsequent_correction": "S08 corrects dictionary-null classification under ISO32000-1 §7.3.9; arrays retain invalid-null checks. See docs/reports/2026-10-05-s08-review.md."
+    },
+    {
+      "id": "S02",
+      "scope": "TJ",
+      "contract": "Uniforme/no uniforme; avance menor/igual/mayor al umbral; signo; outlier",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_vertical_contract_test",
+        "text_tj_scale_contract_test",
+        "text_tracking_recovery_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test, text_vertical_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Uniforme/no uniforme; avance menor/igual/mayor al umbral; signo; outlier; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "46/46 across four targets; local QR complete, product unchanged from S01 corpus. Global CI/integration deferred.",
+        "suite_results": {
+          "text_spacing_contract_test": {
+            "passed": 18,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_tj_scale_contract_test": {
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_tracking_recovery_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_vertical_contract_test": {
+            "passed": 15,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "review": "docs/reports/2026-10-05-s02-review.md",
+      "implemented_slice": "Both signs, zero, strict gap threshold below/equal/above, uniform baseline/excess outlier and no majority; independent frozen geometry plus split/numeric-only TJ and zero/negative Tz. Both modes and vertical controls; finite geometry assertions."
+    },
+    {
+      "id": "S03",
+      "scope": "Evidencia de separación",
+      "contract": "Espacio literal, espacio ToUnicode, solo ajuste, palabra sin espacios",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_tracking_recovery_contract_test",
+        "text_unicode_policy_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Espacio literal, espacio ToUnicode, solo ajuste, palabra sin espacios; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "35/35; local QR complete, product unchanged from S01 corpus. Global CI/integration deferred.",
+        "suite_results": {
+          "text_spacing_contract_test": {
+            "passed": 20,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_tracking_recovery_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_unicode_policy_contract_test": {
+            "passed": 7,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "review": "docs/reports/2026-10-05-s03-review.md",
+      "implemented_slice": "Literal/mapped spaces and source32 remapped to a letter; Type1/TrueType/CIDFontType0/2, explicit0/500, both modes and both Unicode consumers. Adjustment-only versus uniform tracking and words without spaces;160 additional configurations with exact text."
+    },
+    {
+      "id": "S04",
+      "scope": "Elegibilidad",
+      "contract": "Un solo ajuste frente a dos/mayoría; kern inicial/final; uno/varios glifos por string",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_tracking_recovery_contract_test",
+        "text_tj_scale_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Un solo ajuste frente a dos/mayoría; kern inicial/final; uno/varios glifos por string; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "38/38; local QR complete; product unchanged from S01 corpus. Global CI/integration deferred.",
+        "suite_results": {
+          "text_spacing_contract_test": {
+            "passed": 25,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_tracking_recovery_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_tj_scale_contract_test": {
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "review": "docs/reports/2026-10-05-s04-review.md",
+      "implemented_slice": "Minimum two adjustments and strict majority; leading/trailing/both kerns; multiple source glyphs at each string position; one glyph with multiscalar Unicode; resolved simple/CID and damaged recovery controls."
+    },
+    {
+      "id": "S05",
+      "scope": "Estado",
+      "contract": "Tfs, Tz, Tc, Tw; defaults y cambios durante texto",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_vertical_contract_test",
+        "text_tj_scale_contract_test",
+        "text_state_contract_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test, text_vertical_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Tfs, Tz, Tc, Tw; defaults y cambios durante texto; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "7311/0/3 in44 targets including72 corpus and three real gates; local QR complete; global CI/integration deferred.",
+        "suite_results": {
+          "text_state_contract_test": {
+            "passed": 11,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "review": "docs/reports/2026-10-05-s05-review.md",
+      "implemented_slice": "Tf/Tz/Tc/Tw defaults, chained changes/reset, BT persistence and double-quote operand order; Tw by single-byte source32 rather than mapped Unicode, Tc per source glyph, negative spacing and zero/reflected scaling, ActualText accumulation. Tz omission in published fragment width corrected."
+    },
+    {
+      "id": "S06",
+      "scope": "Transformaciones",
+      "contract": "Tm, CTM, rotación, escala, cizallamiento y composición; unidades verificadas",
+      "status": "validated",
+      "tests": [
+        "text_transform_contract_test"
+      ],
+      "implemented_slice": "Existing independent Tm/CTM composition and origins plus finite degenerate/reflected/rotated/sheared matrices in Type1/TrueType/Type3/CIDFontType0/2. Large representable2^600 norm, integer syntax outside i32, nonrepresentable states/composition and reconstructed paragraph overflow. Four defects corrected with explicit errors instead of nonfinite geometry or silent content loss.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_transform_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Tm, CTM, rotación, escala, cizallamiento y composición; unidades verificadas; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "7317/0/3 in44 targets including72 corpus and three real gates; final hashes verified; local QR complete, global CI/integration deferred.",
+        "suite_results": {
+          "text_transform_contract_test": {
+            "passed": 15,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "review": "docs/reports/2026-10-05-s06-review.md"
+    },
+    {
+      "id": "S07",
+      "scope": "Fronteras",
+      "contract": "Tj/TJ consecutivos, cambio de fuente, BT/ET, q/Q, Forms anidados",
+      "status": "validated",
+      "tests": [
+        "text_transform_contract_test",
+        "text_standard14_metrics_contract_test",
+        "text_state_contract_test"
+      ],
+      "implemented_slice": "Consecutive Tj/TJ continuous pen and array-local tracking; q/Q restores text parameters without rewinding text matrices; nested Forms shadow same font alias and restore resource/parameter values at each return. Prior BT, matrices and196 Standard14 font transitions retained.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests",
+        "standard14/provenance.json: unchanged Adobe AFM sources pinned to mirror 0675784d24b28a55c607cad6b74596ce19ce333c;224 PDFs,448 text matches and224 MuPDF origin matches,224 qpdf checks. Zapf geometry fixtures have explicit ToUnicode."
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_transform_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Tj/TJ consecutivos, cambio de fuente, BT/ET, q/Q, Forms anidados; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "40/40; local QR complete. Only product comment changed, S06 corpus applicable; global CI/integration deferred.",
+        "suite_results": {
+          "text_state_contract_test": {
+            "passed": 17,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_transform_contract_test": {
+            "passed": 15,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_standard14_metrics_contract_test": {
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "review": "docs/reports/2026-10-05-s07-review.md"
+    },
+    {
+      "id": "S08",
+      "scope": "Política",
+      "contract": "Strict/lenient, descendiente resoluble/dañado, controles simples y verticales",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_tracking_recovery_contract_test",
+        "text_recovery_boundary_contract_test",
+        "text_metrics_boundary_contract_test",
+        "text_unicode_policy_contract_test",
+        "text_type3_program_boundary_contract_test",
+        "text_cff_program_contract_test",
+        "text_cid_truetype_program_contract_test",
+        "text_cid_collection_policy_contract_test",
+        "text_transform_contract_test"
+      ],
+      "implemented_slice": "Strict/lenient recovery and resolved/damaged/simple/vertical guards reconciled. Unusable ToUnicode remains authoritative; bounded resource-chain resolution shared by consumers, cycles/depth covered. Dictionary null/absent semantics corrected without accepting null width-array elements. Metadata extraction distinguished from font-program validity; policy table links concrete controls.",
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test, text_tracking_recovery_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Strict/lenient, descendiente resoluble/dañado, controles simples y verticales; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "7331/0/3 in44 targets including72 corpus and three real gates; hashes verified, local QR complete; global CI/integration deferred.",
+        "suite_results": {
+          "text_recovery_boundary_contract_test": {
+            "passed": 13,
+            "failed": 0,
+            "ignored": 0
+          },
+          "text_metrics_boundary_contract_test": {
+            "passed": 16,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "review": "docs/reports/2026-10-05-s08-review.md",
+      "policy": "docs/text-recovery-policy.md"
+    },
+    {
+      "id": "S09",
+      "scope": "Salidas",
+      "contract": "Texto plano, fragments, preserve_layout y consumidores que prometan el mismo contrato",
+      "status": "validated",
+      "tests": [
+        "text_spacing_contract_test",
+        "text_vertical_contract_test",
+        "text_output_api_contract_test",
+        "plaintext_td_operator_test",
+        "issue_564_plaintext_quality_test",
+        "issue_615_punctuation_boundaries_test"
+      ],
+      "oracle_sources": [
+        "ISO 32000-1:2008 chapter 9 (font/encoding/geometry semantics); independent literal expectations in the listed tests"
+      ],
+      "fixture_strategy": "Public PdfReader/TextExtractor or documented document-string consumer; fixtures and options in text_spacing_contract_test, text_vertical_contract_test. No product table generates expected values.",
+      "closure_criterion": "Cover every declared variant of: Texto plano, fragments, preserve_layout y consumidores que prometan el mismo contrato; independent reference, discriminating controls, proportional review/CI and integration. Any exclusion requires explicit agreement.",
+      "last_execution": {
+        "date": "2026-10-05",
+        "scope": "7427 PASS/0 FAIL/3 ignored in59 targets,72 corpus and three real gates; final source hashes unchanged, local QR complete. Global T4/T5/CI/integration remain pending.",
+        "suite_results": {
+          "text_output_api_contract_test": {
+            "passed": 12,
+            "failed": 0,
+            "ignored": 0
+          },
+          "plaintext_td_operator_test": {
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0
+          },
+          "issue_564_plaintext_quality_test": {
+            "passed": 4,
+            "failed": 0,
+            "ignored": 0
+          },
+          "issue_615_punctuation_boundaries_test": {
+            "passed": 4,
+            "failed": 0,
+            "ignored": 0
+          }
+        }
+      },
+      "implemented_slice": "Page/document/TextExtractor/PlainTextExtractor APIs in strict/lenient and both layout modes; mixed nested CID Forms, resource resets, all font families. Shared engine preserves facade newline/XY-cut policy; certified tracking survives fragment layout with real geometric extent and outlier spaces. Nonfinite geometry errors propagate.",
+      "review": "docs/reports/2026-10-05-s09-review.md"
+    }
+  ],
+  "first_increment": {
+    "latin_defined_codes": 581,
+    "standard14_spacing_fonts": 12,
+    "spacing_font_mode_cases": 216,
+    "geometry_cases": 3,
+    "not_claimed": [
+      "complete font embedding coverage",
+      "vertical geometry",
+      "CJK conformance",
+      "full scripts/shaping",
+      "corpus quality",
+      "undefined-code behavior",
+      "MacExpert/Symbol/Zapf extraction"
+    ]
+  },
+  "second_increment": {
+    "additional_tests": 9,
+    "symbol_defined_codes": 189,
+    "zapfdingbats_defined_codes": 188,
+    "type3_tests": 3,
+    "bfrange_tests": 2,
+    "differences_counter_tests": 1,
+    "builtin_tounicode_precedence_tests": 1,
+    "total_defined_codes": 958,
+    "total_tests": 30,
+    "undefined_code_policy": "pending; no invented fallback assertion"
+  },
+  "third_increment": {
+    "additional_tests": 10,
+    "total_tests": 40,
+    "pdfdoc_defined": 232,
+    "pdfdoc_undefined_inventory_only": 24,
+    "pdfdoc_routes": [
+      "Info Title/Author",
+      "ActualText"
+    ],
+    "utf16_valid_cases_per_route": 6,
+    "embedded_font": "SourceSans3-Regular 3.052 full OpenType/CFF",
+    "pending": [
+      "undefined document bytes",
+      "invalid/truncated UTF-16 policy",
+      "bookmarks and forms",
+      "TrueType",
+      "Type1 PFB",
+      "raw CFF",
+      "subsets"
+    ]
+  },
+  "fourth_increment": {
+    "additional_tests": 9,
+    "total_tests": 49,
+    "truetype_tests": 5,
+    "document_route_tests": 4,
+    "pdfdoc_routes": [
+      "Info Title/Author",
+      "ActualText",
+      "outline Title",
+      "AcroForm field V via public object API"
+    ],
+    "subset_glyph_count": 7,
+    "full_glyph_count": 2478,
+    "raster_full_subset": "equal at 72 dpi for AéB; not general visual conformance"
+  },
+  "fifth_increment": {
+    "additional_tests": 9,
+    "total_tests": 58,
+    "cid_tests": 5,
+    "expert_tests": 4,
+    "expert_explicit_unicode_codes": 165,
+    "external_limitation": "Resolved: Poppler 24.02.0 numeric limits (warning >0xFFFF, mapping discarded >0xFFFFFF); MuPDF 1.26.10 confirms exact expected extraction; nine boundary controls pass in MuPDF and oxidize."
+  },
+  "external_validation": {
+    "tool": "tools/text_contracts/validate_readers.py",
+    "manifest": "tools/text_contracts/cases.json",
+    "pymupdf": "1.26.5",
+    "mupdf": "1.26.10",
+    "cases": 29,
+    "harness_tests": 10,
+    "results": {
+      "mupdf_matches": 29,
+      "poppler_matches": 21,
+      "known_poppler_limits": 8,
+      "qpdf_passes": 29,
+      "mupdf_geometry_cases": 13
+    },
+    "scope": "single-page reference PDFs with explicit line breaks and optional independently calculated glyph origins; not complete corpus"
+  },
+  "sixth_increment": {
+    "additional_tests": 9,
+    "total_tests": 67,
+    "vertical_scenarios": 11,
+    "external_geometry_cases": 9,
+    "new_test_status": "all nine RED in base and both PRs; horizontal advance used for vertical writing",
+    "not_claimed": [
+      "CJK typographic conformance",
+      "external glyph-offset geometry under Tz",
+      "vertical CIDFontType0"
+    ]
+  },
+  "seventh_increment": {
+    "additional_tests": 6,
+    "total_tests": 73,
+    "cid_cff_new_tests_pass": 5,
+    "cid_cff_vertical_red": 1,
+    "external_fixtures_added": 4,
+    "external_geometry_cases_added": 4
+  },
+  "eighth_increment": {
+    "additional_tests": 7,
+    "total_tests": 80,
+    "cjk_maps": 35,
+    "cjk_samples": 117,
+    "new_results_all_three_revisions": {
+      "passed": 2,
+      "failed": 5,
+      "ignored": 0
+    },
+    "external_probe": {
+      "qpdf_ok": 117,
+      "mupdf_exact_text": 86,
+      "poppler_exact_text": 86,
+      "mupdf_warnings": 10
+    },
+    "external_status": "31 MuPDF disagreements classified: 21 historical CID-Unicode tables, 8 absent named resources, 2 codes absent in historical UniJIS parent. No expectation changes; not admitted as automatic reader-gate exceptions."
+  },
+  "ninth_increment": {
+    "additional_tests": 9,
+    "total_tests": 89,
+    "new_results_all_three_revisions": {
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0
+    },
+    "external_geometry_cases": 9,
+    "external_glyph_origins": 22
+  },
+  "tenth_increment": {
+    "additional_tests": 13,
+    "total_tests": 102,
+    "new_results_all_three_revisions": {
+      "passed": 11,
+      "failed": 2,
+      "ignored": 0
+    },
+    "mupdf_metadata_confirmations": 6,
+    "qpdf_valid_fixtures": 6,
+    "corrective_issue": 667
+  },
+  "document_string_green_increment": {
+    "additional_tests": 2,
+    "total_tests": 104,
+    "red_document_suite": {
+      "passed": 6,
+      "failed": 6
+    },
+    "green_document_suite": {
+      "passed": 12,
+      "failed": 0
+    },
+    "object_unit_tests_passed": 58,
+    "consumer_regressions_passed": 22,
+    "issue": 667,
+    "scope": "PDFDocEncoding and infallible UTF-16 recovery only; PDF 2.0 version propagation pending"
+  },
+  "utf8_green_increment": {
+    "additional_tests": 6,
+    "total_tests": 110,
+    "pdf20_suite_passed": 11,
+    "document_suite_passed": 12,
+    "scope": "Version-aware document strings; malformed UTF-8 replacement; catalog upgrades, invalid-name controls; metadata, ActualText inline/named, outline, stored AcroForm object value."
+  },
+  "structured_actualtext_increment": {
+    "additional_tests": 3,
+    "total_tests": 113,
+    "pdf20_suite_passed": 14,
+    "qpdf_structured_fixtures": 4,
+    "scope": "Page and Form parent-tree ActualText use effective version; inline override has precedence. Six meaningful mutations detected; restored control 26/26."
+  },
+  "document_mutations": {
+    "attempted": 6,
+    "detected": 6,
+    "compile_failures_counted": 0,
+    "restored_tests_passed": 26,
+    "report": "docs/reports/2026-10-01-issue-667-structured-mutations.md"
+  },
+  "document_review_fixes": {
+    "additional_tests": 4,
+    "total_tests": 117,
+    "pdf20_tests_passed": 18,
+    "document_tests_passed": 12,
+    "consumer_tests_passed": 2,
+    "review_findings_fixed": 3,
+    "kripteia_score": 94,
+    "review_scanned_tests": 340,
+    "review_scanned_files": 10,
+    "scope": "Battery validation only; corpus, integration and CI pending. Valid indirect Version, bounded/cyclic reference policy, real form filling and signature metadata decoding."
+  },
+  "current_validation": {
+    "date": "2026-10-03",
+    "product_revision": "d33e7f94b6053e26f29b0523a52b87b08013babb",
+    "local_head": "a9c47deec7f805e73533032b9d26c7f7f4c95708",
+    "product_identity": "Dirty candidate #671/#672 validated by stored product.patch; subsequent #673 edits are not covered by that snapshot.",
+    "evidence": "docs/reports/2026-10-03-issue-671-672-evidence/all-contracts-summary.json",
+    "suite_results": {
+      "text_cid_cff_contract_test": {
+        "passed": 5,
+        "failed": 1,
+        "ignored": 0
+      },
+      "text_cid_contract_test": {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_cjk_contract_test": {
+        "passed": 2,
+        "failed": 5,
+        "ignored": 0
+      },
+      "text_document_string_contract_test": {
+        "passed": 12,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_embedded_font_contract_test": {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_encoding_contract_test": {
+        "passed": 24,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_expert_contract_test": {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_font_program_contract_test": {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_pdf20_string_contract_test": {
+        "passed": 18,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_script_contract_test": {
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_spacing_contract_test": {
+        "passed": 14,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_standard14_metrics_contract_test": {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_symbolic_truetype_contract_test": {
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_tj_scale_contract_test": {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_tracking_recovery_contract_test": {
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_transform_contract_test": {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_truetype_contract_test": {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_type1_intrinsic_contract_test": {
+        "passed": 8,
+        "failed": 2,
+        "ignored": 0
+      },
+      "text_usecmap_contract_test": {
+        "passed": 10,
+        "failed": 0,
+        "ignored": 0
+      },
+      "text_vertical_contract_test": {
+        "passed": 0,
+        "failed": 9,
+        "ignored": 0
+      }
+    },
+    "scope": "Suite results, not proof that each coverage row is complete. Earlier increments are historical."
+  },
+  "type1_increment": {
+    "date": "2026-10-03",
+    "tests": 10,
+    "passed": 8,
+    "failed": 2,
+    "fixtures": 16,
+    "external_text_matches": 32,
+    "external_geometry_matches": 16,
+    "qpdf_valid": 16,
+    "product_correction": "Blocked pending specific open issue; responsible bzsanti/Codex."
+  },
+  "session_close": {
+    "date": "2026-10-03",
+    "status": "paused-at-user-request-incomplete",
+    "handoff": "docs/reports/2026-10-03-session-handoff.md",
+    "library": {
+      "passed": 6798,
+      "failed": 0,
+      "ignored": 3
+    },
+    "cjk_contracts": {
+      "passed": 7,
+      "failed": 0
+    },
+    "additional_regressions": {
+      "passed": 34,
+      "failed": 3
+    },
+    "corpus_after_674_675_676": "not-run",
+    "aggregate_contract_rerun": "pending",
+    "evidence": "docs/reports/2026-10-03-session-close-evidence"
+  },
+  "competing_cmap_increment": {
+    "date": "2026-10-04",
+    "passed": 28,
+    "failed": 0,
+    "targets": 4,
+    "evidence": "docs/reports/2026-10-04-issue-666-continuation-evidence",
+    "scope": "6 new generic-selector contracts; product and frozen prior fixtures unchanged."
+  }
+}

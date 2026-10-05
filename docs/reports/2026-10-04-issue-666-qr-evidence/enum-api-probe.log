@@ -1,0 +1,23 @@
+error[E0004]: non-exhaustive patterns: `CidCollection::Kr` not covered
+  --> docs/reports/2026-10-04-issue-666-qr-evidence/enum-api-probe.rs:2:48
+   |
+ 2 | fn name(c:CidCollection)->&'static str { match c { CidCollection::Cns1=>"CNS1",CidCollection::Gb1=>"GB1",CidCollection::Japan1=>"Jap...
+   |                                                ^ pattern `CidCollection::Kr` not covered
+   |
+note: `CidCollection` defined here
+  --> oxidize-pdf-core/src/text/cid_to_unicode.rs:4:1
+   |
+ 4 | pub enum CidCollection {
+   | ^^^^^^^^^^^^^^^^^^^^^^
+...
+14 |     Kr,
+   |     -- not covered
+   = note: the matched value is of type `CidCollection`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown
+   |
+ 2 | fn name(c:CidCollection)->&'static str { match c { CidCollection::Cns1=>"CNS1",CidCollection::Gb1=>"GB1",CidCollection::Japan1=>"Japan1",CidCollection::Korea1=>"Korea1", CidCollection::Kr => todo!() }}
+   |                                                                                                                                                                         ++++++++++++++++++++++++++++++
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0004`.

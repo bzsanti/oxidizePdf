@@ -1,0 +1,100 @@
+{
+  "exit_code": 101,
+  "suite_results": {
+    "text_cid_cff_contract_test": {
+      "passed": 5,
+      "failed": 1,
+      "ignored": 0
+    },
+    "text_cid_contract_test": {
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_cjk_contract_test": {
+      "passed": 2,
+      "failed": 5,
+      "ignored": 0
+    },
+    "text_document_string_contract_test": {
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_embedded_font_contract_test": {
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_encoding_contract_test": {
+      "passed": 24,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_expert_contract_test": {
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_font_program_contract_test": {
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_pdf20_string_contract_test": {
+      "passed": 18,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_script_contract_test": {
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_spacing_contract_test": {
+      "passed": 13,
+      "failed": 1,
+      "ignored": 0
+    },
+    "text_symbolic_truetype_contract_test": {
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_tracking_recovery_contract_test": {
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_transform_contract_test": {
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_truetype_contract_test": {
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    "text_type1_intrinsic_contract_test": {
+      "passed": 8,
+      "failed": 2,
+      "ignored": 0
+    },
+    "text_usecmap_contract_test": {
+      "passed": 4,
+      "failed": 6,
+      "ignored": 0
+    },
+    "text_vertical_contract_test": {
+      "passed": 0,
+      "failed": 9,
+      "ignored": 0
+    }
+  },
+  "totals": {
+    "passed": 143,
+    "failed": 24,
+    "ignored": 0
+  }
+}

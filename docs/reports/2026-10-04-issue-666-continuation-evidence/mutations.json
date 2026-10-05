@@ -1,0 +1,17 @@
+[
+  {
+    "variant": "control",
+    "exit_code": 0,
+    "scope": "font input perturbation, not production branch mutation"
+  },
+  {
+    "variant": "wrong-full-gid",
+    "exit_code": 101,
+    "scope": "font input perturbation, not production branch mutation"
+  },
+  {
+    "variant": "missing-full-table",
+    "exit_code": 101,
+    "scope": "font input perturbation, not production branch mutation"
+  }
+]

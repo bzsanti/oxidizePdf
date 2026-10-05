@@ -1,0 +1,26 @@
+test_blank_reference_has_no_invented_rate_denominator (__main__.ContentMetrics.test_blank_reference_has_no_invented_rate_denominator) ... ok
+test_case_punctuation_and_replacement_characters_remain_observable (__main__.ContentMetrics.test_case_punctuation_and_replacement_characters_remain_observable) ... ok
+test_empty_successful_extraction_counts_all_reference_content_as_missing (__main__.ContentMetrics.test_empty_successful_extraction_counts_all_reference_content_as_missing) ... ok
+test_export_rejects_partial_duplicate_and_ambiguous_records (__main__.ContentMetrics.test_export_rejects_partial_duplicate_and_ambiguous_records) ... ok
+test_oversized_page_is_explicitly_excluded_from_comparable_population (__main__.ContentMetrics.test_oversized_page_is_explicitly_excluded_from_comparable_population) ... ok
+test_page_count_mismatch_cannot_shift_the_remaining_comparisons (__main__.ContentMetrics.test_page_count_mismatch_cannot_shift_the_remaining_comparisons) ... ok
+test_page_failure_is_not_empty_success (__main__.ContentMetrics.test_page_failure_is_not_empty_success) ... ok
+test_poppler_page_delimiters_preserve_blank_pages (__main__.ContentMetrics.test_poppler_page_delimiters_preserve_blank_pages) ... ok
+test_population_hash_and_path_are_enforced (__main__.ContentMetrics.test_population_hash_and_path_are_enforced) ... ok
+test_reordering_does_not_become_multiset_content_loss (__main__.ContentMetrics.test_reordering_does_not_become_multiset_content_loss) ... ok
+test_repeated_characters_are_not_discarded_as_alignment_junk (__main__.ContentMetrics.test_repeated_characters_are_not_discarded_as_alignment_junk) ... FAIL
+test_substitution_is_distinct_from_missing_and_added_content (__main__.ContentMetrics.test_substitution_is_distinct_from_missing_and_added_content) ... ok
+test_whitespace_is_separate_and_unicode_is_not_normalized (__main__.ContentMetrics.test_whitespace_is_separate_and_unicode_is_not_normalized) ... ok
+
+======================================================================
+FAIL: test_repeated_characters_are_not_discarded_as_alignment_junk (__main__.ContentMetrics.test_repeated_characters_are_not_discarded_as_alignment_junk)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-content-mutations-final/autojunk_test.py", line 51, in test_repeated_characters_are_not_discarded_as_alignment_junk
+    self.assertEqual(counts["matched"], 299)
+AssertionError: 0 != 299
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.017s
+
+FAILED (failures=1)

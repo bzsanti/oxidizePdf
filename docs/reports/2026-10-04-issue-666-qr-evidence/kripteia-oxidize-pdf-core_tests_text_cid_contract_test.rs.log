@@ -1,0 +1,51 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_cid_contract_test.rs                  5     90
+
+--- Worst Offenders ---
+  cidrange_maps_are_equivalent_to_cidchar_maps (oxidize-pdf-core/tests/text_cid_contract_test.rs:100) - Score: 80
+    - Test 'cidrange_maps_are_equivalent_to_cidchar_maps' has identical neighborhood to 'identity_h_codes_are_cids_not_unicode_scalars'
+    i Test 'cidrange_maps_are_equivalent_to_cidchar_maps' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'cidrange_maps_are_equivalent_to_cidchar_maps' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  mixed_one_to_four_byte_codes_use_tounicode_source_codes (oxidize-pdf-core/tests/text_cid_contract_test.rs:87) - Score: 90
+    i Test 'mixed_one_to_four_byte_codes_use_tounicode_source_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'mixed_one_to_four_byte_codes_use_tounicode_source_codes' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  identity_h_codes_are_cids_not_unicode_scalars (oxidize-pdf-core/tests/text_cid_contract_test.rs:113) - Score: 90
+    - Test 'identity_h_codes_are_cids_not_unicode_scalars' has identical neighborhood to 'cidrange_maps_are_equivalent_to_cidchar_maps'
+    i Test 'identity_h_codes_are_cids_not_unicode_scalars' asserts against a hardcoded constant instead of a computed expected value
+  changing_gid_map_does_not_change_explicit_unicode (oxidize-pdf-core/tests/text_cid_contract_test.rs:121) - Score: 90
+    i Test 'changing_gid_map_does_not_change_explicit_unicode' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'changing_gid_map_does_not_change_explicit_unicode' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  widths_are_indexed_by_cid_after_encoding_mapping (oxidize-pdf-core/tests/text_cid_contract_test.rs:131) - Score: 100
+    i Test 'widths_are_indexed_by_cid_after_encoding_mapping' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_cid_contract_test.rs:
+  mixed_one_to_four_byte_codes_use_tounicode_source_codes (line 87) - Score: 90
+    i Test 'mixed_one_to_four_byte_codes_use_tounicode_source_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'mixed_one_to_four_byte_codes_use_tounicode_source_codes' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  cidrange_maps_are_equivalent_to_cidchar_maps (line 100) - Score: 80
+    - Test 'cidrange_maps_are_equivalent_to_cidchar_maps' has identical neighborhood to 'identity_h_codes_are_cids_not_unicode_scalars'
+    i Test 'cidrange_maps_are_equivalent_to_cidchar_maps' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'cidrange_maps_are_equivalent_to_cidchar_maps' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  identity_h_codes_are_cids_not_unicode_scalars (line 113) - Score: 90
+    - Test 'identity_h_codes_are_cids_not_unicode_scalars' has identical neighborhood to 'cidrange_maps_are_equivalent_to_cidchar_maps'
+    i Test 'identity_h_codes_are_cids_not_unicode_scalars' asserts against a hardcoded constant instead of a computed expected value
+  changing_gid_map_does_not_change_explicit_unicode (line 121) - Score: 90
+    i Test 'changing_gid_map_does_not_change_explicit_unicode' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'changing_gid_map_does_not_change_explicit_unicode' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  widths_are_indexed_by_cid_after_encoding_mapping (line 131) - Score: 100
+    i Test 'widths_are_indexed_by_cid_after_encoding_mapping' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

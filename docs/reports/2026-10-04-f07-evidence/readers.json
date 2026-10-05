@@ -1,0 +1,361 @@
+{
+  "versions": [
+    "4.60.1",
+    "1.26.5",
+    "1.26.10"
+  ],
+  "results": [
+    {
+      "case": "symbol-False-False",
+      "pdf_sha256": "e84ebf684c08a1edfc331c6747d9f84906f1a51e70ddd7c1252761193f3f863b",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "51e9bd7952f27838ba0a5d45f527f58f6e9a9b8bb6bd7d20d3eaf32f19ed01f6",
+      "mupdf_text_observation": "BA\n",
+      "unicode_policy": "reader heuristic; not a normative Unicode oracle",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "symbol-False-True",
+      "pdf_sha256": "7ef30552bf44cccab8b15ee023054547614ca4a6315611b68a5be3fc59c8f21a",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "51e9bd7952f27838ba0a5d45f527f58f6e9a9b8bb6bd7d20d3eaf32f19ed01f6",
+      "mupdf_text_observation": "fi\ud83d\ude00\n",
+      "unicode_policy": "explicit ToUnicode",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "symbol-True-False",
+      "pdf_sha256": "a9b32fbfdfc7fc6c0d17b25996e8951a53c1022714dc21201dd944fb49f738ce",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "51e9bd7952f27838ba0a5d45f527f58f6e9a9b8bb6bd7d20d3eaf32f19ed01f6",
+      "mupdf_text_observation": "BA\n",
+      "unicode_policy": "reader heuristic; not a normative Unicode oracle",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "symbol-True-True",
+      "pdf_sha256": "ad323322cf5c75af770604a5de63c6247f19ec0f551bb82c7433c0a97a0175dd",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "51e9bd7952f27838ba0a5d45f527f58f6e9a9b8bb6bd7d20d3eaf32f19ed01f6",
+      "mupdf_text_observation": "fi\ud83d\ude00\n",
+      "unicode_policy": "explicit ToUnicode",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "mac-False-False",
+      "pdf_sha256": "f851a3d9c86706e2be8b23ad61878706c151dd4ea4eb692982d35ba8f45c5a9b",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "51e9bd7952f27838ba0a5d45f527f58f6e9a9b8bb6bd7d20d3eaf32f19ed01f6",
+      "mupdf_text_observation": "BA\n",
+      "unicode_policy": "reader heuristic; not a normative Unicode oracle",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "mac-False-True",
+      "pdf_sha256": "8a31139d8c59f24aefac2825bbbe8500ed56156d83fce729f4093b5386ce9308",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "51e9bd7952f27838ba0a5d45f527f58f6e9a9b8bb6bd7d20d3eaf32f19ed01f6",
+      "mupdf_text_observation": "fi\ud83d\ude00\n",
+      "unicode_policy": "explicit ToUnicode",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "mac-True-False",
+      "pdf_sha256": "7c58bab1975aea73301ee158452b7161edf0e93403862330e53348472dd377dd",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "51e9bd7952f27838ba0a5d45f527f58f6e9a9b8bb6bd7d20d3eaf32f19ed01f6",
+      "mupdf_text_observation": "BA\n",
+      "unicode_policy": "reader heuristic; not a normative Unicode oracle",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "mac-True-True",
+      "pdf_sha256": "a41175d8f79057b6279bbda85e2205b34104648fbf2dff486b545d56a3a3ab18",
+      "gids": [
+        3,
+        2
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          107.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "51e9bd7952f27838ba0a5d45f527f58f6e9a9b8bb6bd7d20d3eaf32f19ed01f6",
+      "mupdf_text_observation": "fi\ud83d\ude00\n",
+      "unicode_policy": "explicit ToUnicode",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "unicode-False-False",
+      "pdf_sha256": "bb7b07e426ba84f2e4da836a66b1073b9f6c8e8404aa652a8c73fc225b61c7e4",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "3d9af7282734f43e54bd7d6f2acea63aa01f1af55e3848a6dabfb319fd2bc487",
+      "mupdf_text_observation": "AB\n",
+      "unicode_policy": "WinAnsi",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "unicode-False-True",
+      "pdf_sha256": "bf11ef352f841efdbaae0c08efe4f9d8fe3d45da9b765e166480af3a0dce752f",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "3d9af7282734f43e54bd7d6f2acea63aa01f1af55e3848a6dabfb319fd2bc487",
+      "mupdf_text_observation": "fi\ud83d\ude00\n",
+      "unicode_policy": "explicit ToUnicode",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "unicode-True-False",
+      "pdf_sha256": "6e57de988d2621e8a3d77198128eabc585b351882a29ad9733fb713f1efbbbf7",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "3d9af7282734f43e54bd7d6f2acea63aa01f1af55e3848a6dabfb319fd2bc487",
+      "mupdf_text_observation": "AB\n",
+      "unicode_policy": "WinAnsi",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "unicode-True-True",
+      "pdf_sha256": "1661a655cda9a1502518bee0a0bdfa950c52a42bff3b0e7a1249dbd3bd893fb9",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "3d9af7282734f43e54bd7d6f2acea63aa01f1af55e3848a6dabfb319fd2bc487",
+      "mupdf_text_observation": "fi\ud83d\ude00\n",
+      "unicode_policy": "explicit ToUnicode",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "ucs4-False-False",
+      "pdf_sha256": "bb2cf053d2fb7b38565a474ed7fd23eec26dcb701550f56ff9c20d40db500f1f",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "3d9af7282734f43e54bd7d6f2acea63aa01f1af55e3848a6dabfb319fd2bc487",
+      "mupdf_text_observation": "AB\n",
+      "unicode_policy": "WinAnsi",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "ucs4-False-True",
+      "pdf_sha256": "54ead15b7e07c4bde821ad6fdd61bd6cc42a65499c772b1b4b1553717f489aca",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "3d9af7282734f43e54bd7d6f2acea63aa01f1af55e3848a6dabfb319fd2bc487",
+      "mupdf_text_observation": "fi\ud83d\ude00\n",
+      "unicode_policy": "explicit ToUnicode",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "ucs4-True-False",
+      "pdf_sha256": "23bbbf7bc4794b261184a6b70f099d8dc16d5afbff37669e3fdd8002510c2854",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "3d9af7282734f43e54bd7d6f2acea63aa01f1af55e3848a6dabfb319fd2bc487",
+      "mupdf_text_observation": "AB\n",
+      "unicode_policy": "WinAnsi",
+      "qpdf": "structure only"
+    },
+    {
+      "case": "ucs4-True-True",
+      "pdf_sha256": "1a79a90bdd8614f79ae273f727fafa5a4f62954f72aa17fe8a899f02f23def62",
+      "gids": [
+        2,
+        3
+      ],
+      "origins": [
+        [
+          100.0,
+          92.0
+        ],
+        [
+          104.0,
+          92.0
+        ]
+      ],
+      "raster_sha256": "3d9af7282734f43e54bd7d6f2acea63aa01f1af55e3848a6dabfb319fd2bc487",
+      "mupdf_text_observation": "fi\ud83d\ude00\n",
+      "unicode_policy": "explicit ToUnicode",
+      "qpdf": "structure only"
+    }
+  ]
+}

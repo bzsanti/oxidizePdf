@@ -1,0 +1,10 @@
+control: verified
+positive-metrics: verified
+strict-mode: verified
+Traceback (most recent call last):
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-05-t4-product-mutations/run.py", line 124, in <module>
+    execute(name, base + ['--test', target, test, '--', '--exact'], 101, test)
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-05-t4-product-mutations/run.py", line 111, in execute
+    assert result.returncode == expected and (not expected or record['assertion_detected']), record
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'case': 'descendant', 'command': ['cargo', 'test', '--locked', '--offline', '--manifest-path', '/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core/Cargo.toml', '--target-dir', '/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build', '--test', 'text_tracking_recovery_contract_test', 'resolved_descendant_without_widths_does_not_enable_recovery', '--', '--exact'], 'exit': 0, 'expected': 101, 'assertion_detected': False}

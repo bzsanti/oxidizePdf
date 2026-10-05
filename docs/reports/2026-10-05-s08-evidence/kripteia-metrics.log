@@ -1,0 +1,48 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 16 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...e-pdf-core/tests/text_metrics_boundary_contract_test.rs       16    100
+
+--- Worst Offenders ---
+  simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth (oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs:47) - Score: 100
+  cid_metrics_resolve_indirect_array_range_and_default_values (oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs:56) - Score: 100
+  invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity (oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs:66) - Score: 100
+    i Test 'invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity' uses .unwrap() which silently discards error information
+  cid_invalid_widths_fail_strict_and_recover_finitely_without_losing_unicode (oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs:111) - Score: 100
+    i Test 'cid_invalid_widths_fail_strict_and_recover_finitely_without_losing_unicode' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_invalid_widths_fail_strict_and_recover_finitely_without_losing_unicode' uses .unwrap() which silently discards error information
+  implicit_standard14_metrics_reach_both_consumers (oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs:157) - Score: 100
+
+--- Details ---
+oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs:
+  invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity (line 66) - Score: 100
+    i Test 'invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity' uses .unwrap() which silently discards error information
+  cid_invalid_widths_fail_strict_and_recover_finitely_without_losing_unicode (line 111) - Score: 100
+    i Test 'cid_invalid_widths_fail_strict_and_recover_finitely_without_losing_unicode' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_invalid_widths_fail_strict_and_recover_finitely_without_losing_unicode' uses .unwrap() which silently discards error information
+  malformed_cid_width_tables_cannot_clamp_or_overflow_into_a_valid_cid (line 178) - Score: 100
+    i Test 'malformed_cid_width_tables_cannot_clamp_or_overflow_into_a_valid_cid' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'malformed_cid_width_tables_cannot_clamp_or_overflow_into_a_valid_cid' uses .unwrap() which silently discards error information
+  explicit_invalid_simple_font_bounds_do_not_wrap_or_default_to_zero (line 223) - Score: 100
+    i Test 'explicit_invalid_simple_font_bounds_do_not_wrap_or_default_to_zero' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'explicit_invalid_simple_font_bounds_do_not_wrap_or_default_to_zero' uses .unwrap() which silently discards error information
+  unspecified_private_metrics_use_documented_consumer_recovery (line 298) - Score: 100
+    i Test 'unspecified_private_metrics_use_documented_consumer_recovery' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unspecified_private_metrics_use_documented_consumer_recovery' uses .unwrap() which silently discards error information
+  null_missingwidth_and_program_entries_match_omission (line 347) - Score: 100
+    i Test 'null_missingwidth_and_program_entries_match_omission' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'null_missingwidth_and_program_entries_match_omission' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

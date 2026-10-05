@@ -1,0 +1,52 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.03s
+     Running tests/text_recovery_boundary_contract_test.rs (target/debug/deps/text_recovery_boundary_contract_test-7dd20d1680fef3b8)
+
+running 5 tests
+test identity_collection_preserves_odd_tail_including_after_notdef ... FAILED
+test complete_unmapped_code_does_not_reinterpret_its_suffix ... FAILED
+test never_joins_partial_codes_across_tj_strings ... FAILED
+test preserves_valid_text_and_marks_every_incomplete_tail_once ... FAILED
+test complete_codes_and_empty_string_remain_valid ... ok
+
+failures:
+
+---- identity_collection_preserves_odd_tail_including_after_notdef stdout ----
+
+thread 'identity_collection_preserves_odd_tail_including_after_notdef' (117) panicked at oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:74:4:
+assertion `left == right` failed: 002200
+  left: "A"
+ right: "A�"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- complete_unmapped_code_does_not_reinterpret_its_suffix stdout ----
+
+thread 'complete_unmapped_code_does_not_reinterpret_its_suffix' (116) panicked at oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:41:3:
+assertion `left == right` failed: <41814141> Tj
+  left: "AAA"
+ right: "A�A"
+
+---- never_joins_partial_codes_across_tj_strings stdout ----
+
+thread 'never_joins_partial_codes_across_tj_strings' (118) panicked at oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:41:3:
+assertion `left == right` failed: [<4181> <01> <41>] TJ
+  left: "AA"
+ right: "A��A"
+
+---- preserves_valid_text_and_marks_every_incomplete_tail_once stdout ----
+
+thread 'preserves_valid_text_and_marks_every_incomplete_tail_once' (119) panicked at oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:41:3:
+assertion `left == right` failed: <4181> Tj
+  left: "A"
+ right: "A�"
+
+
+failures:
+    complete_unmapped_code_does_not_reinterpret_its_suffix
+    identity_collection_preserves_odd_tail_including_after_notdef
+    never_joins_partial_codes_across_tj_strings
+    preserves_valid_text_and_marks_every_incomplete_tail_once
+
+test result: FAILED. 1 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_recovery_boundary_contract_test`

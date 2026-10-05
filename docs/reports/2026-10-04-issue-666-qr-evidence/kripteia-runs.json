@@ -1,0 +1,260 @@
+[
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/src/fonts/resolved.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_src_fonts_resolved.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_cid_cff_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_cid_cff_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_cid_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_cid_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_cjk_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_composite_font_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_composite_font_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_differences_boundary_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_differences_boundary_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_document_string_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_document_string_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_embedded_font_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_embedded_font_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_encoding_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_encoding_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_expert_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_expert_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_font_program_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_font_program_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_output_api_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_output_api_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_pdf20_string_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_pdf20_string_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_script_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_script_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_spacing_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_spacing_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_standard14_metrics_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_standard14_metrics_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_symbolic_truetype_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_tj_scale_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_tj_scale_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_tracking_recovery_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_tracking_recovery_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_transform_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_transform_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_truetype_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_truetype_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_type1_intrinsic_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_usecmap_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_usecmap_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/text_vertical_contract_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_text_vertical_contract_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/cid_cmap_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_cid_cmap_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "rust",
+    "path": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-oxidize-pdf-core_tests_issue_513_resolved_parser_fonts_test.rs.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_cid_cff.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_cid_cff.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_cjk_oracles.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_cjk_oracles.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_composite_font_contracts.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_composite_font_contracts.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_differences_contracts.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_differences_contracts.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_encoding_oracles.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_encoding_oracles.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_expert_font.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_expert_font.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_font_subset.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_font_subset.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_standard14_contracts.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_standard14_contracts.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_symbolic_contracts.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_symbolic_contracts.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_tj_scale_contracts.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_tj_scale_contracts.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_type1_contracts.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_type1_contracts.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_text_usecmap_contracts.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_text_usecmap_contracts.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_adobe_pdf_cid_tables.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_adobe_pdf_cid_tables.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_intrinsic_font_names.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_intrinsic_font_names.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/generate_cid_tables.py",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_generate_cid_tables.py.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/text_contracts",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_text_contracts.log",
+    "exit_code": 0
+  },
+  {
+    "language": "python",
+    "path": "tools/tests",
+    "log": "docs/reports/2026-10-04-issue-666-qr-evidence/kripteia-tools_tests.log",
+    "exit_code": 0
+  }
+]

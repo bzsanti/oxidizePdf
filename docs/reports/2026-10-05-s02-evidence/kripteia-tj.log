@@ -1,0 +1,51 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_tj_scale_contract_test.rs             5     90
+
+--- Worst Offenders ---
+  forward_tj_adjustment_scales_with_tz (oxidize-pdf-core/tests/text_tj_scale_contract_test.rs:66) - Score: 80
+    - Test 'forward_tj_adjustment_scales_with_tz' has identical neighborhood to 'backward_tj_adjustment_scales_with_tz'
+    - Test 'forward_tj_adjustment_scales_with_tz' does not call any production code
+  backward_tj_adjustment_scales_with_tz (oxidize-pdf-core/tests/text_tj_scale_contract_test.rs:70) - Score: 80
+    - Test 'backward_tj_adjustment_scales_with_tz' has identical neighborhood to 'forward_tj_adjustment_scales_with_tz'
+    - Test 'backward_tj_adjustment_scales_with_tz' does not call any production code
+  zero_tj_control_scales_only_source_width (oxidize-pdf-core/tests/text_tj_scale_contract_test.rs:74) - Score: 90
+    - Test 'zero_tj_control_scales_only_source_width' does not call any production code
+  fixture_hashes_are_frozen (oxidize-pdf-core/tests/text_tj_scale_contract_test.rs:78) - Score: 100
+    i Test 'fixture_hashes_are_frozen' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'fixture_hashes_are_frozen' has multiple assertions without diagnostic messages
+    i Test 'fixture_hashes_are_frozen' uses .unwrap() which silently discards error information
+  numeric_only_and_split_tj_adjustments_preserve_the_pen (oxidize-pdf-core/tests/text_tj_scale_contract_test.rs:99) - Score: 100
+    i Test 'numeric_only_and_split_tj_adjustments_preserve_the_pen' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'numeric_only_and_split_tj_adjustments_preserve_the_pen' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_tj_scale_contract_test.rs:
+  forward_tj_adjustment_scales_with_tz (line 66) - Score: 80
+    - Test 'forward_tj_adjustment_scales_with_tz' has identical neighborhood to 'backward_tj_adjustment_scales_with_tz'
+    - Test 'forward_tj_adjustment_scales_with_tz' does not call any production code
+  backward_tj_adjustment_scales_with_tz (line 70) - Score: 80
+    - Test 'backward_tj_adjustment_scales_with_tz' has identical neighborhood to 'forward_tj_adjustment_scales_with_tz'
+    - Test 'backward_tj_adjustment_scales_with_tz' does not call any production code
+  zero_tj_control_scales_only_source_width (line 74) - Score: 90
+    - Test 'zero_tj_control_scales_only_source_width' does not call any production code
+  fixture_hashes_are_frozen (line 78) - Score: 100
+    i Test 'fixture_hashes_are_frozen' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'fixture_hashes_are_frozen' has multiple assertions without diagnostic messages
+    i Test 'fixture_hashes_are_frozen' uses .unwrap() which silently discards error information
+  numeric_only_and_split_tj_adjustments_preserve_the_pen (line 99) - Score: 100
+    i Test 'numeric_only_and_split_tj_adjustments_preserve_the_pen' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'numeric_only_and_split_tj_adjustments_preserve_the_pen' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

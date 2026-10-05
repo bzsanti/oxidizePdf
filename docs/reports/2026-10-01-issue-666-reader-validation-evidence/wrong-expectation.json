@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "versions": {
+    "pymupdf": "1.26.5",
+    "mupdf": "1.26.10",
+    "poppler": "24.02.0",
+    "qpdf": "11.9.0"
+  },
+  "environment_errors": [],
+  "accepted": false,
+  "cases": [
+    {
+      "id": "boundary-01000000",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-01000000.pdf",
+      "expected_text": "fl",
+      "status": "failed",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "status": "mismatch"
+        },
+        {
+          "reader": "poppler",
+          "status": "known_limitation",
+          "exit_code": 0,
+          "stdout": "\f",
+          "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+          "known_limit_reason": "Poppler 24.02.0 warns above 0xFFFF and discards ToUnicode mappings above 0xFFFFFF; independently confirmed by MuPDF and nine boundary cases. See docs/reports/2026-10-01-issue-666-poppler-discrepancy.md."
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-01000000.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "e64c56c7870672aeca6a928126cb427df8856148d9083431fb1030ead916b9a1"
+    }
+  ],
+  "summary": {
+    "match": 0,
+    "known_limitation": 1,
+    "mismatch": 1,
+    "error": 0,
+    "structure_ok": 1
+  }
+}

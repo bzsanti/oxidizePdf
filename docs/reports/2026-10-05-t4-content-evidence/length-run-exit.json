@@ -1,0 +1,1 @@
+{"command": ["python3", "tools/text_contracts/content_differential.py", "run", "test-corpus/t3-stress", "--manifest", "docs/reports/2026-10-05-t4-content-evidence/population.json", "--probe", "target/debug/examples/text_content_probe", "--output", "docs/reports/2026-10-05-t4-content-evidence/length-pages.jsonl", "--work", "target/t4-content-length-run", "--jobs", "4"], "exit": 0}

@@ -1,0 +1,11 @@
+[
+  "oxidize-pdf-core/src/fonts/resolved.rs",
+  "oxidize-pdf-core/src/text/extraction_cmap.rs",
+  "oxidize-pdf-core/src/text/fonts/cff/dict.rs",
+  "oxidize-pdf-core/src/text/fonts/cff/index.rs",
+  "oxidize-pdf-core/src/text/fonts/cff/mod.rs",
+  "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json",
+  "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+  "oxidize-pdf-core/tests/text_cid_cff_contract_test.rs",
+  "oxidize-pdf-core/tests/text_composite_font_contract_test.rs"
+]

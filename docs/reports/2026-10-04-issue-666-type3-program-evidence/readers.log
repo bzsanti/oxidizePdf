@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-type3-program-evidence/readers.py", line 13, in <module>
+    origin=next(o for c,o in chars if c=='B');assert abs(origin[0]-x)<.0001 and abs(origin[1]-92)<.0001,(name,chars)
+                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('fractional', [('f', [100.0, 92.0]), ('i', [100.0, 92.0]), ('B', [101.25, 92.0])])

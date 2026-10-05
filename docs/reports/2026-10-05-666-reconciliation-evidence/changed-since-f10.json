@@ -1,0 +1,5 @@
+[
+  "TASKS.md",
+  "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json",
+  "oxidize-pdf-core/tests/text_standard14_metrics_contract_test.rs"
+]

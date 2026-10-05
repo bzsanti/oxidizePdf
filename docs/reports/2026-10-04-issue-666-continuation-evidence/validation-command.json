@@ -1,0 +1,16 @@
+[
+  "cargo",
+  "test",
+  "--locked",
+  "--offline",
+  "-p",
+  "oxidize-pdf",
+  "--test",
+  "text_competing_cmap_contract_test",
+  "--test",
+  "text_symbolic_truetype_contract_test",
+  "--test",
+  "text_truetype_contract_test",
+  "--test",
+  "text_cmap_boundary_contract_test"
+]

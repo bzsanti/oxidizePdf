@@ -4,7 +4,7 @@
 //! correctly extract text using Adobe CID→Unicode mapping tables.
 
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
-use oxidize_pdf::text::cid_to_unicode::CidCollection;
+use oxidize_pdf::text::cid_to_unicode::AdobeCidCollection as CidCollection;
 
 // ─── Unit tests for CidCollection ───
 
@@ -26,10 +26,7 @@ fn test_cid_collection_from_ordering() {
         CidCollection::from_ordering("Korea1"),
         Some(CidCollection::Korea1)
     );
-    assert_eq!(
-        CidCollection::from_ordering("KR"),
-        Some(CidCollection::Korea1)
-    );
+    assert_eq!(CidCollection::from_ordering("KR"), Some(CidCollection::Kr));
     assert_eq!(CidCollection::from_ordering("Unknown"), None);
     assert_eq!(CidCollection::from_ordering(""), None);
 }
@@ -135,4 +132,23 @@ fn test_issue_157_cid_keyed_font_text_extraction() {
         !text.contains("«þÏçY"),
         "Should not contain garbage characters from WinAnsi fallback"
     );
+}
+
+#[test]
+fn cid_zero_is_not_text_in_collection_fallbacks() {
+    for collection in [
+        CidCollection::Cns1,
+        CidCollection::Gb1,
+        CidCollection::Japan1,
+        CidCollection::Korea1,
+        CidCollection::Kr,
+    ] {
+        assert_eq!(
+            collection.cid_to_unicode_sequence(0),
+            None,
+            "{collection:?}"
+        );
+        assert_eq!(collection.cid_to_unicode(0), None, "{collection:?}");
+        assert_eq!(collection.cid_to_unicode_sequence(1), Some(" "));
+    }
 }

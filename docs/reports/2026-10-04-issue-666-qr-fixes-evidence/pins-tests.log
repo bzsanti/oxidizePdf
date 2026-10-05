@@ -1,0 +1,8 @@
+test_oracle_rejects_modified_source_before_creating_output (test_adobe_source_pins.AdobeSourcePins.test_oracle_rejects_modified_source_before_creating_output) ... ok
+test_pin_inventory_matches_frozen_independent_provenance (test_adobe_source_pins.AdobeSourcePins.test_pin_inventory_matches_frozen_independent_provenance) ... ok
+test_product_rejects_modified_source_before_touching_output (test_adobe_source_pins.AdobeSourcePins.test_product_rejects_modified_source_before_touching_output) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.012s
+
+OK

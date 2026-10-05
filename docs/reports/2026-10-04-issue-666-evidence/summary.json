@@ -1,0 +1,226 @@
+{
+  "exit_code": 0,
+  "targets": [
+    {
+      "target": "library",
+      "status": "ok",
+      "passed": 6798,
+      "failed": 0,
+      "ignored": 3
+    },
+    {
+      "target": "cid_cmap_test",
+      "status": "ok",
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "descendant_fonts_spellings_test",
+      "status": "ok",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "differential_fusion_test",
+      "status": "ok",
+      "passed": 34,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "differential_order_test",
+      "status": "ok",
+      "passed": 38,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "issue_513_resolved_parser_fonts_test",
+      "status": "ok",
+      "passed": 16,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "prop_font_invariants",
+      "status": "ok",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_cid_cff_contract_test",
+      "status": "ok",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_cid_contract_test",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_cjk_contract_test",
+      "status": "ok",
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_composite_font_contract_test",
+      "status": "ok",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_differences_boundary_contract_test",
+      "status": "ok",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_document_string_contract_test",
+      "status": "ok",
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_embedded_font_contract_test",
+      "status": "ok",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_encoding_contract_test",
+      "status": "ok",
+      "passed": 24,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_expert_contract_test",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_font_program_contract_test",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_output_api_contract_test",
+      "status": "ok",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_pdf20_string_contract_test",
+      "status": "ok",
+      "passed": 18,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_script_contract_test",
+      "status": "ok",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_spacing_contract_test",
+      "status": "ok",
+      "passed": 14,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_standard14_metrics_contract_test",
+      "status": "ok",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_symbolic_truetype_contract_test",
+      "status": "ok",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_tj_scale_contract_test",
+      "status": "ok",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_tracking_recovery_contract_test",
+      "status": "ok",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_transform_contract_test",
+      "status": "ok",
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_truetype_contract_test",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_type1_intrinsic_contract_test",
+      "status": "ok",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_usecmap_contract_test",
+      "status": "ok",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "target": "text_vertical_contract_test",
+      "status": "ok",
+      "passed": 15,
+      "failed": 0,
+      "ignored": 0
+    }
+  ],
+  "total_passed": 7117,
+  "total_failed": 0,
+  "total_ignored": 3,
+  "contracts_passed": 208,
+  "contracts_targets": 23,
+  "corpus_metrics": [
+    "differential fusion gate [t3-stress]: compared=1695 skipped=107 fusions=276 candidates=211815 rate=0.001303 content_coverage=0.9731",
+    "differential order gate [t3-stress]: compared=1058 skipped=744 pop_words=594837 common=582111 misplaced=110429 misplaced_rate=0.185646 transposed=97703 transposed_rate=0.167843 fidelity_micro=0.8322 median=1.0000 p10=0.8182 docs_below_0.95=213 alignment_coverage=0.9786 content_coverage=0.9945",
+    "differential order gate [t3-stress-reading-order]: compared=1058 skipped=744 pop_words=594837 common=582111 misplaced=94889 misplaced_rate=0.159521 transposed=82163 transposed_rate=0.141147 fidelity_micro=0.8589 median=1.0000 p10=0.8654 docs_below_0.95=198 alignment_coverage=0.9786 content_coverage=0.9945"
+  ],
+  "hashes_unchanged": true
+}

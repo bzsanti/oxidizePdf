@@ -14,13 +14,20 @@ use crate::text::cmap::{tokenize_cmap, CodeRange, Token};
 pub(crate) struct EncodingCMap {
     /// Writing mode declared by `/WMode` (0 horizontal, 1 vertical).
     pub wmode: u8,
+    /// Registry/Ordering certified by the pinned predefined resource.
+    /// Missing metadata does not assert a different collection.
+    pub(crate) collection: Option<(String, String)>,
+    /// Explicit malformed or conflicting metadata cannot authorize Unicode.
+    pub(crate) invalid_collection: bool,
     pub codespace_ranges: Vec<CodeRange>,
-    pub single_cid: HashMap<Vec<u8>, u16>,
+    // CID and number of ranges already declared: later ranges may override it.
+    pub single_cid: HashMap<Vec<u8>, (u16, usize)>,
     pub cid_ranges: Vec<CidRange>,
     pub notdef_ranges: Vec<CidRange>,
-    /// Parent CMap name from `usecmap` (informational, not followed at runtime).
-    #[allow(dead_code)]
+    /// Parent name from `usecmap`, resolved by the document-aware font parser.
     pub usecmap_parent: Option<String>,
+    pub(crate) parent: Option<Box<EncodingCMap>>,
+    pub(crate) explicit_wmode: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -36,12 +43,14 @@ impl EncodingCMap {
         let content = String::from_utf8_lossy(data);
         let tokens = tokenize_cmap(&content);
         let mut cmap = EncodingCMap::default();
+        super::cmap_collection::apply(data, &mut cmap);
         let mut i = 0;
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Name(name) if name == "WMode" => {
                     if let Some(Token::Integer(value)) = tokens.get(i + 1) {
                         cmap.wmode = (*value).clamp(0, 1) as u8;
+                        cmap.explicit_wmode = true;
                     }
                     i += 1;
                 }
@@ -89,7 +98,10 @@ impl EncodingCMap {
                             }
                             Token::Hex(code) => {
                                 if let Some(Token::Integer(cid)) = tokens.get(i + 1) {
-                                    cmap.single_cid.insert(code.clone(), *cid as u16);
+                                    if let Ok(cid) = u16::try_from(*cid) {
+                                        cmap.single_cid
+                                            .insert(code.clone(), (cid, cmap.cid_ranges.len()));
+                                    }
                                     i += 2;
                                 } else {
                                     i += 1;
@@ -109,11 +121,13 @@ impl EncodingCMap {
                             }
                             Token::Hex(lo) => match (tokens.get(i + 1), tokens.get(i + 2)) {
                                 (Some(Token::Hex(hi)), Some(Token::Integer(cid))) => {
-                                    cmap.cid_ranges.push(CidRange {
-                                        lo: lo.clone(),
-                                        hi: hi.clone(),
-                                        base_cid: *cid as u16,
-                                    });
+                                    if let Ok(cid) = u16::try_from(*cid) {
+                                        cmap.cid_ranges.push(CidRange {
+                                            lo: lo.clone(),
+                                            hi: hi.clone(),
+                                            base_cid: cid,
+                                        });
+                                    }
                                     i += 3;
                                 }
                                 _ => i += 1,
@@ -132,11 +146,13 @@ impl EncodingCMap {
                             }
                             Token::Hex(code) => {
                                 if let Some(Token::Integer(cid)) = tokens.get(i + 1) {
-                                    cmap.notdef_ranges.push(CidRange {
-                                        lo: code.clone(),
-                                        hi: code.clone(),
-                                        base_cid: *cid as u16,
-                                    });
+                                    if let Ok(cid) = u16::try_from(*cid) {
+                                        cmap.notdef_ranges.push(CidRange {
+                                            lo: code.clone(),
+                                            hi: code.clone(),
+                                            base_cid: cid,
+                                        });
+                                    }
                                     i += 2;
                                 } else {
                                     i += 1;
@@ -156,11 +172,13 @@ impl EncodingCMap {
                             }
                             Token::Hex(lo) => match (tokens.get(i + 1), tokens.get(i + 2)) {
                                 (Some(Token::Hex(hi)), Some(Token::Integer(cid))) => {
-                                    cmap.notdef_ranges.push(CidRange {
-                                        lo: lo.clone(),
-                                        hi: hi.clone(),
-                                        base_cid: *cid as u16,
-                                    });
+                                    if let Ok(cid) = u16::try_from(*cid) {
+                                        cmap.notdef_ranges.push(CidRange {
+                                            lo: lo.clone(),
+                                            hi: hi.clone(),
+                                            base_cid: cid,
+                                        });
+                                    }
                                     i += 3;
                                 }
                                 _ => i += 1,
@@ -177,7 +195,7 @@ impl EncodingCMap {
 
     /// Resolve a code that falls in a notdef range to its notdef CID.
     pub fn map_notdef(&self, code: &[u8]) -> Option<u16> {
-        for r in &self.notdef_ranges {
+        for r in self.notdef_ranges.iter().rev() {
             if code.len() == r.lo.len()
                 && code.len() == r.hi.len()
                 && code >= &r.lo[..]
@@ -186,54 +204,118 @@ impl EncodingCMap {
                 return Some(r.base_cid);
             }
         }
-        None
+        self.parent
+            .as_ref()
+            .and_then(|parent| parent.map_notdef(code))
     }
 
     /// Determine the byte width of the code starting at `pos` by matching the
-    /// first byte against codespace ranges (ISO 32000-1 §9.7.6.2). Falls back
+    /// available prefix against every byte of codespace ranges (§9.7.6.2). Falls back
     /// to width 1 when no range matches, guaranteeing forward progress.
     ///
     /// # Panics
-    /// Panics if `pos >= bytes.len()`. Callers iterate `while pos < bytes.len()`.
+    /// Panics if `pos > bytes.len()`. Callers iterate `while pos < bytes.len()`.
     pub fn code_len_at(&self, bytes: &[u8], pos: usize) -> usize {
-        let b = bytes[pos];
+        let remaining = &bytes[pos..];
+        let mut truncated = None;
         for r in &self.codespace_ranges {
             if !r.start.is_empty()
                 && r.start.len() == r.end.len()
-                && b >= r.start[0]
-                && b <= r.end[0]
+                && remaining
+                    .iter()
+                    .zip(r.start.iter().zip(&r.end))
+                    .all(|(byte, (lo, hi))| byte >= lo && byte <= hi)
             {
-                return r.start.len();
+                if remaining.len() >= r.start.len() {
+                    return r.start.len();
+                }
+                truncated = Some(r.start.len());
             }
         }
-        1
+        truncated.unwrap_or(1)
     }
 
-    /// Map a character code to its CID. `single_cid` first, then `cid_ranges`.
+    /// Later declarations override earlier mappings within the same layer.
     pub fn map_code_to_cid(&self, code: &[u8]) -> Option<u16> {
-        if let Some(&cid) = self.single_cid.get(code) {
-            return Some(cid);
-        }
-        for r in &self.cid_ranges {
+        let single = self.single_cid.get(code);
+        let first_range = single.map_or(0, |(_, ranges)| *ranges);
+        for r in self.cid_ranges[first_range..].iter().rev() {
             if code.len() == r.lo.len()
                 && code.len() == r.hi.len()
                 && code >= &r.lo[..]
                 && code <= &r.hi[..]
             {
-                let offset = be_offset(code, &r.lo);
+                let offset = be_offset(code, &r.lo)?;
                 return r.base_cid.checked_add(offset);
             }
         }
-        None
+        if let Some(&(cid, _)) = single {
+            return Some(cid);
+        }
+        self.parent
+            .as_ref()
+            .and_then(|parent| parent.map_code_to_cid(code))
+    }
+
+    /// Keep layers separate so a child range overrides a parent single entry.
+    pub(crate) fn inherit(&mut self, parent: Self) {
+        if self.codespace_ranges.is_empty() {
+            self.codespace_ranges.clone_from(&parent.codespace_ranges);
+        }
+        if !self.explicit_wmode {
+            self.wmode = parent.wmode;
+        }
+        self.invalid_collection |= parent.invalid_collection;
+        if let (Some(child), Some(parent)) = (&self.collection, &parent.collection) {
+            self.invalid_collection |= child != parent;
+        }
+        if self.collection.is_none() {
+            self.collection.clone_from(&parent.collection);
+        }
+        self.parent = Some(Box::new(parent));
+    }
+
+    /// Reconcile an explicit declaration without letting malformed metadata
+    /// disappear into the distinct, historically supported absent case.
+    pub(crate) fn declare_collection(&mut self, collection: Option<(String, String)>) {
+        let Some(collection) = collection else {
+            self.invalid_collection = true;
+            return;
+        };
+        if self
+            .collection
+            .as_ref()
+            .is_some_and(|old| old != &collection)
+        {
+            self.invalid_collection = true;
+        }
+        self.collection = Some(collection);
+    }
+
+    pub(crate) fn identity(vertical: bool) -> Self {
+        Self {
+            wmode: u8::from(vertical),
+            codespace_ranges: vec![CodeRange {
+                start: vec![0, 0],
+                end: vec![255, 255],
+            }],
+            cid_ranges: vec![CidRange {
+                lo: vec![0, 0],
+                hi: vec![255, 255],
+                base_cid: 0,
+            }],
+            ..Self::default()
+        }
     }
 }
 
-/// Big-endian numeric distance `code - lo`, truncated to the low 16 bits.
-/// For well-formed CID ranges (codes ≤ 2 bytes) the distance is ≤ 0xFFFF,
-/// so the mask is a no-op.
-fn be_offset(code: &[u8], lo: &[u8]) -> u16 {
-    let to_u64 = |b: &[u8]| b.iter().fold(0u64, |acc, &x| (acc << 8) | x as u64);
-    (to_u64(code).saturating_sub(to_u64(lo)) & 0xFFFF) as u16
+/// CID offsets must fit in 16 bits even when source codes use three/four bytes.
+fn be_offset(code: &[u8], lo: &[u8]) -> Option<u16> {
+    if code.len() != lo.len() || !(1..=4).contains(&code.len()) {
+        return None;
+    }
+    let to_u32 = |b: &[u8]| b.iter().fold(0u32, |acc, &x| (acc << 8) | x as u32);
+    u16::try_from(to_u32(code).checked_sub(to_u32(lo))?).ok()
 }
 
 /// The resolved, non-Identity encoding of a Type0 font, as carried on `FontInfo`.
@@ -248,47 +330,98 @@ pub(crate) enum CidEncoding {
 /// Decode a byte string as UTF-16BE, replacing malformed units with U+FFFD.
 /// A trailing odd byte is dropped (no complete code unit can be formed from it).
 pub(crate) fn decode_utf16be(bytes: &[u8]) -> String {
-    char::decode_utf16(
+    let mut result: String = char::decode_utf16(
         bytes
-            .chunks(2)
-            .filter(|c| c.len() == 2)
+            .chunks_exact(2)
             .map(|c| u16::from_be_bytes([c[0], c[1]])),
     )
     .map(|r| r.unwrap_or('\u{FFFD}'))
-    .collect()
+    .collect();
+    if bytes.len() % 2 != 0 {
+        result.push('\u{FFFD}');
+    }
+    result
 }
 
 /// Lazily parse a vendored Adobe CMap embedded at compile time. Parsed once,
 /// cached for the process lifetime. Returns `None` only if the embedded data
 /// fails to parse (should never happen for the shipped files).
 macro_rules! vendored_cmap {
-    ($file:literal) => {{
+    ($file:literal, $ordering:literal) => {{
         static CELL: OnceLock<Option<EncodingCMap>> = OnceLock::new();
         CELL.get_or_init(|| {
-            EncodingCMap::parse(include_bytes!(concat!("cmap_resources/", $file))).ok()
+            let mut cmap =
+                EncodingCMap::parse(include_bytes!(concat!("cmap_resources/", $file))).ok()?;
+            if let Some(parent) = cmap.usecmap_parent.as_deref() {
+                match resolve_predefined(parent)? {
+                    CidEncoding::Cmap(parent) => cmap.inherit(parent),
+                    CidEncoding::Utf16Be => return None,
+                }
+            }
+            cmap.collection = Some(("Adobe".into(), $ordering.into()));
+            Some(cmap)
         })
         .clone()
         .map(CidEncoding::Cmap)
     }};
 }
 
-/// Resolve a predefined `/Encoding` name. `Uni*-UCS2-*`/`Uni*-UTF16-*` are
-/// algorithmic UTF-16BE. Vendored CJK names resolve to lazily-parsed
-/// Adobe predefined CMaps (BSD-3-Clause, embedded at compile time).
-/// Unknown names return `None` (caller falls back to current behavior).
-///
-/// Note: the `starts_with("Uni")` check is case-sensitive per PDF spec
-/// (predefined CMap names are case-sensitive, ISO 32000-1 §9.7.5.2).
+/// Resolve a predefined Encoding through pinned Adobe code→CID resources.
+/// Vertical resources inherit their horizontal parent. Unvendored Uni* names
+/// retain the historical UTF-16 recovery; other unknown names return None.
 pub(crate) fn resolve_predefined(name: &str) -> Option<CidEncoding> {
-    if name.starts_with("Uni") && (name.contains("UCS2") || name.contains("UTF16")) {
-        return Some(CidEncoding::Utf16Be);
-    }
     match name {
-        "GBK-EUC-H" => vendored_cmap!("GBK-EUC-H"),
-        "GBKp-EUC-H" => vendored_cmap!("GBKp-EUC-H"),
-        "90ms-RKSJ-H" => vendored_cmap!("90ms-RKSJ-H"),
-        "90pv-RKSJ-H" => vendored_cmap!("90pv-RKSJ-H"),
-        "KSCms-UHC-H" => vendored_cmap!("KSCms-UHC-H"),
+        "90ms-RKSJ-H" => vendored_cmap!("90ms-RKSJ-H", "Japan1"),
+        "90ms-RKSJ-V" => vendored_cmap!("90ms-RKSJ-V", "Japan1"),
+        "90pv-RKSJ-H" => vendored_cmap!("90pv-RKSJ-H", "Japan1"),
+        "90pv-RKSJ-V" => vendored_cmap!("90pv-RKSJ-V", "Japan1"),
+        "B5pc-H" => vendored_cmap!("B5pc-H", "CNS1"),
+        "B5pc-V" => vendored_cmap!("B5pc-V", "CNS1"),
+        "ETen-B5-H" => vendored_cmap!("ETen-B5-H", "CNS1"),
+        "ETen-B5-V" => vendored_cmap!("ETen-B5-V", "CNS1"),
+        "GB-EUC-H" => vendored_cmap!("GB-EUC-H", "GB1"),
+        "GB-EUC-V" => vendored_cmap!("GB-EUC-V", "GB1"),
+        "GBK-EUC-H" => vendored_cmap!("GBK-EUC-H", "GB1"),
+        "GBK-EUC-V" => vendored_cmap!("GBK-EUC-V", "GB1"),
+        "GBKp-EUC-H" => vendored_cmap!("GBKp-EUC-H", "GB1"),
+        "GBKp-EUC-V" => vendored_cmap!("GBKp-EUC-V", "GB1"),
+        "KSC-EUC-H" => vendored_cmap!("KSC-EUC-H", "Korea1"),
+        "KSC-EUC-V" => vendored_cmap!("KSC-EUC-V", "Korea1"),
+        "KSCms-UHC-H" => vendored_cmap!("KSCms-UHC-H", "Korea1"),
+        "KSCms-UHC-V" => vendored_cmap!("KSCms-UHC-V", "Korea1"),
+        "UniAKR-UTF16-H" => vendored_cmap!("UniAKR-UTF16-H", "KR"),
+        "Adobe-KR-0" => vendored_cmap!("Adobe-KR-0", "KR"),
+        "Adobe-KR-1" => vendored_cmap!("Adobe-KR-1", "KR"),
+        "Adobe-KR-2" => vendored_cmap!("Adobe-KR-2", "KR"),
+        "Adobe-KR-3" => vendored_cmap!("Adobe-KR-3", "KR"),
+        "Adobe-KR-4" => vendored_cmap!("Adobe-KR-4", "KR"),
+        "Adobe-KR-5" => vendored_cmap!("Adobe-KR-5", "KR"),
+        "Adobe-KR-6" => vendored_cmap!("Adobe-KR-6", "KR"),
+        "Adobe-KR-7" => vendored_cmap!("Adobe-KR-7", "KR"),
+        "Adobe-KR-8" => vendored_cmap!("Adobe-KR-8", "KR"),
+        "Adobe-KR-9" => vendored_cmap!("Adobe-KR-9", "KR"),
+        "UniAKR-UTF8-H" => vendored_cmap!("UniAKR-UTF8-H", "KR"),
+        "UniAKR-UTF32-H" => vendored_cmap!("UniAKR-UTF32-H", "KR"),
+        "UniCNS-UCS2-H" => vendored_cmap!("UniCNS-UCS2-H", "CNS1"),
+        "UniCNS-UCS2-V" => vendored_cmap!("UniCNS-UCS2-V", "CNS1"),
+        "UniCNS-UTF16-H" => vendored_cmap!("UniCNS-UTF16-H", "CNS1"),
+        "UniCNS-UTF16-V" => vendored_cmap!("UniCNS-UTF16-V", "CNS1"),
+        "UniGB-UCS2-H" => vendored_cmap!("UniGB-UCS2-H", "GB1"),
+        "UniGB-UCS2-V" => vendored_cmap!("UniGB-UCS2-V", "GB1"),
+        "UniGB-UTF16-H" => vendored_cmap!("UniGB-UTF16-H", "GB1"),
+        "UniGB-UTF16-V" => vendored_cmap!("UniGB-UTF16-V", "GB1"),
+        "UniJIS-UCS2-H" => vendored_cmap!("UniJIS-UCS2-H", "Japan1"),
+        "UniJIS-UCS2-V" => vendored_cmap!("UniJIS-UCS2-V", "Japan1"),
+        "UniJIS-UTF16-H" => vendored_cmap!("UniJIS-UTF16-H", "Japan1"),
+        "UniJIS-UTF16-V" => vendored_cmap!("UniJIS-UTF16-V", "Japan1"),
+        "UniKS-UCS2-H" => vendored_cmap!("UniKS-UCS2-H", "Korea1"),
+        "UniKS-UCS2-V" => vendored_cmap!("UniKS-UCS2-V", "Korea1"),
+        "UniKS-UTF16-H" => vendored_cmap!("UniKS-UTF16-H", "Korea1"),
+        "UniKS-UTF16-V" => vendored_cmap!("UniKS-UTF16-V", "Korea1"),
+        // Preserve the historical Unicode recovery for unvendored Uni* names.
+        _ if name.starts_with("Uni") && (name.contains("UCS2") || name.contains("UTF16")) => {
+            Some(CidEncoding::Utf16Be)
+        }
         _ => None,
     }
 }
@@ -424,29 +557,29 @@ endcmap";
     }
 
     #[test]
-    fn utf16be_drops_trailing_odd_byte() {
-        // U+4E2D (中) followed by a lone orphan byte that must be dropped.
+    fn utf16be_marks_trailing_odd_byte() {
+        // #678: keep an incomplete code visible instead of silently dropping it.
         let bytes = [0x4E, 0x2D, 0xFF];
-        assert_eq!(decode_utf16be(&bytes), "中");
+        assert_eq!(decode_utf16be(&bytes), "中�");
     }
 
     #[test]
-    fn predefined_uni_families_resolve_to_utf16be() {
+    fn predefined_uni_families_resolve_to_collection_cmaps() {
         assert!(matches!(
             resolve_predefined("UniGB-UCS2-H"),
-            Some(CidEncoding::Utf16Be)
+            Some(CidEncoding::Cmap(_))
         ));
         assert!(matches!(
             resolve_predefined("UniJIS-UTF16-H"),
-            Some(CidEncoding::Utf16Be)
+            Some(CidEncoding::Cmap(_))
         ));
         assert!(matches!(
             resolve_predefined("UniKS-UTF16-H"),
-            Some(CidEncoding::Utf16Be)
+            Some(CidEncoding::Cmap(_))
         ));
         assert!(matches!(
             resolve_predefined("UniCNS-UCS2-H"),
-            Some(CidEncoding::Utf16Be)
+            Some(CidEncoding::Cmap(_))
         ));
         assert!(resolve_predefined("WhateverUnknown-H").is_none());
     }

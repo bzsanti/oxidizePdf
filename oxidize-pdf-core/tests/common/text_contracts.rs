@@ -1,5 +1,4 @@
-//! Public-API fixtures for encoding and tracking regressions.
-//! No production encoding tables are used to compute expectations.
+//! Public-API fixtures for #666. No production encoding tables are used here.
 #![allow(dead_code)]
 
 #[path = "pdf_assembler.rs"]
@@ -71,4 +70,18 @@ pub fn cmap(entries: &str, count: usize, code_space: &str) -> Vec<u8> {
          endcmap CMapName currentdict /CMap defineresource pop end end"
     );
     assembler::stream_obj("", content.as_bytes())
+}
+
+pub fn corrupt_descendant_pdf(content: &[u8]) -> Vec<u8> {
+    let font = "<< /Type /Font /Subtype /Type0 /BaseFont /Damaged /Encoding /Identity-H /DescendantFonts [6 0 R] /ToUnicode 7 0 R >>";
+    let image = assembler::stream_obj(
+        "/Type /XObject /Subtype /Image /Width 1 /Height 1 /BitsPerComponent 8 /ColorSpace /DeviceGray",
+        &[0],
+    );
+    let unicode = cmap(
+        "<0001> <0031>\n<0002> <0030>\n<0003> <0020>",
+        3,
+        "<0000> <FFFF>",
+    );
+    pdf(font, content, vec![image, unicode])
 }

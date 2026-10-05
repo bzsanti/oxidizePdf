@@ -1,0 +1,97 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 88 | Tests: 25 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_spacing_contract_test.rs             25     88
+
+--- Worst Offenders ---
+  declared_zero_widths_allow_uniform_advances (oxidize-pdf-core/tests/text_spacing_contract_test.rs:47) - Score: 80
+    - Test 'declared_zero_widths_allow_uniform_advances' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'declared_zero_widths_allow_uniform_advances' does not call any production code
+  ordinary_tj_gap_threshold_is_strict_for_both_signs (oxidize-pdf-core/tests/text_spacing_contract_test.rs:183) - Score: 80
+    - Test 'ordinary_tj_gap_threshold_is_strict_for_both_signs' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'ordinary_tj_gap_threshold_is_strict_for_both_signs' does not call any production code
+  tracking_outlier_compares_only_excess_against_strict_threshold (oxidize-pdf-core/tests/text_spacing_contract_test.rs:198) - Score: 80
+    - Test 'tracking_outlier_compares_only_excess_against_strict_threshold' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+    - Test 'tracking_outlier_compares_only_excess_against_strict_threshold' does not call any production code
+  tracking_threshold_and_backward_kern_controls (oxidize-pdf-core/tests/text_spacing_contract_test.rs:216) - Score: 80
+    - Test 'tracking_threshold_and_backward_kern_controls' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+    - Test 'tracking_threshold_and_backward_kern_controls' does not call any production code
+  minimum_support_and_strict_majority_are_both_required (oxidize-pdf-core/tests/text_spacing_contract_test.rs:324) - Score: 80
+    - Test 'minimum_support_and_strict_majority_are_both_required' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+    - Test 'minimum_support_and_strict_majority_are_both_required' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_spacing_contract_test.rs:
+  absent_widths_never_certify_tracking_for_standard_fonts (line 36) - Score: 90
+    - Test 'absent_widths_never_certify_tracking_for_standard_fonts' does not call any production code
+  declared_positive_widths_keep_word_separators (line 42) - Score: 90
+    - Test 'declared_positive_widths_keep_word_separators' does not call any production code
+  declared_zero_widths_allow_uniform_advances (line 47) - Score: 80
+    - Test 'declared_zero_widths_allow_uniform_advances' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'declared_zero_widths_allow_uniform_advances' does not call any production code
+  known_zero_width_single_word_needs_no_literal_space (line 57) - Score: 90
+    - Test 'known_zero_width_single_word_needs_no_literal_space' does not call any production code
+  excess_advance_remains_a_word_separator (line 62) - Score: 90
+    - Test 'excess_advance_remains_a_word_separator' does not call any production code
+  explicit_character_spacing_disables_tracking_inference (line 67) - Score: 90
+    - Test 'explicit_character_spacing_disables_tracking_inference' does not call any production code
+  explicit_word_spacing_disables_tracking_inference (line 72) - Score: 90
+    - Test 'explicit_word_spacing_disables_tracking_inference' does not call any production code
+  a_single_transition_does_not_certify_uniform_tracking (line 77) - Score: 90
+    - Test 'a_single_transition_does_not_certify_uniform_tracking' does not call any production code
+  ordinary_small_kerning_does_not_add_spaces (line 82) - Score: 90
+    - Test 'ordinary_small_kerning_does_not_add_spaces' does not call any production code
+  unresolved_type0_without_space_reaches_and_rejects_the_fallback (line 87) - Score: 90
+    - Test 'unresolved_type0_without_space_reaches_and_rejects_the_fallback' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unresolved_type0_without_space_reaches_and_rejects_the_fallback' asserts against a hardcoded constant instead of a computed expected value
+  strict_mode_does_not_enable_unknown_width_recovery (line 100) - Score: 90
+    - Test 'strict_mode_does_not_enable_unknown_width_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+  lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances (line 111) - Score: 90
+    - Test 'lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances' asserts against a hardcoded constant instead of a computed expected value
+  partial_em_adjustments_do_not_trigger_unknown_width_recovery (line 119) - Score: 90
+    - Test 'partial_em_adjustments_do_not_trigger_unknown_width_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+  glyph_origins_follow_declared_widths_kerns_and_horizontal_scale (line 130) - Score: 100
+    i Test 'glyph_origins_follow_declared_widths_kerns_and_horizontal_scale' has multiple assertions without diagnostic messages
+    i Test 'glyph_origins_follow_declared_widths_kerns_and_horizontal_scale' uses .unwrap() which silently discards error information
+  ordinary_tj_gap_threshold_is_strict_for_both_signs (line 183) - Score: 80
+    - Test 'ordinary_tj_gap_threshold_is_strict_for_both_signs' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'ordinary_tj_gap_threshold_is_strict_for_both_signs' does not call any production code
+  tracking_outlier_compares_only_excess_against_strict_threshold (line 198) - Score: 80
+    - Test 'tracking_outlier_compares_only_excess_against_strict_threshold' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+    - Test 'tracking_outlier_compares_only_excess_against_strict_threshold' does not call any production code
+  nonuniform_advances_without_a_majority_keep_ordinary_gaps (line 210) - Score: 90
+    - Test 'nonuniform_advances_without_a_majority_keep_ordinary_gaps' does not call any production code
+  tracking_threshold_and_backward_kern_controls (line 216) - Score: 80
+    - Test 'tracking_threshold_and_backward_kern_controls' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+    - Test 'tracking_threshold_and_backward_kern_controls' does not call any production code
+  separator_evidence_follows_unicode_not_the_source_byte (line 229) - Score: 90
+    i Test 'separator_evidence_follows_unicode_not_the_source_byte' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'separator_evidence_follows_unicode_not_the_source_byte' uses .unwrap() which silently discards error information
+    - Test 'separator_evidence_follows_unicode_not_the_source_byte' has low assert-to-setup ratio (15%): 8 asserts vs 44 setup lines
+  literal_spaces_and_adjustments_have_distinct_evidence (line 308) - Score: 90
+    - Test 'literal_spaces_and_adjustments_have_distinct_evidence' does not call any production code
+  leading_and_trailing_kerns_do_not_certify_tracking (line 316) - Score: 90
+    - Test 'leading_and_trailing_kerns_do_not_certify_tracking' does not call any production code
+  minimum_support_and_strict_majority_are_both_required (line 324) - Score: 80
+    - Test 'minimum_support_and_strict_majority_are_both_required' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+    - Test 'minimum_support_and_strict_majority_are_both_required' does not call any production code
+  multiple_source_glyphs_disable_simple_font_tracking (line 342) - Score: 90
+    - Test 'multiple_source_glyphs_disable_simple_font_tracking' does not call any production code
+  one_source_glyph_is_not_the_same_as_one_unicode_scalar (line 349) - Score: 90
+    i Test 'one_source_glyph_is_not_the_same_as_one_unicode_scalar' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'one_source_glyph_is_not_the_same_as_one_unicode_scalar' has low assert-to-setup ratio (8%): 1 asserts vs 12 setup lines
+  resolved_cid_tracking_counts_source_glyphs_per_string (line 367) - Score: 90
+    - Test 'resolved_cid_tracking_counts_source_glyphs_per_string' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

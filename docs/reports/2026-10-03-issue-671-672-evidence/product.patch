@@ -1,0 +1,350 @@
+diff --git a/oxidize-pdf-core/src/text/cmap.rs b/oxidize-pdf-core/src/text/cmap.rs
+index 30305db..47dd583 100644
+--- a/oxidize-pdf-core/src/text/cmap.rs
++++ b/oxidize-pdf-core/src/text/cmap.rs
+@@ -79,10 +79,12 @@ pub struct CMap {
+     /// `"Identity-H"` or `"Identity-V"`, `map()` falls back to
+     /// returning the input code as-is for any code the child CMap
+     /// did not map explicitly, and `is_valid_code()` accepts the full
+-    /// 2-byte (Identity-H) or 1-byte (Identity-V) space. External
+-    /// CMap chaining (non-predefined parents) is recorded for
+-    /// observability but does not enable any fallback.
++    /// 2-byte Identity-H/Identity-V space. External
++    /// named parents remain observable; document-owned stream parents
++    /// are resolved separately by the font parser.
+     pub inherited_predefined: Option<String>,
++    parent: Option<Box<CMap>>,
++    explicit_wmode: bool,
+ }
+ 
+ impl Default for CMap {
+@@ -102,6 +104,8 @@ impl CMap {
+             mappings: Vec::new(),
+             single_mappings: HashMap::new(),
+             inherited_predefined: None,
++            parent: None,
++            explicit_wmode: false,
+         }
+     }
+ 
+@@ -118,6 +122,8 @@ impl CMap {
+             mappings: Vec::new(),
+             single_mappings: HashMap::new(),
+             inherited_predefined: None,
++            parent: None,
++            explicit_wmode: false,
+         }
+     }
+ 
+@@ -134,6 +140,8 @@ impl CMap {
+             mappings: Vec::new(),
+             single_mappings: HashMap::new(),
+             inherited_predefined: None,
++            parent: None,
++            explicit_wmode: false,
+         }
+     }
+ 
+@@ -190,6 +198,7 @@ impl CMap {
+                 Token::Name(n) if n == "WMode" => {
+                     if let Some(Token::Integer(w)) = tokens.get(i + 1) {
+                         cmap.wmode = *w as u8;
++                        cmap.explicit_wmode = true;
+                         i += 2;
+                     } else {
+                         i += 1;
+@@ -359,6 +368,12 @@ impl CMap {
+             }
+         }
+ 
++        if let Some(parent) = &self.parent {
++            if let Some(mapped) = parent.map(code) {
++                return Some(mapped);
++            }
++        }
++
+         // Codespace-gated passthroughs (Identity). These synthesise a result
+         // from the code itself rather than an explicit table, so they must
+         // stay constrained to the declared codespace to avoid swallowing
+@@ -424,7 +439,22 @@ impl CMap {
+                 _ => {}
+             }
+         }
+-        None
++        self.parent
++            .as_ref()
++            .and_then(|parent| parent.source_code_for_unicode(target))
++            .filter(|code| self.map(code).as_deref() == Some(target_bytes.as_slice()))
++    }
++
++    /// Preserve layer precedence, including child ranges over parent singles.
++    pub(crate) fn inherit(&mut self, parent: Self) {
++        if self.codespace_ranges.is_empty() {
++            self.codespace_ranges.clone_from(&parent.codespace_ranges);
++        }
++        if !self.explicit_wmode {
++            self.wmode = parent.wmode;
++        }
++        self.inherited_predefined = None;
++        self.parent = Some(Box::new(parent));
+     }
+ 
+     /// Check if a code is in valid codespace
+@@ -451,7 +481,13 @@ impl CMap {
+     /// Used by ToUnicode decoding to resolve codes the child CMap did
+     /// not map explicitly (the code is treated as a CID into the table).
+     pub(crate) fn inherited_ordering(&self) -> Option<&'static str> {
+-        match self.inherited_predefined.as_deref()? {
++        let Some(name) = self.inherited_predefined.as_deref() else {
++            return self
++                .parent
++                .as_ref()
++                .and_then(|parent| parent.inherited_ordering());
++        };
++        match name {
+             "Adobe-GB1-UCS2" => Some("GB1"),
+             "Adobe-CNS1-UCS2" => Some("CNS1"),
+             "Adobe-Japan1-UCS2" => Some("Japan1"),
+diff --git a/oxidize-pdf-core/src/text/encoding_cmap.rs b/oxidize-pdf-core/src/text/encoding_cmap.rs
+index 8dc76ac..8786ce0 100644
+--- a/oxidize-pdf-core/src/text/encoding_cmap.rs
++++ b/oxidize-pdf-core/src/text/encoding_cmap.rs
+@@ -18,9 +18,10 @@ pub(crate) struct EncodingCMap {
+     pub single_cid: HashMap<Vec<u8>, u16>,
+     pub cid_ranges: Vec<CidRange>,
+     pub notdef_ranges: Vec<CidRange>,
+-    /// Parent CMap name from `usecmap` (informational, not followed at runtime).
+-    #[allow(dead_code)]
++    /// Parent name from `usecmap`, resolved by the document-aware font parser.
+     pub usecmap_parent: Option<String>,
++    pub(crate) parent: Option<Box<EncodingCMap>>,
++    pub(crate) explicit_wmode: bool,
+ }
+ 
+ #[derive(Debug, Clone)]
+@@ -42,6 +43,7 @@ impl EncodingCMap {
+                 Token::Name(name) if name == "WMode" => {
+                     if let Some(Token::Integer(value)) = tokens.get(i + 1) {
+                         cmap.wmode = (*value).clamp(0, 1) as u8;
++                        cmap.explicit_wmode = true;
+                     }
+                     i += 1;
+                 }
+@@ -186,7 +188,9 @@ impl EncodingCMap {
+                 return Some(r.base_cid);
+             }
+         }
+-        None
++        self.parent
++            .as_ref()
++            .and_then(|parent| parent.map_notdef(code))
+     }
+ 
+     /// Determine the byte width of the code starting at `pos` by matching the
+@@ -224,7 +228,36 @@ impl EncodingCMap {
+                 return r.base_cid.checked_add(offset);
+             }
+         }
+-        None
++        self.parent
++            .as_ref()
++            .and_then(|parent| parent.map_code_to_cid(code))
++    }
++
++    /// Keep layers separate so a child range overrides a parent single entry.
++    pub(crate) fn inherit(&mut self, parent: Self) {
++        if self.codespace_ranges.is_empty() {
++            self.codespace_ranges.clone_from(&parent.codespace_ranges);
++        }
++        if !self.explicit_wmode {
++            self.wmode = parent.wmode;
++        }
++        self.parent = Some(Box::new(parent));
++    }
++
++    pub(crate) fn identity(vertical: bool) -> Self {
++        Self {
++            wmode: u8::from(vertical),
++            codespace_ranges: vec![CodeRange {
++                start: vec![0, 0],
++                end: vec![255, 255],
++            }],
++            cid_ranges: vec![CidRange {
++                lo: vec![0, 0],
++                hi: vec![255, 255],
++                base_cid: 0,
++            }],
++            ..Self::default()
++        }
+     }
+ }
+ 
+diff --git a/oxidize-pdf-core/src/text/extraction.rs b/oxidize-pdf-core/src/text/extraction.rs
+index 5341835..04e34e1 100644
+--- a/oxidize-pdf-core/src/text/extraction.rs
++++ b/oxidize-pdf-core/src/text/extraction.rs
+@@ -2150,10 +2150,11 @@ impl TextExtractor {
+                                         }
+                                     }
+ 
+-                                    state.text_matrix = multiply_matrix(
+-                                        &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
+-                                        &state.text_matrix,
+-                                    );
++                                    // TJ uses the same horizontal scale as a
++                                    // shown glyph advance (ISO 32000-1 9.4.4).
++                                    // Keep gap inference in unscaled text units;
++                                    // scale only when moving the text matrix.
++                                    advance_pen(&mut state, tx);
+                                 }
+                             }
+                         }
+diff --git a/oxidize-pdf-core/src/text/extraction_cmap.rs b/oxidize-pdf-core/src/text/extraction_cmap.rs
+index 4715656..8304def 100644
+--- a/oxidize-pdf-core/src/text/extraction_cmap.rs
++++ b/oxidize-pdf-core/src/text/extraction_cmap.rs
+@@ -216,12 +216,9 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
+                     }
+                 }
+                 PdfObject::Stream(stream) => {
+-                    if let Ok(data) = stream.decode(&ParseOptions::default()) {
+-                        if let Ok(enc) = crate::text::encoding_cmap::EncodingCMap::parse(&data) {
+-                            font_info.cid_encoding =
+-                                Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc));
+-                        }
+-                    }
++                    let enc = Self::parse_encoding_stream(stream, document, 0)?;
++                    font_info.cid_encoding =
++                        Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc));
+                 }
+                 _ => {}
+             }
+@@ -339,14 +336,116 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
+         Ok(diff_map)
+     }
+ 
+-    /// Parse ToUnicode stream
++    /// Resolve at most sixteen stream levels. This also bounds cycles without
++    /// allocating a graph or expanding ranges into per-code entries.
++    fn cmap_error(message: String) -> ParseError {
++        ParseError::SyntaxError {
++            position: 0,
++            message,
++        }
++    }
++
++    fn cmap_depth(depth: usize) -> ParseResult<()> {
++        if depth >= 16 {
++            return Err(Self::cmap_error(
++                "UseCMap inheritance exceeds 16 stream levels (possible cycle)".into(),
++            ));
++        }
++        Ok(())
++    }
++
++    fn parse_encoding_stream(
++        stream: &PdfStream,
++        document: &PdfDocument<R>,
++        depth: usize,
++    ) -> ParseResult<crate::text::encoding_cmap::EncodingCMap> {
++        use crate::text::encoding_cmap::{resolve_predefined, CidEncoding, EncodingCMap};
++        Self::cmap_depth(depth)?;
++        let mut child = EncodingCMap::parse(&stream.decode(&document.options())?)?;
++        if let Some(mode) = stream.dict.get("WMode").and_then(PdfObject::as_integer) {
++            child.wmode = mode.clamp(0, 1) as u8;
++            child.explicit_wmode = true;
++        }
++        let parent = stream.dict.get("UseCMap").cloned().or_else(|| {
++            child
++                .usecmap_parent
++                .as_ref()
++                .map(|name| PdfObject::Name(PdfName(name.clone())))
++        });
++        if let Some(parent) = parent {
++            let result = (|| match document.resolve(&parent)? {
++                PdfObject::Stream(stream) => {
++                    Self::parse_encoding_stream(&stream, document, depth + 1)
++                }
++                PdfObject::Name(name) => match name.0.as_str() {
++                    "Identity-H" => Ok(EncodingCMap::identity(false)),
++                    "Identity-V" => Ok(EncodingCMap::identity(true)),
++                    name => match resolve_predefined(name) {
++                        Some(CidEncoding::Cmap(map)) => Ok(map),
++                        _ => Err(Self::cmap_error(format!(
++                            "Unsupported Encoding UseCMap parent {name}"
++                        ))),
++                    },
++                },
++                _ => Err(Self::cmap_error(
++                    "UseCMap parent must be a name or stream".into(),
++                )),
++            })();
++            match result {
++                Ok(parent) => child.inherit(parent),
++                Err(error) if document.options().strict_mode => return Err(error),
++                // Recovery keeps the child's explicit mappings, never invents
++                // identity semantics for an unresolved or cyclic parent.
++                Err(_) => {}
++            }
++        }
++        Ok(child)
++    }
++
+     fn parse_tounicode_stream(
+         &self,
+         stream: &PdfStream,
+-        _document: &PdfDocument<R>,
++        document: &PdfDocument<R>,
+     ) -> ParseResult<CMap> {
+-        let data = stream.decode(&ParseOptions::default())?;
+-        CMap::parse(&data)
++        Self::parse_unicode_chain(stream, document, 0)
++    }
++
++    fn parse_unicode_chain(
++        stream: &PdfStream,
++        document: &PdfDocument<R>,
++        depth: usize,
++    ) -> ParseResult<CMap> {
++        Self::cmap_depth(depth)?;
++        let mut child = CMap::parse(&stream.decode(&document.options())?)?;
++        // Named operator parents already have the established CMap fallback.
++        // A dictionary UseCMap takes precedence over that operator.
++        if let Some(parent) = stream.dict.get("UseCMap") {
++            child.inherited_predefined = None;
++            let result = (|| match document.resolve(parent)? {
++                PdfObject::Stream(stream) => {
++                    Self::parse_unicode_chain(&stream, document, depth + 1)
++                }
++                PdfObject::Name(name) => match name.0.as_str() {
++                    "Identity-H" => Ok(CMap::identity_h()),
++                    "Identity-V" => Ok(CMap::identity_v()),
++                    _ => {
++                        // A decoded PDF name is data, not PostScript source.
++                        let mut parent = CMap::new();
++                        parent.inherited_predefined = Some(name.0);
++                        Ok(parent)
++                    }
++                },
++                _ => Err(Self::cmap_error(
++                    "UseCMap parent must be a name or stream".into(),
++                )),
++            })();
++            match result {
++                Ok(parent) => child.inherit(parent),
++                Err(error) if document.options().strict_mode => return Err(error),
++                Err(_) => {}
++            }
++        }
++        Ok(child)
+     }
+ 
+     /// Extract font metrics (widths, kerning) from font dictionary
+@@ -2070,3 +2169,7 @@ endcmap
+         assert_eq!(metrics3.widths, Some(vec![250.0, 333.0]));
+     }
+ }
++
++#[cfg(test)]
++#[path = "usecmap_resolution_tests.rs"]
++mod usecmap_resolution_tests;

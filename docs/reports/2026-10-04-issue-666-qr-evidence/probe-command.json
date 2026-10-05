@@ -1,0 +1,12 @@
+[
+  "rustc",
+  "--edition=2021",
+  "--test",
+  "docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs",
+  "--extern",
+  "oxidize_pdf=target/debug/deps/liboxidize_pdf-8d56b1627bc9922c.rlib",
+  "-L",
+  "dependency=target/debug/deps",
+  "-o",
+  "target/issue666-qr-probe"
+]

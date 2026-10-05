@@ -1,0 +1,2 @@
+lenient: 616715 operations
+strict: SyntaxError { position: 170697657, message: "Unexpected '>'" }

@@ -1,3 +1,33 @@
+## T5 — Integración y mantenimiento (activa)
+
+- Issue: #666 — test(text): build normative encoding and glyph-spacing contract batteries — https://github.com/bzsanti/oxidizePdf/issues/666
+- Estado: iniciada después del cierre T4 y confirmación GitHub OPEN. Prioridad P1. Responsable Codex.
+- Criterio de cierre: baterías deterministas conectadas a CI; default, mínima soportada compression y SPI verificados; MSRV1.88 y Linux/Windows/macOS con evidencia, corpus pesado manual/programado y QR resuelto. Sin merge/release.
+- Última validación: las seis combinaciones locales stable/MSRV1.88 × default/minimal/SPI pasan;396 tests en default/minimal y410 en SPI, sin fallos ni ignorados. Runner final ejecutado; guards aplicados a todos los logs.34 tests Python finales y formato986 archivos Rust pasan. Hashes T4 intactos. Evidencia: docs/reports/2026-10-05-t5-evidence/local-matrix-final.json.
+- Siguiente acción: preparar commit y PR de666 con alcance delimitado; ejecutar matriz remota Linux/Windows/macOS y cerrar QR T5. No hay procesos locales pendientes.
+- Restricciones: no confundir configuración CI con ejecución remota; preservar WIP, oráculos y baselines. Corregir regresiones inmediatamente bajo #666.
+
+### Criterios de aceptación restantes de T5
+
+| Requisito y fuente | Estado y evidencia | Siguiente acción |
+| --- | --- | --- |
+| Suite rápida portable, issue666/T5 | Demostrado:39 targets y runner; mínima396 PASS | Conservar evidencia, verificar perfiles restantes |
+| Default/minimal/SPI y MSRV1.88, plan T5 | Demostrado localmente: seis combinaciones pasan | Verificar matriz remota sobre commit publicado |
+| Linux/Windows/macOS, plan T5 | Linux demostrado parcialmente; remoto pendiente | Publicar candidato revisado y verificar jobs nativos |
+| Corpus pesado manual/programado, issue666/T5 | Implementado; medición local T4 demostrada | Validar workflow; no confundir YAML con ejecución remota |
+| QR y hallazgos resueltos, usuario | T1–T4 demostrados; T5 revisión en curso | Cerrar hallazgos concretos de runner/workflows |
+| Entrega versionada, aceptación issue666 | Pendiente de commit/publicación; merge/release excluidos por issue | Delimitar archivos de666, preservar WIP ajeno, publicar sin merge |
+
+## T4 — Discriminación y corpus (terminada localmente)
+
+- Issue: #666 — test(text): build normative encoding and glyph-spacing contract batteries — https://github.com/bzsanti/oxidizePdf/issues/666
+- Estado: implementación y QR pasados, ocho hallazgos corregidos y revalidados. Prioridad P1. Responsable Codex.
+- Criterio de cierre: cumplido; mutaciones discriminantes, población congelada y métricas separadas con errores/exclusiones visibles.
+- Última validación: 7.453 PASS/0 FAIL/3 ignoradas en62 targets; tres gates históricos pasan. Medidor13/13, nueve mutaciones de producto, cinco del parser y seis del medidor discriminan. Corpus1.802 PDFs,6.937 páginas comparables; hashes intactos. Clippy, formato, Kripteia/Security y trazabilidad pasan. Informe: docs/reports/2026-10-05-t4-review.md.
+- Correcciones de producto: NUL como whitespace; longitud/padding y parámetros tipados de imágenes inline; regresión incremental de whitespace virtual resuelta. Tres páginas reales recuperan texto. Los440 reemplazos Type3 del PDF diagnosticado corresponden a nombres C0…C255 sin ToUnicode, conforme a política.
+- Siguiente acción exacta: T5, configuraciones soportadas/MSRV/plataformas, CI e integración, con QR antes del cierre global de #666. Ningún proceso T4 pendiente.
+- Restricciones: preservar WIP y baselines; no afirmar igualdad con Poppler ni interpretar exclusiones como mejora. Sin merge/release autorizados. #666 sigue abierta.
+
 ## #668 sobre develop integrado — 2026-10-01
 
 - Issue: #668 — fix(text): decode normative simple-font encodings and built-in Symbol/Zapf — https://github.com/bzsanti/oxidizePdf/issues/668

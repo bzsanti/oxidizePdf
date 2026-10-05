@@ -1,0 +1,31 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.08s
+     Running tests/text_cid_cff_contract_test.rs (target/debug/deps/text_cid_cff_contract_test-3fcb695627adadbd)
+
+running 8 tests
+test cid_keyed_cff_matches_its_independently_generated_program ... ok
+test identity_h_cid_cff_preserves_explicit_unicode ... ok
+test cid_cff_widths_use_cids_not_charstring_indices ... ok
+test cid_cff_vertical_advance_uses_w2 ... ok
+test embedded_encoding_remaps_codes_before_selecting_cff_cids ... ok
+test private_cid_cff_without_tounicode_does_not_turn_cids_or_bytes_into_text ... FAILED
+test remapped_cid_cff_widths_follow_encoding_cids ... ok
+test cff_renderer_keeps_cid_gid_unicode_and_vertical_advance_separate ... ok
+
+failures:
+
+---- private_cid_cff_without_tounicode_does_not_turn_cids_or_bytes_into_text stdout ----
+
+thread 'private_cid_cff_without_tounicode_does_not_turn_cids_or_bytes_into_text' (161) panicked at oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:172:13:
+assertion `left == right` failed
+  left: [" ", " "]
+ right: ["�", "�"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    private_cid_cff_without_tounicode_does_not_turn_cids_or_bytes_into_text
+
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cid_cff_contract_test`

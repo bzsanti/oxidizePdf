@@ -69,27 +69,44 @@ fn one_font_pdf(font: Vec<u8>, extra: Vec<Vec<u8>>) -> Vec<u8> {
 
 #[test]
 fn resolves_cidfont_type0_open_type_program_and_vertical_mode() {
-    let pdf = one_font_pdf(
+    // A bounded sfnt wrapper with the actual CID CFF table, rather than the
+    // old opaque placeholder b"OTTOcff-data" which is not a font.
+    let cff = include_bytes!("fixtures/text_contracts/fonts/ContractCID.cff");
+    let mut opentype = b"OTTO\0\x01\0\x10\0\0\0\0CFF \0\0\0\0".to_vec();
+    opentype.extend_from_slice(&28u32.to_be_bytes());
+    opentype.extend_from_slice(&(cff.len() as u32).to_be_bytes());
+    opentype.extend_from_slice(cff);
+    for (program, expected_gid) in [
+        (opentype.as_slice(), None),
+        (
+            include_bytes!("fixtures/text_contracts/fonts/SourceSans3-Regular.otf").as_slice(),
+            Some(7),
+        ),
+    ] {
+        let pdf = one_font_pdf(
         b"<< /Type /Font /Subtype /Type0 /BaseFont /CffDemo /Encoding /Identity-V /DescendantFonts [6 0 R] >>".to_vec(),
         vec![
             b"<< /Type /Font /Subtype /CIDFontType0 /BaseFont /CffDemo /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor 7 0 R /DW 880 >>".to_vec(),
             b"<< /Type /FontDescriptor /FontName /CffDemo /Flags 4 /FontBBox [0 0 1000 1000] /ItalicAngle 0 /Ascent 800 /Descent -200 /CapHeight 700 /StemV 80 /FontFile3 8 0 R >>".to_vec(),
-            stream_obj("/Subtype /OpenType", b"OTTOcff-data"),
+            stream_obj("/Subtype /OpenType", program),
         ],
     );
-    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());
-    let font = ResolvedFontResource::from_page(&document, 0, "F1").unwrap();
+        let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());
+        let font = ResolvedFontResource::from_page(&document, 0, "F1").unwrap();
 
-    assert_eq!(font.subtype, FontSubtype::CidFontType0);
-    assert_eq!(font.writing_mode, WritingMode::Vertical);
-    assert_eq!(
-        font.embedded_font.as_ref().unwrap().format,
-        EmbeddedFontFormat::OpenType
-    );
-    let glyph = font.decode_glyphs(&[0, 7]).unwrap().remove(0);
-    assert_eq!(glyph.cid, Some(7));
-    assert_eq!(glyph.gid, None);
-    assert_eq!(glyph.advance, 880.0);
+        assert_eq!(font.subtype, FontSubtype::CidFontType0);
+        assert_eq!(font.writing_mode, WritingMode::Vertical);
+        assert_eq!(
+            font.embedded_font.as_ref().unwrap().format,
+            EmbeddedFontFormat::OpenType
+        );
+        let glyph = font.decode_glyphs(&[0, 7]).unwrap().remove(0);
+        assert_eq!(glyph.cid, Some(7));
+        assert_eq!(glyph.gid, expected_gid);
+        assert_eq!(glyph.unicode, None);
+        // Identity-V without DW2 uses w1y=-1000, independently of horizontal DW=880.
+        assert_eq!(glyph.advance, -1000.0);
+    }
 }
 
 #[test]
@@ -136,17 +153,18 @@ fn resolves_non_identity_encoding_cmap_and_default_identity_gid() {
 }
 
 #[test]
-fn utf16_encoding_preserves_unicode_without_tounicode() {
+fn named_unicode_encoding_resolves_cid_before_width_and_unicode() {
     let pdf = one_font_pdf(
         b"<< /Type /Font /Subtype /Type0 /BaseFont /UnicodeCid /Encoding /UniJIS-UTF16-H /DescendantFonts [6 0 R] >>".to_vec(),
-        vec![b"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /UnicodeCid /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /W [225 [555]] >>".to_vec()],
+        vec![b"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /UnicodeCid /CIDSystemInfo << /Registry (Adobe) /Ordering (Japan1) /Supplement 7 >> /W [194 [555]] >>".to_vec()],
     );
     let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());
     let font = ResolvedFontResource::from_page(&document, 0, "F1").unwrap();
     let glyph = font.decode_glyphs(&[0, 0xE1]).unwrap().remove(0);
 
-    assert_eq!(glyph.cid, Some(0xE1));
-    assert_eq!(glyph.gid, Some(0xE1));
+    // Pinned Adobe UniJIS maps source 00E1 to CID 194, not CID 225.
+    assert_eq!(glyph.cid, Some(194));
+    assert_eq!(glyph.gid, Some(194));
     assert_eq!(glyph.unicode.as_deref(), Some("á"));
     assert_eq!(glyph.advance, 555.0);
 }
@@ -293,4 +311,34 @@ fn rejects_oversized_embedded_font_after_bounded_decompression() {
     let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());
     let error = ResolvedFontResource::from_page(&document, 0, "F1").unwrap_err();
     assert!(error.to_string().contains("limit"));
+}
+
+#[test]
+fn cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings() {
+    for (registry, ordering, expected) in [
+        ("Adobe", "Japan1", Some("A")),
+        ("Private", "Japan1", None),
+        ("Adobe", "Private", None),
+    ] {
+        let pdf = one_font_pdf(
+            b"<< /Type /Font /Subtype /Type0 /BaseFont /Registry /Encoding /Identity-H /DescendantFonts [6 0 R] >>".to_vec(),
+            vec![
+                b"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Registry /CIDSystemInfo 7 0 R /W [34 [456]] >>".to_vec(),
+                b"<< /Registry 8 0 R /Ordering 9 0 R /Supplement 7 >>".to_vec(),
+                format!("({registry})").into_bytes(),
+                format!("({ordering})").into_bytes(),
+            ],
+        );
+        let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());
+        let font = ResolvedFontResource::from_page(&document, 0, "F1").unwrap();
+        let glyphs = font.decode_glyphs(&[0, 34]).unwrap();
+        assert_eq!(glyphs[0].cid, Some(34));
+        assert_eq!(glyphs[0].gid, Some(34));
+        assert_eq!(
+            glyphs[0].unicode.as_deref(),
+            expected,
+            "{registry}-{ordering}"
+        );
+        assert_eq!(glyphs[0].advance, 456.0);
+    }
 }

@@ -1,0 +1,21 @@
+
+running 1 test
+test multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance ... FAILED
+
+failures:
+
+---- multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance stdout ----
+
+thread 'multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance' (168) panicked at symbolic_truetype.rs:176:13:
+symbol-full-unicode.pdf: expected (107,700), got (109,700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized] target(s) in 0.07s
+     Running symbolic_truetype.rs (target/debug/deps/symbolic_truetype-9928a615ad5d793c)
+error: test failed, to rerun pass `--test symbolic_truetype`

@@ -1,0 +1,9 @@
+{
+  "passed": 7288,
+  "failed": 0,
+  "ignored": 3,
+  "targets": 43,
+  "source_hashes": "final-hashes.json",
+  "log": "second-increment.log",
+  "focused_log": "final-metrics.log"
+}

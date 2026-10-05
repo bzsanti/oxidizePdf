@@ -1,0 +1,23 @@
+{
+  "license": "Original project fixture; repository license",
+  "tool": "FontTools 4.60.1",
+  "format": "CID-keyed CFF1, Type2 charstrings, one FDArray entry",
+  "ROS": [
+    "Contract",
+    "Synthetic",
+    0
+  ],
+  "charset_by_gid": [
+    ".notdef",
+    "cid00017",
+    "cid00029"
+  ],
+  "widths_by_gid": [
+    500,
+    400,
+    700
+  ],
+  "CIDCount": 30,
+  "sha256": "6ffca49f6b854be45cc6da2ad2edc5618698df14cbcc89ed1a3960816e6d2824",
+  "scope": "Original triangle/rectangle outlines; not Chinese typography or Adobe collection coverage"
+}

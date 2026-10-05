@@ -1,0 +1,13 @@
+
+running 8 tests
+test inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance ... ok
+test type3_differences_counter_cannot_wrap_after_byte_255 ... ok
+test valid_text_metadata_survives_unrenderable_charproc ... ok
+test malformed_declared_widths_are_rejected_by_program_consumer ... ok
+test consistent_d0_and_d1_preserve_metrics_and_program_operations ... ok
+test type3_differences_accepts_byte_255_and_explicit_counter_resets ... ok
+test zero_negative_and_fractional_declared_widths_are_not_replaced_by_defaults ... ok
+test malformed_charprocs_fail_with_context_in_both_parser_modes ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

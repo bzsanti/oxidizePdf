@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "issue": 666,
+  "cases": [
+    {
+      "id": "scale-50-kern--300",
+      "path": "scale-50-kern--300.pdf",
+      "sha256": "1edcbaef173c3ef131e80233fb7130ce0782a092a9830e7780bf6d9a017646f1",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.4.4: (width/1000*font_size - TJ/1000*font_size)*Tz/100; width500/font_size10. Literal origins table, not product calculation.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale-50-kern-0",
+      "path": "scale-50-kern-0.pdf",
+      "sha256": "0a6f51f18ee16c44ae1c1d588c7c20d49890dec06869a3b197a014ca06128b7f",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.4.4: (width/1000*font_size - TJ/1000*font_size)*Tz/100; width500/font_size10. Literal origins table, not product calculation.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            102.5,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale-50-kern-300",
+      "path": "scale-50-kern-300.pdf",
+      "sha256": "9e441f2a67db405c6ae69919f250a20ef79ec10f28321d06ac542ff01e3d2fad",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.4.4: (width/1000*font_size - TJ/1000*font_size)*Tz/100; width500/font_size10. Literal origins table, not product calculation.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            101,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale-100-kern--300",
+      "path": "scale-100-kern--300.pdf",
+      "sha256": "a724707aac3b424194f799f4769085a0425b81f8ff8dada18553930efcae555a",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.4.4: (width/1000*font_size - TJ/1000*font_size)*Tz/100; width500/font_size10. Literal origins table, not product calculation.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            108,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale-100-kern-0",
+      "path": "scale-100-kern-0.pdf",
+      "sha256": "a6fbc6dc9a77ad914f257a8670eec59f252f132b8db0695bd5fc15cb8caabb14",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.4.4: (width/1000*font_size - TJ/1000*font_size)*Tz/100; width500/font_size10. Literal origins table, not product calculation.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale-100-kern-300",
+      "path": "scale-100-kern-300.pdf",
+      "sha256": "eb0b612efd6ed7b6c59f9564b344a45e7ffc347679dadca22e120842d9bc04c6",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.4.4: (width/1000*font_size - TJ/1000*font_size)*Tz/100; width500/font_size10. Literal origins table, not product calculation.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            102,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale-200-kern--300",
+      "path": "scale-200-kern--300.pdf",
+      "sha256": "cc94f697d63ea36209d871f2a021a50b32db65555762dbde0fbc1a60895f4425",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.4.4: (width/1000*font_size - TJ/1000*font_size)*Tz/100; width500/font_size10. Literal origins table, not product calculation.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            116,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale-200-kern-0",
+      "path": "scale-200-kern-0.pdf",
+      "sha256": "88dbc1ad4b5c812a5698cc0904824fc012926e7761d21e378a55c7f1001348b0",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.4.4: (width/1000*font_size - TJ/1000*font_size)*Tz/100; width500/font_size10. Literal origins table, not product calculation.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            110,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale-200-kern-300",
+      "path": "scale-200-kern-300.pdf",
+      "sha256": "610b4191c7bfc66380eee83eddf3b0f540880bf05a9d6196639ae57afb59329b",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.4.4: (width/1000*font_size - TJ/1000*font_size)*Tz/100; width500/font_size10. Literal origins table, not product calculation.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    }
+  ]
+}

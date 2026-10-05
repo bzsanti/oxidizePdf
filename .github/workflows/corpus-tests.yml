@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
   schedule:
     - cron: '0 3 * * *'      # Nightly at 03:00 UTC (T2 + T3)
     - cron: '0 5 * * 0'      # Weekly on Sunday at 05:00 UTC (T4 + T5 + T6)
@@ -67,7 +68,7 @@ jobs:
   # ═══════════════════════════════════════════════════════════════
   tier-nightly:
     name: "T2 + T3: Real-World & Stress"
-    if: github.event_name == 'schedule' && github.event.schedule == '0 3 * * *'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '0 3 * * *')
     runs-on: ubuntu-latest
     # T2 + T3 ~35 min; + two differential gates, each a full extract-and-compare
     # pass with poppler over ~1800 PDFs (per-file timeouts capped at 15 s).
@@ -138,6 +139,17 @@ jobs:
         env:
           OXIDIZE_DIFF_REQUIRE_CORPUS: "1"
         run: cargo test --test differential_order_test -- --nocapture
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Measure substitutions and content disagreements
+        run: |
+          mkdir -p test-corpus/results/text-content
+          cargo build --locked -p oxidize-pdf --example text_content_probe
+          python tools/text_contracts/content_differential.py freeze test-corpus/t3-stress --manifest test-corpus/results/text-content/population.json
+          python tools/text_contracts/content_differential.py run test-corpus/t3-stress --manifest test-corpus/results/text-content/population.json --probe target/debug/examples/text_content_probe --output test-corpus/results/text-content/pages.jsonl --work target/text-content-work --jobs 4
 
       - name: Upload results
         if: always()

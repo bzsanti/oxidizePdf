@@ -1,0 +1,33 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.18s
+     Running tests/text_metrics_boundary_contract_test.rs (target/debug/deps/text_metrics_boundary_contract_test-3369e698de7e0c21)
+
+running 2 tests
+test simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth ... FAILED
+test cid_metrics_resolve_indirect_array_range_and_default_values ... FAILED
+
+failures:
+
+---- simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth stdout ----
+
+thread 'simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth' (148) panicked at oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs:23:9:
+assertion `left == right` failed
+  left: 1
+ right: 3
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- cid_metrics_resolve_indirect_array_range_and_default_values stdout ----
+
+thread 'cid_metrics_resolve_indirect_array_range_and_default_values' (147) panicked at oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs:23:9:
+assertion `left == right` failed
+  left: 1
+ right: 3
+
+
+failures:
+    cid_metrics_resolve_indirect_array_range_and_default_values
+    simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_metrics_boundary_contract_test`

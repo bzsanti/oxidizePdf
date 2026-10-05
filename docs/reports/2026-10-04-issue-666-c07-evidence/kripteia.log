@@ -1,0 +1,55 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 94 | Tests: 9 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs        9     94
+
+--- Worst Offenders ---
+  notdef_range_selects_one_cid_without_incrementing (oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs:62) - Score: 90
+    - Test 'notdef_range_selects_one_cid_without_incrementing' does not call any production code
+  inherited_notdef_range_retains_parent_cid_and_width (oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs:71) - Score: 90
+    - Test 'inherited_notdef_range_retains_parent_cid_and_width' does not call any production code
+  child_notdef_char_overrides_only_its_parent_fallback_code (oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs:76) - Score: 90
+    - Test 'child_notdef_char_overrides_only_its_parent_fallback_code' does not call any production code
+  ordinary_parent_mapping_wins_over_child_notdef (oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs:86) - Score: 90
+    - Test 'ordinary_parent_mapping_wins_over_child_notdef' does not call any production code
+  ordinary_child_mapping_wins_over_inherited_notdef (oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs:98) - Score: 90
+    - Test 'ordinary_child_mapping_wins_over_inherited_notdef' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs:
+  notdef_range_selects_one_cid_without_incrementing (line 62) - Score: 90
+    - Test 'notdef_range_selects_one_cid_without_incrementing' does not call any production code
+  inherited_notdef_range_retains_parent_cid_and_width (line 71) - Score: 90
+    - Test 'inherited_notdef_range_retains_parent_cid_and_width' does not call any production code
+  child_notdef_char_overrides_only_its_parent_fallback_code (line 76) - Score: 90
+    - Test 'child_notdef_char_overrides_only_its_parent_fallback_code' does not call any production code
+  ordinary_parent_mapping_wins_over_child_notdef (line 86) - Score: 90
+    - Test 'ordinary_parent_mapping_wins_over_child_notdef' does not call any production code
+  ordinary_child_mapping_wins_over_inherited_notdef (line 98) - Score: 90
+    - Test 'ordinary_child_mapping_wins_over_inherited_notdef' does not call any production code
+  cid_zero_notdef_keeps_source_tounicode_and_advance (line 109) - Score: 100
+    i Test 'cid_zero_notdef_keeps_source_tounicode_and_advance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_zero_notdef_keeps_source_tounicode_and_advance' uses .unwrap() which silently discards error information
+  mixed_one_to_four_byte_codes_keep_boundaries_and_cids (line 158) - Score: 100
+    i Test 'mixed_one_to_four_byte_codes_keep_boundaries_and_cids' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'mixed_one_to_four_byte_codes_keep_boundaries_and_cids' has multiple assertions without diagnostic messages
+    i Test 'mixed_one_to_four_byte_codes_keep_boundaries_and_cids' uses .unwrap() which silently discards error information
+  renderer_rejects_every_partial_multibyte_tail_in_both_modes (line 193) - Score: 100
+    i Test 'renderer_rejects_every_partial_multibyte_tail_in_both_modes' has multiple assertions without diagnostic messages
+    i Test 'renderer_rejects_every_partial_multibyte_tail_in_both_modes' uses .unwrap() which silently discards error information
+  fully_consumed_unmapped_code_is_distinct_from_truncation (line 218) - Score: 100
+    i Test 'fully_consumed_unmapped_code_is_distinct_from_truncation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'fully_consumed_unmapped_code_is_distinct_from_truncation' has multiple assertions without diagnostic messages
+    i Test 'fully_consumed_unmapped_code_is_distinct_from_truncation' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

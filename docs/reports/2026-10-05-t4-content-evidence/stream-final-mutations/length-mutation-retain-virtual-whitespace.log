@@ -1,0 +1,17 @@
+
+running 1 test
+test content::tests::incremental_operations_match_batch_at_lexical_boundaries ... FAILED
+
+failures:
+
+failures:
+    content::tests::incremental_operations_match_batch_at_lexical_boundaries
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 101 filtered out; finished in 0.01s
+
+
+thread 'content::tests::incremental_operations_match_batch_at_lexical_boundaries' (270) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-length-parser-mutations/content.rs:2347:17:
+assertion `left == right` failed: split at 79
+  left: [BeginText, SetFont("F1", 12.0), MoveText(100.0, 700.0), ShowTextArray([Text([72, 69]), Spacing(10.0), Text([76, 76, 79])]), EndText, InlineImage { params: {"Height": Integer(1), "ColorSpace": Name("DeviceGray"), "BitsPerComponent": Integer(8), "Width": Integer(3)}, data: [97, 98, 99, 10] }, SaveGraphicsState, RestoreGraphicsState]
+ right: [BeginText, SetFont("F1", 12.0), MoveText(100.0, 700.0), ShowTextArray([Text([72, 69]), Spacing(10.0), Text([76, 76, 79])]), EndText, InlineImage { params: {"Height": Integer(1), "BitsPerComponent": Integer(8), "ColorSpace": Name("DeviceGray"), "Width": Integer(3)}, data: [97, 98, 99] }, SaveGraphicsState, RestoreGraphicsState]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

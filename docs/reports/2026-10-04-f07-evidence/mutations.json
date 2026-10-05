@@ -1,0 +1,22 @@
+[
+  {
+    "case": "control",
+    "test": "full_and_subset_preserve_selected_symbolic_contours",
+    "exit": 0
+  },
+  {
+    "case": "glyph-selection",
+    "test": "full_and_subset_preserve_selected_symbolic_contours",
+    "exit": 101
+  },
+  {
+    "case": "outline",
+    "test": "full_and_subset_preserve_selected_symbolic_contours",
+    "exit": 101
+  },
+  {
+    "case": "explicit-encoding",
+    "test": "arbitrary_symbolic_text_uses_replacement_without_losing_advance",
+    "exit": 101
+  }
+]

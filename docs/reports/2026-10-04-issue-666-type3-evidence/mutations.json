@@ -1,0 +1,22 @@
+[
+  {
+    "variant": "control",
+    "exit": 0,
+    "scope": "fixture input perturbation, production unchanged"
+  },
+  {
+    "variant": "fixed_scale",
+    "exit": 101,
+    "scope": "fixture input perturbation, production unchanged"
+  },
+  {
+    "variant": "drop_translation",
+    "exit": 101,
+    "scope": "fixture input perturbation, production unchanged"
+  },
+  {
+    "variant": "double_tj",
+    "exit": 101,
+    "scope": "fixture input perturbation, production unchanged"
+  }
+]

@@ -1,0 +1,57 @@
+    Finished `test` profile [unoptimized] target(s) in 0.20s
+     Running tests/text_cid_collection_policy_contract_test.rs (target/debug/deps/text_cid_collection_policy_contract_test-f30f06a374652993)
+
+running 7 tests
+test incompatible_collection_cid_zero_does_not_silently_erase_unknown_text ... ok
+test named_gb1_cmap_cannot_decode_cids_through_a_different_collection ... ok
+test invalid_explicit_supplement_does_not_certify_collection_unicode ... ok
+test cumulative_supplements_do_not_require_equality_or_invent_a_new_collection ... ok
+test embedded_dictionary_metadata_must_not_authorize_another_collection ... ok
+test embedded_metadata_cannot_conflict_with_a_named_parent ... ok
+test program_metadata_is_static_scoped_and_must_agree_with_dictionary ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-576d6b91ec72df24)
+
+running 16 tests
+test cjk_samples_have_pinned_identity_and_distinct_collections ... ok
+test cid_zero_only_does_not_fall_back_to_source_bytes ... ok
+test cid_zero_fallback_preserves_following_text_and_explicit_unicode ... ok
+test adobe_kr_is_a_separate_collection ... ok
+test adobe_korea1_named_cmaps_decode_collection_cids ... ok
+test adobe_japan1_named_cmaps_decode_collection_cids ... ok
+test adobe_cns1_named_cmaps_decode_collection_cids ... ok
+test named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity ... ok
+test adobe_gb1_named_cmaps_decode_collection_cids ... ok
+test korea1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test japan1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test kr_and_korea1_are_not_interchangeable_in_either_direction ... ok
+test cns1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences ... ok
+test explicit_unicode_overrides_all_five_collection_fallbacks ... ok
+test kr_extended_official_maps_preserve_identity_and_unicode_authority ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.15s
+
+     Running tests/text_vertical_contract_test.rs (target/debug/deps/text_vertical_contract_test-fcfbd6e3bb975c41)
+
+running 15 tests
+test character_spacing_applies_on_the_vertical_axis ... ok
+test missing_w2_entry_falls_back_to_dw2 ... ok
+test dw2_overrides_default_vertical_advance ... ok
+test font_size_changes_apply_to_subsequent_vertical_advances ... ok
+test identity_v_uses_default_vertical_advance ... ok
+test embedded_wmode_one_selects_vertical_advance ... ok
+test horizontal_scale_does_not_scale_vertical_pen_advance ... ok
+test w2_range_overrides_dw2_for_the_selected_cid ... ok
+test w2_array_overrides_dw2_for_the_selected_cid ... ok
+test vertical_pen_follows_rotated_ctm ... ok
+test w2_array_uses_selected_cid_at_each_position ... ok
+test vertical_multiscalar_unicode_advances_once_per_source_code ... ok
+test vertical_tj_adjustment_changes_y_with_the_pdf_sign ... ok
+test word_spacing_does_not_apply_to_two_byte_source_codes ... ok
+test vertical_tj_ignores_horizontal_scale_for_both_signs ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

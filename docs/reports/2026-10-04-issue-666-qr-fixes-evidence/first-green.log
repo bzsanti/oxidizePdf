@@ -1,0 +1,16 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+error[E0433]: cannot find type `ParseError` in this scope
+    --> oxidize-pdf-core/src/text/extraction.rs:3449:56
+     |
+3449 |         let font_dict = object.as_dict().ok_or_else(|| ParseError::SyntaxError {
+     |                                                        ^^^^^^^^^^ use of undeclared type `ParseError`
+     |
+help: consider importing one of these items
+     |
+   7 + use crate::parser::ParseError;
+     |
+   7 + use std::string::ParseError;
+     |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `oxidize-pdf` (lib) due to 1 previous error

@@ -1,0 +1,539 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 9.64s
+     Running tests/text_cid_cff_contract_test.rs (target/debug/deps/text_cid_cff_contract_test-3fcb695627adadbd)
+
+running 6 tests
+test cid_keyed_cff_matches_its_independently_generated_program ... ok
+test identity_h_cid_cff_preserves_explicit_unicode ... ok
+test cid_cff_widths_use_cids_not_charstring_indices ... ok
+test embedded_encoding_remaps_codes_before_selecting_cff_cids ... ok
+test remapped_cid_cff_widths_follow_encoding_cids ... ok
+test cid_cff_vertical_advance_uses_w2 ... FAILED
+
+failures:
+
+---- cid_cff_vertical_advance_uses_w2 stdout ----
+
+thread 'cid_cff_vertical_advance_uses_w2' (2054) panicked at oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:112:5:
+glyph 1: expected B at (100,688), got "B" at (105,700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    cid_cff_vertical_advance_uses_w2
+
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cid_cff_contract_test`
+     Running tests/text_cid_contract_test.rs (target/debug/deps/text_cid_contract_test-3b82e4604a3b3f4e)
+
+running 5 tests
+test identity_h_codes_are_cids_not_unicode_scalars ... ok
+test cidrange_maps_are_equivalent_to_cidchar_maps ... ok
+test mixed_one_to_four_byte_codes_use_tounicode_source_codes ... ok
+test widths_are_indexed_by_cid_after_encoding_mapping ... ok
+test changing_gid_map_does_not_change_explicit_unicode ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-576d6b91ec72df24)
+
+running 7 tests
+test cjk_samples_have_pinned_identity_and_distinct_collections ... ok
+test adobe_kr_is_a_separate_collection ... FAILED
+test adobe_korea1_named_cmaps_decode_collection_cids ... FAILED
+test adobe_japan1_named_cmaps_decode_collection_cids ... FAILED
+test adobe_cns1_named_cmaps_decode_collection_cids ... FAILED
+test adobe_gb1_named_cmaps_decode_collection_cids ... FAILED
+test explicit_unicode_overrides_all_five_collection_fallbacks ... ok
+
+failures:
+
+---- adobe_kr_is_a_separate_collection stdout ----
+
+thread 'adobe_kr_is_a_separate_collection' (2071) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+UniAKR-UTF16-H first-cjk code=2F00 CID=14238: expected "一", got "⼀"
+UniAKR-UTF16-H last-cjk code=FA2F CID=18559: expected "隷", got "隷"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- adobe_korea1_named_cmaps_decode_collection_cids stdout ----
+
+thread 'adobe_korea1_named_cmaps_decode_collection_cids' (2070) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+KSC-EUC-H first-cjk code=B0A1 CID=1086: expected "가", got "�"
+KSC-EUC-H last-cjk code=FDFE CID=8055: expected "詰", got "�"
+KSC-EUC-V first-cjk code=B0A1 CID=1086: expected "가", got "�"
+KSC-EUC-V last-cjk code=FDFE CID=8055: expected "詰", got "�"
+KSC-EUC-V vertical-override code=A1A2 CID=8056: expected "、", got "�"
+KSCms-UHC-V first-cjk code=8141 CID=9333: expected "갂", got "�"
+KSCms-UHC-V last-cjk code=FDFE CID=8055: expected "詰", got "�"
+KSCms-UHC-V vertical-override code=A1A2 CID=8056: expected "、", got "�"
+UniKS-UCS2-H last-cjk code=FA0B CID=3815: expected "廓", got "廓"
+UniKS-UCS2-V last-cjk code=FA0B CID=3815: expected "廓", got "廓"
+UniKS-UCS2-V vertical-override code=2013 CID=8059: expected "\u{ad}", got "–"
+UniKS-UTF16-H first-cjk code=2F00 CID=6460: expected "一", got "⼀"
+UniKS-UTF16-H last-cjk code=FA2F CID=4510: expected "隷", got "隷"
+UniKS-UTF16-V first-cjk code=2F00 CID=6460: expected "一", got "⼀"
+UniKS-UTF16-V last-cjk code=FA2F CID=4510: expected "隷", got "隷"
+UniKS-UTF16-V vertical-override code=2013 CID=8059: expected "\u{ad}", got "–"
+
+---- adobe_japan1_named_cmaps_decode_collection_cids stdout ----
+
+thread 'adobe_japan1_named_cmaps_decode_collection_cids' (2069) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+90ms-RKSJ-H non-bmp code=88A7 CID=1133: expected "逢\u{e0100}", got "逢"
+90ms-RKSJ-V first-cjk code=8157 CID=656: expected "仝", got "�"
+90ms-RKSJ-V last-cjk code=FC4B CID=8717: expected "黑", got "�"
+90ms-RKSJ-V non-bmp code=88A7 CID=1133: expected "逢\u{e0100}", got "�"
+90ms-RKSJ-V vertical-override code=8141 CID=7887: expected "、", got "�"
+90pv-RKSJ-H non-bmp code=8591 CID=8061: expected "🄀", got "�"
+90pv-RKSJ-V first-cjk code=8157 CID=656: expected "仝", got "�"
+90pv-RKSJ-V last-cjk code=EAA4 CID=8285: expected "熙", got "�"
+90pv-RKSJ-V non-bmp code=8591 CID=8061: expected "🄀", got "�"
+90pv-RKSJ-V vertical-override code=8141 CID=7887: expected "、", got "�"
+UniJIS-UCS2-H first-cjk code=2E83 CID=14305: expected "乚", got "⺃"
+UniJIS-UCS2-H last-cjk code=FA2D CID=8715: expected "鶴\u{fe00}", got "鶴"
+UniJIS-UCS2-H non-bmp code=2E87 CID=14105: expected "𠘨", got "⺇"
+UniJIS-UCS2-V first-cjk code=2E83 CID=14305: expected "乚", got "⺃"
+UniJIS-UCS2-V last-cjk code=FA2D CID=8715: expected "鶴\u{fe00}", got "鶴"
+UniJIS-UCS2-V non-bmp code=2E87 CID=14105: expected "𠘨", got "⺇"
+UniJIS-UTF16-H first-cjk code=2E83 CID=14305: expected "乚", got "⺃"
+UniJIS-UTF16-H last-cjk code=FA6D CID=13695: expected "舘\u{fe00}", got "舘"
+UniJIS-UTF16-H non-bmp code=2E87 CID=14105: expected "𠘨", got "⺇"
+UniJIS-UTF16-V first-cjk code=2E83 CID=14305: expected "乚", got "⺃"
+UniJIS-UTF16-V last-cjk code=FA6D CID=13695: expected "舘\u{fe00}", got "舘"
+UniJIS-UTF16-V non-bmp code=2E87 CID=14105: expected "𠘨", got "⺇"
+
+---- adobe_cns1_named_cmaps_decode_collection_cids stdout ----
+
+thread 'adobe_cns1_named_cmaps_decode_collection_cids' (2067) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+B5pc-H first-cjk code=A259 CID=281: expected "兙", got "�"
+B5pc-H last-cjk code=F9D5 CID=13645: expected "龘", got "�"
+B5pc-V first-cjk code=A259 CID=281: expected "兙", got "�"
+B5pc-V last-cjk code=F9D5 CID=13645: expected "龘", got "�"
+B5pc-V vertical-override code=A14B CID=13646: expected "︙", got "�"
+ETen-B5-H first-cjk code=A259 CID=281: expected "兙", got "�"
+ETen-B5-H last-cjk code=F9DC CID=14062: expected "嫺", got "�"
+ETen-B5-H non-bmp code=C87A CID=14000: expected "𠃌", got "�"
+ETen-B5-V first-cjk code=A259 CID=281: expected "兙", got "�"
+ETen-B5-V last-cjk code=F9DC CID=14062: expected "嫺", got "�"
+ETen-B5-V non-bmp code=C87A CID=14000: expected "𠃌", got "�"
+ETen-B5-V vertical-override code=A14B CID=13646: expected "︙", got "�"
+UniCNS-UCS2-H first-cjk code=2E9D CID=732: expected "月", got "⺝"
+UniCNS-UCS2-H last-cjk code=FA0D CID=9089: expected "嗀", got "嗀"
+UniCNS-UCS2-H non-bmp code=3D1D CID=14652: expected "𪏭", got "㴝"
+UniCNS-UCS2-V first-cjk code=2E9D CID=732: expected "月", got "⺝"
+UniCNS-UCS2-V last-cjk code=FA0D CID=9089: expected "嗀", got "嗀"
+UniCNS-UCS2-V non-bmp code=3D1D CID=14652: expected "𪏭", got "㴝"
+UniCNS-UCS2-V vertical-override code=2013 CID=120: expected "｜", got "–"
+UniCNS-UTF16-H first-cjk code=2F00 CID=595: expected "一", got "⼀"
+UniCNS-UTF16-H last-cjk code=FA0D CID=9089: expected "嗀", got "嗀"
+UniCNS-UTF16-H non-bmp code=3D1D CID=14652: expected "𪏭", got "㴝"
+UniCNS-UTF16-V first-cjk code=2F00 CID=595: expected "一", got "⼀"
+UniCNS-UTF16-V last-cjk code=FA0D CID=9089: expected "嗀", got "嗀"
+UniCNS-UTF16-V non-bmp code=3D1D CID=14652: expected "𪏭", got "㴝"
+UniCNS-UTF16-V vertical-override code=2013 CID=120: expected "｜", got "–"
+
+---- adobe_gb1_named_cmaps_decode_collection_cids stdout ----
+
+thread 'adobe_gb1_named_cmaps_decode_collection_cids' (2068) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+GB-EUC-H first-cjk code=B0A1 CID=940: expected "啊", got "�"
+GB-EUC-H last-cjk code=F7FE CID=7702: expected "齄", got "�"
+GB-EUC-V first-cjk code=B0A1 CID=940: expected "啊", got "�"
+GB-EUC-V last-cjk code=F7FE CID=7702: expected "齄", got "�"
+GB-EUC-V vertical-override code=A1A2 CID=575: expected "、", got "�"
+GBK-EUC-H non-bmp code=FE51 CID=22048: expected "𠂇", got "�"
+GBK-EUC-V first-cjk code=8140 CID=10072: expected "丂", got "�"
+GBK-EUC-V last-cjk code=FEA0 CID=22126: expected "龻", got "�"
+GBK-EUC-V non-bmp code=FE51 CID=22048: expected "𠂇", got "�"
+GBK-EUC-V vertical-override code=A1A2 CID=575: expected "、", got "�"
+GBKp-EUC-H non-bmp code=FE51 CID=22048: expected "𠂇", got "�"
+GBKp-EUC-V first-cjk code=8140 CID=10072: expected "丂", got "�"
+GBKp-EUC-V last-cjk code=FEA0 CID=22126: expected "龻", got "�"
+GBKp-EUC-V non-bmp code=FE51 CID=22048: expected "𠂇", got "�"
+GBKp-EUC-V vertical-override code=A1A2 CID=575: expected "、", got "�"
+UniGB-UCS2-H first-cjk code=2F00 CID=4162: expected "一", got "⼀"
+UniGB-UCS2-H last-cjk code=FA20 CID=22040: expected "蘒\u{fe00}", got "蘒"
+UniGB-UCS2-H non-bmp code=E816 CID=22048: expected "𠂇", got "\u{e816}"
+UniGB-UCS2-V first-cjk code=2F00 CID=4162: expected "一", got "⼀"
+UniGB-UCS2-V last-cjk code=FA20 CID=22040: expected "蘒\u{fe00}", got "蘒"
+UniGB-UCS2-V non-bmp code=E816 CID=22048: expected "𠂇", got "\u{e816}"
+UniGB-UTF16-H first-cjk code=2F00 CID=4162: expected "一", got "⼀"
+UniGB-UTF16-H last-cjk code=FA20 CID=22040: expected "蘒\u{fe00}", got "蘒"
+UniGB-UTF16-V first-cjk code=2F00 CID=4162: expected "一", got "⼀"
+UniGB-UTF16-V last-cjk code=FA20 CID=22040: expected "蘒\u{fe00}", got "蘒"
+
+
+failures:
+    adobe_cns1_named_cmaps_decode_collection_cids
+    adobe_gb1_named_cmaps_decode_collection_cids
+    adobe_japan1_named_cmaps_decode_collection_cids
+    adobe_korea1_named_cmaps_decode_collection_cids
+    adobe_kr_is_a_separate_collection
+
+test result: FAILED. 2 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cjk_contract_test`
+     Running tests/text_document_string_contract_test.rs (target/debug/deps/text_document_string_contract_test-4bb9f5f742bc9015)
+
+running 12 tests
+test malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail ... ok
+test document_oracle_preserves_defined_and_undefined_positions ... ok
+test empty_document_strings_remain_empty ... ok
+test empty_bookmarks_and_form_values_remain_empty ... ok
+test undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes ... ok
+test actualtext_utf16be_bom_sequences_are_exact ... ok
+test metadata_utf16be_bom_sequences_are_exact ... ok
+test bookmarks_and_form_values_preserve_utf16be_sequences ... ok
+test stored_form_values_match_pdfdocencoding_normative_table ... ok
+test bookmark_titles_match_pdfdocencoding_normative_table ... ok
+test metadata_matches_pdfdocencoding_normative_table ... ok
+test actualtext_matches_pdfdocencoding_normative_table ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/text_embedded_font_contract_test.rs (target/debug/deps/text_embedded_font_contract_test-bb27c925769a6a3b)
+
+running 4 tests
+test embedded_cff_simple_font_decodes_without_tounicode ... ok
+test embedded_cff_tounicode_has_precedence ... ok
+test embedded_cff_advance_matches_declared_font_metrics ... ok
+test embedded_font_is_the_pinned_opentype_cff_program ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-8b823f1d04deae6c)
+
+running 24 tests
+test builtin_font_selection_does_not_match_unrelated_names_or_type3 ... ok
+test builtin_symbol_subset_names_and_explicit_tounicode_are_distinct ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test differences_restart_the_code_counter_and_preserve_unmodified_codes ... ok
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test differences_override_the_base_encoding ... ok
+test builtin_symbol_and_zapf_keep_encoding_and_differences_precedence ... ok
+test builtin_decoding_preserves_afm_widths_and_following_origins ... ok
+test custom_type3_names_keep_existing_byte_recovery_and_mapping_precedence ... ok
+test macroman_overrides_cover_undefined_and_currency_codes ... ok
+test tounicode_overrides_builtin_symbol_and_dingbats ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test unknown_intrinsic_type1_encoding_keeps_existing_recovery ... ok
+test unresolved_differences_replace_instead_of_restoring_the_base_glyph ... ok
+test standard_encoding_matches_independent_table ... ok
+test zapf_differences_resolve_adobe_names_before_builtin_codes ... ok
+test macroman_undefined_codes_preserve_neighbors_with_replacement ... ok
+test macroman_encoding_matches_independent_table ... ok
+test symbol_builtin_encoding_matches_independent_table ... ok
+test winansi_encoding_matches_independent_table ... ok
+test zapfdingbats_builtin_encoding_matches_independent_table ... ok
+test all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding ... ok
+test simple_encoding_undefined_codes_recover_without_losing_neighbors ... ok
+test latin_standard14_fonts_use_complete_explicit_pdf_encodings_in_both_modes ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.97s
+
+     Running tests/text_expert_contract_test.rs (target/debug/deps/text_expert_contract_test-61ced53d1b848098)
+
+running 5 tests
+test expert_program_and_independent_name_inventory_are_pinned ... ok
+test macexpert_unambiguous_glyph_names_decode_without_tounicode ... ok
+test tounicode_can_choose_non_pua_text_for_expert_glyphs ... ok
+test all_expert_codes_preserve_their_explicit_tounicode_values ... ok
+test all_macexpert_codes_follow_agl_or_explicit_undefined_recovery ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+
+     Running tests/text_font_program_contract_test.rs (target/debug/deps/text_font_program_contract_test-905eb1f36d6ff5ce)
+
+running 5 tests
+test type3_charproc_names_supply_unicode_without_tounicode ... ok
+test bfrange_array_preserves_sequences_and_surrogate_pairs ... ok
+test bfrange_sequential_destination_increments_unicode ... ok
+test type3_tounicode_overrides_charproc_names ... ok
+test type3_advance_uses_font_matrix_and_declared_width ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_pdf20_string_contract_test.rs (target/debug/deps/text_pdf20_string_contract_test-c18f4e3693b98cf4)
+
+running 18 tests
+test indirect_catalog_version_is_resolved ... ok
+test pdf17_does_not_silently_apply_pdf20_utf8_semantics ... ok
+test catalog_version_upgrade_enables_utf8_and_downgrade_does_not_disable_it ... ok
+test malformed_catalog_version_names_do_not_enable_utf8 ... ok
+test inline_utf8_actualtext_overrides_structure_in_page_and_form ... ok
+test pdf20_outline_title_uses_effective_document_version ... ok
+test pdf20_utf8_without_bom_remains_pdfdocencoding ... ok
+test stored_pdf20_form_value_can_be_decoded_with_effective_version ... ok
+test signature_metadata_uses_pdf20_text_strings ... ok
+test malformed_pdf20_utf8_replaces_invalid_subparts_and_preserves_suffix ... ok
+test pdf20_metadata_utf8_bom_decodes_exact_sequences ... ok
+test structure_actualtext_in_form_uses_its_own_parent_tree_key ... ok
+test pdf20_actualtext_utf8_bom_decodes_exact_sequences ... ok
+test indirect_version_resolution_is_bounded_and_rejects_cycles ... ok
+test upgraded_catalog_and_named_actualtext_properties_share_version_context ... ok
+test structure_actualtext_on_page_uses_catalog_version ... ok
+test utf8_bom_in_glyph_string_is_decoded_by_font_not_document_encoding ... ok
+test utf8_named_field_remains_addressable_to_form_filler ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_script_contract_test.rs (target/debug/deps/text_script_contract_test-9acd821e1c141adf)
+
+running 8 tests
+test hebrew_preserves_logical_sequence_marks_and_mixed_digits ... ok
+test devanagari_and_thai_preserve_combining_sequences ... ok
+test greek_and_cyrillic_keep_accents_and_mixed_digits ... ok
+test arabic_preserves_logical_sequence_marks_and_arabic_indic_digits ... ok
+test supplementary_variation_selectors_and_joiners_are_not_dropped ... ok
+test canonically_equivalent_sequences_remain_distinct ... ok
+test western_latin_accents_currency_and_punctuation_are_exact ... ok
+test extended_latin_preserves_polish_czech_turkish_and_vietnamese ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_spacing_contract_test.rs (target/debug/deps/text_spacing_contract_test-040fabcda5bb0cc2)
+
+running 14 tests
+test glyph_origins_follow_declared_widths_kerns_and_horizontal_scale ... ok
+test absent_widths_never_certify_tracking_for_standard_fonts ... ok
+test lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances ... ok
+test excess_advance_remains_a_word_separator ... ok
+test a_single_transition_does_not_certify_uniform_tracking ... ok
+test declared_zero_widths_allow_uniform_advances ... ok
+test partial_em_adjustments_do_not_trigger_unknown_width_recovery ... ok
+test strict_mode_does_not_enable_unknown_width_recovery ... ok
+test declared_positive_widths_keep_word_separators ... ok
+test explicit_character_spacing_disables_tracking_inference ... ok
+test unresolved_type0_without_space_reaches_and_rejects_the_fallback ... ok
+test ordinary_small_kerning_does_not_add_spaces ... ok
+test explicit_word_spacing_disables_tracking_inference ... ok
+test known_zero_width_single_word_needs_no_literal_space ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_standard14_metrics_contract_test.rs (target/debug/deps/text_standard14_metrics_contract_test-77fe3bfd266fac8a)
+
+running 7 tests
+test symbol_and_zapf_select_builtin_glyphs_and_metrics ... ok
+test courier_styles_follow_adobe_monospaced_metrics ... ok
+test helvetica_styles_follow_adobe_implicit_metrics ... ok
+test times_styles_follow_adobe_implicit_metrics ... ok
+test declared_widths_override_implicit_metrics_for_all_fourteen_fonts ... ok
+test frozen_afm_sources_license_and_pdfs_are_unchanged ... ok
+test every_font_pair_and_return_transition_selects_the_current_metrics ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running tests/text_symbolic_truetype_contract_test.rs (target/debug/deps/text_symbolic_truetype_contract_test-91e7fc73a19c3ad3)
+
+running 8 tests
+test macintosh_byte_cmap_preserves_original_glyph_selection ... ok
+test windows_unicode_bmp_cmap_preserves_gids_and_metrics ... ok
+test windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font ... ok
+test windows_symbol_cmap_preserves_private_codes_and_gids ... ok
+test all_symbolic_programs_and_pdfs_match_frozen_hashes ... ok
+test multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance ... ok
+test symbolic_tounicode_preserves_sequences_independently_of_glyph_names ... ok
+test nonsymbolic_winansi_and_explicit_unicode_have_separate_contracts ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_tj_scale_contract_test.rs (target/debug/deps/text_tj_scale_contract_test-adff38aa153acd86)
+
+running 4 tests
+test fixture_hashes_are_frozen ... ok
+test forward_tj_adjustment_scales_with_tz ... ok
+test backward_tj_adjustment_scales_with_tz ... ok
+test zero_tj_control_scales_only_source_width ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_tracking_recovery_contract_test.rs (target/debug/deps/text_tracking_recovery_contract_test-62d9e1ff39e7e205)
+
+running 8 tests
+test larger_outlier_remains_a_word_gap_during_recovery ... ok
+test resolved_descendant_without_widths_does_not_enable_recovery ... ok
+test multiple_source_glyphs_cannot_certify_per_glyph_tracking ... ok
+test a_space_inside_a_unicode_sequence_is_not_a_space_glyph ... ok
+test vertical_encoding_does_not_enable_horizontal_recovery ... ok
+test truncated_identity_codes_cannot_certify_tracking ... ok
+test damaged_type0_recovery_covers_full_em_tolerance_and_mode ... ok
+test damaged_type0_rejects_non_em_baselines_and_explicit_spacing ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_transform_contract_test.rs (target/debug/deps/text_transform_contract_test-57da4620cfd91d58)
+
+running 9 tests
+test q_and_q_restore_ctm_before_the_next_text_object ... ok
+test ctm_nonuniform_scale_and_translation_apply_to_text_origins ... ok
+test ctm_scale_composes_with_rotated_tm_in_pdf_order ... ok
+test tm_rotation_rotates_glyph_advance ... ok
+test ctm_shear_and_translation_apply_to_text_origins ... ok
+test font_switch_changes_advance_without_resetting_text_matrix ... ok
+test nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state ... ok
+test bt_resets_text_matrix_and_retains_text_state ... ok
+test tm_shear_preserves_both_advance_components ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_truetype_contract_test.rs (target/debug/deps/text_truetype_contract_test-5b7b919e731860a6)
+
+running 5 tests
+test full_truetype_decodes_composite_glyph_without_tounicode ... ok
+test subset_truetype_decodes_composite_glyph_without_tounicode ... ok
+test full_and_subset_tounicode_override_font_encoding ... ok
+test full_and_subset_preserve_advance_and_explicit_space ... ok
+test full_and_subset_are_pinned_distinct_truetype_programs ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/text_type1_intrinsic_contract_test.rs (target/debug/deps/text_type1_intrinsic_contract_test-05b76f25adf8696c)
+
+running 10 tests
+test pfb_records_are_removed_from_pdf_fontfile_payloads ... ok
+test all_program_and_pdf_bytes_match_the_independent_provenance ... ok
+test differences_without_base_inherits_unmodified_codes_from_the_program ... FAILED
+test explicit_pdf_encoding_overrides_the_embedded_encoding ... ok
+test absent_pdf_encoding_uses_the_embedded_program_encoding ... FAILED
+test explicit_encoding_glyph_width_advances_the_text_pen ... ok
+test differences_glyph_width_advances_the_text_pen ... ok
+test intrinsic_glyph_width_advances_the_text_pen ... ok
+test tounicode_overrides_pdf_differences_and_intrinsic_encoding ... ok
+test tounicode_does_not_change_glyph_advances ... ok
+
+failures:
+
+---- differences_without_base_inherits_unmodified_codes_from_the_program stdout ----
+
+thread 'differences_without_base_inherits_unmodified_codes_from_the_program' (2223) panicked at oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:71:5:
+pfb-full strict: expected "AA", got "AB"
+pfb-full lenient: expected "AA", got "AB"
+pfb-subset strict: expected "AA", got "AB"
+pfb-subset lenient: expected "AA", got "AB"
+cff-full strict: expected "AA", got "AB"
+cff-full lenient: expected "AA", got "AB"
+cff-subset strict: expected "AA", got "AB"
+cff-subset lenient: expected "AA", got "AB"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- absent_pdf_encoding_uses_the_embedded_program_encoding stdout ----
+
+thread 'absent_pdf_encoding_uses_the_embedded_program_encoding' (2220) panicked at oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:71:5:
+pfb-full strict: expected "BA", got "AB"
+pfb-full lenient: expected "BA", got "AB"
+pfb-subset strict: expected "BA", got "AB"
+pfb-subset lenient: expected "BA", got "AB"
+cff-full strict: expected "BA", got "AB"
+cff-full lenient: expected "BA", got "AB"
+cff-subset strict: expected "BA", got "AB"
+cff-subset lenient: expected "BA", got "AB"
+
+
+failures:
+    absent_pdf_encoding_uses_the_embedded_program_encoding
+    differences_without_base_inherits_unmodified_codes_from_the_program
+
+test result: FAILED. 8 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_type1_intrinsic_contract_test`
+     Running tests/text_usecmap_contract_test.rs (target/debug/deps/text_usecmap_contract_test-d04affbc6085c30f)
+
+running 10 tests
+test flat_maps_are_the_control ... ok
+test encoding_inherits_parent_codespace_and_cids ... ok
+test explicit_cid_mapping_precedes_notdef_range ... ok
+test child_unicode_overrides_one_code_and_inherits_the_other ... ok
+test both_maps_follow_two_parent_levels ... ok
+test child_cid_mapping_overrides_parent_width_selection ... ok
+test fixture_bytes_match_frozen_provenance ... ok
+test tounicode_inherits_parent_mapping ... ok
+test identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths ... ok
+test identity_parent_operator_preserves_two_byte_codes_and_cid_widths ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_vertical_contract_test.rs (target/debug/deps/text_vertical_contract_test-fcfbd6e3bb975c41)
+
+running 9 tests
+test character_spacing_applies_on_the_vertical_axis ... FAILED
+test dw2_overrides_default_vertical_advance ... FAILED
+test horizontal_scale_does_not_scale_vertical_pen_advance ... FAILED
+test missing_w2_entry_falls_back_to_dw2 ... FAILED
+test embedded_wmode_one_selects_vertical_advance ... FAILED
+test w2_array_overrides_dw2_for_the_selected_cid ... FAILED
+test vertical_tj_adjustment_changes_y_with_the_pdf_sign ... FAILED
+test identity_v_uses_default_vertical_advance ... FAILED
+test w2_range_overrides_dw2_for_the_selected_cid ... FAILED
+
+failures:
+
+---- character_spacing_applies_on_the_vertical_axis stdout ----
+
+thread 'character_spacing_applies_on_the_vertical_axis' (2242) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=: expected B pen=(100,692), actual "B"=(107,700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- dw2_overrides_default_vertical_advance stdout ----
+
+thread 'dw2_overrides_default_vertical_advance' (2243) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=/DW2 [900 -1300]: expected B pen=(100,687), actual "B"=(105,700)
+
+---- horizontal_scale_does_not_scale_vertical_pen_advance stdout ----
+
+thread 'horizontal_scale_does_not_scale_vertical_pen_advance' (2245) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:147:5:
+glyph 1, embedded=false, metrics=: expected B pen=(100,690), actual "B"=(102.5,700)
+glyph 1, embedded=false, metrics=: expected B pen=(100,690), actual "B"=(110,700)
+
+---- missing_w2_entry_falls_back_to_dw2 stdout ----
+
+thread 'missing_w2_entry_falls_back_to_dw2' (2247) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=/DW2 [900 -1300] /W2 [17 [-1200 272 880]]: expected B pen=(100,688), actual "B"=(105,700)
+glyph 2, embedded=false, metrics=/DW2 [900 -1300] /W2 [17 [-1200 272 880]]: expected A pen=(100,675), actual "A"=(110,700)
+
+---- embedded_wmode_one_selects_vertical_advance stdout ----
+
+thread 'embedded_wmode_one_selects_vertical_advance' (2244) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=true, metrics=: expected B pen=(100,690), actual "B"=(105,700)
+
+---- w2_array_overrides_dw2_for_the_selected_cid stdout ----
+
+thread 'w2_array_overrides_dw2_for_the_selected_cid' (2249) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=/DW2 [900 -1300] /W2 [17 [-1200 272 880]]: expected B pen=(100,688), actual "B"=(105,700)
+
+---- vertical_tj_adjustment_changes_y_with_the_pdf_sign stdout ----
+
+thread 'vertical_tj_adjustment_changes_y_with_the_pdf_sign' (2248) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:133:5:
+glyph 1, embedded=false, metrics=: expected B pen=(100,687), actual "B"=(102,700)
+glyph 0, embedded=false, metrics=: expected A pen=(100,700), actual "A "=(100,700)
+glyph 1, embedded=false, metrics=: expected B pen=(100,693), actual "B"=(108,700)
+
+---- identity_v_uses_default_vertical_advance stdout ----
+
+thread 'identity_v_uses_default_vertical_advance' (2246) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=: expected B pen=(100,690), actual "B"=(105,700)
+
+---- w2_range_overrides_dw2_for_the_selected_cid stdout ----
+
+thread 'w2_range_overrides_dw2_for_the_selected_cid' (2250) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=/DW2 [900 -1300] /W2 [17 19 -1200 272 880]: expected B pen=(100,688), actual "B"=(105,700)
+
+
+failures:
+    character_spacing_applies_on_the_vertical_axis
+    dw2_overrides_default_vertical_advance
+    embedded_wmode_one_selects_vertical_advance
+    horizontal_scale_does_not_scale_vertical_pen_advance
+    identity_v_uses_default_vertical_advance
+    missing_w2_entry_falls_back_to_dw2
+    vertical_tj_adjustment_changes_y_with_the_pdf_sign
+    w2_array_overrides_dw2_for_the_selected_cid
+    w2_range_overrides_dw2_for_the_selected_cid
+
+test result: FAILED. 0 passed; 9 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_vertical_contract_test`
+error: 4 targets failed:
+    `-p oxidize-pdf --test text_cid_cff_contract_test`
+    `-p oxidize-pdf --test text_cjk_contract_test`
+    `-p oxidize-pdf --test text_type1_intrinsic_contract_test`
+    `-p oxidize-pdf --test text_vertical_contract_test`

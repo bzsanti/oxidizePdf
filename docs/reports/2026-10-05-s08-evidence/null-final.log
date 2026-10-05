@@ -1,0 +1,43 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 10.43s
+     Running tests/text_metrics_boundary_contract_test.rs (target/debug/deps/text_metrics_boundary_contract_test-3369e698de7e0c21)
+
+running 16 tests
+test implicit_standard14_metrics_reach_both_consumers ... ok
+test cid_width_array_may_end_at_maximum_cid ... ok
+test cid_metrics_resolve_indirect_array_range_and_default_values ... ok
+test lastchar_limits_explicit_widths_and_retains_missingwidth ... ok
+test declared_missingwidth_applies_when_private_font_has_no_widths_array ... ok
+test null_dictionary_metrics_are_absent_instead_of_invalid_values ... ok
+test null_cid_metrics_and_gid_map_keep_the_absent_defaults ... ok
+test invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity ... ok
+test null_missingwidth_and_program_entries_match_omission ... ok
+test simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth ... ok
+test simple_negative_widths_are_preserved ... ok
+test unspecified_private_metrics_use_documented_consumer_recovery ... ok
+test cid_missing_and_explicit_zero_defaults_remain_distinct ... ok
+test cid_invalid_widths_fail_strict_and_recover_finitely_without_losing_unicode ... ok
+test explicit_invalid_simple_font_bounds_do_not_wrap_or_default_to_zero ... ok
+test malformed_cid_width_tables_cannot_clamp_or_overflow_into_a_valid_cid ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/text_recovery_boundary_contract_test.rs (target/debug/deps/text_recovery_boundary_contract_test-7dd20d1680fef3b8)
+
+running 13 tests
+test simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace ... ok
+test never_joins_partial_codes_across_tj_strings ... ok
+test encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping ... ok
+test complete_codes_and_empty_string_remain_valid ... ok
+test complete_unmapped_code_does_not_reinterpret_its_suffix ... ok
+test tounicode_reference_chain_preserves_authoritative_mapping ... ok
+test identity_collection_preserves_odd_tail_including_after_notdef ... ok
+test unusable_tounicode_stream_keeps_encoding_cmap_source_boundaries ... ok
+test unavailable_font_program_does_not_discard_authoritative_text_metadata ... ok
+test unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible ... ok
+test tounicode_reference_depth_and_cycles_have_explicit_mode_policy ... ok
+test invalid_tounicode_resource_cannot_silently_restore_base_unicode ... ok
+test preserves_valid_text_and_marks_every_incomplete_tail_once ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

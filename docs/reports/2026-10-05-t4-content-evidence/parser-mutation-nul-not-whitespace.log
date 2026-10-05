@@ -1,0 +1,27 @@
+
+running 2 tests
+test regression::nul_separates_tokens_and_hex_digits_but_remains_literal_data ... FAILED
+test regression::pdf_whitespace_delimits_inline_image_without_swallowing_following_text ... FAILED
+
+failures:
+
+---- regression::nul_separates_tokens_and_hex_digits_but_remains_literal_data stdout ----
+
+thread 'regression::nul_separates_tokens_and_hex_digits_but_remains_literal_data' (100) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-parser-mutations/regression.rs:44:85:
+called `Result::unwrap()` on an `Err` value: SyntaxError { position: 16, message: "Invalid character in hex string: '\\0'" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- regression::pdf_whitespace_delimits_inline_image_without_swallowing_following_text stdout ----
+
+thread 'regression::pdf_whitespace_delimits_inline_image_without_swallowing_following_text' (101) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-parser-mutations/regression.rs:22:21:
+assertion `left == right` failed: separator=0, position=0
+  left: []
+ right: [127]
+
+
+failures:
+    regression::nul_separates_tokens_and_hex_digits_but_remains_literal_data
+    regression::pdf_whitespace_delimits_inline_image_without_swallowing_following_text
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 93 filtered out; finished in 0.00s
+

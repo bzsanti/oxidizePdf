@@ -1,0 +1,87 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.19s
+     Running tests/issue_663_tracking_guards_test.rs (target/debug/deps/issue_663_tracking_guards_test-9972973d9b53af32)
+
+running 10 tests
+test a_space_inside_a_unicode_sequence_is_not_a_space_glyph ... ok
+test larger_outlier_remains_a_word_gap_during_recovery ... ok
+test multiple_source_glyphs_cannot_certify_per_glyph_tracking ... ok
+test missing_space_guard_is_exercised_by_two_full_em_adjustments ... ok
+test resolved_descendant_without_widths_does_not_enable_recovery ... ok
+test truncated_identity_codes_cannot_certify_tracking ... ok
+test vertical_encoding_does_not_enable_horizontal_recovery ... ok
+test damaged_type0_rejects_non_em_baselines_and_explicit_spacing ... ok
+test damaged_type0_recovery_covers_full_em_tolerance_and_mode ... ok
+test simple_fonts_with_unknown_widths_keep_word_boundaries ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/text_cid_cff_contract_test.rs (target/debug/deps/text_cid_cff_contract_test-3fcb695627adadbd)
+
+running 6 tests
+test cid_keyed_cff_matches_its_independently_generated_program ... ok
+test cid_cff_widths_use_cids_not_charstring_indices ... ok
+test cid_cff_vertical_advance_uses_w2 ... ok
+test embedded_encoding_remaps_codes_before_selecting_cff_cids ... ok
+test identity_h_cid_cff_preserves_explicit_unicode ... ok
+test remapped_cid_cff_widths_follow_encoding_cids ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_output_api_contract_test.rs (target/debug/deps/text_output_api_contract_test-193dd67eae72543e)
+
+running 6 tests
+test document_api_resets_same_resource_name_between_pages ... ok
+test type3_output_preserves_multiscalar_mapping_and_real_charprocs ... ok
+test cid_cff_inheritance_outputs_preserve_child_and_parent_text ... ok
+test all_standard14_styles_have_consistent_output_apis ... ok
+test embedded_type1_and_cff_outputs_preserve_encoding_precedence ... ok
+test symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/text_tj_scale_contract_test.rs (target/debug/deps/text_tj_scale_contract_test-adff38aa153acd86)
+
+running 4 tests
+test fixture_hashes_are_frozen ... ok
+test forward_tj_adjustment_scales_with_tz ... ok
+test backward_tj_adjustment_scales_with_tz ... ok
+test zero_tj_control_scales_only_source_width ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_tracking_recovery_contract_test.rs (target/debug/deps/text_tracking_recovery_contract_test-62d9e1ff39e7e205)
+
+running 8 tests
+test resolved_descendant_without_widths_does_not_enable_recovery ... ok
+test multiple_source_glyphs_cannot_certify_per_glyph_tracking ... ok
+test larger_outlier_remains_a_word_gap_during_recovery ... ok
+test a_space_inside_a_unicode_sequence_is_not_a_space_glyph ... ok
+test truncated_identity_codes_cannot_certify_tracking ... ok
+test vertical_encoding_does_not_enable_horizontal_recovery ... ok
+test damaged_type0_recovery_covers_full_em_tolerance_and_mode ... ok
+test damaged_type0_rejects_non_em_baselines_and_explicit_spacing ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/text_vertical_contract_test.rs (target/debug/deps/text_vertical_contract_test-fcfbd6e3bb975c41)
+
+running 15 tests
+test horizontal_scale_does_not_scale_vertical_pen_advance ... ok
+test character_spacing_applies_on_the_vertical_axis ... ok
+test font_size_changes_apply_to_subsequent_vertical_advances ... ok
+test dw2_overrides_default_vertical_advance ... ok
+test embedded_wmode_one_selects_vertical_advance ... ok
+test missing_w2_entry_falls_back_to_dw2 ... ok
+test identity_v_uses_default_vertical_advance ... ok
+test w2_range_overrides_dw2_for_the_selected_cid ... ok
+test w2_array_overrides_dw2_for_the_selected_cid ... ok
+test vertical_pen_follows_rotated_ctm ... ok
+test vertical_tj_adjustment_changes_y_with_the_pdf_sign ... ok
+test vertical_multiscalar_unicode_advances_once_per_source_code ... ok
+test w2_array_uses_selected_cid_at_each_position ... ok
+test vertical_tj_ignores_horizontal_scale_for_both_signs ... ok
+test word_spacing_does_not_apply_to_two_byte_source_codes ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+

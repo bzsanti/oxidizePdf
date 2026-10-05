@@ -1,0 +1,15 @@
+{
+  "poppler": "24.02.0",
+  "PyMuPDF": "1.26.5",
+  "MuPDF": "1.26.10",
+  "sources": {
+    "CharCodeToUnicode": {
+      "url": "https://gitlab.freedesktop.org/poppler/poppler/-/raw/poppler-24.02.0/poppler/CharCodeToUnicode.cc",
+      "sha256": "2ce7358edb87463b1dc43e0559e720dacf1811120e1d5be5b03aa517156a7edf"
+    },
+    "GfxFont": {
+      "url": "https://gitlab.freedesktop.org/poppler/poppler/-/raw/poppler-24.02.0/poppler/GfxFont.cc",
+      "sha256": "4e2a2923954f8d928c15d21ffa3a35e481d3d0f22affc6193184bf82b1e943b4"
+    }
+  }
+}

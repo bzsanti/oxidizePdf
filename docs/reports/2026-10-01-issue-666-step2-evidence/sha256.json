@@ -1,0 +1,17 @@
+{
+  "tools/generate_text_encoding_oracles.py": "16caa804b00bb9c672860eab8e1fd3ef5483ecd1f78a41b1c8020a7ab11ee5d6",
+  "oxidize-pdf-core/tests/common/text_contracts.rs": "69eaa1a6fa7ce447feb52ffefbc03cb4e390ad547116e7b66f698fb993704d56",
+  "oxidize-pdf-core/tests/text_encoding_contract_test.rs": "247f953d643f82934f1a60feef5235306a53d613416e8fe7429c6f699e1d7cb6",
+  "oxidize-pdf-core/tests/text_font_program_contract_test.rs": "607b7b4c92d56d64db577eb070177fd817377eac0f2625213e0648ba483fb363",
+  "oxidize-pdf-core/tests/fixtures/text_contracts/provenance.json": "093e19fe6f75b7bc5b9633c22a527bd8291e5c5dff67634df1cab67478c84453",
+  "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json": "e1d7da120b6d9e5907f8b54842ce2ef80f48a999fb21d69e0278a6e30b53f105",
+  "docs/reports/2026-10-01-issue-666-step2-evidence/issue666-step2-type3-unicode.pdf": "455a7aefcf34b407bae26bf684eb0e2f45de13ac8be5379330b6ef7546d14ad7",
+  "docs/reports/2026-10-01-issue-666-step2-evidence/clippy.log": "ce4fa2154a76804bf580018497ca205615b37846543c15194f630aa10293a984",
+  "docs/reports/2026-10-01-issue-666-step2-evidence/pr665-final.log": "6fbce5b542c589e771170b3ac6f244f88d1a4a783f75fefc2025e214e7713034",
+  "docs/reports/2026-10-01-issue-666-step2-evidence/pr664-final.log": "0585ccbe600e2c54d25a49e21684892c060a1f65ea3c89f5e760379dfd6afecb",
+  "docs/reports/2026-10-01-issue-666-step2-evidence/issue666-step2-type3-normal.pdf": "1f5f3588c7d535460774b02f67cc0ff3e5847b927d2b1f50f9437c04c210d9c0",
+  "docs/reports/2026-10-01-issue-666-step2-evidence/base-final.log": "bb1d55a82765b86a7d243f895c1ae6a55b6e13d84233e6953cbbeeef21ed7cd8",
+  "docs/reports/2026-10-01-issue-666-step2-evidence/issue666-step2-type3-scaled.pdf": "f9795e60f7a44c343aa56f1927a2055390c188caec49611b2b0938bd11d9e4e0",
+  "docs/reports/2026-10-01-issue-666-step2-evidence/qpdf.json": "5b9d0ab8a0c7ef513eb4816f3837fffda1557fcd875a5162344014d15c726b10",
+  "docs/reports/2026-10-01-issue-666-step2-evidence/fixture_probe.rs": "942b4f462f5e7dc46c58ceb60f1522321fc04b33a36f675edc3e7ba38cab067a"
+}

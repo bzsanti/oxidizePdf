@@ -1,0 +1,35 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 11.92s
+     Running tests/issue_613_multistream_boundary_test.rs (target/debug/deps/issue_613_multistream_boundary_test-cca0ccd3d55c226b)
+
+running 9 tests
+test streaming_recovers_after_bad_stream_without_losing_split_operands ... ok
+test test_stream_text_multistream_boundary ... ok
+test streaming_skips_inline_image_data_across_stream_boundaries ... ok
+test test_content_parser_parse_content_streams ... ok
+test test_multistream_operand_operator_split_text_extraction ... ok
+test test_multistream_operand_split_coordinates_text_extraction ... ok
+test test_multistream_plaintext_extraction ... ok
+test test_combined_content_stream_helpers ... ok
+test test_combine_streams_corner_cases ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_617_stream_recovery_test.rs (target/debug/deps/issue_617_stream_recovery_test-0551afa372ca0a6e)
+
+running 4 tests
+test strict_content_parser_still_rejects_malformed_content ... ok
+test healthy_streams_keep_operands_after_recovery_and_empty_streams ... ok
+test recovery_keeps_prefix_operations_but_discards_incomplete_operands ... ok
+test later_valid_text_survives_lexical_error_in_every_extraction_facade ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_inline_image_boundary_contract_test.rs (target/debug/deps/text_inline_image_boundary_contract_test-8b3a1b0fe4ec0e52)
+
+running 2 tests
+test nul_separates_tokens_and_hex_digits_but_remains_literal_data ... ok
+test pdf_whitespace_delimits_inline_image_without_swallowing_following_text ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+

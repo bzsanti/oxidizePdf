@@ -1,0 +1,94 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 24 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_encoding_contract_test.rs            24     95
+
+--- Worst Offenders ---
+  differences_override_the_base_encoding (oxidize-pdf-core/tests/text_encoding_contract_test.rs:144) - Score: 90
+    i Test 'differences_override_the_base_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'differences_override_the_base_encoding' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  tounicode_overrides_differences_and_supports_unicode_sequences (oxidize-pdf-core/tests/text_encoding_contract_test.rs:160) - Score: 90
+    i Test 'tounicode_overrides_differences_and_supports_unicode_sequences' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'tounicode_overrides_differences_and_supports_unicode_sequences' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  literal_and_hex_strings_preserve_the_same_source_codes (oxidize-pdf-core/tests/text_encoding_contract_test.rs:180) - Score: 90
+    i Test 'literal_and_hex_strings_preserve_the_same_source_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'literal_and_hex_strings_preserve_the_same_source_codes' has low assert-to-setup ratio (11%): 2 asserts vs 17 setup lines
+  symbol_builtin_encoding_matches_independent_table (oxidize-pdf-core/tests/text_encoding_contract_test.rs:203) - Score: 90
+    - Test 'symbol_builtin_encoding_matches_independent_table' does not call any production code
+  zapfdingbats_builtin_encoding_matches_independent_table (oxidize-pdf-core/tests/text_encoding_contract_test.rs:211) - Score: 90
+    - Test 'zapfdingbats_builtin_encoding_matches_independent_table' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_encoding_contract_test.rs:
+  external_oracles_have_256_unique_positions_and_recorded_hashes (line 67) - Score: 100
+    i Test 'external_oracles_have_256_unique_positions_and_recorded_hashes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'external_oracles_have_256_unique_positions_and_recorded_hashes' has multiple assertions without diagnostic messages
+  differences_override_the_base_encoding (line 144) - Score: 90
+    i Test 'differences_override_the_base_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'differences_override_the_base_encoding' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  tounicode_overrides_differences_and_supports_unicode_sequences (line 160) - Score: 90
+    i Test 'tounicode_overrides_differences_and_supports_unicode_sequences' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'tounicode_overrides_differences_and_supports_unicode_sequences' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  literal_and_hex_strings_preserve_the_same_source_codes (line 180) - Score: 90
+    i Test 'literal_and_hex_strings_preserve_the_same_source_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'literal_and_hex_strings_preserve_the_same_source_codes' has low assert-to-setup ratio (11%): 2 asserts vs 17 setup lines
+  symbol_builtin_encoding_matches_independent_table (line 203) - Score: 90
+    - Test 'symbol_builtin_encoding_matches_independent_table' does not call any production code
+  zapfdingbats_builtin_encoding_matches_independent_table (line 211) - Score: 90
+    - Test 'zapfdingbats_builtin_encoding_matches_independent_table' does not call any production code
+  tounicode_overrides_builtin_symbol_and_dingbats (line 219) - Score: 90
+    i Test 'tounicode_overrides_builtin_symbol_and_dingbats' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'tounicode_overrides_builtin_symbol_and_dingbats' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  differences_restart_the_code_counter_and_preserve_unmodified_codes (line 239) - Score: 90
+    i Test 'differences_restart_the_code_counter_and_preserve_unmodified_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'differences_restart_the_code_counter_and_preserve_unmodified_codes' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  macroman_undefined_codes_preserve_neighbors_with_replacement (line 256) - Score: 100
+    i Test 'macroman_undefined_codes_preserve_neighbors_with_replacement' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'macroman_undefined_codes_preserve_neighbors_with_replacement' uses .unwrap() which silently discards error information
+  macroman_overrides_cover_undefined_and_currency_codes (line 288) - Score: 90
+    i Test 'macroman_overrides_cover_undefined_and_currency_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'macroman_overrides_cover_undefined_and_currency_codes' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  simple_encoding_undefined_codes_recover_without_losing_neighbors (line 317) - Score: 90
+    - Test 'simple_encoding_undefined_codes_recover_without_losing_neighbors' has a match arm with empty body, ignoring potential error cases
+    i Test 'simple_encoding_undefined_codes_recover_without_losing_neighbors' asserts against a hardcoded constant instead of a computed expected value
+  builtin_symbol_and_zapf_keep_encoding_and_differences_precedence (line 343) - Score: 100
+    i Test 'builtin_symbol_and_zapf_keep_encoding_and_differences_precedence' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'builtin_symbol_and_zapf_keep_encoding_and_differences_precedence' has multiple assertions without diagnostic messages
+  builtin_font_selection_does_not_match_unrelated_names_or_type3 (line 371) - Score: 90
+    - Test 'builtin_font_selection_does_not_match_unrelated_names_or_type3' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'builtin_font_selection_does_not_match_unrelated_names_or_type3' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'builtin_font_selection_does_not_match_unrelated_names_or_type3' has multiple assertions without diagnostic messages
+  builtin_symbol_subset_names_and_explicit_tounicode_are_distinct (line 403) - Score: 90
+    i Test 'builtin_symbol_subset_names_and_explicit_tounicode_are_distinct' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'builtin_symbol_subset_names_and_explicit_tounicode_are_distinct' has multiple assertions without diagnostic messages
+    - Test 'builtin_symbol_subset_names_and_explicit_tounicode_are_distinct' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+  zapf_differences_resolve_adobe_names_before_builtin_codes (line 479) - Score: 90
+    i Test 'zapf_differences_resolve_adobe_names_before_builtin_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'zapf_differences_resolve_adobe_names_before_builtin_codes' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  unresolved_differences_replace_instead_of_restoring_the_base_glyph (line 495) - Score: 100
+    i Test 'unresolved_differences_replace_instead_of_restoring_the_base_glyph' asserts against a hardcoded constant instead of a computed expected value
+  all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding (line 528) - Score: 100
+    i Test 'all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding' has multiple assertions without diagnostic messages
+    i Test 'all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding' uses .unwrap() which silently discards error information
+  builtin_decoding_preserves_afm_widths_and_following_origins (line 556) - Score: 100
+    i Test 'builtin_decoding_preserves_afm_widths_and_following_origins' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'builtin_decoding_preserves_afm_widths_and_following_origins' has multiple assertions without diagnostic messages
+    i Test 'builtin_decoding_preserves_afm_widths_and_following_origins' uses .unwrap() which silently discards error information
+  custom_type3_names_preserve_unknown_markers_and_mapping_precedence (line 609) - Score: 100
+    i Test 'custom_type3_names_preserve_unknown_markers_and_mapping_precedence' asserts against a hardcoded constant instead of a computed expected value
+  unknown_intrinsic_type1_names_preserve_markers_and_explicit_unicode (line 627) - Score: 90
+    - Test 'unknown_intrinsic_type1_names_preserve_markers_and_explicit_unicode' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unknown_intrinsic_type1_names_preserve_markers_and_explicit_unicode' asserts against a hardcoded constant instead of a computed expected value
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

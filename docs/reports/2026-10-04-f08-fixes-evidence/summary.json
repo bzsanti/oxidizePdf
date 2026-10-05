@@ -1,0 +1,29 @@
+{
+  "issues": [
+    666,
+    679
+  ],
+  "findings_fixed": 6,
+  "validation": {
+    "targets": 32,
+    "passed": 7093,
+    "failed": 0,
+    "ignored": 3,
+    "focused_passed": 14,
+    "format": "pass",
+    "clippy": "pass"
+  },
+  "red": {
+    "passed": 8,
+    "failed": 4
+  },
+  "mutations": "controls pass; all three mutations rejected",
+  "security": "five analyzed scopes; no automated alerts; manual aggregate budgets reviewed",
+  "limits": {
+    "decoded_bytes_per_font": 8388608,
+    "tokens_per_font": 262144,
+    "operations_per_font": 65536,
+    "aliases": "charged for each code; public Vec retained"
+  },
+  "corpus": "not rerun: changes confined to Type3 renderer resolution/parser; TextExtractor and general content parsing unchanged"
+}

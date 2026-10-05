@@ -1,0 +1,53 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 10 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_font_program_contract_test.rs        10     96
+
+--- Worst Offenders ---
+  bfrange_array_preserves_sequences_and_surrogate_pairs (oxidize-pdf-core/tests/text_font_program_contract_test.rs:121) - Score: 90
+    i Test 'bfrange_array_preserves_sequences_and_surrogate_pairs' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'bfrange_array_preserves_sequences_and_surrogate_pairs' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  type3_nonuniform_font_matrix_combines_with_character_and_horizontal_scaling (oxidize-pdf-core/tests/text_font_program_contract_test.rs:199) - Score: 90
+    - Test 'type3_nonuniform_font_matrix_combines_with_character_and_horizontal_scaling' does not call any production code
+  type3_tj_adjustment_is_in_text_units_not_glyph_matrix_units (oxidize-pdf-core/tests/text_font_program_contract_test.rs:206) - Score: 90
+    - Test 'type3_tj_adjustment_is_in_text_units_not_glyph_matrix_units' does not call any production code
+  type3_text_matrix_rotates_the_pen_even_when_font_matrix_does_not (oxidize-pdf-core/tests/text_font_program_contract_test.rs:213) - Score: 90
+    - Test 'type3_text_matrix_rotates_the_pen_even_when_font_matrix_does_not' does not call any production code
+  type3_charproc_names_supply_unicode_without_tounicode (oxidize-pdf-core/tests/text_font_program_contract_test.rs:48) - Score: 100
+    i Test 'type3_charproc_names_supply_unicode_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+
+--- Details ---
+oxidize-pdf-core/tests/text_font_program_contract_test.rs:
+  type3_charproc_names_supply_unicode_without_tounicode (line 48) - Score: 100
+    i Test 'type3_charproc_names_supply_unicode_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  type3_tounicode_overrides_charproc_names (line 56) - Score: 100
+    i Test 'type3_tounicode_overrides_charproc_names' asserts against a hardcoded constant instead of a computed expected value
+  bfrange_sequential_destination_increments_unicode (line 112) - Score: 100
+    i Test 'bfrange_sequential_destination_increments_unicode' asserts against a hardcoded constant instead of a computed expected value
+  bfrange_array_preserves_sequences_and_surrogate_pairs (line 121) - Score: 90
+    i Test 'bfrange_array_preserves_sequences_and_surrogate_pairs' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'bfrange_array_preserves_sequences_and_surrogate_pairs' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  type3_non_scalar_matrices_preserve_horizontal_text_pen_contract (line 135) - Score: 100
+    i Test 'type3_non_scalar_matrices_preserve_horizontal_text_pen_contract' uses .unwrap() which silently discards error information
+  type3_nonuniform_font_matrix_combines_with_character_and_horizontal_scaling (line 199) - Score: 90
+    - Test 'type3_nonuniform_font_matrix_combines_with_character_and_horizontal_scaling' does not call any production code
+  type3_tj_adjustment_is_in_text_units_not_glyph_matrix_units (line 206) - Score: 90
+    - Test 'type3_tj_adjustment_is_in_text_units_not_glyph_matrix_units' does not call any production code
+  type3_text_matrix_rotates_the_pen_even_when_font_matrix_does_not (line 213) - Score: 90
+    - Test 'type3_text_matrix_rotates_the_pen_even_when_font_matrix_does_not' does not call any production code
+  resolved_type3_retains_full_matrix_but_reports_horizontal_advance (line 220) - Score: 100
+    i Test 'resolved_type3_retains_full_matrix_but_reports_horizontal_advance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolved_type3_retains_full_matrix_but_reports_horizontal_advance' has multiple assertions without diagnostic messages
+    i Test 'resolved_type3_retains_full_matrix_but_reports_horizontal_advance' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

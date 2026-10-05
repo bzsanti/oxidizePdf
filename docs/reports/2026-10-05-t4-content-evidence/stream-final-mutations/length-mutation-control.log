@@ -1,0 +1,11 @@
+
+running 6 tests
+test regression::indexed_inline_palette_is_one_component_and_retains_its_binary_lookup ... ok
+test regression::nul_separates_tokens_and_hex_digits_but_remains_literal_data ... ok
+test regression::unfiltered_length_keeps_embedded_ei_inside_pixels_and_recovers_tight_end_marker ... ok
+test regression::filters_unknown_color_spaces_and_overflow_do_not_guess_raw_length ... ok
+test regression::unfiltered_length_uses_components_and_per_row_bit_padding ... ok
+test regression::pdf_whitespace_delimits_inline_image_without_swallowing_following_text ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 96 filtered out; finished in 0.04s
+

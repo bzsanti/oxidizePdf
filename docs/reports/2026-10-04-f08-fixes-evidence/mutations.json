@@ -1,0 +1,88 @@
+[
+  {
+    "name": "reader-control",
+    "command": [
+      "python3",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/reader-control.py",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-f08-fixes-evidence/reader-control.json"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "reader-width-mutation",
+    "command": [
+      "python3",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/reader-width-mutation.py",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-f08-fixes-evidence/reader-width-mutation.json"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "reader-version-mutation",
+    "command": [
+      "python3",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/reader-version-mutation.py",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-f08-fixes-evidence/reader-version-mutation.json"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "operations-control-build",
+    "command": [
+      "rustc",
+      "--edition",
+      "2021",
+      "--test",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/operations-control.rs",
+      "-L",
+      "dependency=target/debug/deps",
+      "--extern",
+      "oxidize_pdf=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/liboxidize_pdf-8d56b1627bc9922c.rlib",
+      "-o",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/operations-control"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "operations-control",
+    "command": [
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/operations-control",
+      "consistent_d0_and_d1_preserve_metrics_and_program_operations",
+      "--exact"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "operations-mutation-build",
+    "command": [
+      "rustc",
+      "--edition",
+      "2021",
+      "--test",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/operations-mutation.rs",
+      "-L",
+      "dependency=target/debug/deps",
+      "--extern",
+      "oxidize_pdf=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/liboxidize_pdf-8d56b1627bc9922c.rlib",
+      "-o",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/operations-mutation"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "operations-mutation",
+    "command": [
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/operations-mutation",
+      "consistent_d0_and_d1_preserve_metrics_and_program_operations",
+      "--exact"
+    ],
+    "exit": 101,
+    "expected": 101
+  }
+]

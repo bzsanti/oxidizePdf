@@ -1,0 +1,1108 @@
+{
+  "schema_version": 1,
+  "versions": {
+    "pymupdf": "1.26.5",
+    "mupdf": "1.26.10",
+    "poppler": "24.02.0",
+    "qpdf": "11.9.0"
+  },
+  "environment_errors": [],
+  "accepted": true,
+  "cases": [
+    {
+      "id": "type1-pfb-full-intrinsic",
+      "path": "pfb-full-intrinsic.pdf",
+      "expected_text": "BA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "BA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "BA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/pfb-full-intrinsic.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "a4a393ae97c253a632e96b180bbb3773ff67be75d16331708f48d25b5f3b03e2"
+    },
+    {
+      "id": "type1-pfb-full-differences",
+      "path": "pfb-full-differences.pdf",
+      "expected_text": "AA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/pfb-full-differences.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "91b1e4b4257852de10e09049cb79cda469082b8c45c96adb4d065e5d59eb8208"
+    },
+    {
+      "id": "type1-pfb-full-winansi",
+      "path": "pfb-full-winansi.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/pfb-full-winansi.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "8e76b21d5f33a7d191141c3b5677c2669a909261c173f2b59b68cf1fe731db3c"
+    },
+    {
+      "id": "type1-pfb-full-tounicode",
+      "path": "pfb-full-tounicode.pdf",
+      "expected_text": "XY",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "XY\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "X",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "Y",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "X",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "Y",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "XY\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/pfb-full-tounicode.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "0e03a0f207b25090bae610fc4187f6990f06db636eca1badf52a21401ac3a30e"
+    },
+    {
+      "id": "type1-pfb-subset-intrinsic",
+      "path": "pfb-subset-intrinsic.pdf",
+      "expected_text": "BA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "BA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "BA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/pfb-subset-intrinsic.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "a6df2206bd03a1d392456089be3df379c9ec02e162c99336bf351f3f5b67170c"
+    },
+    {
+      "id": "type1-pfb-subset-differences",
+      "path": "pfb-subset-differences.pdf",
+      "expected_text": "AA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/pfb-subset-differences.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "7ea1b94a86dc5c5b0c7f2016c49debffbf91d16912d006a869e6ce90873ad43b"
+    },
+    {
+      "id": "type1-pfb-subset-winansi",
+      "path": "pfb-subset-winansi.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/pfb-subset-winansi.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "f4b591d8f13413e084f6b2c99999e80cd66e12cd9d4d4be6cbc86eb17fe579c4"
+    },
+    {
+      "id": "type1-pfb-subset-tounicode",
+      "path": "pfb-subset-tounicode.pdf",
+      "expected_text": "XY",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "XY\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "X",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "Y",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "X",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "Y",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "XY\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/pfb-subset-tounicode.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "0f05b249bafac039a9308bdd505e1d1478c916d0bad8ecc4b9783c2e4caac09e"
+    },
+    {
+      "id": "type1-cff-full-intrinsic",
+      "path": "cff-full-intrinsic.pdf",
+      "expected_text": "BA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "BA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "BA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/cff-full-intrinsic.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "55fde397cd9d9eea618d865cbeda26187f7bf97a85d563cbe9299505f6d8b23c"
+    },
+    {
+      "id": "type1-cff-full-differences",
+      "path": "cff-full-differences.pdf",
+      "expected_text": "AA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/cff-full-differences.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "7b8dc55a2695e46c80d5132e7c48d63842de06d99d70987c17e6c78d5bb032b1"
+    },
+    {
+      "id": "type1-cff-full-winansi",
+      "path": "cff-full-winansi.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/cff-full-winansi.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "ea7b43f553da3151a2fff5b4516c691a2277f504750d6021819090a78e789130"
+    },
+    {
+      "id": "type1-cff-full-tounicode",
+      "path": "cff-full-tounicode.pdf",
+      "expected_text": "XY",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "XY\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "X",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "Y",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "X",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "Y",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "XY\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/cff-full-tounicode.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "90d54c30d1523159ea854b7ee8202a106babd92ceddef332c0a35d633c7ba7b3"
+    },
+    {
+      "id": "type1-cff-subset-intrinsic",
+      "path": "cff-subset-intrinsic.pdf",
+      "expected_text": "BA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "BA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "BA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/cff-subset-intrinsic.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "4daf81e2212ffa513eef9f3757b7fbf5ef9be85a29b75e368ea446c6d3126ae2"
+    },
+    {
+      "id": "type1-cff-subset-differences",
+      "path": "cff-subset-differences.pdf",
+      "expected_text": "AA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/cff-subset-differences.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "3dc3d4cd9ed41803951266de793b58368aed8203f3e30f92c25ff5d348ab859d"
+    },
+    {
+      "id": "type1-cff-subset-winansi",
+      "path": "cff-subset-winansi.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/cff-subset-winansi.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "76ec5f27c1ccf7d7b483ec5a6db65ef78bff17dfc4b02e1e3d68c7744988edd4"
+    },
+    {
+      "id": "type1-cff-subset-tounicode",
+      "path": "cff-subset-tounicode.pdf",
+      "expected_text": "XY",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "XY\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "X",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "Y",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "X",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "Y",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "XY\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/type1/cff-subset-tounicode.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "ba755c784c6fd5616a30f2605f5840e4664e95fad8878817de838473e3facced"
+    }
+  ],
+  "summary": {
+    "match": 32,
+    "known_limitation": 0,
+    "mismatch": 0,
+    "error": 0,
+    "structure_ok": 16
+  }
+}

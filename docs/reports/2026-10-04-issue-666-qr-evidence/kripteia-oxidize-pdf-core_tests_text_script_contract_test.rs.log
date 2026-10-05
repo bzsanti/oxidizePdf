@@ -1,0 +1,55 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 85 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_script_contract_test.rs               8     85
+
+--- Worst Offenders ---
+  western_latin_accents_currency_and_punctuation_are_exact (oxidize-pdf-core/tests/text_script_contract_test.rs:29) - Score: 80
+    - Test 'western_latin_accents_currency_and_punctuation_are_exact' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'western_latin_accents_currency_and_punctuation_are_exact' does not call any production code
+  extended_latin_preserves_polish_czech_turkish_and_vietnamese (oxidize-pdf-core/tests/text_script_contract_test.rs:38) - Score: 80
+    - Test 'extended_latin_preserves_polish_czech_turkish_and_vietnamese' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+    - Test 'extended_latin_preserves_polish_czech_turkish_and_vietnamese' does not call any production code
+  supplementary_variation_selectors_and_joiners_are_not_dropped (oxidize-pdf-core/tests/text_script_contract_test.rs:69) - Score: 80
+    - Test 'supplementary_variation_selectors_and_joiners_are_not_dropped' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'supplementary_variation_selectors_and_joiners_are_not_dropped' does not call any production code
+  canonically_equivalent_sequences_remain_distinct (oxidize-pdf-core/tests/text_script_contract_test.rs:79) - Score: 80
+    - Test 'canonically_equivalent_sequences_remain_distinct' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'canonically_equivalent_sequences_remain_distinct' does not call any production code
+  greek_and_cyrillic_keep_accents_and_mixed_digits (oxidize-pdf-core/tests/text_script_contract_test.rs:50) - Score: 90
+    - Test 'greek_and_cyrillic_keep_accents_and_mixed_digits' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_script_contract_test.rs:
+  western_latin_accents_currency_and_punctuation_are_exact (line 29) - Score: 80
+    - Test 'western_latin_accents_currency_and_punctuation_are_exact' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'western_latin_accents_currency_and_punctuation_are_exact' does not call any production code
+  extended_latin_preserves_polish_czech_turkish_and_vietnamese (line 38) - Score: 80
+    - Test 'extended_latin_preserves_polish_czech_turkish_and_vietnamese' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+    - Test 'extended_latin_preserves_polish_czech_turkish_and_vietnamese' does not call any production code
+  greek_and_cyrillic_keep_accents_and_mixed_digits (line 50) - Score: 90
+    - Test 'greek_and_cyrillic_keep_accents_and_mixed_digits' does not call any production code
+  arabic_preserves_logical_sequence_marks_and_arabic_indic_digits (line 57) - Score: 90
+    - Test 'arabic_preserves_logical_sequence_marks_and_arabic_indic_digits' does not call any production code
+  hebrew_preserves_logical_sequence_marks_and_mixed_digits (line 61) - Score: 90
+    - Test 'hebrew_preserves_logical_sequence_marks_and_mixed_digits' does not call any production code
+  devanagari_and_thai_preserve_combining_sequences (line 65) - Score: 90
+    - Test 'devanagari_and_thai_preserve_combining_sequences' does not call any production code
+  supplementary_variation_selectors_and_joiners_are_not_dropped (line 69) - Score: 80
+    - Test 'supplementary_variation_selectors_and_joiners_are_not_dropped' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'supplementary_variation_selectors_and_joiners_are_not_dropped' does not call any production code
+  canonically_equivalent_sequences_remain_distinct (line 79) - Score: 80
+    - Test 'canonically_equivalent_sequences_remain_distinct' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'canonically_equivalent_sequences_remain_distinct' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

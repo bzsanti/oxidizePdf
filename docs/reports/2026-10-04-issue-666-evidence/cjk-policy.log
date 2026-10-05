@@ -1,0 +1,18 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.73s
+     Running tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-576d6b91ec72df24)
+
+running 10 tests
+test cjk_samples_have_pinned_identity_and_distinct_collections ... ok
+test cid_zero_fallback_preserves_following_text_and_explicit_unicode ... ok
+test named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity ... ok
+test adobe_kr_is_a_separate_collection ... ok
+test adobe_japan1_named_cmaps_decode_collection_cids ... ok
+test adobe_korea1_named_cmaps_decode_collection_cids ... ok
+test adobe_gb1_named_cmaps_decode_collection_cids ... ok
+test adobe_cns1_named_cmaps_decode_collection_cids ... ok
+test explicit_unicode_overrides_all_five_collection_fallbacks ... ok
+test resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s
+

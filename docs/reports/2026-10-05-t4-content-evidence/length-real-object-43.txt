@@ -1,0 +1,1 @@
+<< /CharProcs 40 0 R /Encoding 41 0 R /FirstChar 32 /FontBBox [ -150 -425 3496 2049 ] /FontMatrix [ 0.000488 0 0 0.000488 0 0 ] /LastChar 255 /Name /Verdana-Bold-Bold /Subtype /Type3 /Type /Font /Widths 42 0 R >>

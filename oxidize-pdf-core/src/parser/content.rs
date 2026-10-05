@@ -437,6 +437,8 @@ pub struct ContentTokenizer<'a> {
     /// Set after returning an "ID" operator token.
     /// The next call to next_token() will read raw inline image bytes.
     in_inline_image: bool,
+    inline_header_start: Option<usize>,
+    inline_data_length: Option<usize>,
 }
 
 impl<'a> ContentTokenizer<'a> {
@@ -446,6 +448,8 @@ impl<'a> ContentTokenizer<'a> {
             input,
             position: 0,
             in_inline_image: false,
+            inline_header_start: None,
+            inline_data_length: None,
         }
     }
 
@@ -518,8 +522,14 @@ impl<'a> ContentTokenizer<'a> {
                 let token = self.read_operator()?;
                 // After "ID" operator, switch to raw binary mode for inline image data
                 if let Some(Token::Operator(ref op)) = token {
-                    if op == "ID" {
+                    if op == "BI" {
+                        self.inline_header_start = Some(self.position);
+                    } else if op == "ID" {
                         self.in_inline_image = true;
+                        self.inline_data_length =
+                            self.inline_header_start.take().and_then(|start| {
+                                unfiltered_inline_length(&self.input[start..self.position - 2])
+                            });
                     }
                 }
                 Ok(token)
@@ -530,7 +540,7 @@ impl<'a> ContentTokenizer<'a> {
     fn skip_whitespace(&mut self) {
         while self.position < self.input.len() {
             match self.input[self.position] {
-                b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' => self.position += 1,
+                b'\0' | b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' => self.position += 1,
                 b'%' => self.skip_comment(),
                 _ => break,
             }
@@ -590,13 +600,19 @@ impl<'a> ContentTokenizer<'a> {
                 })?;
             Ok(Some(Token::Number(value)))
         } else {
-            let value = num_str
-                .parse::<i32>()
-                .map_err(|_| ParseError::SyntaxError {
-                    position: start,
-                    message: "Invalid integer number".to_string(),
-                })?;
-            Ok(Some(Token::Integer(value)))
+            match num_str.parse::<i32>() {
+                Ok(value) => Ok(Some(Token::Integer(value))),
+                // Real-valued operands (Tm/cm/Tf/etc.) also accept integer
+                // syntax. A valid number outside i32 must not discard the
+                // content stream when its real representation is usable.
+                Err(_) => num_str
+                    .parse::<f32>()
+                    .map(|value| Some(Token::Number(value)))
+                    .map_err(|_| ParseError::SyntaxError {
+                        position: start,
+                        message: "Invalid numeric operand".to_string(),
+                    }),
+            }
         }
     }
 
@@ -714,7 +730,7 @@ impl<'a> ContentTokenizer<'a> {
                     }
                     self.position += 1;
                 }
-                b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' => {
+                b'\0' | b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' => {
                     // Skip whitespace in hex strings
                     self.position += 1;
                 }
@@ -740,8 +756,8 @@ impl<'a> ContentTokenizer<'a> {
         while self.position < self.input.len() {
             let ch = self.input[self.position];
             match ch {
-                b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' | b'(' | b')' | b'<' | b'>' | b'['
-                | b']' | b'{' | b'}' | b'/' | b'%' => break,
+                b'\0' | b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' | b'(' | b')' | b'<' | b'>'
+                | b'[' | b']' | b'{' | b'}' | b'/' | b'%' => break,
                 b'#' => {
                     // Handle hex escape in name
                     self.position += 1;
@@ -796,8 +812,8 @@ impl<'a> ContentTokenizer<'a> {
         while self.position < self.input.len() {
             let ch = self.input[self.position];
             match ch {
-                b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' | b'(' | b')' | b'<' | b'>' | b'['
-                | b']' | b'{' | b'}' | b'/' | b'%' | b';' => break,
+                b'\0' | b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' | b'(' | b')' | b'<' | b'>'
+                | b'[' | b']' | b'{' | b'}' | b'/' | b'%' | b';' => break,
                 _ => self.position += 1,
             }
         }
@@ -830,7 +846,7 @@ impl<'a> ContentTokenizer<'a> {
         // Skip single whitespace byte after ID (per PDF spec §4.8.6)
         if skip_separator && self.position < self.input.len() {
             let ch = self.input[self.position];
-            if ch == b' ' || ch == b'\n' || ch == b'\r' || ch == b'\t' {
+            if matches!(ch, b'\0' | b' ' | b'\t' | b'\r' | b'\n' | b'\x0C') {
                 self.position += 1;
                 // Handle \r\n as single whitespace
                 if ch == b'\r'
@@ -844,12 +860,41 @@ impl<'a> ContentTokenizer<'a> {
 
         let start = self.position;
 
+        // For known unfiltered images, pixels have a precise row-padded length.
+        // Verify EI at that boundary before falling back to marker scanning.
+        // This preserves whitespace-valued pixels and ignores accidental EI
+        // sequences inside them. Some producers omit whitespace before EI;
+        // accepting that at an independently known byte boundary is safe.
+        if let Some(end) = self
+            .inline_data_length
+            .take()
+            .and_then(|len| start.checked_add(len))
+        {
+            if end <= self.input.len() {
+                let mut marker = end;
+                while self
+                    .input
+                    .get(marker)
+                    .is_some_and(|b| matches!(b, 0 | 9 | 10 | 12 | 13 | 32))
+                {
+                    marker += 1;
+                }
+                if inline_end_at(self.input, marker) {
+                    self.position = marker + 2;
+                    return Ok((
+                        Some(Token::InlineImageData(self.input[start..end].to_vec())),
+                        true,
+                    ));
+                }
+            }
+        }
+
         // Scan for EI marker: preceded by whitespace + 'E' + 'I' + (whitespace/delimiter/EOF)
         while self.position + 1 < self.input.len() {
             let preceded_by_whitespace = self.position == start
                 || matches!(
                     self.input[self.position - 1],
-                    b' ' | b'\t' | b'\r' | b'\n' | b'\x0C'
+                    b'\0' | b' ' | b'\t' | b'\r' | b'\n' | b'\x0C'
                 );
 
             if preceded_by_whitespace
@@ -860,14 +905,27 @@ impl<'a> ContentTokenizer<'a> {
                 let followed_by_boundary = after_ei >= self.input.len()
                     || matches!(
                         self.input[after_ei],
-                        b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' | b'/' | b'<' | b'(' | b'[' | b'%'
+                        b'\0'
+                            | b' '
+                            | b'\t'
+                            | b'\r'
+                            | b'\n'
+                            | b'\x0C'
+                            | b'/'
+                            | b'<'
+                            | b'('
+                            | b'['
+                            | b'%'
                     );
 
                 if followed_by_boundary {
                     // Trim trailing whitespace that preceded EI from the data
                     let mut end = self.position;
                     if end > start
-                        && matches!(self.input[end - 1], b' ' | b'\t' | b'\r' | b'\n' | b'\x0C')
+                        && matches!(
+                            self.input[end - 1],
+                            b'\0' | b' ' | b'\t' | b'\r' | b'\n' | b'\x0C'
+                        )
                     {
                         end -= 1;
                     }
@@ -980,10 +1038,26 @@ impl ContentParser {
         .parse_operators_strict()
     }
 
-    pub(crate) fn parse_type3_charproc(content: &[u8]) -> ParseResult<ParsedType3CharProc> {
+    pub(crate) fn parse_type3_charproc(
+        content: &[u8],
+        token_budget: &mut usize,
+        operation_budget: &mut usize,
+    ) -> ParseResult<ParsedType3CharProc> {
         let mut tokenizer = ContentTokenizer::new(content);
         let mut tokens = Vec::new();
         while let Some(token) = tokenizer.next_token()? {
+            *token_budget = token_budget
+                .checked_sub(1)
+                .ok_or_else(|| ParseError::SyntaxError {
+                    position: tokenizer.position,
+                    message: "Type 3 token budget exceeded".into(),
+                })?;
+            if matches!(token, Token::Number(value) if !value.is_finite()) {
+                return Err(ParseError::SyntaxError {
+                    position: tokenizer.position,
+                    message: "Type 3 numeric operand must be finite and representable".into(),
+                });
+            }
             tokens.push(token);
         }
         let mut parser = Self {
@@ -1044,6 +1118,13 @@ impl ContentParser {
                     ));
                 }
                 Token::Operator(op) => {
+                    *operation_budget =
+                        operation_budget
+                            .checked_sub(1)
+                            .ok_or_else(|| ParseError::SyntaxError {
+                                position: parser.position,
+                                message: "Type 3 operation budget exceeded".into(),
+                            })?;
                     operations.push(parser.parse_operator(&op, &mut operands)?);
                 }
                 operand => operands.push(operand),
@@ -1931,25 +2012,15 @@ impl ContentParser {
             // /W -> Width, /H -> Height, /CS -> ColorSpace, /BPC -> BitsPerComponent
             // /F -> Filter, /DP -> DecodeParms, /IM -> ImageMask, /I -> Interpolate
             if let Token::Name(key) = &self.tokens[self.position] {
+                let full_key = expand_inline_key(key);
                 self.position += 1;
                 if self.position >= self.tokens.len() {
                     break;
                 }
 
                 // Parse the value
-                let value = match &self.tokens[self.position] {
-                    Token::Integer(n) => Object::Integer(*n as i64),
-                    Token::Number(n) => Object::Real(*n as f64),
-                    Token::Name(s) => Object::Name(expand_inline_name(s)),
-                    Token::String(s) => Object::String(String::from_utf8_lossy(s).to_string()),
-                    Token::HexString(s) => Object::String(String::from_utf8_lossy(s).to_string()),
-                    _ => Object::Null,
-                };
-
-                // Expand abbreviated keys to full names
-                let full_key = expand_inline_key(key);
+                let value = self.parse_inline_value(0)?;
                 params.insert(full_key, value);
-                self.position += 1;
             } else {
                 self.position += 1;
             }
@@ -1957,7 +2028,7 @@ impl ContentParser {
 
         // Get inline image data from dedicated InlineImageData token
         // (the tokenizer reads raw bytes between ID whitespace and EI)
-        let data = if self.position < self.tokens.len() {
+        let mut data = if self.position < self.tokens.len() {
             if let Token::InlineImageData(bytes) = &self.tokens[self.position] {
                 let d = bytes.clone();
                 self.position += 1;
@@ -1970,7 +2041,68 @@ impl ContentParser {
             Vec::new()
         };
 
+        // The incremental visitor inserts virtual whitespace between streams.
+        // When raw metadata proves the pixel extent, retain exactly those bytes
+        // if the remaining bytes are only the whitespace before EI. Do not trim
+        // whitespace-valued pixels or repair a non-whitespace length mismatch.
+        if let Some(length) = unfiltered_inline_params_length(&params) {
+            if data
+                .get(length..)
+                .is_some_and(|tail| tail.iter().all(|b| matches!(b, 0 | 9 | 10 | 12 | 13 | 32)))
+            {
+                data.truncate(length);
+            }
+        }
+
         Ok(ContentOperation::InlineImage { params, data })
+    }
+
+    fn parse_inline_value(&mut self, depth: usize) -> ParseResult<Object> {
+        let error = || ParseError::SyntaxError {
+            position: self.position,
+            message: "Invalid or excessively nested inline image parameter".into(),
+        };
+        if depth > 16 {
+            return Err(error());
+        }
+        let token = self.tokens.get(self.position).cloned().ok_or_else(error)?;
+        self.position += 1;
+        match token {
+            Token::Integer(n) => Ok(Object::Integer(i64::from(n))),
+            Token::Number(n) => Ok(Object::Real(f64::from(n))),
+            Token::Name(s) => Ok(Object::Name(expand_inline_name(&s))),
+            Token::String(bytes) | Token::HexString(bytes) => Ok(Object::ByteString(bytes)),
+            Token::Operator(op) if op == "true" => Ok(Object::Boolean(true)),
+            Token::Operator(op) if op == "false" => Ok(Object::Boolean(false)),
+            Token::Operator(op) if op == "null" => Ok(Object::Null),
+            Token::ArrayStart => {
+                let mut values = Vec::new();
+                while !matches!(self.tokens.get(self.position), Some(Token::ArrayEnd)) {
+                    values.push(self.parse_inline_value(depth + 1)?);
+                }
+                self.position += 1;
+                Ok(Object::Array(values))
+            }
+            Token::DictStart => {
+                let mut dictionary = crate::objects::Dictionary::new();
+                while !matches!(self.tokens.get(self.position), Some(Token::DictEnd)) {
+                    let Some(Token::Name(key)) = self.tokens.get(self.position).cloned() else {
+                        return Err(ParseError::SyntaxError {
+                            position: self.position,
+                            message: "Expected inline image dictionary key".into(),
+                        });
+                    };
+                    self.position += 1;
+                    dictionary.set(key, self.parse_inline_value(depth + 1)?);
+                }
+                self.position += 1;
+                Ok(Object::Dictionary(dictionary))
+            }
+            _ => Err(ParseError::SyntaxError {
+                position: self.position,
+                message: "Invalid inline image parameter value".into(),
+            }),
+        }
     }
 
     /// Fallback data collection when InlineImageData token is not present.
@@ -1997,6 +2129,92 @@ impl ContentParser {
         }
         Ok(data)
     }
+}
+
+fn inline_end_at(input: &[u8], position: usize) -> bool {
+    input.get(position..position.saturating_add(2)) == Some(b"EI".as_slice())
+        && input.get(position + 2).is_none_or(|b| {
+            matches!(
+                b,
+                0 | 9 | 10 | 12 | 13 | 32 | b'/' | b'<' | b'(' | b'[' | b'%'
+            )
+        })
+}
+
+/// Compute a raw image's byte length only from supported, complete metadata.
+/// Unknown color spaces and filters retain the legacy marker scanner. Header
+/// tokenization and object nesting are bounded independently of pixel size.
+fn unfiltered_inline_length(header: &[u8]) -> Option<usize> {
+    if header.len() > 16 * 1024 {
+        return None;
+    }
+    let mut tokenizer = ContentTokenizer::new(header);
+    let mut tokens = Vec::new();
+    while let Some(token) = tokenizer.next_token().ok()? {
+        if tokens.len() >= 1024 {
+            return None;
+        }
+        tokens.push(token);
+    }
+    let ContentOperation::InlineImage { params, .. } = (ContentParser {
+        tokens,
+        position: 0,
+    })
+    .parse_inline_image()
+    .ok()?
+    else {
+        return None;
+    };
+    unfiltered_inline_params_length(&params)
+}
+
+fn unfiltered_inline_params_length(params: &HashMap<String, Object>) -> Option<usize> {
+    if params.get("Filter").is_some_and(|filter| {
+        !matches!(filter, Object::Null)
+            && !matches!(filter, Object::Array(values) if values.is_empty())
+    }) {
+        return None;
+    }
+    let integer = |key| match params.get(key) {
+        Some(Object::Integer(n)) if *n > 0 => usize::try_from(*n).ok(),
+        _ => None,
+    };
+    let width = integer("Width")?;
+    let height = integer("Height")?;
+    let mask = match params.get("ImageMask") {
+        None | Some(Object::Null) => false,
+        Some(Object::Boolean(value)) => *value,
+        _ => return None,
+    };
+    let components = if mask {
+        1
+    } else {
+        match params.get("ColorSpace")? {
+            Object::Name(name) if name == "DeviceGray" => 1,
+            Object::Name(name) if name == "DeviceRGB" => 3,
+            Object::Name(name) if name == "DeviceCMYK" => 4,
+            Object::Array(values)
+                if matches!(values.as_slice(),
+                [Object::Name(name), _, Object::Integer(0..=255), Object::ByteString(_)] if name == "Indexed") =>
+            {
+                1
+            }
+            _ => return None,
+        }
+    };
+    let bits = match params.get("BitsPerComponent") {
+        None | Some(Object::Null) if mask => 1,
+        _ => integer("BitsPerComponent")?,
+    };
+    if !matches!(bits, 1 | 2 | 4 | 8 | 16) || (mask && bits != 1) {
+        return None;
+    }
+    width
+        .checked_mul(components)?
+        .checked_mul(bits)?
+        .checked_add(7)?
+        .checked_div(8)?
+        .checked_mul(height)
 }
 
 /// Expand abbreviated inline image key names to full names
@@ -2037,6 +2255,78 @@ fn expand_inline_name(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inline_length_distinguishes_absent_mask_defaults_from_invalid_values() {
+        for tail in ["/BPC 0", "/BPC -1", "/BPC /Invalid", "/IM /true", "/IM 1"] {
+            let header = format!("/W 8 /H 1 /CS /G /BPC 1 /IM true {tail}");
+            assert_eq!(unfiltered_inline_length(header.as_bytes()), None, "{tail}");
+        }
+        assert_eq!(unfiltered_inline_length(b"/W 8 /H 1 /IM true"), Some(1));
+        assert_eq!(
+            unfiltered_inline_length(b"/W 8 /H 1 /IM true /BPC null"),
+            Some(1)
+        );
+        assert_eq!(
+            unfiltered_inline_length(b"/W 8 /H 1 /CS /G /IM false"),
+            None
+        );
+    }
+
+    #[test]
+    fn inline_parameter_nesting_is_bounded_and_truncation_is_an_error() {
+        let deep = format!("BI /D {}0{} ID x EI", "[".repeat(32), "]".repeat(32));
+        assert!(ContentParser::parse_strict(deep.as_bytes()).is_err());
+        assert!(ContentParser::parse_strict(b"BI /D [0 ID x EI").is_err());
+        assert!(ContentParser::parse_strict(b"BI /DP << /Colors ID x EI").is_err());
+        let operations = ContentParser::parse_strict(
+            b"BI /W 1 /H 1 /BPC 8 /CS /G /DP << /Predictor 1 /Values [false null] >> ID x EI",
+        )
+        .unwrap();
+        let ContentOperation::InlineImage { params, .. } = &operations[0] else {
+            panic!("image missing")
+        };
+        let Some(Object::Dictionary(dict)) = params.get("DecodeParms") else {
+            panic!("dictionary missing")
+        };
+        assert_eq!(dict.get("Predictor"), Some(&Object::Integer(1)));
+        assert_eq!(
+            dict.get("Values"),
+            Some(&Object::Array(vec![Object::Boolean(false), Object::Null]))
+        );
+    }
+
+    #[test]
+    fn incremental_image_length_preserves_pixel_whitespace_and_malformed_payload() {
+        for (first, second, expected) in [
+            (
+                b"BI /W 3 /H 1 /BPC 8 /CS /G ID ab\n".as_slice(),
+                b" EI q".as_slice(),
+                b"ab\n".as_slice(),
+            ),
+            (
+                b"BI /W 3 /H 1 /BPC 8 /CS /G ID ab\0".as_slice(),
+                b" EI q".as_slice(),
+                b"ab\0".as_slice(),
+            ),
+            // A non-whitespace suffix is not a stream delimiter to discard.
+            (
+                b"BI /W 3 /H 1 /BPC 8 /CS /G ID abcX".as_slice(),
+                b" EI q".as_slice(),
+                b"abcX\n".as_slice(),
+            ),
+        ] {
+            let mut images = Vec::new();
+            ContentParser::visit_content_streams(&[first, second], |operation| {
+                if let ContentOperation::InlineImage { data, .. } = operation {
+                    images.push(data);
+                }
+                Ok::<_, ()>(())
+            })
+            .unwrap();
+            assert_eq!(images, vec![expected.to_vec()]);
+        }
+    }
 
     #[test]
     fn incremental_operations_match_batch_at_lexical_boundaries() {

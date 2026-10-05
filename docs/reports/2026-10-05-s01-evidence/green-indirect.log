@@ -1,0 +1,10 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 7.90s
+     Running tests/text_metrics_boundary_contract_test.rs (target/debug/deps/text_metrics_boundary_contract_test-3369e698de7e0c21)
+
+running 2 tests
+test cid_metrics_resolve_indirect_array_range_and_default_values ... ok
+test simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,20 @@
+
+running 1 test
+test consistent_d0_and_d1_preserve_metrics_and_program_operations ... FAILED
+
+failures:
+
+---- consistent_d0_and_d1_preserve_metrics_and_program_operations stdout ----
+
+thread 'consistent_d0_and_d1_preserve_metrics_and_program_operations' (107) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/operations-mutation.rs:57:13:
+assertion `left == right` failed
+  left: [MoveTo(1.0, 1.0), Stroke]
+ right: [Rectangle(0.0, 0.0, 400.0, 600.0), Fill]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    consistent_d0_and_d1_preserve_metrics_and_program_operations
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.00s
+

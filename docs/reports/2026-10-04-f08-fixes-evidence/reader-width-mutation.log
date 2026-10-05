@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/reader-width-mutation.py", line 17, in <module>
+    assert abs(origin[0]-external_x)<.0001 and abs(origin[1]-92)<.0001,(name,chars,external_x)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('fractional', [('f', [100.0, 92.0]), ('i', [100.0, 92.0]), ('B', [102.5, 92.0])], 101.25)

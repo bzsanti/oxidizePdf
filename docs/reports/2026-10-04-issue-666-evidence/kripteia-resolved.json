@@ -1,0 +1,540 @@
+{
+  "files": [
+    {
+      "path": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+      "score": 96,
+      "test_count": 16,
+      "tests": [
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_inherited_identity_type2_into_renderer_glyphs' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_inherited_identity_type2_into_renderer_glyphs' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_inherited_identity_type2_into_renderer_glyphs' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 34,
+          "name": "resolves_inherited_identity_type2_into_renderer_glyphs",
+          "score": 100,
+          "source_snippet": "fn resolves_inherited_identity_type2_into_renderer_glyphs() {\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(identity_type2_pdf())).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n\n    assert_eq!(font.base_font.as_deref(), Some(\"Demo\"));\n    assert_eq!(font.subtype, FontSubtype::CidFontType2);\n    assert_eq!(font.writing_mode, WritingMode::Horizontal);\n    let embedded = font.embedded_font.as_ref().expect(\"FontFile2 resolved\");\n    assert_eq!(embedded.format, EmbeddedFontFormat::TrueType);\n    assert_eq!(embedded.data, b\"\\0\\x01\\0\\0fake-ttf\");\n\n    let glyphs = font.decode_glyphs(&[0, 1, 0, 2]).unwrap();\n    assert_eq!(glyphs.len(), 2);\n    assert_eq!(glyphs[0].source_code, vec![0, 1]);\n    assert_eq!(glyphs[0].cid, Some(1));\n    assert_eq!(glyphs[0].gid, Some(5));\n    assert_eq!(glyphs[0].unicode.as_deref(), Some(\"á\"));\n    assert_eq!(glyphs[0].advance, 600.0);\n    assert_eq!(glyphs[1].cid, Some(2));\n    assert_eq!(glyphs[1].gid, Some(9));\n    assert_eq!(glyphs[1].unicode, None);\n    assert_eq!(glyphs[1].advance, 700.0);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_cidfont_type0_open_type_program_and_vertical_mode' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_cidfont_type0_open_type_program_and_vertical_mode' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_cidfont_type0_open_type_program_and_vertical_mode' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 71,
+          "name": "resolves_cidfont_type0_open_type_program_and_vertical_mode",
+          "score": 100,
+          "source_snippet": "fn resolves_cidfont_type0_open_type_program_and_vertical_mode() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /CffDemo /Encoding /Identity-V /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![\n            b\"<< /Type /Font /Subtype /CIDFontType0 /BaseFont /CffDemo /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor 7 0 R /DW 880 >>\".to_vec(),\n            b\"<< /Type /FontDescriptor /FontName /CffDemo /Flags 4 /FontBBox [0 0 1000 1000] /ItalicAngle 0 /Ascent 800 /Descent -200 /CapHeight 700 /StemV 80 /FontFile3 8 0 R >>\".to_vec(),\n            stream_obj(\"/Subtype /OpenType\", b\"OTTOcff-data\"),\n        ],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n\n    assert_eq!(font.subtype, FontSubtype::CidFontType0);\n    assert_eq!(font.writing_mode, WritingMode::Vertical);\n    assert_eq!(\n        font.embedded_font.as_ref().unwrap().format,\n        EmbeddedFontFormat::OpenType\n    );\n    let glyph = font.decode_glyphs(&[0, 7]).unwrap().remove(0);\n    assert_eq!(glyph.cid, Some(7));\n    assert_eq!(glyph.gid, None);\n    assert_eq!(glyph.advance, 880.0);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_symbol_difference_as_a_bullet_not_latin_x' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_symbol_difference_as_a_bullet_not_latin_x' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_symbol_difference_as_a_bullet_not_latin_x' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 96,
+          "name": "resolves_symbol_difference_as_a_bullet_not_latin_x",
+          "score": 100,
+          "source_snippet": "fn resolves_symbol_difference_as_a_bullet_not_latin_x() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type1 /BaseFont /Symbol /FirstChar 120 /LastChar 120 /Widths [500] /Encoding << /Differences [120 /bullet] >> /FontDescriptor 6 0 R >>\".to_vec(),\n        vec![b\"<< /Type /FontDescriptor /FontName /Symbol /Flags 4 /FontBBox [0 0 1000 1000] /ItalicAngle 0 /Ascent 800 /Descent -200 /CapHeight 700 /StemV 80 >>\".to_vec()],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n    let glyph = font.decode_glyphs(b\"x\").unwrap().remove(0);\n\n    assert_eq!(\n        font.differences.get(&120).map(String::as_str),\n        Some(\"bullet\")\n    );\n    assert_eq!(glyph.source_code, b\"x\");\n    assert_eq!(glyph.unicode.as_deref(), Some(\"•\"));\n    assert_eq!(glyph.cid, None);\n    assert_eq!(glyph.advance, 500.0);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "EnrichedQuality",
+              "message": "Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' only exercises the happy path — no None, Err, or edge-case inputs",
+              "severity_hint": "medium",
+              "suggestion": "Add test cases for error conditions, boundary values, and None/Err inputs."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 116,
+          "name": "resolves_non_identity_encoding_cmap_and_default_identity_gid",
+          "score": 90,
+          "source_snippet": "fn resolves_non_identity_encoding_cmap_and_default_identity_gid() {\n    let encoding = b\"begincmap /WMode 0 def 1 begincodespacerange <00> <FF> endcodespacerange 1 begincidchar <41> 5 endcidchar endcmap\";\n    let to_unicode = b\"begincmap 1 begincodespacerange <00> <FF> endcodespacerange 1 beginbfchar <41> <0041> endbfchar endcmap\";\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Mapped /Encoding 7 0 R /DescendantFonts [6 0 R] /ToUnicode 8 0 R >>\".to_vec(),\n        vec![\n            b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Mapped /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /W [5 [444]] >>\".to_vec(),\n            stream_obj(\"\", encoding),\n            stream_obj(\"\", to_unicode),\n        ],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n    let glyph = font.decode_glyphs(b\"A\").unwrap().remove(0);\n\n    assert_eq!(glyph.source_code, b\"A\");\n    assert_eq!(glyph.cid, Some(5));\n    assert_eq!(glyph.gid, Some(5));\n    assert_eq!(glyph.unicode.as_deref(), Some(\"A\"));\n    assert_eq!(glyph.advance, 444.0);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'named_unicode_encoding_resolves_cid_before_width_and_unicode' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'named_unicode_encoding_resolves_cid_before_width_and_unicode' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'named_unicode_encoding_resolves_cid_before_width_and_unicode' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 139,
+          "name": "named_unicode_encoding_resolves_cid_before_width_and_unicode",
+          "score": 100,
+          "source_snippet": "fn named_unicode_encoding_resolves_cid_before_width_and_unicode() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /UnicodeCid /Encoding /UniJIS-UTF16-H /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /UnicodeCid /CIDSystemInfo << /Registry (Adobe) /Ordering (Japan1) /Supplement 7 >> /W [194 [555]] >>\".to_vec()],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n    let glyph = font.decode_glyphs(&[0, 0xE1]).unwrap().remove(0);\n\n    // Pinned Adobe UniJIS maps source 00E1 to CID 194, not CID 225.\n    assert_eq!(glyph.cid, Some(194));\n    assert_eq!(glyph.gid, Some(194));\n    assert_eq!(glyph.unicode.as_deref(), Some(\"á\"));\n    assert_eq!(glyph.advance, 555.0);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'decodes_win_ansi_without_confusing_code_and_unicode' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'decodes_win_ansi_without_confusing_code_and_unicode' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'decodes_win_ansi_without_confusing_code_and_unicode' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 156,
+          "name": "decodes_win_ansi_without_confusing_code_and_unicode",
+          "score": 100,
+          "source_snippet": "fn decodes_win_ansi_without_confusing_code_and_unicode() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /TrueType /BaseFont /Arial /FirstChar 149 /LastChar 149 /Widths [350] /Encoding /WinAnsiEncoding >>\".to_vec(),\n        vec![],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n    let glyph = font.decode_glyphs(&[0x95]).unwrap().remove(0);\n\n    assert_eq!(glyph.source_code, vec![0x95]);\n    assert_eq!(glyph.cid, None);\n    assert_eq!(glyph.unicode.as_deref(), Some(\"•\"));\n    assert_eq!(glyph.advance, 350.0);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'exposes_type3_through_the_coherent_resource_model' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'exposes_type3_through_the_coherent_resource_model' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'exposes_type3_through_the_coherent_resource_model' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 172,
+          "name": "exposes_type3_through_the_coherent_resource_model",
+          "score": 100,
+          "source_snippet": "fn exposes_type3_through_the_coherent_resource_model() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type3 /Name /Painted /FontBBox [0 0 1 1] /FontMatrix [0.001 0 0 0.001 0 0] /FirstChar 65 /LastChar 65 /Widths [500] /Encoding << /Differences [65 /A] >> /CharProcs << /A 6 0 R >> >>\".to_vec(),\n        vec![stream_obj(\"\", b\"500 0 d0\")],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n\n    assert_eq!(font.subtype, FontSubtype::Type3);\n    assert_eq!(font.type3.as_ref().unwrap().glyph(65).unwrap().width, 500.0);\n    assert_eq!(font.decode_glyphs(b\"A\").unwrap()[0].advance, 500.0);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "EnrichedQuality",
+              "message": "Test 'type3_uses_tounicode_when_decoding_glyphs' only exercises the happy path — no None, Err, or edge-case inputs",
+              "severity_hint": "medium",
+              "suggestion": "Add test cases for error conditions, boundary values, and None/Err inputs."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'type3_uses_tounicode_when_decoding_glyphs' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 186,
+          "name": "type3_uses_tounicode_when_decoding_glyphs",
+          "score": 90,
+          "source_snippet": "fn type3_uses_tounicode_when_decoding_glyphs() {\n    let to_unicode = b\"begincmap 1 begincodespacerange <00> <FF> endcodespacerange 1 beginbfchar <41> <03A9> endbfchar endcmap\";\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type3 /Name /Painted /FontBBox [0 0 1 1] /FontMatrix [0.001 0 0 0.001 0 0] /FirstChar 65 /LastChar 65 /Widths [500] /Encoding << /Differences [65 /A] >> /CharProcs << /A 6 0 R >> /ToUnicode 7 0 R >>\".to_vec(),\n        vec![stream_obj(\"\", b\"500 0 d0\"), stream_obj(\"\", to_unicode)],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n\n    assert_eq!(\n        font.decode_glyphs(b\"A\").unwrap()[0].unicode.as_deref(),\n        Some(\"Ω\")\n    );\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "EnrichedQuality",
+              "message": "Test 'unmapped_composite_code_uses_default_cid_width' only exercises the happy path — no None, Err, or edge-case inputs",
+              "severity_hint": "medium",
+              "suggestion": "Add test cases for error conditions, boundary values, and None/Err inputs."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'unmapped_composite_code_uses_default_cid_width' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'unmapped_composite_code_uses_default_cid_width' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'unmapped_composite_code_uses_default_cid_width' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 202,
+          "name": "unmapped_composite_code_uses_default_cid_width",
+          "score": 90,
+          "source_snippet": "fn unmapped_composite_code_uses_default_cid_width() {\n    let encoding = b\"begincmap 1 begincodespacerange <00> <FF> endcodespacerange endcmap\";\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Mapped /Encoding 7 0 R /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![\n            b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Mapped /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /DW 777 >>\".to_vec(),\n            stream_obj(\"\", encoding),\n        ],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n    let glyph = font.decode_glyphs(b\"A\").unwrap().remove(0);\n\n    assert_eq!(glyph.cid, None);\n    assert_eq!(glyph.advance, 777.0);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "DuplicateTest",
+              "message": "Test 'rejects_non_cid_descendant_in_type0_font' has identical neighborhood to 'rejects_type0_font_without_required_encoding'",
+              "severity_hint": "low",
+              "suggestion": "These tests exercise the same code paths with the same assertion structure. Consolidate into one parameterized test, or differentiate by testing different edge cases or input values."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'rejects_non_cid_descendant_in_type0_font' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 220,
+          "name": "rejects_non_cid_descendant_in_type0_font",
+          "score": 90,
+          "source_snippet": "fn rejects_non_cid_descendant_in_type0_font() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Bad /Encoding /Identity-H /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![b\"<< /Type /Font /Subtype /TrueType /BaseFont /Bad >>\".to_vec()],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let error = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap_err();\n\n    assert!(error.to_string().contains(\"Type0 descendant\"));\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'rejects_odd_cid_to_gid_map_without_panicking' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 232,
+          "name": "rejects_odd_cid_to_gid_map_without_panicking",
+          "score": 100,
+          "source_snippet": "fn rejects_odd_cid_to_gid_map_without_panicking() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Bad /Encoding /Identity-H /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![\n            b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Bad /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /CIDToGIDMap 7 0 R >>\".to_vec(),\n            stream_obj(\"\", &[0]),\n        ],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let error = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap_err();\n    assert!(error.to_string().contains(\"odd length\"));\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "DuplicateTest",
+              "message": "Test 'rejects_type0_font_without_required_encoding' has identical neighborhood to 'rejects_non_cid_descendant_in_type0_font'",
+              "severity_hint": "low",
+              "suggestion": "These tests exercise the same code paths with the same assertion structure. Consolidate into one parameterized test, or differentiate by testing different edge cases or input values."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'rejects_type0_font_without_required_encoding' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 246,
+          "name": "rejects_type0_font_without_required_encoding",
+          "score": 90,
+          "source_snippet": "fn rejects_type0_font_without_required_encoding() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Bad /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Bad /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> >>\".to_vec()],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let error = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap_err();\n    assert!(error.to_string().contains(\"missing its Encoding\"));\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "DuplicateTest",
+              "message": "Test 'rejects_oversized_cid_to_gid_map_after_bounded_decompression' has identical neighborhood to 'rejects_oversized_embedded_font_after_bounded_decompression'",
+              "severity_hint": "low",
+              "suggestion": "These tests exercise the same code paths with the same assertion structure. Consolidate into one parameterized test, or differentiate by testing different edge cases or input values."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'rejects_oversized_cid_to_gid_map_after_bounded_decompression' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 257,
+          "name": "rejects_oversized_cid_to_gid_map_after_bounded_decompression",
+          "score": 90,
+          "source_snippet": "fn rejects_oversized_cid_to_gid_map_after_bounded_decompression() {\n    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());\n    encoder\n        .write_all(&vec![0; (u16::MAX as usize + 1) * 2 + 1])\n        .unwrap();\n    let compressed = encoder.finish().unwrap();\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Huge /Encoding /Identity-H /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![\n            b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Huge /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /CIDToGIDMap 7 0 R >>\".to_vec(),\n            stream_obj(\"/Filter /FlateDecode\", &compressed),\n        ],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let error = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap_err();\n    assert!(error.to_string().contains(\"limit\"));\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'rejects_circular_font_resource_without_panicking' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 276,
+          "name": "rejects_circular_font_resource_without_panicking",
+          "score": 100,
+          "source_snippet": "fn rejects_circular_font_resource_without_panicking() {\n    let pdf = one_font_pdf(b\"6 0 R\".to_vec(), vec![b\"5 0 R\".to_vec()]);\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    assert!(ResolvedFontResource::from_page(&document, 0, \"F1\").is_err());\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "DuplicateTest",
+              "message": "Test 'rejects_oversized_embedded_font_after_bounded_decompression' has identical neighborhood to 'rejects_oversized_cid_to_gid_map_after_bounded_decompression'",
+              "severity_hint": "low",
+              "suggestion": "These tests exercise the same code paths with the same assertion structure. Consolidate into one parameterized test, or differentiate by testing different edge cases or input values."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'rejects_oversized_embedded_font_after_bounded_decompression' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 283,
+          "name": "rejects_oversized_embedded_font_after_bounded_decompression",
+          "score": 90,
+          "source_snippet": "fn rejects_oversized_embedded_font_after_bounded_decompression() {\n    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());\n    encoder.write_all(&vec![0; 10 * 1024 * 1024 + 1]).unwrap();\n    let compressed = encoder.finish().unwrap();\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /TrueType /BaseFont /Huge /FirstChar 0 /LastChar 0 /Widths [500] /FontDescriptor 6 0 R >>\".to_vec(),\n        vec![\n            b\"<< /Type /FontDescriptor /FontName /Huge /Flags 32 /FontBBox [0 0 1000 1000] /ItalicAngle 0 /Ascent 800 /Descent -200 /CapHeight 700 /StemV 80 /FontFile2 7 0 R >>\".to_vec(),\n            stream_obj(\"/Filter /FlateDecode\", &compressed),\n        ],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let error = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap_err();\n    assert!(error.to_string().contains(\"limit\"));\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 300,
+          "name": "cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings",
+          "score": 100,
+          "source_snippet": "fn cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings() {\n    for (registry, ordering, expected) in [\n        (\"Adobe\", \"Japan1\", Some(\"A\")),\n        (\"Private\", \"Japan1\", None),\n        (\"Adobe\", \"Private\", None),\n    ] {\n        let pdf = one_font_pdf(\n            b\"<< /Type /Font /Subtype /Type0 /BaseFont /Registry /Encoding /Identity-H /DescendantFonts [6 0 R] >>\".to_vec(),\n            vec![\n                b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Registry /CIDSystemInfo 7 0 R /W [34 [456]] >>\".to_vec(),\n                b\"<< /Registry 8 0 R /Ordering 9 0 R /Supplement 7 >>\".to_vec(),\n                format!(\"({registry})\").into_bytes(),\n                format!(\"({ordering})\").into_bytes(),\n            ],\n        );\n        let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n        let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n        let glyphs = font.decode_glyphs(&[0, 34]).unwrap();\n        assert_eq!(glyphs[0].cid, Some(34));\n        assert_eq!(glyphs[0].gid, Some(34));\n        assert_eq!(\n            glyphs[0].unicode.as_deref(),\n            expected,\n            \"{registry}-{ordering}\"\n        );\n        assert_eq!(glyphs[0].advance, 456.0);\n    }\n}"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "analysis_date": "2026-10-04T09:10:57.913132882+00:00",
+    "duration_ms": 491,
+    "kripteia_version": "0.15.0"
+  },
+  "output_schema_version": 1,
+  "score": 96,
+  "total_tests": 16,
+  "worst_offenders": [
+    {
+      "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+      "issues": [
+        {
+          "kind": "EnrichedQuality",
+          "message": "Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' only exercises the happy path — no None, Err, or edge-case inputs",
+          "severity_hint": "medium",
+          "suggestion": "Add test cases for error conditions, boundary values, and None/Err inputs."
+        },
+        {
+          "kind": "Informational",
+          "message": "Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' asserts against a hardcoded constant instead of a computed expected value",
+          "severity_hint": "info",
+          "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+        },
+        {
+          "kind": "Informational",
+          "message": "Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' has multiple assertions without diagnostic messages",
+          "severity_hint": "info",
+          "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+        },
+        {
+          "kind": "Informational",
+          "message": "Test 'resolves_non_identity_encoding_cmap_and_default_identity_gid' uses .unwrap() which silently discards error information",
+          "severity_hint": "info",
+          "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+        }
+      ],
+      "line": 116,
+      "name": "resolves_non_identity_encoding_cmap_and_default_identity_gid",
+      "score": 90,
+      "source_snippet": "fn resolves_non_identity_encoding_cmap_and_default_identity_gid() {\n    let encoding = b\"begincmap /WMode 0 def 1 begincodespacerange <00> <FF> endcodespacerange 1 begincidchar <41> 5 endcidchar endcmap\";\n    let to_unicode = b\"begincmap 1 begincodespacerange <00> <FF> endcodespacerange 1 beginbfchar <41> <0041> endbfchar endcmap\";\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Mapped /Encoding 7 0 R /DescendantFonts [6 0 R] /ToUnicode 8 0 R >>\".to_vec(),\n        vec![\n            b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Mapped /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /W [5 [444]] >>\".to_vec(),\n            stream_obj(\"\", encoding),\n            stream_obj(\"\", to_unicode),\n        ],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n    let glyph = font.decode_glyphs(b\"A\").unwrap().remove(0);\n\n    assert_eq!(glyph.source_code, b\"A\");\n    assert_eq!(glyph.cid, Some(5));\n    assert_eq!(glyph.gid, Some(5));\n    assert_eq!(glyph.unicode.as_deref(), Some(\"A\"));\n    assert_eq!(glyph.advance, 444.0);\n}"
+    },
+    {
+      "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+      "issues": [
+        {
+          "kind": "EnrichedQuality",
+          "message": "Test 'type3_uses_tounicode_when_decoding_glyphs' only exercises the happy path — no None, Err, or edge-case inputs",
+          "severity_hint": "medium",
+          "suggestion": "Add test cases for error conditions, boundary values, and None/Err inputs."
+        },
+        {
+          "kind": "Informational",
+          "message": "Test 'type3_uses_tounicode_when_decoding_glyphs' uses .unwrap() which silently discards error information",
+          "severity_hint": "info",
+          "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+        }
+      ],
+      "line": 186,
+      "name": "type3_uses_tounicode_when_decoding_glyphs",
+      "score": 90,
+      "source_snippet": "fn type3_uses_tounicode_when_decoding_glyphs() {\n    let to_unicode = b\"begincmap 1 begincodespacerange <00> <FF> endcodespacerange 1 beginbfchar <41> <03A9> endbfchar endcmap\";\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type3 /Name /Painted /FontBBox [0 0 1 1] /FontMatrix [0.001 0 0 0.001 0 0] /FirstChar 65 /LastChar 65 /Widths [500] /Encoding << /Differences [65 /A] >> /CharProcs << /A 6 0 R >> /ToUnicode 7 0 R >>\".to_vec(),\n        vec![stream_obj(\"\", b\"500 0 d0\"), stream_obj(\"\", to_unicode)],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n\n    assert_eq!(\n        font.decode_glyphs(b\"A\").unwrap()[0].unicode.as_deref(),\n        Some(\"Ω\")\n    );\n}"
+    },
+    {
+      "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+      "issues": [
+        {
+          "kind": "EnrichedQuality",
+          "message": "Test 'unmapped_composite_code_uses_default_cid_width' only exercises the happy path — no None, Err, or edge-case inputs",
+          "severity_hint": "medium",
+          "suggestion": "Add test cases for error conditions, boundary values, and None/Err inputs."
+        },
+        {
+          "kind": "Informational",
+          "message": "Test 'unmapped_composite_code_uses_default_cid_width' asserts against a hardcoded constant instead of a computed expected value",
+          "severity_hint": "info",
+          "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+        },
+        {
+          "kind": "Informational",
+          "message": "Test 'unmapped_composite_code_uses_default_cid_width' has multiple assertions without diagnostic messages",
+          "severity_hint": "info",
+          "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+        },
+        {
+          "kind": "Informational",
+          "message": "Test 'unmapped_composite_code_uses_default_cid_width' uses .unwrap() which silently discards error information",
+          "severity_hint": "info",
+          "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+        }
+      ],
+      "line": 202,
+      "name": "unmapped_composite_code_uses_default_cid_width",
+      "score": 90,
+      "source_snippet": "fn unmapped_composite_code_uses_default_cid_width() {\n    let encoding = b\"begincmap 1 begincodespacerange <00> <FF> endcodespacerange endcmap\";\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Mapped /Encoding 7 0 R /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![\n            b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Mapped /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /DW 777 >>\".to_vec(),\n            stream_obj(\"\", encoding),\n        ],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n    let glyph = font.decode_glyphs(b\"A\").unwrap().remove(0);\n\n    assert_eq!(glyph.cid, None);\n    assert_eq!(glyph.advance, 777.0);\n}"
+    },
+    {
+      "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+      "issues": [
+        {
+          "kind": "DuplicateTest",
+          "message": "Test 'rejects_non_cid_descendant_in_type0_font' has identical neighborhood to 'rejects_type0_font_without_required_encoding'",
+          "severity_hint": "low",
+          "suggestion": "These tests exercise the same code paths with the same assertion structure. Consolidate into one parameterized test, or differentiate by testing different edge cases or input values."
+        },
+        {
+          "kind": "Informational",
+          "message": "Test 'rejects_non_cid_descendant_in_type0_font' uses .unwrap() which silently discards error information",
+          "severity_hint": "info",
+          "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+        }
+      ],
+      "line": 220,
+      "name": "rejects_non_cid_descendant_in_type0_font",
+      "score": 90,
+      "source_snippet": "fn rejects_non_cid_descendant_in_type0_font() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Bad /Encoding /Identity-H /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![b\"<< /Type /Font /Subtype /TrueType /BaseFont /Bad >>\".to_vec()],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let error = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap_err();\n\n    assert!(error.to_string().contains(\"Type0 descendant\"));\n}"
+    },
+    {
+      "file": "oxidize-pdf-core/tests/issue_513_resolved_parser_fonts_test.rs",
+      "issues": [
+        {
+          "kind": "DuplicateTest",
+          "message": "Test 'rejects_type0_font_without_required_encoding' has identical neighborhood to 'rejects_non_cid_descendant_in_type0_font'",
+          "severity_hint": "low",
+          "suggestion": "These tests exercise the same code paths with the same assertion structure. Consolidate into one parameterized test, or differentiate by testing different edge cases or input values."
+        },
+        {
+          "kind": "Informational",
+          "message": "Test 'rejects_type0_font_without_required_encoding' uses .unwrap() which silently discards error information",
+          "severity_hint": "info",
+          "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+        }
+      ],
+      "line": 246,
+      "name": "rejects_type0_font_without_required_encoding",
+      "score": 90,
+      "source_snippet": "fn rejects_type0_font_without_required_encoding() {\n    let pdf = one_font_pdf(\n        b\"<< /Type /Font /Subtype /Type0 /BaseFont /Bad /DescendantFonts [6 0 R] >>\".to_vec(),\n        vec![b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Bad /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> >>\".to_vec()],\n    );\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(pdf)).unwrap());\n    let error = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap_err();\n    assert!(error.to_string().contains(\"missing its Encoding\"));\n}"
+    }
+  ]
+}

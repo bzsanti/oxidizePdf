@@ -1,0 +1,29 @@
+{
+  "product_identical": true,
+  "oracle_files_identical": {
+    "ADOBE-LICENSE.txt": true,
+    "provenance.json": true,
+    "samples.tsv": true
+  },
+  "commands": [
+    [
+      "python3",
+      "tools/generate_adobe_pdf_cid_tables.py",
+      "target/issue676-unicode/mapping-resources-pdf-2dd5e53fb74a01718b9dfd448a0d1cce6fff2aa5",
+      "target/issue666-qr-fix-regeneration/cid.rs"
+    ],
+    [
+      "rustfmt",
+      "--edition",
+      "2021",
+      "target/issue666-qr-fix-regeneration/cid.rs"
+    ],
+    [
+      "python3",
+      "tools/generate_text_cjk_oracles.py",
+      "target/issue676-cmaps/cmap-resources-f5cf3bca7fdfeaceb77aa82847e974f2306c20b4",
+      "target/issue676-unicode/mapping-resources-pdf-2dd5e53fb74a01718b9dfd448a0d1cce6fff2aa5",
+      "target/issue666-qr-fix-regeneration/cjk"
+    ]
+  ]
+}

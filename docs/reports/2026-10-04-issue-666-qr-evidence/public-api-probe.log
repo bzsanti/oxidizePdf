@@ -1,0 +1,9 @@
+error[E0451]: fields `single_mappings`, `parent` and `explicit_wmode` of struct `CMap` are private
+ --> docs/reports/2026-10-04-issue-666-qr-evidence/public-api-probe.rs:2:60
+  |
+2 | fn main() { let _ = CMap { name: Some("Example".into()), ..Default::default() }; }
+  |                                                            ^^^^^^^^^^^^^^^^^^ fields `single_mappings`, `parent` and `explicit_wmode` are private
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0451`.
