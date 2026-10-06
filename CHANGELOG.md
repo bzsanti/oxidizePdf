@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- Document explicit `TextExtractor::extract_from_page_with_recovery` usage for
+  missing checksums and truncated Flate streams, including omission diagnostics
+  and independent stream/text limits. Add regression coverage for page/Form
+  recovery and bounded live allocations (#680).
+
 - Clarify that PAdES is outside the library scope and can be implemented by anyone
   as an independent external extension; document basic signature operations (#641).
 

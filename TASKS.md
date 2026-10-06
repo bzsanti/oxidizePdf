@@ -1,3 +1,32 @@
+## Integración autorizada de PRs verdes — 2026-10-06
+
+- Issue: #680 — TextExtractor::extract_from_page fails with StreamDecodeError("FlateDecode incomplete or truncated zlib stream") on truncated streams — https://github.com/bzsanti/oxidizePdf/issues/680
+- Issue: #677 — Tagged split rejects missing page StructParents keys in 5.2.0 (#621) — https://github.com/bzsanti/oxidizePdf/issues/677
+- Estado: usuario autoriza fusionar los PRs verdes; #683 MERGED en develop, commit 091d4abf7b2686e22c36427b1759b3ec11484193. #682 requiere conciliar solo TASKS.md y revalidar CI. Prioridad P1. Responsable Codex.
+- Criterio de cierre: #682 y #683 MERGED en develop después de sus checks; sin bypass, release ni cierre administrativo de issues. #658 permanece borrador por aceptación de seguridad pendiente.
+- Última validación: ambos PR tenían 29 SUCCESS y 2 SKIPPED, sin checks pendientes; #683 fusionado sobre ese HEAD. La conciliación de #682 conserva ambos bloques de seguimiento, sin conflictos de código.
+- Siguiente acción: contratos combinados y hook original; publicar actualización #682, esperar CI y fusionar su HEAD validado.
+
+## Base de integración de #682 — 2026-10-06
+
+- Issue: #680 — TextExtractor::extract_from_page fails with StreamDecodeError("FlateDecode incomplete or truncated zlib stream") on truncated streams — https://github.com/bzsanti/oxidizePdf/issues/680
+- Estado: base remota cambiada a develop por instrucción del usuario; conflictos documentales resueltos localmente, validación/publicación de la conciliación pendientes. Prioridad P1. Responsable Codex.
+- Regla permanente: todo PR de trabajo apunta a develop; main recibe únicamente merges de nuevas releases.
+- Alcance: preservar autoría e historial del PR; conservar ambas aclaraciones rustdoc (recuperación explícita y geometría), seguimiento de develop y pruebas ya revisadas. Excluidos del diff los cambios de versiones/documentación de releases heredados de main.
+- Criterio de cierre: diff contra develop limitado a #680, contratos focales aprobados, hook original y rama publicada sin conflictos. No merge del PR, release ni cierre de issue.
+- Siguiente acción: validar y publicar la conciliación; los checks anteriores sobre main no acreditan el nuevo HEAD/base.
+- Validación de conciliación: 42/42 contratos focales pasan; las cuatro fuentes Rust del PR coinciden byte a byte con el snapshot develop ya revisado y probado. Código ejecutable y manifiestos iguales a develop; solo docs/tests/evidencia de #680 en el diff. Se reutilizan QR y ambos análisis de seguridad/calidad vigentes. Hook original y publicación pendientes.
+
+## Corrección de PR #682 — 2026-10-06
+
+- Issue: #680 — TextExtractor::extract_from_page fails with StreamDecodeError("FlateDecode incomplete or truncated zlib stream") on truncated streams — https://github.com/bzsanti/oxidizePdf/issues/680
+- Estado: cinco hallazgos corregidos y revisión local completada; publicación/CI pendientes. Prioridad P1. Responsable Codex. Usuario solicita corregir los hallazgos del PR.
+- Decisión: retirar el builder que ocultaba diagnósticos y el buffer adicional; documentar y probar la API existente extract_from_page_with_recovery. Código ejecutable idéntico a develop tras conciliar la base; tests y docs son el alcance final. Autoría e historia de los dos commits originales conservadas.
+- Criterio de cierre local: diagnósticos observables, límites independientes, un buffer expandido, documentación coherente y regresiones discriminantes; demostrado en pruebas focalizadas y revisión calidad/seguridad.
+- Validación: 42/42 en base main y 42/42 sobre develop; Clippy/formato y ejemplo rustdoc pasan. RED de memoria 2.140.544 bytes; GREEN 1.091.968 para salida 1 MiB. Mutaciones: borrar diagnósticos provoca cinco fallos; confundir límites provoca un fallo. Seis alcances Kripteia/Security, allocator de tests auditado. Evidencia y revisión: docs/reports/2026-10-06-pr-682-review.md y directorio contiguo.
+- Siguiente acción: publicar corrección aditiva en #682 y comprobar CI del nuevo HEAD. No merge, release ni cierre de #680. #677/#661 no iniciadas; #662/#663 siguen reservadas a oshtivi.
+- Restricciones: preservar cambios locales anteriores; recuperación explícita no implica integridad/completitud. Primera ejecución con caché compartida descartada; validación final en targets exclusivos.
+
 ## Recuperación segura de tagged split — #677 — 2026-10-06
 
 - Issue: #677 — Tagged split rejects missing page StructParents keys in 5.2.0 (#621) — https://github.com/bzsanti/oxidizePdf/issues/677

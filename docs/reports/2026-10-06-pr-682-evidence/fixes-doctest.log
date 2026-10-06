@@ -1,0 +1,8 @@
+    Finished `test` profile [unoptimized] target(s) in 0.21s
+   Doc-tests oxidize_pdf
+
+running 1 test
+test oxidize-pdf-core/src/text/extraction/recovery.rs - text::extraction::recovery::TextExtractor::extract_from_page_with_recovery (line 60) - compile ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 244 filtered out; finished in 0.05s
+

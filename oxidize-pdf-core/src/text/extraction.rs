@@ -1328,7 +1328,11 @@ impl TextExtractor {
         Ok(results)
     }
 
-    /// Extract text from a specific page.
+    /// Extract text from a specific page without recovering damaged Flate streams.
+    ///
+    /// This method propagates stream decoding errors even with lenient parser
+    /// options. To explicitly recover incomplete content with diagnostics, use
+    /// [`Self::extract_from_page_with_recovery`].
     ///
     /// Non-finite or unrepresentable text geometry returns an error in both
     /// strict and lenient modes, including overflow during layout reconstruction.
