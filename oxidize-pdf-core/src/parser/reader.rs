@@ -196,6 +196,27 @@ impl<R: Read + Seek> PdfReader<R> {
         self.encryption_handler.as_ref()
     }
 
+    /// Unlock Adobe.PubSec using a DER certificate and matching unencrypted PKCS#8 key.
+    /// Experimental pending #642: the RSA dependency has timing advisory
+    /// RUSTSEC-2023-0071; do not expose this as a decryption service.
+    /// Failed attempts clear the previous authentication and plaintext caches.
+    /// This does not validate certificate trust, revocation, or content integrity.
+    /// Caller-owned private key bytes should be cleared by the caller after use.
+    #[cfg(feature = "recipient-encryption")]
+    pub fn unlock_with_recipient(
+        &mut self,
+        certificate_der: &[u8],
+        private_key_der: &[u8],
+    ) -> ParseResult<()> {
+        self.object_cache.clear();
+        self.object_stream_cache.clear();
+        self.page_tree = None;
+        self.encryption_handler
+            .as_mut()
+            .ok_or(ParseError::EncryptionNotSupported)?
+            .unlock_recipient(certificate_der, private_key_der)
+    }
+
     /// Try to unlock PDF with password
     pub fn unlock_with_password(&mut self, password: &str) -> ParseResult<bool> {
         match &mut self.encryption_handler {
@@ -310,6 +331,10 @@ impl<R: Read + Seek> PdfReader<R> {
             _ => return Ok(obj), // Not encrypted or not unlocked
         };
 
+        if handler.is_recipient_encryption() && self.trailer.encrypt()? == Some((obj_num, gen_num))
+        {
+            return Ok(obj);
+        }
         let obj_id = ObjectId::new(obj_num, gen_num);
 
         match obj {
@@ -319,6 +344,45 @@ impl<R: Read + Seek> PdfReader<R> {
                 Ok(PdfObject::String(PdfString::new(decrypted_bytes)))
             }
             PdfObject::Stream(ref stream) => {
+                if handler.is_recipient_encryption() {
+                    // Xref streams are never encrypted. Explicit per-stream crypt
+                    // overrides are outside this all-content encrypted profile.
+                    if stream
+                        .dict
+                        .get("Type")
+                        .and_then(|v| v.as_name())
+                        .is_some_and(|n| n.0 == "XRef")
+                    {
+                        let offset = self.xref.object_storage_offset(obj_num);
+                        if self
+                            .xref
+                            .revisions_oldest_first()
+                            .iter()
+                            .any(|r| Some(r.xref_offset) == offset)
+                        {
+                            return Ok(obj);
+                        }
+                        return Err(ParseError::EncryptionNotSupported);
+                    }
+                    let has_crypt = |v: &PdfObject| v.as_name().is_some_and(|n| n.0 == "Crypt");
+                    if stream.dict.contains_key("StmF")
+                        || stream.dict.get("Filter").is_some_and(|v| {
+                            has_crypt(v) || v.as_array().is_some_and(|a| a.0.iter().any(has_crypt))
+                        })
+                    {
+                        return Err(ParseError::EncryptionNotSupported);
+                    }
+                    let mut result = stream.clone();
+                    result.data = handler.decrypt_stream(&stream.data, &obj_id)?;
+                    if let PdfObject::Dictionary(dict) = self.decrypt_object_if_needed(
+                        PdfObject::Dictionary(stream.dict.clone()),
+                        obj_num,
+                        gen_num,
+                    )? {
+                        result.dict = dict;
+                    }
+                    return Ok(PdfObject::Stream(result));
+                }
                 // Check if stream should be decrypted (Identity filter means no decryption)
                 let should_decrypt = stream
                     .dict
@@ -538,6 +602,21 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Get the document catalog
     pub fn catalog(&mut self) -> ParseResult<&PdfDictionary> {
+        if self
+            .encryption_handler
+            .as_ref()
+            .is_some_and(|h| h.is_recipient_encryption())
+        {
+            self.ensure_unlocked()?;
+            let (number, generation) = self.trailer.root()?;
+            return self
+                .get_object(number, generation)?
+                .as_dict()
+                .ok_or_else(|| ParseError::SyntaxError {
+                    position: 0,
+                    message: "recipient-encrypted catalog must be a dictionary".into(),
+                });
+        }
         // Try to get root from trailer
         let (obj_num, gen_num) = match self.trailer.root() {
             Ok(root) => {
@@ -1061,7 +1140,17 @@ impl<R: Read + Seek> PdfReader<R> {
             })?;
 
         // Decrypt if encryption is active (object stream contents may contain encrypted strings)
-        let decrypted_obj = self.decrypt_object_if_needed(obj.clone(), obj_num, gen_num)?;
+        let decrypted_obj = if self
+            .encryption_handler
+            .as_ref()
+            .is_some_and(|h| h.is_recipient_encryption())
+        {
+            // Strings inside an object stream were encrypted with that stream,
+            // and must not be decrypted a second time.
+            obj.clone()
+        } else {
+            self.decrypt_object_if_needed(obj.clone(), obj_num, gen_num)?
+        };
 
         // Cache the decrypted object
         self.object_cache.insert(key, decrypted_obj);
@@ -1441,6 +1530,13 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Determine if we should attempt manual reconstruction for this error
     fn can_attempt_manual_reconstruction(&self, error: &ParseError) -> bool {
+        if self
+            .encryption_handler
+            .as_ref()
+            .is_some_and(|h| h.is_recipient_encryption())
+        {
+            return false;
+        }
         match error {
             // These are the types of errors that might be fixable with manual reconstruction
             ParseError::SyntaxError { .. } => true,
@@ -1452,6 +1548,13 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Check if an object can be manually reconstructed
     fn is_reconstructible_object(&self, obj_num: u32) -> bool {
+        if self
+            .encryption_handler
+            .as_ref()
+            .is_some_and(|h| h.is_recipient_encryption())
+        {
+            return false;
+        }
         // Known problematic objects for corrupted PDF reconstruction
         if obj_num == 102 || obj_num == 113 || obj_num == 114 {
             return true;

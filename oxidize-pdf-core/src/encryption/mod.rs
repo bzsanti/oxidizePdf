@@ -5,7 +5,11 @@
 //! Handler (Revision 2, 3, 4, 5, and 6). Document read/write support depends on
 //! the selected revision and API; these primitives do not imply every writer profile.
 //!
-//! Certificate-based recipient encryption is **not supported**.
+//! Experimental feature `recipient-encryption` implements Adobe.PubSec via
+//! `RecipientEncryption`: RSA-OAEP SHA-256 and AES-256-CBC. It provides
+//! confidentiality, not authenticated integrity. Security acceptance is pending
+//! (#642, RUSTSEC-2023-0071); this is not a supported-use declaration.
+//! The legacy API remains unsupported.
 //! [`PublicKeySecurityHandler`] is retained for source compatibility, but all
 //! its cryptographic operations return an explicit error and permission checks
 //! deny access. Its dictionary helpers only represent caller-supplied metadata;
@@ -13,7 +17,7 @@
 //!
 //! Certificate validation for digital signatures is a separate capability in
 //! the `signatures` module (with the `signatures` feature). It does not enable
-//! recipient encryption. [`SecurityHandler`] is a low-level extension interface
+//! the separate `recipient-encryption` feature. [`SecurityHandler`] is a low-level extension interface
 //! for crypt filters, not a certificate-aware document reader/writer integration.
 
 mod aes;
@@ -25,6 +29,10 @@ mod permissions;
 mod permissions_enforcement;
 mod public_key;
 mod rc4;
+#[cfg(feature = "recipient-encryption")]
+pub(crate) mod recipient;
+#[cfg(feature = "recipient-encryption")]
+pub use recipient::RecipientEncryption;
 mod standard_security;
 
 pub use aes::{generate_iv, Aes, AesError, AesKey, AesKeySize};

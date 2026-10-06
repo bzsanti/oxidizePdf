@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Experimental `recipient-encryption` candidate (security acceptance pending
+  RUSTSEC-2023-0071 / #642): real X.509 recipient encryption through the
+  document writer and reader, using Adobe.PubSec / adbe.pkcs7.s5, RSA-OAEP SHA-256
+  and AES-256-CBC. Multiple recipients and per-recipient permissions; explicit
+  profile limits and independent pyHanko interoperability evidence (#642).
+
 - `Document::set_build_identification(BuildIdentification::Disabled)` omits the
   generated build, edition and feature Info fields. Default output remains
   enabled; Producer and Creator have their own setters (#639).

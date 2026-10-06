@@ -1,0 +1,7 @@
+{
+  "binaries": 371,
+  "passed": 9779,
+  "failed": 0,
+  "ignored": 47,
+  "command": "cargo test --workspace --features recipient-encryption,signatures,internal-testing --lib --tests"
+}

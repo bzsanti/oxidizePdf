@@ -70,16 +70,25 @@
 ## Resolución #641 y desarrollo #642 — 2026-09-29
 
 - Issue: #641 — docs(signatures): clarify basic support and keep PAdES outside library scope — https://github.com/bzsanti/oxidizePdf/issues/641
-- Estado: `[-]` en curso. Prioridad P2. Responsable Codex.
+- Estado: `[x]` integrada mediante PR #657 (48d8b8f8bbf08b2976fd739e6c2462c9552a3cc6); issue cerrada. Prioridad P2. Responsable Codex.
 - Criterio de cierre: README, rustdoc, CLAIMS y casos de uso describen firmas básicas, flujo externo y PAdES fuera de alcance; guard documental y ejemplo ejecutable validados; PR integrado.
 - Última validación: contrato y ejemplo ya presentes en develop c4e08c7; se precisa exclusión de PAdES y se actualiza referencia a contención #640.
 - Última validación final #641: dos guards documentales y cinco doctests pasan (dos omitidos); Clippy focalizado y revisión calidad/seguridad pasan.
-- Siguiente acción: publicar PR #641, verificar CI e integrar; #642 continúa por separado.
+- Última validación remota #641: 17 checks SUCCESS, 2 jobs programados SKIPPED; integración verificada.
+- Siguiente acción: ninguna para #641; #642 continúa por separado.
 - Issue: #642 — feat(encryption): implement interoperable certificate-based PDF recipient encryption — https://github.com/bzsanti/oxidizePdf/issues/642
-- Estado: `[-]` análisis de perfil e interoperabilidad. Prioridad P2. Responsable Codex.
+- Estado: `[!]` implementación candidata funcional; aceptación de seguridad bloqueada. Prioridad P2. Responsable Codex.
 - Criterio de cierre: writer/reader públicos con cifrado real por certificados, múltiples destinatarios, rechazos, aleatoriedad, interoperabilidad bidireccional, no-C y revisión de seguridad.
 - Última validación: #640 mantiene shell legacy no soportado; #642 confirmada OPEN. Implementación autorizada expresamente por el usuario.
-- Siguiente acción: fijar perfil soportado y construir fixtures con implementación independiente antes de integrar la criptografía.
+- Perfil: Adobe.PubSec/adbe.pkcs7.s5/AESV3, RSA-OAEP SHA-256/MGF1 SHA-256, CMS AES-256-CBC, metadata cifrada. Sin MAC; no implica integridad autenticada.
+- Fixtures: pyHanko 0.29.1, cryptography 50.0.1, Python 3.14.6; texto, imagen, strings, dos destinatarios, xref clásico/stream y object stream.
+- Última validación: 9 tests de consumidor externo pasan con CC/CXX=false; pyHanko verifica ambos destinatarios, texto/imagen/título y aleatoriedad de semillas/claves; tres mutaciones detectadas.
+- Dependencia externa: RUSTSEC-2023-0071 permanece sin parche para rsa 0.9.10; OAEP+blinding no demuestra exención. Upstream: https://github.com/RustCrypto/RSA/issues/626.
+- Criterio de desbloqueo: proveedor puro Rust adecuado o revisión independiente concluyente del camino privado exacto, más CI Linux/Windows/macOS.
+- Restricciones: no fusionar ni declarar soporte mientras siga abierto este hallazgo; no exponer el candidato como servicio de descifrado.
+- Regresión local: 9779 pasan, 0 fallos, 47 omitidos; Clippy final, formato y consumidor externo pasan.
+- PR borrador: https://github.com/bzsanti/oxidizePdf/pull/658; implementación c8eeb5d y normalización de logs f3fb570.
+- Siguiente acción: comprobar CI remota y resolver el hallazgo del proveedor RSA; mantener #642 abierta y #658 en borrador.
 - Restricciones: PAdES fuera de la librería; extensiones externas disponibles a cualquiera. Sin PKI gestionada ni ampliación implícita de R6 por contraseña.
 
 ## Validación final #639/#653/#654/#655 — 2026-09-29

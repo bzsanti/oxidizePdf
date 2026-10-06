@@ -30,6 +30,14 @@ jobs:
         run: python scripts/check_no_native_dependencies.py --product-features --target ${{ matrix.target }} --build
       - name: Validate certificates from a consumer without dev-dependencies
         run: python scripts/check_certificate_product.py --target ${{ matrix.target }}
+      - name: Verify certificate recipient encryption from a consumer without dev-dependencies
+        run: python scripts/check_recipient_product.py --target ${{ matrix.target }} --output recipient-consumer.pdf
+      - name: Install independent recipient interoperability oracle
+        if: runner.os == 'Linux'
+        run: python -m pip install pyhanko==0.29.1 cryptography==50.0.1 asn1crypto==1.5.1
+      - name: Verify Rust output and key randomization with pyHanko
+        if: runner.os == 'Linux'
+        run: python oxidize-pdf-core/tests/fixtures/recipient_encryption/oracle.py verify recipient-consumer.pdf
       - name: Verify certificate chains and CRLs
         run: cargo test --locked -p oxidize-pdf --features signatures --test issue_526_signature_validation_test --test issue_627_certificate_provider_test --test signature_integration_test
 
