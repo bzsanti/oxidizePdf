@@ -43,6 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Rebuild absent page `/StructParents` keys during tagged splits from unambiguous
+  structure ownership, without colliding with page or annotation keys. Preserve
+  content and ActualText; invalid ownership and permission failures still reject
+  the operation before publishing outputs (#677).
+
 - Decode the complete PDF Standard, WinAnsi and MacExpert tables and select
   built-in Symbol/ZapfDingbats encodings. Preserve Differences/ToUnicode
   precedence and AFM widths; undefined codes recover visibly (#668).

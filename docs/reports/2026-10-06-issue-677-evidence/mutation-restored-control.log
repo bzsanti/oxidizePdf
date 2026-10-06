@@ -1,0 +1,21 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 9.98s
+     Running tests/issue_677_missing_structparents_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-cargo/debug/deps/issue_677_missing_structparents_test-4a0f3777a65a0a34)
+
+running 13 tests
+test certificate_permissions_still_precede_missing_key_repair ... ok
+test ambiguous_existing_keys_are_not_renumbered ... ok
+test distinct_structure_owners_for_one_mcid_are_rejected ... ok
+test ambiguous_owners_on_later_page_publish_no_parts ... ok
+test missing_effective_page_is_not_guessed ... ok
+test invalid_explicit_keys_are_not_treated_as_missing ... ok
+test duplicate_content_mcid_is_not_repaired ... ok
+test missing_content_on_later_page_publishes_no_parts ... ok
+test missing_keys_with_existing_indexes_preserve_reordered_pages ... ok
+test explicit_mcr_and_inherited_page_recover_missing_keys ... ok
+test fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys ... ok
+test missing_keys_and_indexes_preserve_content_actualtext_and_three_parts ... ok
+test page_reparenting_preserves_reconstructed_keys ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+

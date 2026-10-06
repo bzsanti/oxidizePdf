@@ -1,0 +1,20 @@
+[
+  {
+    "mutation": "collision",
+    "exit": 101,
+    "test": "fresh_keys_do_not_collide",
+    "detected": true
+  },
+  {
+    "mutation": "page-rewrite",
+    "exit": 101,
+    "test": "page_reparenting",
+    "detected": true
+  },
+  {
+    "mutation": "validation",
+    "exit": 101,
+    "test": "missing_content_on_later_page",
+    "detected": true
+  }
+]
