@@ -1,0 +1,20 @@
+   Compiling oxidize-pdf v5.2.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.52s
+     Running tests/issue_680_memory_budget_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_680_memory_budget_test-546cbc42918c524f)
+
+running 1 test
+decoded_bytes=1048576 peak_live_requested_increment=2140544
+
+thread 'recovery_keeps_one_expanded_buffer_live' (57) panicked at oxidize-pdf-core/tests/issue_680_memory_budget_test.rs:30:2:
+Recovery retained multiple expanded buffers: 2140544 bytes for 1048576 decoded bytes
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test recovery_keeps_one_expanded_buffer_live ... FAILED
+
+failures:
+
+failures:
+    recovery_keeps_one_expanded_buffer_live
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_680_memory_budget_test`

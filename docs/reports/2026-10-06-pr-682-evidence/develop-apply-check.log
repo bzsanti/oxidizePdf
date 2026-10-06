@@ -1,0 +1,3 @@
+error: patch failed: target/pr682-review/develop/oxidize-pdf-core/src/text/extraction.rs:721
+error: target/pr682-review/develop/oxidize-pdf-core/src/text/extraction.rs: patch does not apply
+Exit: 1

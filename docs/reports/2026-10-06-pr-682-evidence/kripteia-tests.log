@@ -1,0 +1,45 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 3 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/issue_680_flate_stream_recovery_test.rs        3     90
+
+--- Worst Offenders ---
+  test_truncated_compressed_stream_filter (target/pr682-review/source/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:40) - Score: 90
+    - Test 'test_truncated_compressed_stream_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_truncated_compressed_stream_filter' has multiple assertions without diagnostic messages
+    i Test 'test_truncated_compressed_stream_filter' uses .unwrap() which silently discards error information
+  test_extract_from_page_with_stream_recovery (target/pr682-review/source/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:76) - Score: 90
+    - Test 'test_extract_from_page_with_stream_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_extract_from_page_with_stream_recovery' has multiple assertions without diagnostic messages
+    i Test 'test_extract_from_page_with_stream_recovery' uses .unwrap() which silently discards error information
+  test_form_xobject_stream_recovery (target/pr682-review/source/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:107) - Score: 90
+    - Test 'test_form_xobject_stream_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_form_xobject_stream_recovery' has multiple assertions without diagnostic messages
+    i Test 'test_form_xobject_stream_recovery' uses .unwrap() which silently discards error information
+
+--- Details ---
+target/pr682-review/source/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:
+  test_truncated_compressed_stream_filter (line 40) - Score: 90
+    - Test 'test_truncated_compressed_stream_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_truncated_compressed_stream_filter' has multiple assertions without diagnostic messages
+    i Test 'test_truncated_compressed_stream_filter' uses .unwrap() which silently discards error information
+  test_extract_from_page_with_stream_recovery (line 76) - Score: 90
+    - Test 'test_extract_from_page_with_stream_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_extract_from_page_with_stream_recovery' has multiple assertions without diagnostic messages
+    i Test 'test_extract_from_page_with_stream_recovery' uses .unwrap() which silently discards error information
+  test_form_xobject_stream_recovery (line 107) - Score: 90
+    - Test 'test_form_xobject_stream_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_form_xobject_stream_recovery' has multiple assertions without diagnostic messages
+    i Test 'test_form_xobject_stream_recovery' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

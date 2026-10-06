@@ -1,0 +1,13 @@
+{
+  "head": "07e13c49ea344097a90c7734d7b2707bfcf4fef8",
+  "base": "9ab7ac6530d6e064d48a3b274568af1b6d901462",
+  "develop": "9c3f4b57969dd69fc9efa128495a8b0a7c7f4f74",
+  "merge_tree": "dc24799d9236990f28117cc4faab94da6e1421a0",
+  "sha256": {
+    "oxidize-pdf-core/src/parser/filters.rs": "6e6233b7efcf50c38be6b35b470c71c083fedcdc64997a1816acbda3ffca7a55",
+    "oxidize-pdf-core/src/parser/filters/recovery.rs": "6bf9a072f69ca3aafb3ed89fc4d86d92578b2d04fc1139e0850262ed4c64e98d",
+    "oxidize-pdf-core/src/text/extraction.rs": "cf5f92eb8cb7bd08bf9db7329e445a2b1ce10dedf34bb3e24f765319e87e6dc8",
+    "oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs": "db5e371accdecdbd61691b34170ce06239ddc7057c9a2f05c89d8ce223559253"
+  },
+  "reviewed_sources_unchanged": true
+}

@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.2.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.00s
+     Running tests/issue_680_flate_stream_recovery_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-cargo/debug/deps/issue_680_flate_stream_recovery_test-33afc16419a3feae)
+
+running 1 test
+test text_budget_does_not_limit_decoded_operators ... FAILED
+
+failures:
+
+---- text_budget_does_not_limit_decoded_operators stdout ----
+
+thread 'text_budget_does_not_limit_decoded_operators' (371) panicked at oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:206:18:
+called `Result::unwrap()` on an `Err` value: StreamDecodeError("FlateDecode decompressed size exceeds limit of 0 bytes")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    text_budget_does_not_limit_decoded_operators
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_680_flate_stream_recovery_test`

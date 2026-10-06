@@ -1,3 +1,13 @@
+## Corrección de PR #682 — 2026-10-06
+
+- Issue: #680 — TextExtractor::extract_from_page fails with StreamDecodeError("FlateDecode incomplete or truncated zlib stream") on truncated streams — https://github.com/bzsanti/oxidizePdf/issues/680
+- Estado: cinco hallazgos corregidos y revisión local completada; publicación/CI pendientes. Prioridad P1. Responsable Codex. Usuario solicita corregir los hallazgos del PR.
+- Decisión: retirar el builder que ocultaba diagnósticos y el buffer adicional; documentar y probar la API existente extract_from_page_with_recovery. Código ejecutable idéntico a main; tests y docs son el alcance final. Autoría e historia de los dos commits originales conservadas.
+- Criterio de cierre local: diagnósticos observables, límites independientes, un buffer expandido, documentación coherente y regresiones discriminantes; demostrado en pruebas focalizadas y revisión calidad/seguridad.
+- Validación: 42/42 en base main y 42/42 sobre develop; Clippy/formato y ejemplo rustdoc pasan. RED de memoria 2.140.544 bytes; GREEN 1.091.968 para salida 1 MiB. Mutaciones: borrar diagnósticos provoca cinco fallos; confundir límites provoca un fallo. Seis alcances Kripteia/Security, allocator de tests auditado. Evidencia y revisión: docs/reports/2026-10-06-pr-682-review.md y directorio contiguo.
+- Siguiente acción: publicar corrección aditiva en #682 y comprobar CI del nuevo HEAD. No merge, release ni cierre de #680. #677/#661 no iniciadas; #662/#663 siguen reservadas a oshtivi.
+- Restricciones: preservar cambios locales anteriores; recuperación explícita no implica integridad/completitud. Primera ejecución con caché compartida descartada; validación final en targets exclusivos.
+
 ## Preparación del release 5.2.0 — 2026-09-29
 
 - Issue: #659 — release: prepare oxidize-pdf 5.2.0 — https://github.com/bzsanti/oxidizePdf/issues/659

@@ -1,0 +1,10 @@
+{
+  "CHANGELOG.md": "d048f9733f9026b3f1e45179cec529c7c7df20294ded967507707310bcdbec11",
+  "TASKS.md": "3d044b689e243d2c8bb87aa4be8cf64d1174184ed70222d447703c29ba53da9f",
+  "oxidize-pdf-core/src/parser/filters.rs": "a069649a670b5cd315512b2f5c5d42258c878a581278f69741289a02eb7e9281",
+  "oxidize-pdf-core/src/parser/filters/recovery.rs": "5667e97f3350a0bb3e8a1f40819fae26e6b5987918392c597f993beef8ce1a18",
+  "oxidize-pdf-core/src/text/extraction.rs": "b8fbd1524191ae8547197726d2fad0648c29a06e08cd47181a9472f6f34d3f8b",
+  "oxidize-pdf-core/src/text/extraction/recovery.rs": "af1582d4d6ec2192c98c20a562e97dd660baba9056f8530f885b9d5059fc8cff",
+  "oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs": "03eef5de635cc1cf45bc8474e1331afbf76482530b3c5ea66d56b66cbad0dda7",
+  "oxidize-pdf-core/tests/issue_680_memory_budget_test.rs": "01d2c4e9fc04b32c8fefde2aa98508b9faf397bf243615f3b4441d1662d9594d"
+}

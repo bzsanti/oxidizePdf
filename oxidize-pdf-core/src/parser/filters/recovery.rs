@@ -158,7 +158,9 @@ fn recover_flate(
         });
     }
     let original = first.error;
-    let first_partial = first.partial;
+    // Do not hold two expanded buffers while retrying. Raw DEFLATE starts at
+    // the same payload offset for a valid zlib header, and can expose a prefix.
+    drop(first.partial);
     let has_header = data.len() >= 2
         && data[0] & 15 == 8
         && data[0] >> 4 <= 7
@@ -182,10 +184,6 @@ fn recover_flate(
         }),
         Err(e) if !e.partial.is_empty() => Ok((
             e.partial,
-            Some((FlateRecoveryKind::Incomplete, original.to_string())),
-        )),
-        Err(_) if !first_partial.is_empty() => Ok((
-            first_partial,
             Some((FlateRecoveryKind::Incomplete, original.to_string())),
         )),
         Err(_) => Err(StreamRecoveryError {

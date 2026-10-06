@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.2.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-review/source/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.83s
+     Running tests/issue_680_review_probe.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_680_review_probe-8a3e47c65d956cb6)
+
+running 3 tests
+test legacy_explicit_api_recovers_the_reported_checksum_case ... ok
+
+thread 'text_budget_is_not_a_stream_budget' (102) panicked at oxidize-pdf-core/tests/issue_680_review_probe.rs:48:5:
+Enabling recovery must not reject valid short text: Err(StreamDecodeError("FlateDecode decompressed size exceeds limit of 8 bytes"))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test text_budget_is_not_a_stream_budget ... FAILED
+Existing API reports [TextRecoveryDiagnostic { location: FormXObject { name: "Fm", object: (6, 0) }, action: Omitted { error: "Stream decode error: FlateDecode failed: deflate decompression error" } }]; builder returns ordinary ExtractedText without those diagnostics
+test builder_discards_an_omission_that_existing_api_reports ... ok
+
+failures:
+
+failures:
+    text_budget_is_not_a_stream_budget
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_680_review_probe`

@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Documentation
+
+- Document explicit `TextExtractor::extract_from_page_with_recovery` usage for
+  missing checksums and truncated Flate streams, including omission diagnostics
+  and independent stream/text limits. Add regression coverage for page/Form
+  recovery and bounded live allocations (#680).
+
 ## [5.2.0] - 2026-09-29
 
 ### Added

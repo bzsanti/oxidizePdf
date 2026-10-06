@@ -701,9 +701,6 @@ pub struct TextExtractor {
     /// public `ExtractionOptions` so adding it does not break exhaustive struct
     /// literals in downstream crates.
     carriage_return_handling: CarriageReturnHandling,
-    /// Recovery policy for content streams and Form XObjects with stream errors
-    /// (e.g. truncated streams, missing Adler32 checksums).
-    recover_stream_errors: bool,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
     /// Narrowest usable CID width for Type0 fonts in the current page. Derived
@@ -724,7 +721,6 @@ impl TextExtractor {
             include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
-            recover_stream_errors: false,
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
@@ -740,7 +736,6 @@ impl TextExtractor {
             include_link_annotations: false,
             reading_order: false,
             carriage_return_handling: CarriageReturnHandling::default(),
-            recover_stream_errors: false,
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
@@ -797,22 +792,6 @@ impl TextExtractor {
     /// The default is [`CarriageReturnHandling::Remove`].
     pub fn with_carriage_return_handling(mut self, handling: CarriageReturnHandling) -> Self {
         self.carriage_return_handling = handling;
-        self
-    }
-
-    /// Enable (or disable) stream error recovery during text extraction.
-    ///
-    /// When enabled, content streams and form XObjects that fail strict Flate
-    /// decompression (e.g. truncated streams or missing checksums) are recovered
-    /// on a best-effort basis, allowing available text to be extracted rather
-    /// than failing the entire page with `StreamDecodeError`.
-    ///
-    /// By default, stream recovery is automatically active when extracting from
-    /// documents parsed with tolerant/lenient options (`!strict_mode` or
-    /// `recover_from_stream_errors`). Calling `with_stream_recovery(true)` explicitly
-    /// enables recovery regardless of document parse options.
-    pub fn with_stream_recovery(mut self, enable: bool) -> Self {
-        self.recover_stream_errors = enable;
         self
     }
 
@@ -1275,29 +1254,18 @@ impl TextExtractor {
         Ok(results)
     }
 
-    /// Extract text from a specific page
+    /// Extract text from a specific page without recovering damaged Flate streams.
+    ///
+    /// This method propagates stream decoding errors even with lenient parser
+    /// options. To explicitly recover incomplete content with diagnostics, use
+    /// [`Self::extract_from_page_with_recovery`].
     pub fn extract_from_page<R: Read + Seek>(
         &mut self,
         document: &PdfDocument<R>,
         page_index: u32,
     ) -> ParseResult<ExtractedText> {
-        if self.recover_stream_errors {
-            let max_bytes = self
-                .options
-                .max_extracted_bytes
-                .unwrap_or(usize::MAX)
-                .min(crate::parser::filters::MAX_DECOMPRESSED_SIZE);
-            self.recovery = Some(recovery::RecoveryContext {
-                max_stream_bytes: max_bytes,
-                diagnostics: Vec::new(),
-            });
-            let result = self.extract_page_impl(document, page_index);
-            self.recovery = None;
-            result
-        } else {
-            self.recovery = None;
-            self.extract_page_impl(document, page_index)
-        }
+        self.recovery = None;
+        self.extract_page_impl(document, page_index)
     }
 
     fn extract_page_impl<R: Read + Seek>(
