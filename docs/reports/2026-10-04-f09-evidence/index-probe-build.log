@@ -1,0 +1,55 @@
+warning: fields `start_offset`, `byte_length`, and `item_offsets` are never read
+  --> docs/reports/2026-10-04-f09-evidence/../../../target/f09-index-before.rs:13:16
+   |
+12 | pub struct CffIndex {
+   |            -------- fields in this struct
+13 |     pub(crate) start_offset: usize,
+   |                ^^^^^^^^^^^^
+14 |     pub(crate) byte_length: usize,
+   |                ^^^^^^^^^^^
+15 |     pub(crate) item_offsets: Vec<usize>,
+   |                ^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated items `empty`, `end_offset`, `count`, `get_item`, and `raw_bytes` are never used
+  --> docs/reports/2026-10-04-f09-evidence/../../../target/f09-index-before.rs:21:12
+   |
+18 | impl CffIndex {
+   | ------------- associated items in this implementation
+...
+21 |     pub fn empty() -> Self {
+   |            ^^^^^
+...
+29 |     pub fn end_offset(&self) -> usize {
+   |            ^^^^^^^^^^
+...
+33 |     pub fn count(&self) -> usize {
+   |            ^^^^^
+...
+41 |     pub fn get_item<'a>(&self, index: usize, cff: &'a [u8]) -> Option<&'a [u8]> {
+   |            ^^^^^^^^
+...
+53 |     pub fn raw_bytes<'a>(&self, cff: &'a [u8]) -> &'a [u8] {
+   |            ^^^^^^^^^
+
+warning: function `usize_to_cff_offset` is never used
+   --> docs/reports/2026-10-04-f09-evidence/../../../target/f09-index-before.rs:134:8
+    |
+134 | pub fn usize_to_cff_offset(val: usize) -> ParseResult<i32> {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `build_cff_index` is never used
+   --> docs/reports/2026-10-04-f09-evidence/../../../target/f09-index-before.rs:141:8
+    |
+141 | pub fn build_cff_index(items: &[&[u8]]) -> Vec<u8> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `write_offset` is never used
+   --> docs/reports/2026-10-04-f09-evidence/../../../target/f09-index-before.rs:172:4
+    |
+172 | fn write_offset(out: &mut Vec<u8>, value: u32, off_size: u8) {
+    |    ^^^^^^^^^^^^
+
+warning: 5 warnings emitted
+

@@ -7,8 +7,15 @@ use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::{CarriageReturnHandling, ExtractionOptions, TextExtractor};
 use std::io::Cursor;
 
-fn build_pdf() -> Vec<u8> {
+fn build_pdf(include_to_unicode: bool) -> Vec<u8> {
     let content = b"BT /F1 10 Tf 100 700 Td (rating-aa\\015a-exp\\015\\012next) Tj ET";
+    // CR/LF are unassigned glyph codes in WinAnsi. Declare their Unicode
+    // meaning explicitly so this fixture tests sanitization after decoding.
+    let mapping = if include_to_unicode {
+        "/ToUnicode 6 0 R"
+    } else {
+        ""
+    };
     assemble_pdf(&[
         b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_vec(),
@@ -16,14 +23,31 @@ fn build_pdf() -> Vec<u8> {
           /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>"
             .to_vec(),
         stream_obj("", content),
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica \
-          /Encoding /WinAnsiEncoding >>"
-            .to_vec(),
+        format!("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding {mapping} >>").into_bytes(),
+        stream_obj("", b"/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CMapName /Issue476Controls def
+/CMapType 2 def
+1 begincodespacerange
+<00> <FF>
+endcodespacerange
+1 beginbfrange
+<20> <7E> <0020>
+endbfrange
+2 beginbfchar
+<0D> <000D>
+<0A> <000A>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end"),
     ])
 }
 
 fn extract_with(mut extractor: TextExtractor) -> String {
-    let reader = PdfReader::new(Cursor::new(build_pdf())).expect("fixture must parse");
+    let reader = PdfReader::new(Cursor::new(build_pdf(true))).expect("fixture must parse");
     let document = PdfDocument::new(reader);
     extractor
         .extract_from_page(&document, 0)
@@ -105,4 +129,34 @@ fn extraction_can_replace_carriage_returns_with_spaces() {
         extract(CarriageReturnHandling::ReplaceWithSpace),
         "rating-aa a-exp\nnext"
     );
+}
+
+#[test]
+fn extraction_can_preserve_standalone_cr_and_normalize_crlf() {
+    assert_eq!(
+        extract(CarriageReturnHandling::NormalizeLineEnding),
+        "rating-aa\ra-exp\nnext"
+    );
+}
+
+#[test]
+fn unassigned_winansi_codes_do_not_become_unicode_line_endings() {
+    let document = PdfDocument::new(
+        PdfReader::new(Cursor::new(build_pdf(false))).expect("fixture must parse"),
+    );
+    for policy in [
+        CarriageReturnHandling::Remove,
+        CarriageReturnHandling::ReplaceWithSpace,
+        CarriageReturnHandling::NormalizeLineEnding,
+    ] {
+        let mut extractor = TextExtractor::new().with_carriage_return_handling(policy);
+        assert_eq!(
+            extractor
+                .extract_from_page(&document, 0)
+                .expect("extraction succeeds")
+                .text,
+            "rating-aa�a-exp��next",
+            "{policy:?}: undefined glyphs must not be treated as decoded controls"
+        );
+    }
 }

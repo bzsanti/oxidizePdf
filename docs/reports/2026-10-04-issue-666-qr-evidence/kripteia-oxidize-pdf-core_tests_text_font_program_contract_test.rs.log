@@ -1,0 +1,40 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_font_program_contract_test.rs         5     98
+
+--- Worst Offenders ---
+  bfrange_array_preserves_sequences_and_surrogate_pairs (oxidize-pdf-core/tests/text_font_program_contract_test.rs:108) - Score: 90
+    i Test 'bfrange_array_preserves_sequences_and_surrogate_pairs' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'bfrange_array_preserves_sequences_and_surrogate_pairs' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  type3_charproc_names_supply_unicode_without_tounicode (oxidize-pdf-core/tests/text_font_program_contract_test.rs:35) - Score: 100
+    i Test 'type3_charproc_names_supply_unicode_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  type3_tounicode_overrides_charproc_names (oxidize-pdf-core/tests/text_font_program_contract_test.rs:43) - Score: 100
+    i Test 'type3_tounicode_overrides_charproc_names' asserts against a hardcoded constant instead of a computed expected value
+  type3_advance_uses_font_matrix_and_declared_width (oxidize-pdf-core/tests/text_font_program_contract_test.rs:51) - Score: 100
+  bfrange_sequential_destination_increments_unicode (oxidize-pdf-core/tests/text_font_program_contract_test.rs:99) - Score: 100
+    i Test 'bfrange_sequential_destination_increments_unicode' asserts against a hardcoded constant instead of a computed expected value
+
+--- Details ---
+oxidize-pdf-core/tests/text_font_program_contract_test.rs:
+  type3_charproc_names_supply_unicode_without_tounicode (line 35) - Score: 100
+    i Test 'type3_charproc_names_supply_unicode_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  type3_tounicode_overrides_charproc_names (line 43) - Score: 100
+    i Test 'type3_tounicode_overrides_charproc_names' asserts against a hardcoded constant instead of a computed expected value
+  bfrange_sequential_destination_increments_unicode (line 99) - Score: 100
+    i Test 'bfrange_sequential_destination_increments_unicode' asserts against a hardcoded constant instead of a computed expected value
+  bfrange_array_preserves_sequences_and_surrogate_pairs (line 108) - Score: 90
+    i Test 'bfrange_array_preserves_sequences_and_surrogate_pairs' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'bfrange_array_preserves_sequences_and_surrogate_pairs' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

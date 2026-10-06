@@ -1,0 +1,60 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 88 | Tests: 10 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ze-pdf-core/tests/text_type1_intrinsic_contract_test.rs       10     88
+
+--- Worst Offenders ---
+  differences_glyph_width_advances_the_text_pen (oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:133) - Score: 80
+    - Test 'differences_glyph_width_advances_the_text_pen' has identical neighborhood to 'explicit_encoding_glyph_width_advances_the_text_pen'
+    - Test 'differences_glyph_width_advances_the_text_pen' does not call any production code
+  explicit_encoding_glyph_width_advances_the_text_pen (oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:138) - Score: 80
+    - Test 'explicit_encoding_glyph_width_advances_the_text_pen' has identical neighborhood to 'differences_glyph_width_advances_the_text_pen'
+    - Test 'explicit_encoding_glyph_width_advances_the_text_pen' does not call any production code
+  tounicode_does_not_change_glyph_advances (oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:143) - Score: 80
+    - Test 'tounicode_does_not_change_glyph_advances' has identical neighborhood to 'differences_glyph_width_advances_the_text_pen'
+    - Test 'tounicode_does_not_change_glyph_advances' does not call any production code
+  absent_pdf_encoding_uses_the_embedded_program_encoding (oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:75) - Score: 90
+    - Test 'absent_pdf_encoding_uses_the_embedded_program_encoding' does not call any production code
+  differences_without_base_inherits_unmodified_codes_from_the_program (oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:80) - Score: 90
+    - Test 'differences_without_base_inherits_unmodified_codes_from_the_program' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:
+  absent_pdf_encoding_uses_the_embedded_program_encoding (line 75) - Score: 90
+    - Test 'absent_pdf_encoding_uses_the_embedded_program_encoding' does not call any production code
+  differences_without_base_inherits_unmodified_codes_from_the_program (line 80) - Score: 90
+    - Test 'differences_without_base_inherits_unmodified_codes_from_the_program' does not call any production code
+  explicit_pdf_encoding_overrides_the_embedded_encoding (line 85) - Score: 90
+    - Test 'explicit_pdf_encoding_overrides_the_embedded_encoding' does not call any production code
+  tounicode_overrides_pdf_differences_and_intrinsic_encoding (line 90) - Score: 90
+    - Test 'tounicode_overrides_pdf_differences_and_intrinsic_encoding' does not call any production code
+  intrinsic_glyph_width_advances_the_text_pen (line 127) - Score: 90
+    - Test 'intrinsic_glyph_width_advances_the_text_pen' does not call any production code
+  differences_glyph_width_advances_the_text_pen (line 133) - Score: 80
+    - Test 'differences_glyph_width_advances_the_text_pen' has identical neighborhood to 'explicit_encoding_glyph_width_advances_the_text_pen'
+    - Test 'differences_glyph_width_advances_the_text_pen' does not call any production code
+  explicit_encoding_glyph_width_advances_the_text_pen (line 138) - Score: 80
+    - Test 'explicit_encoding_glyph_width_advances_the_text_pen' has identical neighborhood to 'differences_glyph_width_advances_the_text_pen'
+    - Test 'explicit_encoding_glyph_width_advances_the_text_pen' does not call any production code
+  tounicode_does_not_change_glyph_advances (line 143) - Score: 80
+    - Test 'tounicode_does_not_change_glyph_advances' has identical neighborhood to 'differences_glyph_width_advances_the_text_pen'
+    - Test 'tounicode_does_not_change_glyph_advances' does not call any production code
+  all_program_and_pdf_bytes_match_the_independent_provenance (line 148) - Score: 100
+    i Test 'all_program_and_pdf_bytes_match_the_independent_provenance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_program_and_pdf_bytes_match_the_independent_provenance' has multiple assertions without diagnostic messages
+    i Test 'all_program_and_pdf_bytes_match_the_independent_provenance' uses .unwrap() which silently discards error information
+  pfb_records_are_removed_from_pdf_fontfile_payloads (line 172) - Score: 90
+    - Test 'pfb_records_are_removed_from_pdf_fontfile_payloads' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'pfb_records_are_removed_from_pdf_fontfile_payloads' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

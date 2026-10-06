@@ -1,0 +1,1894 @@
+{
+  "sha": "f5cf3bca7fdfeaceb77aa82847e974f2306c20b4",
+  "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/f5cf3bca7fdfeaceb77aa82847e974f2306c20b4",
+  "tree": [
+    {
+      "path": "Adobe-CNS1-7",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d1c20df39663dcbe5433bc5989d7b0bf9515d2c0",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/d1c20df39663dcbe5433bc5989d7b0bf9515d2c0"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "49f67d52a626bf1240c9437e78e901a6ff60ad50",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/49f67d52a626bf1240c9437e78e901a6ff60ad50"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/Adobe-CNS1-0",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9a037f85b8df021b333eb0501fe695e2e924ecbd",
+      "size": 3829,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/9a037f85b8df021b333eb0501fe695e2e924ecbd"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/Adobe-CNS1-1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "24c193aac7aa0bc5aac12ebf2379e1e64e98f66c",
+      "size": 4002,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/24c193aac7aa0bc5aac12ebf2379e1e64e98f66c"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/Adobe-CNS1-2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "544b73fc79d6db0fad73cfb392e0c4338bf4619c",
+      "size": 4022,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/544b73fc79d6db0fad73cfb392e0c4338bf4619c"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/Adobe-CNS1-3",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f380656311673f79f95bf96aab5114e7f2258c39",
+      "size": 4122,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/f380656311673f79f95bf96aab5114e7f2258c39"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/Adobe-CNS1-4",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d9f2f65d14ef703aeca66fcc36c0802f0ca80cb2",
+      "size": 4142,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d9f2f65d14ef703aeca66fcc36c0802f0ca80cb2"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/Adobe-CNS1-5",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7aa30aabbbfcca044c4c0b671eca3d7b9f3ed616",
+      "size": 4142,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7aa30aabbbfcca044c4c0b671eca3d7b9f3ed616"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/Adobe-CNS1-6",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7529a97aacacd0c76ab0c3f429f8c794da29b585",
+      "size": 4142,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7529a97aacacd0c76ab0c3f429f8c794da29b585"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/Adobe-CNS1-7",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "17cec369e448e234a11206c29aff265e7c76d8e4",
+      "size": 4118,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/17cec369e448e234a11206c29aff265e7c76d8e4"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "08f05cc372f1372b90ad9a43cca1a686bb975afd",
+      "size": 7493,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/08f05cc372f1372b90ad9a43cca1a686bb975afd"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2b0482d0387d5f6ec69a7922e40c31b63885acba",
+      "size": 2924,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/2b0482d0387d5f6ec69a7922e40c31b63885acba"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/B5pc-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "277ede77969762723ba531c698d5447724387a4f",
+      "size": 7547,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/277ede77969762723ba531c698d5447724387a4f"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/B5pc-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "70f89e7ab425e12f33b39f4ff089cef8731d0281",
+      "size": 2936,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/70f89e7ab425e12f33b39f4ff089cef8731d0281"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/CNS-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8e8936bf14a4d485a72019d39379fff6d40611f7",
+      "size": 12246,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/8e8936bf14a4d485a72019d39379fff6d40611f7"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/CNS-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "62c458029881a185249af114c2c0a74e00a2e9a1",
+      "size": 13278,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/62c458029881a185249af114c2c0a74e00a2e9a1"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/CNS1-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eefb687598b2783ce9be1dd4c9b26cc0d591c2ee",
+      "size": 5611,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/eefb687598b2783ce9be1dd4c9b26cc0d591c2ee"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/CNS1-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fec58cd1e36e85082594a1fbcbdfd3e1331180cc",
+      "size": 2932,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/fec58cd1e36e85082594a1fbcbdfd3e1331180cc"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/CNS2-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "832b710a7bb75d25e2150b64b9d93b9d0b22aadc",
+      "size": 4275,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/832b710a7bb75d25e2150b64b9d93b9d0b22aadc"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/CNS2-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ee519fab4b293e19f013251e57b51a892c668de3",
+      "size": 2683,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ee519fab4b293e19f013251e57b51a892c668de3"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/ETHK-B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "974945adf77484b3121687352d972fcbb6c54983",
+      "size": 23202,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/974945adf77484b3121687352d972fcbb6c54983"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/ETHK-B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "57d776389096381999a607dcceddb3c5e665710a",
+      "size": 2955,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/57d776389096381999a607dcceddb3c5e665710a"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/ETen-B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a25ea5ccbc2cf3ddf9dd0039a1cde5d6ffc2c747",
+      "size": 7703,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a25ea5ccbc2cf3ddf9dd0039a1cde5d6ffc2c747"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/ETen-B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "736fb4a403b94b9e6ce25f0a12675848c8dd5481",
+      "size": 2974,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/736fb4a403b94b9e6ce25f0a12675848c8dd5481"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/ETenms-B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6a3395011aaef3e921ab44c1e535223ea6679734",
+      "size": 2729,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/6a3395011aaef3e921ab44c1e535223ea6679734"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/ETenms-B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4a5c611fed53ddd6880f19b641233d89572f1c76",
+      "size": 3041,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/4a5c611fed53ddd6880f19b641233d89572f1c76"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKdla-B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "199f52e58ebedf5da4c585994d89f13c72041721",
+      "size": 23268,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/199f52e58ebedf5da4c585994d89f13c72041721"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKdla-B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cf1e5501d88934b7229736554cfd2bab70ee8d96",
+      "size": 2941,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/cf1e5501d88934b7229736554cfd2bab70ee8d96"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKdlb-B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1721d6ea0bc07c0a4e1f5bf7615d82934d7a90cc",
+      "size": 20928,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/1721d6ea0bc07c0a4e1f5bf7615d82934d7a90cc"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKdlb-B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a6960b22df4115caef5126be85d209d2ed21540d",
+      "size": 2941,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a6960b22df4115caef5126be85d209d2ed21540d"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKgccs-B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d92536a2c1bf3f4b65f935524393e3378a912817",
+      "size": 13724,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d92536a2c1bf3f4b65f935524393e3378a912817"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKgccs-B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "298cb275c68458ee93ea969251553e1daca28b34",
+      "size": 2947,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/298cb275c68458ee93ea969251553e1daca28b34"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKm314-B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cfc47917b53f57044460b4639c48543281d1919f",
+      "size": 13537,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/cfc47917b53f57044460b4639c48543281d1919f"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKm314-B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0f47a62e9400732840d5f40c51068c10bd6c7f0a",
+      "size": 2947,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0f47a62e9400732840d5f40c51068c10bd6c7f0a"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKm471-B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "543de49adcb83b8585fc7ec8a98ca80d0eaecbb1",
+      "size": 16507,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/543de49adcb83b8585fc7ec8a98ca80d0eaecbb1"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKm471-B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8782ca6b4ccbfd7a9e9ee23b21a5b4b186e72ee3",
+      "size": 2947,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/8782ca6b4ccbfd7a9e9ee23b21a5b4b186e72ee3"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKscs-B5-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ea6e1c881ba1bb465b2b1d81bccefde9b602c977",
+      "size": 23253,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ea6e1c881ba1bb465b2b1d81bccefde9b602c977"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/HKscs-B5-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da4f9bfe122fe49ab04878addf03f0ce95e57015",
+      "size": 2961,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/da4f9bfe122fe49ab04878addf03f0ce95e57015"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/UniCNS-UCS2-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "73ca664a26ba7835d0c06a1ae13f1c8b5ed16812",
+      "size": 326349,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/73ca664a26ba7835d0c06a1ae13f1c8b5ed16812"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/UniCNS-UCS2-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9927ba9fb7cb7bcc46ade671f95a845ac39156d9",
+      "size": 2971,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/9927ba9fb7cb7bcc46ade671f95a845ac39156d9"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/UniCNS-UTF16-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "76c15677f9fc536e83d4263a3fb26b785db9eecf",
+      "size": 253253,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/76c15677f9fc536e83d4263a3fb26b785db9eecf"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/UniCNS-UTF16-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "37e13a5a9605070f98291b396806d04c6ddcfd09",
+      "size": 2960,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/37e13a5a9605070f98291b396806d04c6ddcfd09"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/UniCNS-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "beee8bb2efd85b85fb5457c1f048732bdde7d0a2",
+      "size": 324657,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/beee8bb2efd85b85fb5457c1f048732bdde7d0a2"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/UniCNS-UTF32-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "123ec46ca25b8649658b17cec29fab62cda29a8f",
+      "size": 3040,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/123ec46ca25b8649658b17cec29fab62cda29a8f"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/UniCNS-UTF8-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1b5fb46b21b49d1d5b143a4abca2afa7c5c62ad3",
+      "size": 290056,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/1b5fb46b21b49d1d5b143a4abca2afa7c5c62ad3"
+    },
+    {
+      "path": "Adobe-CNS1-7/CMap/UniCNS-UTF8-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ba1840bdb24e959384853adce5fba014ca4e308b",
+      "size": 2996,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ba1840bdb24e959384853adce5fba014ca4e308b"
+    },
+    {
+      "path": "Adobe-CNS1-7/cid2code.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "13ebdcb98e07d1fe3031287bf7dec7989974f841",
+      "size": 2048477,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/13ebdcb98e07d1fe3031287bf7dec7989974f841"
+    },
+    {
+      "path": "Adobe-GB1-6",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "e7a81208275db53e99323057b217a8ee646b9b3c",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/e7a81208275db53e99323057b217a8ee646b9b3c"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "cd8f9f6324b2c56820d649b4beacadcf9aa0c96f",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/cd8f9f6324b2c56820d649b4beacadcf9aa0c96f"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/Adobe-GB1-0",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c96113ad786567fb9cf4e18bcf0d5b85b53b97ad",
+      "size": 3292,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/c96113ad786567fb9cf4e18bcf0d5b85b53b97ad"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/Adobe-GB1-1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8cde432ee3a6cffbe4f0125ad6662098bbb9e929",
+      "size": 3446,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/8cde432ee3a6cffbe4f0125ad6662098bbb9e929"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/Adobe-GB1-2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ee205248148aa4dc85e6b7c2231bcd7e9b7afb7b",
+      "size": 4400,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ee205248148aa4dc85e6b7c2231bcd7e9b7afb7b"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/Adobe-GB1-3",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "96fd45a6e3c3ae360804a2af46fed374ccf76b4a",
+      "size": 4399,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/96fd45a6e3c3ae360804a2af46fed374ccf76b4a"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/Adobe-GB1-4",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ecb9212730c6e252bcd79f2b7185bc8d668a8adf",
+      "size": 4951,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ecb9212730c6e252bcd79f2b7185bc8d668a8adf"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/Adobe-GB1-5",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8a9ee3ee1035dad2fcbd89863ed4fe9eeb5fec07",
+      "size": 5051,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/8a9ee3ee1035dad2fcbd89863ed4fe9eeb5fec07"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/Adobe-GB1-6",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8e1686d86c2c35a083816cd391362bf468261c5c",
+      "size": 5048,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/8e1686d86c2c35a083816cd391362bf468261c5c"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GB-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f28d6f1135ea9294e02dc0d5ecb09205867d61d9",
+      "size": 4427,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/f28d6f1135ea9294e02dc0d5ecb09205867d61d9"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GB-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d6c9ba76d827a5d9ee58a47730d1fcb3d9471d5c",
+      "size": 3100,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d6c9ba76d827a5d9ee58a47730d1fcb3d9471d5c"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GB-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c84cff673a589d8e56c3edd4319aab6d088cc3e",
+      "size": 4322,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0c84cff673a589d8e56c3edd4319aab6d088cc3e"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GB-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c88725325f411b6caa8a09ccbef1d1ad5c6a93ec",
+      "size": 3076,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/c88725325f411b6caa8a09ccbef1d1ad5c6a93ec"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBK-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ddb94e9f0457fe5560711a218556516103a56129",
+      "size": 83102,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ddb94e9f0457fe5560711a218556516103a56129"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBK-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7e5b586fb2eca868dce6dbfa2ce8bc1599f61792",
+      "size": 3089,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7e5b586fb2eca868dce6dbfa2ce8bc1599f61792"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBK2K-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d86427fd8cf9e015cd30834da31ed73e3ef69d8c",
+      "size": 94485,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d86427fd8cf9e015cd30834da31ed73e3ef69d8c"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBK2K-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ffe1093b77112a2eb42c9dc402e53884e6fc96af",
+      "size": 3482,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ffe1093b77112a2eb42c9dc402e53884e6fc96af"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBKp-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "15d15a49ded29b5995738a22d768bbf4af82798c",
+      "size": 83083,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/15d15a49ded29b5995738a22d768bbf4af82798c"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBKp-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9bcb51d848506c2ea49fd1679964ee68d43c79bf",
+      "size": 3095,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/9bcb51d848506c2ea49fd1679964ee68d43c79bf"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBT-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e82b1ef0b5b4eab71f6f23e2f1cc5986b85da87d",
+      "size": 46773,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e82b1ef0b5b4eab71f6f23e2f1cc5986b85da87d"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBT-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0b8c4b0bced6e9887d10387fb8ae3805e84a9f88",
+      "size": 3108,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0b8c4b0bced6e9887d10387fb8ae3805e84a9f88"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBT-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9aa834eb0623a38e3fac7288ca25d134d7fe463c",
+      "size": 46668,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/9aa834eb0623a38e3fac7288ca25d134d7fe463c"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBT-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c0bab3d590df40b841862dcc2eb84859610c3070",
+      "size": 3084,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/c0bab3d590df40b841862dcc2eb84859610c3070"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBTpc-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a5be785960f371ead7dddb79dc6fe4176370cf37",
+      "size": 46803,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a5be785960f371ead7dddb79dc6fe4176370cf37"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBTpc-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bcc5f4713a914977860c668e9e6d7953992d9d8a",
+      "size": 3120,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/bcc5f4713a914977860c668e9e6d7953992d9d8a"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBpc-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "84f0e64a7a566183828e8fb6e7479fef10c9ea75",
+      "size": 4455,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/84f0e64a7a566183828e8fb6e7479fef10c9ea75"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/GBpc-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "851888210989436ace1415082fcd484cb1cfda25",
+      "size": 3112,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/851888210989436ace1415082fcd484cb1cfda25"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/UniGB-UCS2-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c7b40cda0527ed5d990bacceabc13164bf999fa2",
+      "size": 274383,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/c7b40cda0527ed5d990bacceabc13164bf999fa2"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/UniGB-UCS2-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e0f0fb56ed168c035169be8e72fdcc361ef9186d",
+      "size": 3167,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e0f0fb56ed168c035169be8e72fdcc361ef9186d"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/UniGB-UTF16-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e4086cef47ac57512a6bd83ff987e75a400cb50d",
+      "size": 203288,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e4086cef47ac57512a6bd83ff987e75a400cb50d"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/UniGB-UTF16-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "21da97d5fa2f24b0cb9c72aaa50ca295ca6d2762",
+      "size": 3062,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/21da97d5fa2f24b0cb9c72aaa50ca295ca6d2762"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/UniGB-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "75879587b8ba229d2775774bef0c2c20ee02edad",
+      "size": 271244,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/75879587b8ba229d2775774bef0c2c20ee02edad"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/UniGB-UTF32-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a54be464ecf18b2cb5c6994e814f588665223b4f",
+      "size": 3178,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a54be464ecf18b2cb5c6994e814f588665223b4f"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/UniGB-UTF8-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "51cc7afeac122929dd1f339117f719c695d09807",
+      "size": 241183,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/51cc7afeac122929dd1f339117f719c695d09807"
+    },
+    {
+      "path": "Adobe-GB1-6/CMap/UniGB-UTF8-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e2d5f17c57e1d6dda271c60bb1c8d41758f41013",
+      "size": 3116,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e2d5f17c57e1d6dda271c60bb1c8d41758f41013"
+    },
+    {
+      "path": "Adobe-GB1-6/cid2code.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c94c7bf8c94327e8f9d9273511d70843f6b48fb4",
+      "size": 1916850,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/c94c7bf8c94327e8f9d9273511d70843f6b48fb4"
+    },
+    {
+      "path": "Adobe-Identity-0",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "afcbfcd3963e10f79519d9ddf1a62592fe1c26ec",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/afcbfcd3963e10f79519d9ddf1a62592fe1c26ec"
+    },
+    {
+      "path": "Adobe-Identity-0/CMap",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6f72f6305a690fe8839a7e3ca69b7216a88c6d52",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/6f72f6305a690fe8839a7e3ca69b7216a88c6d52"
+    },
+    {
+      "path": "Adobe-Identity-0/CMap/Identity-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7b1860afbb97febf0da743e3561e04a5c93a3c0c",
+      "size": 7820,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7b1860afbb97febf0da743e3561e04a5c93a3c0c"
+    },
+    {
+      "path": "Adobe-Identity-0/CMap/Identity-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dcfe8db4638680c9c311ac2e554c1157b7fd4ada",
+      "size": 2619,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/dcfe8db4638680c9c311ac2e554c1157b7fd4ada"
+    },
+    {
+      "path": "Adobe-Japan1-7",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "c7103d32dff8f39c738a914e7574bfd306fb5857",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/c7103d32dff8f39c738a914e7574bfd306fb5857"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "2f45af99b709196d439c393685e8d309da9200a4",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/2f45af99b709196d439c393685e8d309da9200a4"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/78-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d30c5e8832eeb027cbc5715a0eedea6fe230b24a",
+      "size": 14796,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d30c5e8832eeb027cbc5715a0eedea6fe230b24a"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/78-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "69fe9c26eb688d4651e5d5d939f0ca38d4072e28",
+      "size": 3222,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/69fe9c26eb688d4651e5d5d939f0ca38d4072e28"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/78-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1c7cc2d10bd847a2806a16677d46f741278ea843",
+      "size": 14673,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/1c7cc2d10bd847a2806a16677d46f741278ea843"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/78-RKSJ-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d77d6308b1a3e4b3f65775dcf9f3274ad4b3df96",
+      "size": 14827,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d77d6308b1a3e4b3f65775dcf9f3274ad4b3df96"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/78-RKSJ-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e68ca260312bd53965c407baf39b37a11b1ed49e",
+      "size": 3228,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e68ca260312bd53965c407baf39b37a11b1ed49e"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/78-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "465b79f995a725aedceb1e606104f8badf312e05",
+      "size": 3198,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/465b79f995a725aedceb1e606104f8badf312e05"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/78ms-RKSJ-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ca78cae23fd2f0e7e33bf5e4b28f3b289b126683",
+      "size": 16500,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ca78cae23fd2f0e7e33bf5e4b28f3b289b126683"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/78ms-RKSJ-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "03685c696791e40af7e369dea45fad938c035a79",
+      "size": 4209,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/03685c696791e40af7e369dea45fad938c035a79"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/83pv-RKSJ-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d80b465fa79480caa1e9606fb89716fbc370d1ed",
+      "size": 7080,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d80b465fa79480caa1e9606fb89716fbc370d1ed"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/90ms-RKSJ-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "89c83394e93d6568ba031f349b46fd883e76f755",
+      "size": 6070,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/89c83394e93d6568ba031f349b46fd883e76f755"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/90ms-RKSJ-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eeb6a28a93d970d0d74c7000cc185a117aaaddf0",
+      "size": 4229,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/eeb6a28a93d970d0d74c7000cc185a117aaaddf0"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/90msp-RKSJ-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "158f3f661cc7d0529d21adfbe92bcaaee5f8f756",
+      "size": 6001,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/158f3f661cc7d0529d21adfbe92bcaaee5f8f756"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/90msp-RKSJ-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7081845f4fc2c965debd8906a557a6d772b5c87a",
+      "size": 4212,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7081845f4fc2c965debd8906a557a6d772b5c87a"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/90pv-RKSJ-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0b68fba1392f9b6e5cff078f1642d29bc6a496e7",
+      "size": 7815,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0b68fba1392f9b6e5cff078f1642d29bc6a496e7"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/90pv-RKSJ-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "32b993422ad421f7b22aaed08f19ccc22d2a3e98",
+      "size": 3715,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/32b993422ad421f7b22aaed08f19ccc22d2a3e98"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Add-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a5889e51bebbc7188cc531c86fa1958e4ba73b0e",
+      "size": 14854,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a5889e51bebbc7188cc531c86fa1958e4ba73b0e"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Add-RKSJ-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff0b793bdb63feb6d09e01233cdd87b39f1660c0",
+      "size": 15038,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ff0b793bdb63feb6d09e01233cdd87b39f1660c0"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Add-RKSJ-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "db50cbcbf098a2e4603190d51f41fbc1c69f1008",
+      "size": 3823,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/db50cbcbf098a2e4603190d51f41fbc1c69f1008"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Add-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "053dbff78d0793e80e8dfda5d52a76b03c13b97e",
+      "size": 3793,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/053dbff78d0793e80e8dfda5d52a76b03c13b97e"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Adobe-Japan1-0",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7e172144da548b3dc9c706f9cd44c69f8c51f741",
+      "size": 3341,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7e172144da548b3dc9c706f9cd44c69f8c51f741"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Adobe-Japan1-1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f61f714cce4cd01615f95e67a7f4173fac2b2fb2",
+      "size": 3342,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/f61f714cce4cd01615f95e67a7f4173fac2b2fb2"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Adobe-Japan1-2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d7767f65fcfd31c6f2a3551cf3b8942ef2d9ab72",
+      "size": 3380,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d7767f65fcfd31c6f2a3551cf3b8942ef2d9ab72"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Adobe-Japan1-3",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a5507b65ad1ed355e7c44f41f132b5d27844439c",
+      "size": 3390,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a5507b65ad1ed355e7c44f41f132b5d27844439c"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Adobe-Japan1-4",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f6a4cf813712748a7351bea4919222d300f5b2a6",
+      "size": 3868,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/f6a4cf813712748a7351bea4919222d300f5b2a6"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Adobe-Japan1-5",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e7991319e3b7e7e34bdcd6d554d9501c23f758c4",
+      "size": 4248,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e7991319e3b7e7e34bdcd6d554d9501c23f758c4"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Adobe-Japan1-6",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "38e95eae7a7b595197357a17309bd96b0232deb9",
+      "size": 4468,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/38e95eae7a7b595197357a17309bd96b0232deb9"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Adobe-Japan1-7",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6f195ced13be18738b7dd7ef33d66fd6fab48d23",
+      "size": 4444,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/6f195ced13be18738b7dd7ef33d66fd6fab48d23"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1167675bd41d5fa35bc35dbd02b7483070220b29",
+      "size": 5075,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/1167675bd41d5fa35bc35dbd02b7483070220b29"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b3796b7443f306b81c0b857b6d9d472f3f1faa84",
+      "size": 3223,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/b3796b7443f306b81c0b857b6d9d472f3f1faa84"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Ext-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a67d3409ce7ec59d34ee7bd5aff3e703af5dce84",
+      "size": 15424,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a67d3409ce7ec59d34ee7bd5aff3e703af5dce84"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Ext-RKSJ-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fd6be155157daf82d09189b376fcca7b8facfeca",
+      "size": 15607,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/fd6be155157daf82d09189b376fcca7b8facfeca"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Ext-RKSJ-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "06f2ce07c5ac084b25786fa7d8a4514c1f1e15b5",
+      "size": 3481,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/06f2ce07c5ac084b25786fa7d8a4514c1f1e15b5"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Ext-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dfe6d14face1eb9ad49b05f07403d8c60611eca1",
+      "size": 3451,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/dfe6d14face1eb9ad49b05f07403d8c60611eca1"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f8efc4ed68400d9de0ab017c977b9ff15597fdf1",
+      "size": 4941,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/f8efc4ed68400d9de0ab017c977b9ff15597fdf1"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Hankaku",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "24cfcca3ff60c00add8b12a0d1cf47d03bc0deb9",
+      "size": 2821,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/24cfcca3ff60c00add8b12a0d1cf47d03bc0deb9"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Hiragana",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f4983034846b44c8e6df204857ff37697a05dc64",
+      "size": 2795,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/f4983034846b44c8e6df204857ff37697a05dc64"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Katakana",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7dbaffb7d3293c534070fbcb31794f10bdf74eb1",
+      "size": 2711,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7dbaffb7d3293c534070fbcb31794f10bdf74eb1"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/NWP-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4b8f7eb7d9b1765b18323be8c7aa1c7173b1f7cf",
+      "size": 17298,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/4b8f7eb7d9b1765b18323be8c7aa1c7173b1f7cf"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/NWP-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f44a34082bcf05655b4f4489a3a18b3089973c2c",
+      "size": 3603,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/f44a34082bcf05655b4f4489a3a18b3089973c2c"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/RKSJ-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "46fd6237fd77d10bdf6925654253e4ab3e4b3950",
+      "size": 5124,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/46fd6237fd77d10bdf6925654253e4ab3e4b3950"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/RKSJ-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7740b49416eb6b590a275fd67a3b80a7cfc22a60",
+      "size": 3229,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7740b49416eb6b590a275fd67a3b80a7cfc22a60"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/Roman",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "74eb81051b0a6af02c0585dcb2ddbf2b3f5fd234",
+      "size": 2688,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/74eb81051b0a6af02c0585dcb2ddbf2b3f5fd234"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UCS2-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bf5331822801a655b922e0efaf786e1250b4216d",
+      "size": 168597,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/bf5331822801a655b922e0efaf786e1250b4216d"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UCS2-HW-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ab516ed8a851126f4332608f19327bdc418fd8b8",
+      "size": 2820,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ab516ed8a851126f4332608f19327bdc418fd8b8"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UCS2-HW-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "311d584a1c207bd63e0967a8068590f98b72e896",
+      "size": 6591,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/311d584a1c207bd63e0967a8068590f98b72e896"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UCS2-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ade3d475e827114ca79d12640ada7bb48693a19",
+      "size": 6509,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7ade3d475e827114ca79d12640ada7bb48693a19"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UTF16-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "11b725a80d6bf0aef98378558d83bd74df30dd4c",
+      "size": 188225,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/11b725a80d6bf0aef98378558d83bd74df30dd4c"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UTF16-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f18f11e82efd487e3115f92eb70da35da947d256",
+      "size": 5806,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/f18f11e82efd487e3115f92eb70da35da947d256"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bdf61a04a29c82dec4c5e0945758ddbe0686dfa9",
+      "size": 245445,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/bdf61a04a29c82dec4c5e0945758ddbe0686dfa9"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UTF32-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e9a3b9eed686719fd116ec626f1908c613484948",
+      "size": 6838,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e9a3b9eed686719fd116ec626f1908c613484948"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UTF8-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "82ed8d1e664a2a3d974630533d206381e94f91f3",
+      "size": 216459,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/82ed8d1e664a2a3d974630533d206381e94f91f3"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS-UTF8-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5e673f2303834f1b4e20891ecaff9c1fedc5b33b",
+      "size": 6331,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/5e673f2303834f1b4e20891ecaff9c1fedc5b33b"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS2004-UTF16-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "296c2ab8d609a9a9b9025277c350f4763533734d",
+      "size": 188305,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/296c2ab8d609a9a9b9025277c350f4763533734d"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS2004-UTF16-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "441af72004ffaa37064c77ce254113a8f9bc4c2a",
+      "size": 5830,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/441af72004ffaa37064c77ce254113a8f9bc4c2a"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS2004-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "723328206a8d9a875c39c24ace32bcc649b38ea0",
+      "size": 245525,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/723328206a8d9a875c39c24ace32bcc649b38ea0"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS2004-UTF32-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ca945368992d110ed7d8637fd26ae3a4e3f5bcd0",
+      "size": 6862,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ca945368992d110ed7d8637fd26ae3a4e3f5bcd0"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS2004-UTF8-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0169f03647f0a81ec6e7cb44c971665d90f97158",
+      "size": 216537,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0169f03647f0a81ec6e7cb44c971665d90f97158"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJIS2004-UTF8-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c4f75c08a05edf94ceb73d917714ed29d61a1f93",
+      "size": 6353,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/c4f75c08a05edf94ceb73d917714ed29d61a1f93"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJISPro-UCS2-HW-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bb4b1208814e9829481d1b33b1b179c80ee3c5d1",
+      "size": 6729,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/bb4b1208814e9829481d1b33b1b179c80ee3c5d1"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJISPro-UCS2-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "59d2d3d2fa01c0227b80989190490762a42bfe15",
+      "size": 6618,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/59d2d3d2fa01c0227b80989190490762a42bfe15"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJISPro-UTF8-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "654601bcfd62c5c007dbb386b75708cbcb211a06",
+      "size": 7467,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/654601bcfd62c5c007dbb386b75708cbcb211a06"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJISX0213-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ebe76f629d11bb0dcc0f0a6463d0d2e0cff6f611",
+      "size": 245434,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ebe76f629d11bb0dcc0f0a6463d0d2e0cff6f611"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJISX0213-UTF32-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a7b8d41a6a379f6ac528afc80d833642bc690376",
+      "size": 6804,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a7b8d41a6a379f6ac528afc80d833642bc690376"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJISX02132004-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "069d6991ea4171349d79f701a04c6e761304a79c",
+      "size": 245515,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/069d6991ea4171349d79f701a04c6e761304a79c"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/UniJISX02132004-UTF32-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bf6f0a7caa8349372255eb9dbe7765a883d62dde",
+      "size": 6828,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/bf6f0a7caa8349372255eb9dbe7765a883d62dde"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e508e19ecf70faf17b5da0bfeec5b49b6dd38cbf",
+      "size": 3199,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e508e19ecf70faf17b5da0bfeec5b49b6dd38cbf"
+    },
+    {
+      "path": "Adobe-Japan1-7/CMap/WP-Symbol",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a450c2ad0ee4ee935b6f11b7c5d3703094629d76",
+      "size": 3093,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a450c2ad0ee4ee935b6f11b7c5d3703094629d76"
+    },
+    {
+      "path": "Adobe-Japan1-7/cid2code.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4aead36837dae76e1f45c6028702dfde47780bc2",
+      "size": 2691597,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/4aead36837dae76e1f45c6028702dfde47780bc2"
+    },
+    {
+      "path": "Adobe-Japan1-7/jisx0208-jp04.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a117ac7d2eeefe26e2b23571912ed8a4edf3b5e1",
+      "size": 276521,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a117ac7d2eeefe26e2b23571912ed8a4edf3b5e1"
+    },
+    {
+      "path": "Adobe-Japan1-7/jisx0208-jp90.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f646040fc89be801f8bfd4728318bc294f704126",
+      "size": 275171,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/f646040fc89be801f8bfd4728318bc294f704126"
+    },
+    {
+      "path": "Adobe-Japan1-7/jisx0212-jp04.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0ca2b036fa7f99d3990c9eb4b707eb9d6cb051a8",
+      "size": 236025,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0ca2b036fa7f99d3990c9eb4b707eb9d6cb051a8"
+    },
+    {
+      "path": "Adobe-Japan1-7/jisx0212-jp90.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "36b0113ec45775592c5e8be245d212910de0dda4",
+      "size": 235852,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/36b0113ec45775592c5e8be245d212910de0dda4"
+    },
+    {
+      "path": "Adobe-Japan1-7/jisx0213-jp04.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2982e20eeb93353ccc236e1f1a216790bb8f0943",
+      "size": 184615,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/2982e20eeb93353ccc236e1f1a216790bb8f0943"
+    },
+    {
+      "path": "Adobe-Japan1-7/jisx0213-jp90.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e9a8b8661bc77cb3707d0895727eb6c340c7d123",
+      "size": 184705,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e9a8b8661bc77cb3707d0895727eb6c340c7d123"
+    },
+    {
+      "path": "Adobe-KR-9",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "0653ef30c6aeef0bf080851df862f7846d43f87a",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/0653ef30c6aeef0bf080851df862f7846d43f87a"
+    },
+    {
+      "path": "Adobe-KR-9/CMap",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ff263bee1bee9f3c6a46c8e6ed3f501ad0fa2440",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/ff263bee1bee9f3c6a46c8e6ed3f501ad0fa2440"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-0",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e87bc485e0587addee08b1ced23f5fc5465110a5",
+      "size": 2879,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e87bc485e0587addee08b1ced23f5fc5465110a5"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "210a09224ed51f9c172aaaf6614173b16190f79b",
+      "size": 3012,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/210a09224ed51f9c172aaaf6614173b16190f79b"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6d6ee62aed11e7bc607871b9f7b72434c576a831",
+      "size": 3512,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/6d6ee62aed11e7bc607871b9f7b72434c576a831"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-3",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "75503388388d9f4f48c2a475b98555ffffc0335b",
+      "size": 3532,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/75503388388d9f4f48c2a475b98555ffffc0335b"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-4",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b16a34168049afe7b86f416c8ca826f77b790cf4",
+      "size": 3552,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/b16a34168049afe7b86f416c8ca826f77b790cf4"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-5",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "abd3b546f7e815e0431eaeb7bca6f2c793cb0d38",
+      "size": 3572,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/abd3b546f7e815e0431eaeb7bca6f2c793cb0d38"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-6",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cde3707f562c88bfc3f4b6e07b1afa121fec5a71",
+      "size": 3732,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/cde3707f562c88bfc3f4b6e07b1afa121fec5a71"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-7",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "654c5443c861e1f9c9fa0966d6beedb993df8d1a",
+      "size": 4092,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/654c5443c861e1f9c9fa0966d6beedb993df8d1a"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-8",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8c80219e66deb00a3ccb445b99f59cfe40e19392",
+      "size": 4372,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/8c80219e66deb00a3ccb445b99f59cfe40e19392"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/Adobe-KR-9",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7f1f9a499a737b32f21152c20205032093328739",
+      "size": 4412,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7f1f9a499a737b32f21152c20205032093328739"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/UniAKR-UTF16-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7f0904446ce2b16855e08f8bfe5752470923550e",
+      "size": 186571,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7f0904446ce2b16855e08f8bfe5752470923550e"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/UniAKR-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "82b117b4f1846a88dc2cbb0364b8f5f643a53d4f",
+      "size": 250512,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/82b117b4f1846a88dc2cbb0364b8f5f643a53d4f"
+    },
+    {
+      "path": "Adobe-KR-9/CMap/UniAKR-UTF8-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0853d1182d2302b1b8a1f890ecff0a716de9df09",
+      "size": 220026,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0853d1182d2302b1b8a1f890ecff0a716de9df09"
+    },
+    {
+      "path": "Adobe-KR-9/cid2code.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7213ca0ad874241c0f11c82c42cd8fe7a56da8a9",
+      "size": 592367,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/7213ca0ad874241c0f11c82c42cd8fe7a56da8a9"
+    },
+    {
+      "path": "Adobe-Korea1-2",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "c5cb8a7f52281dad59767a9517acd40c31b24e38",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/c5cb8a7f52281dad59767a9517acd40c31b24e38"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "013ead232fd6c74762669def73d52abef647dfc0",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/013ead232fd6c74762669def73d52abef647dfc0"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/Adobe-Korea1-0",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "903ef2fe13e5480fad45828130e08146b06b7025",
+      "size": 3433,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/903ef2fe13e5480fad45828130e08146b06b7025"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/Adobe-Korea1-1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e6f3bba58f85de84ad05af9a64f3b598452f7d2f",
+      "size": 4089,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e6f3bba58f85de84ad05af9a64f3b598452f7d2f"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/Adobe-Korea1-2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "26c8ff78e06ac23862fb841becef6d60c462a2b6",
+      "size": 4088,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/26c8ff78e06ac23862fb841becef6d60c462a2b6"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSC-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1b877a902a8d40c683c730102258a70ca548247d",
+      "size": 11728,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/1b877a902a8d40c683c730102258a70ca548247d"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSC-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "46b28ed5d57068c733839c4a61fd07d835f0017f",
+      "size": 3036,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/46b28ed5d57068c733839c4a61fd07d835f0017f"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d7c42cddc29b8888d7e9e95685bc3b4aebd3b786",
+      "size": 11637,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d7c42cddc29b8888d7e9e95685bc3b4aebd3b786"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSC-Johab-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a08cc92b2288dbb715ae1d4da7253e099194b389",
+      "size": 84250,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a08cc92b2288dbb715ae1d4da7253e099194b389"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSC-Johab-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6245a72b819abfd1da1f2040fca1c17e93770e08",
+      "size": 3050,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/6245a72b819abfd1da1f2040fca1c17e93770e08"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b0ee2ba209d7123bed8ae9af68a4ff46257f90d0",
+      "size": 3012,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/b0ee2ba209d7123bed8ae9af68a4ff46257f90d0"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSCms-UHC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "84dbbdc3cb433d9fb8ab0169c8bc8b08c05c49fe",
+      "size": 15940,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/84dbbdc3cb433d9fb8ab0169c8bc8b08c05c49fe"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSCms-UHC-HW-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6e89d5bd3672ec0104a14f98a653142e4decce07",
+      "size": 15936,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/6e89d5bd3672ec0104a14f98a653142e4decce07"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSCms-UHC-HW-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "32f182f71dd824b9b00b93910ae7f4d536408cfb",
+      "size": 3049,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/32f182f71dd824b9b00b93910ae7f4d536408cfb"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSCms-UHC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8939350e036f64f861a50283c8db4afaedba6003",
+      "size": 3050,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/8939350e036f64f861a50283c8db4afaedba6003"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSCpc-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a5aae5a37a3359954e09d1effee1e9ccafd7d96b",
+      "size": 12555,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a5aae5a37a3359954e09d1effee1e9ccafd7d96b"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/KSCpc-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c9615a341e09bf193af8307f9cbbba2008d07972",
+      "size": 3048,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/c9615a341e09bf193af8307f9cbbba2008d07972"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/UniKS-UCS2-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a7f64bd7c8e01039795a8d7eac11d90ad8500cf7",
+      "size": 166009,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/a7f64bd7c8e01039795a8d7eac11d90ad8500cf7"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/UniKS-UCS2-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4ecc9df8bec428f27eab46a7f0aa3a3b4101ff14",
+      "size": 3076,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/4ecc9df8bec428f27eab46a7f0aa3a3b4101ff14"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/UniKS-UTF16-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "61cab822075091ad36ed7abc975416bc8c408d3f",
+      "size": 122938,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/61cab822075091ad36ed7abc975416bc8c408d3f"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/UniKS-UTF16-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "049fd21f02ab5eb253a3d3e594729eb4f396ebac",
+      "size": 3030,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/049fd21f02ab5eb253a3d3e594729eb4f396ebac"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/UniKS-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4f6c419826124b8b950cb39304e0a56cebc7a1b0",
+      "size": 165010,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/4f6c419826124b8b950cb39304e0a56cebc7a1b0"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/UniKS-UTF32-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fe2fd2c28bce5892ce18330372be678f3588368e",
+      "size": 3130,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/fe2fd2c28bce5892ce18330372be678f3588368e"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/UniKS-UTF8-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "148162cdc5ae02edf172f5b25e744f507f0bbd48",
+      "size": 145845,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/148162cdc5ae02edf172f5b25e744f507f0bbd48"
+    },
+    {
+      "path": "Adobe-Korea1-2/CMap/UniKS-UTF8-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e06985999662b52e67b48601581e671b4c447153",
+      "size": 3076,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e06985999662b52e67b48601581e671b4c447153"
+    },
+    {
+      "path": "Adobe-Korea1-2/cid2code.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0b5db6b5f5c362233447aea9a85912417c68df9b",
+      "size": 1028307,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0b5db6b5f5c362233447aea9a85912417c68df9b"
+    },
+    {
+      "path": "Adobe-Manga1-0",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "4eee425c2ac07e520d4fc00b3f53fea5eb232ba8",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/4eee425c2ac07e520d4fc00b3f53fea5eb232ba8"
+    },
+    {
+      "path": "Adobe-Manga1-0/CMap",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1728919d9cc780ae2b7b961553715e051c2fda16",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/1728919d9cc780ae2b7b961553715e051c2fda16"
+    },
+    {
+      "path": "Adobe-Manga1-0/CMap/Adobe-Manga1-0",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "23ff5487a5a6618b00d1071324cc5d08cbed6162",
+      "size": 4046,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/23ff5487a5a6618b00d1071324cc5d08cbed6162"
+    },
+    {
+      "path": "Adobe-Manga1-0/CMap/UniManga-UTF16-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "904429bcff53a799df827eacde5dcbdeed28831e",
+      "size": 95348,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/904429bcff53a799df827eacde5dcbdeed28831e"
+    },
+    {
+      "path": "Adobe-Manga1-0/CMap/UniManga-UTF16-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d6d9d3b721f79e1e0870405dd364c40e59f0e335",
+      "size": 2852,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/d6d9d3b721f79e1e0870405dd364c40e59f0e335"
+    },
+    {
+      "path": "Adobe-Manga1-0/CMap/UniManga-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "94bbd6f34e79d00af10dd3dcdc246cda7c4c3fc9",
+      "size": 127172,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/94bbd6f34e79d00af10dd3dcdc246cda7c4c3fc9"
+    },
+    {
+      "path": "Adobe-Manga1-0/CMap/UniManga-UTF32-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "427bd4e301ef727e5326276ff6b29b51eb5312de",
+      "size": 2888,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/427bd4e301ef727e5326276ff6b29b51eb5312de"
+    },
+    {
+      "path": "Adobe-Manga1-0/CMap/UniManga-UTF8-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0b6bb975509219b937c1df013b0af544a0ae7c56",
+      "size": 113463,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0b6bb975509219b937c1df013b0af544a0ae7c56"
+    },
+    {
+      "path": "Adobe-Manga1-0/CMap/UniManga-UTF8-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dcb9b190d648634832b0c80be31ea0b85e219298",
+      "size": 2888,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/dcb9b190d648634832b0c80be31ea0b85e219298"
+    },
+    {
+      "path": "Adobe-Manga1-0/cid2code.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b21aef587deac8e1f9fb4c8a2b76f773469b7250",
+      "size": 460420,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/b21aef587deac8e1f9fb4c8a2b76f773469b7250"
+    },
+    {
+      "path": "LICENSE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2552cc990c12f85cdc50ef3c5185061a8c64e326",
+      "size": 1453,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/2552cc990c12f85cdc50ef3c5185061a8c64e326"
+    },
+    {
+      "path": "Makefile",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f42e713c21c95189a72c842a175a552526f6268",
+      "size": 5113,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/8f42e713c21c95189a72c842a175a552526f6268"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "780099f159614e76e620a376363cefe49cc1359e",
+      "size": 22353,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/780099f159614e76e620a376363cefe49cc1359e"
+    },
+    {
+      "path": "VERSIONS.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "34d0ce4e392e690d47fda73856b320ee6108c691",
+      "size": 6720,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/34d0ce4e392e690d47fda73856b320ee6108c691"
+    },
+    {
+      "path": "deprecated",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ccec471f3000396eb43276df74368d78ef9a399d",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/ccec471f3000396eb43276df74368d78ef9a399d"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "5cca20eb3726e907202015ef933238ee769fa450",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/5cca20eb3726e907202015ef933238ee769fa450"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "116a6c291447d0abcd73e8cfcac87e673fad7c45",
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/trees/116a6c291447d0abcd73e8cfcac87e673fad7c45"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/Adobe-Japan2-0",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b4abbe49ec37b2d446993a1be95671cbf2f7cf0b",
+      "size": 3168,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/b4abbe49ec37b2d446993a1be95671cbf2f7cf0b"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/Hojo-EUC-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4d33c8dec14ff765d6a83147c596c1b2f672d604",
+      "size": 4626,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/4d33c8dec14ff765d6a83147c596c1b2f672d604"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/Hojo-EUC-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "223e544d2706c5d95751c55b1afe5420ca8d25ed",
+      "size": 2709,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/223e544d2706c5d95751c55b1afe5420ca8d25ed"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/Hojo-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "35490e0858b9a4f826d80ecab5b00a494cff8bab",
+      "size": 4276,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/35490e0858b9a4f826d80ecab5b00a494cff8bab"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/Hojo-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0e3414499068f964bbc9f4e94040a30aa89b46dd",
+      "size": 2685,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0e3414499068f964bbc9f4e94040a30aa89b46dd"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/UniHojo-UCS2-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ca77057fb2e740885acd60c0b5176f3942e53aa4",
+      "size": 83592,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ca77057fb2e740885acd60c0b5176f3942e53aa4"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/UniHojo-UCS2-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b82548d55002987bcf24feccc47f9b6865f1195d",
+      "size": 2714,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/b82548d55002987bcf24feccc47f9b6865f1195d"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/UniHojo-UTF16-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "87ff21bc045019fae7baec05378cb9e23f8902d8",
+      "size": 62948,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/87ff21bc045019fae7baec05378cb9e23f8902d8"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/UniHojo-UTF16-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ba7d520d5165d0c1f834f603af9ae507ad0681cc",
+      "size": 2720,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/ba7d520d5165d0c1f834f603af9ae507ad0681cc"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/UniHojo-UTF32-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9685b63258a6931a68bdb9931126f65c908401e8",
+      "size": 84821,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/9685b63258a6931a68bdb9931126f65c908401e8"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/UniHojo-UTF32-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1b9959ec5afc61bcab07b5ba51b9f68bf6981ce7",
+      "size": 2720,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/1b9959ec5afc61bcab07b5ba51b9f68bf6981ce7"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/UniHojo-UTF8-H",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e92a0fc7ec3005993bd15260beae80c33c250f91",
+      "size": 73701,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/e92a0fc7ec3005993bd15260beae80c33c250f91"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/CMap/UniHojo-UTF8-V",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1d31b182e6cd26afaaf1c4d14d6de945e5b5ac06",
+      "size": 2716,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/1d31b182e6cd26afaaf1c4d14d6de945e5b5ac06"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/cid2code.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4377e567e47530ab3b4186344a3e3be88f9d170d",
+      "size": 262649,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/4377e567e47530ab3b4186344a3e3be88f9d170d"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/jisx0212-jp04.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0ca2b036fa7f99d3990c9eb4b707eb9d6cb051a8",
+      "size": 236025,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/0ca2b036fa7f99d3990c9eb4b707eb9d6cb051a8"
+    },
+    {
+      "path": "deprecated/Adobe-Japan2-0/jisx0212-jp90.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "36b0113ec45775592c5e8be245d212910de0dda4",
+      "size": 235852,
+      "url": "https://api.github.com/repos/adobe-type-tools/cmap-resources/git/blobs/36b0113ec45775592c5e8be245d212910de0dda4"
+    }
+  ],
+  "truncated": false
+}

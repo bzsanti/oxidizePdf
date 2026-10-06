@@ -1,0 +1,27 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.12s
+     Running tests/text_cid_collection_policy_contract_test.rs (target/debug/deps/text_cid_collection_policy_contract_test-f30f06a374652993)
+
+running 4 tests
+test embedded_dictionary_metadata_must_not_authorize_another_collection ... FAILED
+test cumulative_supplements_do_not_require_equality_or_invent_a_new_collection ... ok
+test named_gb1_cmap_cannot_decode_cids_through_a_different_collection ... ok
+test invalid_explicit_supplement_does_not_certify_collection_unicode ... ok
+
+failures:
+
+---- embedded_dictionary_metadata_must_not_authorize_another_collection stdout ----
+
+thread 'embedded_dictionary_metadata_must_not_authorize_another_collection' (413) panicked at oxidize-pdf-core/tests/text_cid_collection_policy_contract_test.rs:106:13:
+assertion `left == right` failed: /CIDSystemInfo << /Registry (Adobe) /Ordering (Japan1) /Supplement 0 >> 
+  left: "啊"
+ right: "�"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    embedded_dictionary_metadata_must_not_authorize_another_collection
+
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cid_collection_policy_contract_test`

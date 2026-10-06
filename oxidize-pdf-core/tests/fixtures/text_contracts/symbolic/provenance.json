@@ -1,0 +1,257 @@
+{
+  "tool": "FontTools 4.60.1",
+  "license": "Original project fixtures; repository MIT license",
+  "programs": [
+    {
+      "name": "ContractTTSymbol",
+      "profile": "symbol",
+      "subset": false,
+      "symbolic": true,
+      "platform_id": 3,
+      "encoding_id": 0,
+      "format": 4,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B",
+        "C"
+      ],
+      "mapping": {
+        "61472": 1,
+        "61505": 3,
+        "61506": 2,
+        "61507": 4
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700,
+        600
+      ],
+      "file": "symbol-full.ttf"
+    },
+    {
+      "name": "ABCDEF+ContractTTSymbol",
+      "profile": "symbol",
+      "subset": true,
+      "symbolic": true,
+      "platform_id": 3,
+      "encoding_id": 0,
+      "format": 4,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B"
+      ],
+      "mapping": {
+        "61472": 1,
+        "61505": 3,
+        "61506": 2
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700
+      ],
+      "file": "symbol-subset.ttf"
+    },
+    {
+      "name": "ContractTTMac",
+      "profile": "mac",
+      "subset": false,
+      "symbolic": true,
+      "platform_id": 1,
+      "encoding_id": 0,
+      "format": 0,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B",
+        "C"
+      ],
+      "mapping": {
+        "32": 1,
+        "65": 3,
+        "66": 2,
+        "67": 4
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700,
+        600
+      ],
+      "file": "mac-full.ttf"
+    },
+    {
+      "name": "ABCDEF+ContractTTMac",
+      "profile": "mac",
+      "subset": true,
+      "symbolic": true,
+      "platform_id": 1,
+      "encoding_id": 0,
+      "format": 0,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B"
+      ],
+      "mapping": {
+        "32": 1,
+        "65": 3,
+        "66": 2
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700
+      ],
+      "file": "mac-subset.ttf"
+    },
+    {
+      "name": "ContractTTUnicode",
+      "profile": "unicode",
+      "subset": false,
+      "symbolic": false,
+      "platform_id": 3,
+      "encoding_id": 1,
+      "format": 4,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B",
+        "C"
+      ],
+      "mapping": {
+        "32": 1,
+        "65": 2,
+        "66": 3,
+        "67": 4
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700,
+        600
+      ],
+      "file": "unicode-full.ttf"
+    },
+    {
+      "name": "ABCDEF+ContractTTUnicode",
+      "profile": "unicode",
+      "subset": true,
+      "symbolic": false,
+      "platform_id": 3,
+      "encoding_id": 1,
+      "format": 4,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B"
+      ],
+      "mapping": {
+        "32": 1,
+        "65": 2,
+        "66": 3
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700
+      ],
+      "file": "unicode-subset.ttf"
+    },
+    {
+      "name": "ContractTTUcs4",
+      "profile": "ucs4",
+      "subset": false,
+      "symbolic": false,
+      "platform_id": 3,
+      "encoding_id": 10,
+      "format": 12,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B",
+        "C"
+      ],
+      "mapping": {
+        "32": 1,
+        "65": 2,
+        "66": 3,
+        "128512": 4
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700,
+        600
+      ],
+      "file": "ucs4-full.ttf"
+    },
+    {
+      "name": "ABCDEF+ContractTTUcs4",
+      "profile": "ucs4",
+      "subset": true,
+      "symbolic": false,
+      "platform_id": 3,
+      "encoding_id": 10,
+      "format": 12,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B"
+      ],
+      "mapping": {
+        "32": 1,
+        "65": 2,
+        "66": 3
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700
+      ],
+      "file": "ucs4-subset.ttf"
+    }
+  ],
+  "sha256": {
+    "symbol-full.ttf": "89cfcb6cfe2512c64b238bfa8c56816d9a524abc691f20cbf43a1805e076c93d",
+    "symbol-full-unicode.pdf": "7ef30552bf44cccab8b15ee023054547614ca4a6315611b68a5be3fc59c8f21a",
+    "symbol-subset.ttf": "c78bc7d362120d85846646aa682a16a13c7e6a166ebaa49f054b159dd376d215",
+    "symbol-subset-unicode.pdf": "ad323322cf5c75af770604a5de63c6247f19ec0f551bb82c7433c0a97a0175dd",
+    "mac-full.ttf": "f9233fe0269ad7154180989be064b82740d3be5845bd6b590ef702529f35b4e3",
+    "mac-full-unicode.pdf": "8a31139d8c59f24aefac2825bbbe8500ed56156d83fce729f4093b5386ce9308",
+    "mac-subset.ttf": "5ed0ef5c4c2218dd9c72da04e881839628b8f1d87cee4fc3cd5046aaeb6bdd68",
+    "mac-subset-unicode.pdf": "a41175d8f79057b6279bbda85e2205b34104648fbf2dff486b545d56a3a3ab18",
+    "unicode-full.ttf": "1848b71aed85eb5801c7859b04ae8d05b2dafea45ef8eccafcafebf897ee6d0c",
+    "unicode-full-winansi.pdf": "bb7b07e426ba84f2e4da836a66b1073b9f6c8e8404aa652a8c73fc225b61c7e4",
+    "unicode-full-unicode.pdf": "bf11ef352f841efdbaae0c08efe4f9d8fe3d45da9b765e166480af3a0dce752f",
+    "unicode-subset.ttf": "390d0ab7d7f6babf1ef87f75184ca17ac90543e191d755e2042c3495e21a5042",
+    "unicode-subset-winansi.pdf": "6e57de988d2621e8a3d77198128eabc585b351882a29ad9733fb713f1efbbbf7",
+    "unicode-subset-unicode.pdf": "1661a655cda9a1502518bee0a0bdfa950c52a42bff3b0e7a1249dbd3bd893fb9",
+    "ucs4-full.ttf": "5deba1d84f926173c111250768028e352fdc725f16c4c75b638beed977fa7f37",
+    "ucs4-full-winansi.pdf": "bb2cf053d2fb7b38565a474ed7fd23eec26dcb701550f56ff9c20d40db500f1f",
+    "ucs4-full-unicode.pdf": "54ead15b7e07c4bde821ad6fdd61bd6cc42a65499c772b1b4b1553717f489aca",
+    "ucs4-subset.ttf": "e9bf97c6124767458baadfecae3caa2d3ecb568f12970024605bf2c8d143f7df",
+    "ucs4-subset-winansi.pdf": "23bbbf7bc4794b261184a6b70f099d8dc16d5afbff37669e3fdd8002510c2854",
+    "ucs4-subset-unicode.pdf": "1a79a90bdd8614f79ae273f727fafa5a4f62954f72aa17fe8a899f02f23def62"
+  },
+  "scope": "Real glyf programs and formats 0/4/12; symbolic Unicode without ToUnicode intentionally not inferred."
+}

@@ -1,0 +1,45 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.77s
+     Running tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-8b823f1d04deae6c)
+
+running 24 tests
+test builtin_decoding_preserves_afm_widths_and_following_origins ... ok
+test builtin_font_selection_does_not_match_unrelated_names_or_type3 ... ok
+test builtin_symbol_subset_names_and_explicit_tounicode_are_distinct ... ok
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test builtin_symbol_and_zapf_keep_encoding_and_differences_precedence ... ok
+test differences_restart_the_code_counter_and_preserve_unmodified_codes ... ok
+test custom_type3_names_preserve_unknown_markers_and_mapping_precedence ... ok
+test differences_override_the_base_encoding ... ok
+test macroman_overrides_cover_undefined_and_currency_codes ... ok
+test tounicode_overrides_builtin_symbol_and_dingbats ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test unknown_intrinsic_type1_names_preserve_markers_and_explicit_unicode ... ok
+test unresolved_differences_replace_instead_of_restoring_the_base_glyph ... ok
+test macroman_undefined_codes_preserve_neighbors_with_replacement ... ok
+test zapf_differences_resolve_adobe_names_before_builtin_codes ... ok
+test standard_encoding_matches_independent_table ... ok
+test macroman_encoding_matches_independent_table ... ok
+test symbol_builtin_encoding_matches_independent_table ... ok
+test zapfdingbats_builtin_encoding_matches_independent_table ... ok
+test winansi_encoding_matches_independent_table ... ok
+test all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding ... ok
+test simple_encoding_undefined_codes_recover_without_losing_neighbors ... ok
+test latin_standard14_fonts_use_complete_explicit_pdf_encodings_in_both_modes ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.32s
+
+     Running tests/text_unicode_policy_contract_test.rs (target/debug/deps/text_unicode_policy_contract_test-e891f611c11033b0)
+
+running 7 tests
+test zapf_components_use_font_specific_names_in_both_consumers ... ok
+test incomplete_tounicode_does_not_invent_a_base_mapping ... ok
+test agl_components_suffixes_and_scalar_boundaries_follow_independent_examples ... ok
+test differences_sequences_reach_both_consumers_without_multiplying_advances ... ok
+test valid_utf16_sequences_preserve_precedence_and_scalar_content ... ok
+test malformed_tounicode_destinations_never_become_utf8_or_base_text ... ok
+test unknown_difference_replaces_base_in_all_simple_subtypes ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

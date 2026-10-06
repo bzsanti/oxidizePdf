@@ -1,0 +1,15 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.08s
+     Running tests/text_standard14_metrics_contract_test.rs (target/debug/deps/text_standard14_metrics_contract_test-77fe3bfd266fac8a)
+
+running 7 tests
+test symbol_and_zapf_select_builtin_glyphs_and_metrics ... ok
+test helvetica_styles_follow_adobe_implicit_metrics ... ok
+test courier_styles_follow_adobe_monospaced_metrics ... ok
+test times_styles_follow_adobe_implicit_metrics ... ok
+test declared_widths_override_implicit_metrics_for_all_fourteen_fonts ... ok
+test frozen_afm_sources_license_and_pdfs_are_unchanged ... ok
+test every_font_pair_and_return_transition_selects_the_current_metrics ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+

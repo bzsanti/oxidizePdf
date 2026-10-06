@@ -1,0 +1,18 @@
+test_cid_ranges_keep_byte_length_and_increment_destination (test_generate_text_cjk_oracles.SourceParserTests.test_cid_ranges_keep_byte_length_and_increment_destination) ... ok
+test_cycles_are_rejected (test_generate_text_cjk_oracles.SourceParserTests.test_cycles_are_rejected) ... ok
+test_missing_rows_and_unsupported_syntax_fail_closed (test_generate_text_cjk_oracles.SourceParserTests.test_missing_rows_and_unsupported_syntax_fail_closed) ... ok
+test_utf16_sequences_surrogates_and_ranges_are_not_normalized (test_generate_text_cjk_oracles.SourceParserTests.test_utf16_sequences_surrogates_and_ranges_are_not_normalized) ... ok
+test_vertical_child_overrides_parent_and_keeps_inherited_codes (test_generate_text_cjk_oracles.SourceParserTests.test_vertical_child_overrides_parent_and_keeps_inherited_codes) ... ok
+test_current_manifest_matches_the_agreed_plan (test_text_contract_coverage.CoverageTraceability.test_current_manifest_matches_the_agreed_plan) ... ok
+test_deleted_row_is_detected_against_plan (test_text_contract_coverage.CoverageTraceability.test_deleted_row_is_detected_against_plan) ... ok
+test_duplicate_row_is_rejected_even_with_all_ids_present (test_text_contract_coverage.CoverageTraceability.test_duplicate_row_is_rejected_even_with_all_ids_present) ... ok
+test_invented_test_target_is_rejected (test_text_contract_coverage.CoverageTraceability.test_invented_test_target_is_rejected) ... ok
+test_missing_oracle_or_closure_is_not_traceable (test_text_contract_coverage.CoverageTraceability.test_missing_oracle_or_closure_is_not_traceable) ... ok
+test_partial_row_cannot_hide_remaining_work (test_text_contract_coverage.CoverageTraceability.test_partial_row_cannot_hide_remaining_work) ... ok
+test_plan_path_cannot_escape_repository (test_text_contract_coverage.CoverageTraceability.test_plan_path_cannot_escape_repository) ... ok
+test_target_path_cannot_escape_the_test_directory (test_text_contract_coverage.CoverageTraceability.test_target_path_cannot_escape_the_test_directory) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.043s
+
+OK

@@ -1,0 +1,53 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 10 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_usecmap_contract_test.rs             10     91
+
+--- Worst Offenders ---
+  flat_maps_are_the_control (oxidize-pdf-core/tests/text_usecmap_contract_test.rs:64) - Score: 90
+    - Test 'flat_maps_are_the_control' does not call any production code
+  encoding_inherits_parent_codespace_and_cids (oxidize-pdf-core/tests/text_usecmap_contract_test.rs:68) - Score: 90
+    - Test 'encoding_inherits_parent_codespace_and_cids' does not call any production code
+  child_cid_mapping_overrides_parent_width_selection (oxidize-pdf-core/tests/text_usecmap_contract_test.rs:72) - Score: 90
+    - Test 'child_cid_mapping_overrides_parent_width_selection' does not call any production code
+  tounicode_inherits_parent_mapping (oxidize-pdf-core/tests/text_usecmap_contract_test.rs:76) - Score: 90
+    - Test 'tounicode_inherits_parent_mapping' does not call any production code
+  child_unicode_overrides_one_code_and_inherits_the_other (oxidize-pdf-core/tests/text_usecmap_contract_test.rs:80) - Score: 90
+    - Test 'child_unicode_overrides_one_code_and_inherits_the_other' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_usecmap_contract_test.rs:
+  flat_maps_are_the_control (line 64) - Score: 90
+    - Test 'flat_maps_are_the_control' does not call any production code
+  encoding_inherits_parent_codespace_and_cids (line 68) - Score: 90
+    - Test 'encoding_inherits_parent_codespace_and_cids' does not call any production code
+  child_cid_mapping_overrides_parent_width_selection (line 72) - Score: 90
+    - Test 'child_cid_mapping_overrides_parent_width_selection' does not call any production code
+  tounicode_inherits_parent_mapping (line 76) - Score: 90
+    - Test 'tounicode_inherits_parent_mapping' does not call any production code
+  child_unicode_overrides_one_code_and_inherits_the_other (line 80) - Score: 90
+    - Test 'child_unicode_overrides_one_code_and_inherits_the_other' does not call any production code
+  both_maps_follow_two_parent_levels (line 84) - Score: 90
+    - Test 'both_maps_follow_two_parent_levels' does not call any production code
+  identity_parent_operator_preserves_two_byte_codes_and_cid_widths (line 88) - Score: 90
+    - Test 'identity_parent_operator_preserves_two_byte_codes_and_cid_widths' does not call any production code
+  identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths (line 92) - Score: 90
+    - Test 'identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths' does not call any production code
+  explicit_cid_mapping_precedes_notdef_range (line 96) - Score: 90
+    - Test 'explicit_cid_mapping_precedes_notdef_range' does not call any production code
+  fixture_bytes_match_frozen_provenance (line 100) - Score: 100
+    i Test 'fixture_bytes_match_frozen_provenance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'fixture_bytes_match_frozen_provenance' has multiple assertions without diagnostic messages
+    i Test 'fixture_bytes_match_frozen_provenance' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

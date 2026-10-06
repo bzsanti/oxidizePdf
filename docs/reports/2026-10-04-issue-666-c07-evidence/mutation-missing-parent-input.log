@@ -1,0 +1,74 @@
+
+running 9 tests
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... FAILED
+test child_notdef_char_overrides_only_its_parent_fallback_code ... FAILED
+test inherited_notdef_range_retains_parent_cid_and_width ... FAILED
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... FAILED
+test ordinary_child_mapping_wins_over_inherited_notdef ... FAILED
+test ordinary_parent_mapping_wins_over_child_notdef ... FAILED
+test notdef_range_selects_one_cid_without_incrementing ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... FAILED
+
+failures:
+
+---- fully_consumed_unmapped_code_is_distinct_from_truncation stdout ----
+
+thread 'fully_consumed_unmapped_code_is_distinct_from_truncation' (327) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/missing-parent-input.rs:224:5:
+assertion `left == right` failed
+  left: 3
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- child_notdef_char_overrides_only_its_parent_fallback_code stdout ----
+
+thread 'child_notdef_char_overrides_only_its_parent_fallback_code' (325) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/missing-parent-input.rs:54:13:
+assertion `left == right` failed: source code 3
+  left: None
+ right: Some(17)
+
+---- inherited_notdef_range_retains_parent_cid_and_width stdout ----
+
+thread 'inherited_notdef_range_retains_parent_cid_and_width' (328) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/missing-parent-input.rs:54:13:
+assertion `left == right` failed: source code 3
+  left: None
+ right: Some(17)
+
+---- mixed_one_to_four_byte_codes_keep_boundaries_and_cids stdout ----
+
+thread 'mixed_one_to_four_byte_codes_keep_boundaries_and_cids' (329) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/missing-parent-input.rs:167:9:
+assertion `left == right` failed
+  left: [[65], [129], [1], [130], [0], [2], [131], [0], [0], [3]]
+ right: [[65], [129, 1], [130, 0, 2], [131, 0, 0, 3]]
+
+---- ordinary_child_mapping_wins_over_inherited_notdef stdout ----
+
+thread 'ordinary_child_mapping_wins_over_inherited_notdef' (331) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/missing-parent-input.rs:54:13:
+assertion `left == right` failed: source code 3
+  left: None
+ right: Some(17)
+
+---- ordinary_parent_mapping_wins_over_child_notdef stdout ----
+
+thread 'ordinary_parent_mapping_wins_over_child_notdef' (332) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/missing-parent-input.rs:54:13:
+assertion `left == right` failed: source code 4
+  left: Some(0)
+ right: Some(29)
+
+---- renderer_rejects_every_partial_multibyte_tail_in_both_modes stdout ----
+
+thread 'renderer_rejects_every_partial_multibyte_tail_in_both_modes' (333) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/missing-parent-input.rs:206:30:
+called `Result::unwrap_err()` on an `Ok` value: [DecodedGlyph { source_code: [65], cid: None, gid: None, unicode: Some("A"), advance: 900.0 }, DecodedGlyph { source_code: [129], cid: None, gid: None, unicode: None, advance: 900.0 }]
+
+
+failures:
+    child_notdef_char_overrides_only_its_parent_fallback_code
+    fully_consumed_unmapped_code_is_distinct_from_truncation
+    inherited_notdef_range_retains_parent_cid_and_width
+    mixed_one_to_four_byte_codes_keep_boundaries_and_cids
+    ordinary_child_mapping_wins_over_inherited_notdef
+    ordinary_parent_mapping_wins_over_child_notdef
+    renderer_rejects_every_partial_multibyte_tail_in_both_modes
+
+test result: FAILED. 2 passed; 7 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

@@ -1,0 +1,70 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 14 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...core/tests/text_type3_program_boundary_contract_test.rs       14     96
+
+--- Worst Offenders ---
+  type3_operation_and_token_budgets_accept_the_limit_and_reject_the_next_item (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:349) - Score: 80
+    - Test 'type3_operation_and_token_budgets_accept_the_limit_and_reject_the_next_item' has a match arm with empty body, ignoring potential error cases
+    - Test 'type3_operation_and_token_budgets_accept_the_limit_and_reject_the_next_item' has low assert-to-setup ratio (12%): 5 asserts vs 35 setup lines
+  malformed_charprocs_fail_with_context_in_both_parser_modes (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:101) - Score: 90
+    - Test 'malformed_charprocs_fail_with_context_in_both_parser_modes' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  finite_pdf_decimals_cannot_overflow_type3_metrics (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:281) - Score: 90
+    - Test 'finite_pdf_decimals_cannot_overflow_type3_metrics' has low assert-to-setup ratio (7%): 2 asserts vs 25 setup lines
+  aggregate_charproc_expansion_is_bounded_for_aliases_and_distinct_streams (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:315) - Score: 90
+    i Test 'aggregate_charproc_expansion_is_bounded_for_aliases_and_distinct_streams' has multiple assertions without diagnostic messages
+    i Test 'aggregate_charproc_expansion_is_bounded_for_aliases_and_distinct_streams' uses .unwrap() which silently discards error information
+    - Test 'aggregate_charproc_expansion_is_bounded_for_aliases_and_distinct_streams' has low assert-to-setup ratio (14%): 3 asserts vs 19 setup lines
+  type3_decoded_byte_budget_counts_repeated_streams (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:400) - Score: 90
+    - Test 'type3_decoded_byte_budget_counts_repeated_streams' has a match arm with empty body, ignoring potential error cases
+    i Test 'type3_decoded_byte_budget_counts_repeated_streams' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'type3_decoded_byte_budget_counts_repeated_streams' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:
+  consistent_d0_and_d1_preserve_metrics_and_program_operations (line 43) - Score: 100
+    i Test 'consistent_d0_and_d1_preserve_metrics_and_program_operations' has multiple assertions without diagnostic messages
+    i Test 'consistent_d0_and_d1_preserve_metrics_and_program_operations' uses .unwrap() which silently discards error information
+  inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance (line 69) - Score: 100
+    i Test 'inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance' has multiple assertions without diagnostic messages
+    i Test 'inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance' uses .unwrap() which silently discards error information
+  zero_negative_and_fractional_declared_widths_are_not_replaced_by_defaults (line 83) - Score: 100
+    i Test 'zero_negative_and_fractional_declared_widths_are_not_replaced_by_defaults' uses .unwrap() which silently discards error information
+  malformed_charprocs_fail_with_context_in_both_parser_modes (line 101) - Score: 90
+    - Test 'malformed_charprocs_fail_with_context_in_both_parser_modes' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  type3_differences_counter_cannot_wrap_after_byte_255 (line 146) - Score: 100
+    i Test 'type3_differences_counter_cannot_wrap_after_byte_255' uses .unwrap() which silently discards error information
+  type3_differences_accepts_byte_255_and_explicit_counter_resets (line 163) - Score: 100
+    i Test 'type3_differences_accepts_byte_255_and_explicit_counter_resets' uses .unwrap() which silently discards error information
+  indirect_encoding_components_match_direct_values (line 204) - Score: 100
+    i Test 'indirect_encoding_components_match_direct_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'indirect_encoding_components_match_direct_values' uses .unwrap() which silently discards error information
+  missing_charproc_preserves_metadata_and_does_not_hide_invalid_widths (line 252) - Score: 100
+    i Test 'missing_charproc_preserves_metadata_and_does_not_hide_invalid_widths' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'missing_charproc_preserves_metadata_and_does_not_hide_invalid_widths' uses .unwrap() which silently discards error information
+  finite_pdf_decimals_cannot_overflow_type3_metrics (line 281) - Score: 90
+    - Test 'finite_pdf_decimals_cannot_overflow_type3_metrics' has low assert-to-setup ratio (7%): 2 asserts vs 25 setup lines
+  aggregate_charproc_expansion_is_bounded_for_aliases_and_distinct_streams (line 315) - Score: 90
+    i Test 'aggregate_charproc_expansion_is_bounded_for_aliases_and_distinct_streams' has multiple assertions without diagnostic messages
+    i Test 'aggregate_charproc_expansion_is_bounded_for_aliases_and_distinct_streams' uses .unwrap() which silently discards error information
+    - Test 'aggregate_charproc_expansion_is_bounded_for_aliases_and_distinct_streams' has low assert-to-setup ratio (14%): 3 asserts vs 19 setup lines
+  type3_operation_and_token_budgets_accept_the_limit_and_reject_the_next_item (line 349) - Score: 80
+    - Test 'type3_operation_and_token_budgets_accept_the_limit_and_reject_the_next_item' has a match arm with empty body, ignoring potential error cases
+    - Test 'type3_operation_and_token_budgets_accept_the_limit_and_reject_the_next_item' has low assert-to-setup ratio (12%): 5 asserts vs 35 setup lines
+  type3_decoded_byte_budget_counts_repeated_streams (line 400) - Score: 90
+    - Test 'type3_decoded_byte_budget_counts_repeated_streams' has a match arm with empty body, ignoring potential error cases
+    i Test 'type3_decoded_byte_budget_counts_repeated_streams' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'type3_decoded_byte_budget_counts_repeated_streams' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

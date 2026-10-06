@@ -1,0 +1,310 @@
+[
+  {
+    "log": "kripteia-oxidize-pdf-core_src_fonts_resolved.rs.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_cid_cmap_test.rs.log",
+    "score": 97,
+    "tests": 9,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_issue_513_resolved_parser_fonts_test.rs.log",
+    "score": 96,
+    "tests": 16,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_cid_cff_contract_test.rs.log",
+    "score": 95,
+    "tests": 6,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_cid_contract_test.rs.log",
+    "score": 90,
+    "tests": 5,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_cjk_contract_test.rs.log",
+    "score": 94,
+    "tests": 11,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_composite_font_contract_test.rs.log",
+    "score": 100,
+    "tests": 6,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_differences_boundary_contract_test.rs.log",
+    "score": 91,
+    "tests": 7,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_document_string_contract_test.rs.log",
+    "score": 92,
+    "tests": 12,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_embedded_font_contract_test.rs.log",
+    "score": 100,
+    "tests": 4,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_encoding_contract_test.rs.log",
+    "score": 95,
+    "tests": 24,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_expert_contract_test.rs.log",
+    "score": 98,
+    "tests": 5,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_font_program_contract_test.rs.log",
+    "score": 98,
+    "tests": 5,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_output_api_contract_test.rs.log",
+    "score": 99,
+    "tests": 7,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_pdf20_string_contract_test.rs.log",
+    "score": 96,
+    "tests": 18,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_script_contract_test.rs.log",
+    "score": 85,
+    "tests": 8,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_spacing_contract_test.rs.log",
+    "score": 90,
+    "tests": 14,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_standard14_metrics_contract_test.rs.log",
+    "score": 100,
+    "tests": 7,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_symbolic_truetype_contract_test.rs.log",
+    "score": 96,
+    "tests": 8,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_tj_scale_contract_test.rs.log",
+    "score": 88,
+    "tests": 4,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_tracking_recovery_contract_test.rs.log",
+    "score": 94,
+    "tests": 8,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_transform_contract_test.rs.log",
+    "score": 72,
+    "tests": 9,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_truetype_contract_test.rs.log",
+    "score": 96,
+    "tests": 5,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_type1_intrinsic_contract_test.rs.log",
+    "score": 88,
+    "tests": 10,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_usecmap_contract_test.rs.log",
+    "score": 91,
+    "tests": 10,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-oxidize-pdf-core_tests_text_vertical_contract_test.rs.log",
+    "score": 91,
+    "tests": 15,
+    "files": 1,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-text.log",
+    "score": 92,
+    "tests": 862,
+    "files": 47,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_adobe_pdf_cid_tables.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_cid_tables.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_intrinsic_font_names.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_cid_cff.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_cjk_oracles.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_composite_font_contracts.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_differences_contracts.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_encoding_oracles.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_expert_font.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_font_subset.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_standard14_contracts.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_symbolic_contracts.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_tj_scale_contracts.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_type1_contracts.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_generate_text_usecmap_contracts.py.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_tests.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  },
+  {
+    "log": "kripteia-tools_text_contracts.log",
+    "score": 100,
+    "tests": 0,
+    "files": 0,
+    "security_clean": true
+  }
+]

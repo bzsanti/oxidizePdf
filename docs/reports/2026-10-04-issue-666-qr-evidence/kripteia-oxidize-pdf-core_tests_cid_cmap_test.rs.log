@@ -1,0 +1,47 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 9 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/cid_cmap_test.rs                           9     97
+
+--- Worst Offenders ---
+  test_cns1_basic_latin_cids (oxidize-pdf-core/tests/cid_cmap_test.rs:58) - Score: 90
+    - Test 'test_cns1_basic_latin_cids' has identical neighborhood to 'test_unknown_cid_returns_none'
+  test_unknown_cid_returns_none (oxidize-pdf-core/tests/cid_cmap_test.rs:85) - Score: 90
+    - Test 'test_unknown_cid_returns_none' has identical neighborhood to 'test_cns1_basic_latin_cids'
+  test_issue_157_cid_keyed_font_text_extraction (oxidize-pdf-core/tests/cid_cmap_test.rs:94) - Score: 90
+    - Test 'test_issue_157_cid_keyed_font_text_extraction' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_issue_157_cid_keyed_font_text_extraction' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_issue_157_cid_keyed_font_text_extraction' has multiple assertions without diagnostic messages
+  test_cid_collection_from_ordering (oxidize-pdf-core/tests/cid_cmap_test.rs:12) - Score: 100
+    i Test 'test_cid_collection_from_ordering' has multiple assertions without diagnostic messages
+  test_cns1_known_cid_mappings (oxidize-pdf-core/tests/cid_cmap_test.rs:35) - Score: 100
+    i Test 'test_cns1_known_cid_mappings' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/tests/cid_cmap_test.rs:
+  test_cid_collection_from_ordering (line 12) - Score: 100
+    i Test 'test_cid_collection_from_ordering' has multiple assertions without diagnostic messages
+  test_cns1_known_cid_mappings (line 35) - Score: 100
+    i Test 'test_cns1_known_cid_mappings' has multiple assertions without diagnostic messages
+  test_cns1_basic_latin_cids (line 58) - Score: 90
+    - Test 'test_cns1_basic_latin_cids' has identical neighborhood to 'test_unknown_cid_returns_none'
+  test_unknown_cid_returns_none (line 85) - Score: 90
+    - Test 'test_unknown_cid_returns_none' has identical neighborhood to 'test_cns1_basic_latin_cids'
+  test_issue_157_cid_keyed_font_text_extraction (line 94) - Score: 90
+    - Test 'test_issue_157_cid_keyed_font_text_extraction' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_issue_157_cid_keyed_font_text_extraction' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_issue_157_cid_keyed_font_text_extraction' has multiple assertions without diagnostic messages
+  cid_zero_is_not_text_in_collection_fallbacks (line 138) - Score: 100
+    i Test 'cid_zero_is_not_text_in_collection_fallbacks' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

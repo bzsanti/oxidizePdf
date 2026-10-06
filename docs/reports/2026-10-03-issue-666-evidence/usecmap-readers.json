@@ -1,0 +1,754 @@
+{
+  "schema_version": 1,
+  "versions": {
+    "pymupdf": "1.26.5",
+    "mupdf": "1.26.10",
+    "poppler": "24.02.0",
+    "qpdf": "11.9.0"
+  },
+  "environment_errors": [],
+  "accepted": false,
+  "cases": [
+    {
+      "id": "usecmap-flat",
+      "path": "flat.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/flat.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "eb71b5cfdb5552ff438acc9c5a5a5d7309173f07a10d67002bf7b1218d4adfed"
+    },
+    {
+      "id": "usecmap-encoding-parent",
+      "path": "encoding-parent.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/encoding-parent.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "8e22cefe6e6aee45fdad5ab8c0163ec85298eb21cd797ba4cd80a03cb1fd721a"
+    },
+    {
+      "id": "usecmap-encoding-shadow",
+      "path": "encoding-shadow.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/encoding-shadow.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "16d911503a6621ee90c11e7ff76255ff9d09d72190a4f09e611aa7c1e5e87cf0"
+    },
+    {
+      "id": "usecmap-unicode-parent",
+      "path": "unicode-parent.pdf",
+      "expected_text": "AB",
+      "status": "failed",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "mismatch",
+          "exit_code": 0,
+          "stdout": "\f",
+          "stderr": "Syntax Error: Unknown character collection 'Contract-Synthetic'\n",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/unicode-parent.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "f1d16bd0cdd62de181b419f277f5c4da6a47e2e73ecdfce23d8d667bc32dde03"
+    },
+    {
+      "id": "usecmap-unicode-shadow",
+      "path": "unicode-shadow.pdf",
+      "expected_text": "XB",
+      "status": "failed",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "XB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "X",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "X",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "mismatch",
+          "exit_code": 0,
+          "stdout": "X\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/unicode-shadow.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "5c455143f6a41566fa6500f68d5331909952c15138907c284681d6a9c6ccbd75"
+    },
+    {
+      "id": "usecmap-both-chain",
+      "path": "both-chain.pdf",
+      "expected_text": "AB",
+      "status": "failed",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "mismatch",
+          "exit_code": 0,
+          "stdout": "\f",
+          "stderr": "Syntax Error: Unknown character collection 'Contract-Synthetic'\n",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/both-chain.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "e0cce687c630aa1ec8ea5966113ef1d3a992f20770a24f9ee3837691716471e3"
+    },
+    {
+      "id": "usecmap-named-operator",
+      "path": "named-operator.pdf",
+      "expected_text": "AB",
+      "status": "failed",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "mismatch",
+          "exit_code": 0,
+          "stdout": "A B\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/named-operator.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "dbcbab07699910a79c4ecb55ffba6e6f7dc64f7171b8794fc1ea610efd4636d4"
+    },
+    {
+      "id": "usecmap-named-dictionary",
+      "path": "named-dictionary.pdf",
+      "expected_text": "AB",
+      "status": "failed",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "mismatch",
+          "exit_code": 0,
+          "stdout": "A B\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/named-dictionary.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "1a531064bb69fbe4683210d55dff8be9529687aff1b2059a5755647d35084673"
+    },
+    {
+      "id": "usecmap-notdef-char",
+      "path": "notdef-char.pdf",
+      "expected_text": "�B",
+      "status": "failed",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "B\n"
+          ],
+          "warnings": "cannot encode character\n... repeated 2 times...",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "�",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              }
+            ],
+            "match": false,
+            "tolerance_points": 0.001
+          },
+          "status": "mismatch"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "�B\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/notdef-char.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "f63317e1005762c59688c749003d7759567f6db822f57e0ed9d9d3d08428dd59"
+    },
+    {
+      "id": "usecmap-notdef-range",
+      "path": "notdef-range.pdf",
+      "expected_text": "�B",
+      "status": "failed",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "B\n"
+          ],
+          "warnings": "cannot encode character\n... repeated 2 times...",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "�",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              }
+            ],
+            "match": false,
+            "tolerance_points": 0.001
+          },
+          "status": "mismatch"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "�B\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/notdef-range.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "22bd30db936a26e7af5b17dec099955fd71bebd70f854ef8fcb50942d6a42c2c"
+    },
+    {
+      "id": "usecmap-notdef-explicit-wins",
+      "path": "notdef-explicit-wins.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/usecmap/notdef-explicit-wins.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "a3981aac1f2dd8b8740711e7a4e62c74f1253081fe9760db5ea522cc5b2c46f0"
+    }
+  ],
+  "summary": {
+    "match": 15,
+    "known_limitation": 0,
+    "mismatch": 7,
+    "error": 0,
+    "structure_ok": 11
+  }
+}

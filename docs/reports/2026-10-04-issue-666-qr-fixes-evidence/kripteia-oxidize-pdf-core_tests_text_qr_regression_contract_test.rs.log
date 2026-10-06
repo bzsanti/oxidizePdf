@@ -1,0 +1,78 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 94 | Tests: 15 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_qr_regression_contract_test.rs       15     94
+
+--- Worst Offenders ---
+  resolved_flat_control (oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:17) - Score: 90
+    i Test 'resolved_flat_control' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolved_flat_control' has multiple assertions without diagnostic messages
+    - Test 'resolved_flat_control' does not call any production code
+  resolved_encoding_parent (oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:30) - Score: 90
+    i Test 'resolved_encoding_parent' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolved_encoding_parent' has multiple assertions without diagnostic messages
+    - Test 'resolved_encoding_parent' does not call any production code
+  resolved_unicode_parent (oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:39) - Score: 90
+    - Test 'resolved_unicode_parent' does not call any production code
+  resolved_named_parent (oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:47) - Score: 90
+    i Test 'resolved_named_parent' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolved_named_parent' has multiple assertions without diagnostic messages
+    - Test 'resolved_named_parent' does not call any production code
+  resolved_intrinsic_type1 (oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:53) - Score: 90
+    - Test 'resolved_intrinsic_type1' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:
+  resolved_flat_control (line 17) - Score: 90
+    i Test 'resolved_flat_control' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolved_flat_control' has multiple assertions without diagnostic messages
+    - Test 'resolved_flat_control' does not call any production code
+  resolved_encoding_parent (line 30) - Score: 90
+    i Test 'resolved_encoding_parent' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolved_encoding_parent' has multiple assertions without diagnostic messages
+    - Test 'resolved_encoding_parent' does not call any production code
+  resolved_unicode_parent (line 39) - Score: 90
+    - Test 'resolved_unicode_parent' does not call any production code
+  resolved_named_parent (line 47) - Score: 90
+    i Test 'resolved_named_parent' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'resolved_named_parent' has multiple assertions without diagnostic messages
+    - Test 'resolved_named_parent' does not call any production code
+  resolved_intrinsic_type1 (line 53) - Score: 90
+    - Test 'resolved_intrinsic_type1' does not call any production code
+  resolved_intrinsic_cff (line 57) - Score: 90
+    - Test 'resolved_intrinsic_cff' does not call any production code
+  resolved_vertical_advance (line 69) - Score: 100
+    i Test 'resolved_vertical_advance' has multiple assertions without diagnostic messages
+    i Test 'resolved_vertical_advance' uses .unwrap() which silently discards error information
+  strict_public_extraction_rejects_cyclic_usecmap (line 77) - Score: 100
+    i Test 'strict_public_extraction_rejects_cyclic_usecmap' uses .unwrap() which silently discards error information
+  type1_procedure_is_not_executed (line 86) - Score: 100
+    i Test 'type1_procedure_is_not_executed' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'type1_procedure_is_not_executed' uses .unwrap() which silently discards error information
+  inherited_adobe_kr_operator (line 93) - Score: 90
+    - Test 'inherited_adobe_kr_operator' does not call any production code
+  inherited_adobe_kr_dictionary (line 97) - Score: 90
+    - Test 'inherited_adobe_kr_dictionary' does not call any production code
+  indirect_cid_collection_matches_direct_extraction (line 119) - Score: 100
+    i Test 'indirect_cid_collection_matches_direct_extraction' asserts against a hardcoded constant instead of a computed expected value
+  legacy_collection_matches_stay_exhaustive (line 125) - Score: 100
+    i Test 'legacy_collection_matches_stay_exhaustive' has multiple assertions without diagnostic messages
+  page_and_form_strict_cycles_error_while_lenient_keeps_child (line 169) - Score: 90
+    i Test 'page_and_form_strict_cycles_error_while_lenient_keeps_child' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'page_and_form_strict_cycles_error_while_lenient_keeps_child' has multiple assertions without diagnostic messages
+    i Test 'page_and_form_strict_cycles_error_while_lenient_keeps_child' uses .unwrap() which silently discards error information
+    - Test 'page_and_form_strict_cycles_error_while_lenient_keeps_child' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  resolved_intrinsic_differences_and_tounicode_precedence (line 205) - Score: 100
+    i Test 'resolved_intrinsic_differences_and_tounicode_precedence' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

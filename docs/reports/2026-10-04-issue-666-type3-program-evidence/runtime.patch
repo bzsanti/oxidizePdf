@@ -1,0 +1,16 @@
+diff --git a/oxidize-pdf-core/src/fonts/type3.rs b/oxidize-pdf-core/src/fonts/type3.rs
+index acba18d..a006f22 100644
+--- a/oxidize-pdf-core/src/fonts/type3.rs
++++ b/oxidize-pdf-core/src/fonts/type3.rs
+@@ -276,6 +276,11 @@ fn apply_encoding_differences(
+         } else if let Some(name) = object.as_name() {
+             let value =
+                 code.ok_or_else(|| syntax("Encoding Differences name has no starting code"))?;
++            // The implicit counter also needs validation: a name after code
++            // 255 must not wrap to byte zero when narrowed to u8 (#675).
++            if !(0..=255).contains(&value) {
++                return Err(syntax("Encoding Differences code is outside 0..=255"));
++            }
+             result.insert(value as u8, name.0.clone());
+             code = value.checked_add(1);
+         } else {

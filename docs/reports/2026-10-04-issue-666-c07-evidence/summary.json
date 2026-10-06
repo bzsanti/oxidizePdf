@@ -1,0 +1,17 @@
+{
+  "new_tests": 9,
+  "focused_tests_passed": 81,
+  "focused_failed": 0,
+  "final_new_target_rerun_passed": 9,
+  "new_contract_total": 232,
+  "new_contract_targets": 25,
+  "product_files_changed": 0,
+  "existing_fixture_bytes_changed": 0,
+  "mutations_detected": 3,
+  "mutation_control_passed": 9,
+  "kripteia_score": 94,
+  "security_alerts": 0,
+  "external_reader_gate_changed": false,
+  "c07_complete": false,
+  "issue666_complete": false
+}

@@ -1,0 +1,21 @@
+{
+  "adobe": {
+    "url": "https://adobe-type-tools.github.io/font-tech-notes/pdfs/5014.CIDFont_Spec.pdf",
+    "sections": [
+      "5.2 notdef",
+      "5.4 UseCMap",
+      "7 beginnotdefrange"
+    ],
+    "pages": [
+      53,
+      56,
+      76
+    ]
+  },
+  "mupdf": {
+    "url": "https://raw.githubusercontent.com/ArtifexSoftware/mupdf/1.26.10/source/pdf/pdf-cmap-parse.c",
+    "sha256": "8954e4ff709d4b0b74222e10469593d2d0b832d2043a57607d5ab618f48da670",
+    "lines": "412-427",
+    "finding": "pdf_load_cmap dispatches cidchar/cidrange but has no notdefchar/notdefrange dispatch; consistent with paired loss of code and pen advance."
+  }
+}

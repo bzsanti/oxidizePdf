@@ -1,0 +1,17 @@
+test_changed_fixture_is_not_silently_rebaselined (test_validate_readers.ReaderGateTests.test_changed_fixture_is_not_silently_rebaselined) ... <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+<frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+<frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+ok
+test_known_limit_is_scoped_to_the_observed_reader_version (test_validate_readers.ReaderGateTests.test_known_limit_is_scoped_to_the_observed_reader_version) ... ok
+test_known_poppler_loss_does_not_hide_exact_mupdf_result (test_validate_readers.ReaderGateTests.test_known_poppler_loss_does_not_hide_exact_mupdf_result) ... ok
+test_missing_fixture_fails_without_reader_results (test_validate_readers.ReaderGateTests.test_missing_fixture_fails_without_reader_results) ... ok
+test_missing_reader_is_an_error_not_a_skip (test_validate_readers.ReaderGateTests.test_missing_reader_is_an_error_not_a_skip) ... ok
+test_unreviewed_mupdf_version_cannot_validate_the_suite (test_validate_readers.ReaderGateTests.test_unreviewed_mupdf_version_cannot_validate_the_suite) ... ok
+test_warning_alone_is_not_enough_to_allow_unexpected_text (test_validate_readers.ReaderGateTests.test_warning_alone_is_not_enough_to_allow_unexpected_text) ... ok
+test_wrong_unicode_expectation_fails_even_with_known_poppler_loss (test_validate_readers.ReaderGateTests.test_wrong_unicode_expectation_fails_even_with_known_poppler_loss) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.227s
+
+OK
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

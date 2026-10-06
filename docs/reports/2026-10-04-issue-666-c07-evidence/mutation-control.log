@@ -1,0 +1,14 @@
+
+running 9 tests
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... ok
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... ok
+test child_notdef_char_overrides_only_its_parent_fallback_code ... ok
+test inherited_notdef_range_retains_parent_cid_and_width ... ok
+test ordinary_parent_mapping_wins_over_child_notdef ... ok
+test notdef_range_selects_one_cid_without_incrementing ... ok
+test ordinary_child_mapping_wins_over_inherited_notdef ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

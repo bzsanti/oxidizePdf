@@ -1,0 +1,1617 @@
+{
+  "tool": "FontTools4.60.1",
+  "license": "Original fixtures, repository MIT license",
+  "unicode_reference": "Adobe-Japan1 CID34 U+0041 / CID35 U+0042; explicit ToUnicode X/Y; private collection unknown is a recovery policy",
+  "cases": [
+    {
+      "path": "private-fd0-full-h-fallback.pdf",
+      "font": "private-fd0-full.cff",
+      "collection": "private",
+      "subset": false,
+      "fdselect_format": 0,
+      "vertical": false,
+      "explicit_unicode": false,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        null,
+        null
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "private-fd0-full-h-unicode.pdf",
+      "font": "private-fd0-full.cff",
+      "collection": "private",
+      "subset": false,
+      "fdselect_format": 0,
+      "vertical": false,
+      "explicit_unicode": true,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "private-fd0-full-v-fallback.pdf",
+      "font": "private-fd0-full.cff",
+      "collection": "private",
+      "subset": false,
+      "fdselect_format": 0,
+      "vertical": true,
+      "explicit_unicode": false,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        null,
+        null
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "private-fd0-full-v-unicode.pdf",
+      "font": "private-fd0-full.cff",
+      "collection": "private",
+      "subset": false,
+      "fdselect_format": 0,
+      "vertical": true,
+      "explicit_unicode": true,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "private-fd3-full-h-fallback.pdf",
+      "font": "private-fd3-full.cff",
+      "collection": "private",
+      "subset": false,
+      "fdselect_format": 3,
+      "vertical": false,
+      "explicit_unicode": false,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        null,
+        null
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "private-fd3-full-h-unicode.pdf",
+      "font": "private-fd3-full.cff",
+      "collection": "private",
+      "subset": false,
+      "fdselect_format": 3,
+      "vertical": false,
+      "explicit_unicode": true,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "private-fd3-full-v-fallback.pdf",
+      "font": "private-fd3-full.cff",
+      "collection": "private",
+      "subset": false,
+      "fdselect_format": 3,
+      "vertical": true,
+      "explicit_unicode": false,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        null,
+        null
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "private-fd3-full-v-unicode.pdf",
+      "font": "private-fd3-full.cff",
+      "collection": "private",
+      "subset": false,
+      "fdselect_format": 3,
+      "vertical": true,
+      "explicit_unicode": true,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "private-fd0-subset-h-fallback.pdf",
+      "font": "private-fd0-subset.cff",
+      "collection": "private",
+      "subset": true,
+      "fdselect_format": 0,
+      "vertical": false,
+      "explicit_unicode": false,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        null,
+        null
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "private-fd0-subset-h-unicode.pdf",
+      "font": "private-fd0-subset.cff",
+      "collection": "private",
+      "subset": true,
+      "fdselect_format": 0,
+      "vertical": false,
+      "explicit_unicode": true,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "private-fd0-subset-v-fallback.pdf",
+      "font": "private-fd0-subset.cff",
+      "collection": "private",
+      "subset": true,
+      "fdselect_format": 0,
+      "vertical": true,
+      "explicit_unicode": false,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        null,
+        null
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "private-fd0-subset-v-unicode.pdf",
+      "font": "private-fd0-subset.cff",
+      "collection": "private",
+      "subset": true,
+      "fdselect_format": 0,
+      "vertical": true,
+      "explicit_unicode": true,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "private-fd3-subset-h-fallback.pdf",
+      "font": "private-fd3-subset.cff",
+      "collection": "private",
+      "subset": true,
+      "fdselect_format": 3,
+      "vertical": false,
+      "explicit_unicode": false,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        null,
+        null
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "private-fd3-subset-h-unicode.pdf",
+      "font": "private-fd3-subset.cff",
+      "collection": "private",
+      "subset": true,
+      "fdselect_format": 3,
+      "vertical": false,
+      "explicit_unicode": true,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "private-fd3-subset-v-fallback.pdf",
+      "font": "private-fd3-subset.cff",
+      "collection": "private",
+      "subset": true,
+      "fdselect_format": 3,
+      "vertical": true,
+      "explicit_unicode": false,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        null,
+        null
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "private-fd3-subset-v-unicode.pdf",
+      "font": "private-fd3-subset.cff",
+      "collection": "private",
+      "subset": true,
+      "fdselect_format": 3,
+      "vertical": true,
+      "explicit_unicode": true,
+      "cids": [
+        17,
+        29
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd0-full-h-fallback.pdf",
+      "font": "Japan1-fd0-full.cff",
+      "collection": "Japan1",
+      "subset": false,
+      "fdselect_format": 0,
+      "vertical": false,
+      "explicit_unicode": false,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "A",
+        "B"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd0-full-h-unicode.pdf",
+      "font": "Japan1-fd0-full.cff",
+      "collection": "Japan1",
+      "subset": false,
+      "fdselect_format": 0,
+      "vertical": false,
+      "explicit_unicode": true,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd0-full-v-fallback.pdf",
+      "font": "Japan1-fd0-full.cff",
+      "collection": "Japan1",
+      "subset": false,
+      "fdselect_format": 0,
+      "vertical": true,
+      "explicit_unicode": false,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "A",
+        "B"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd0-full-v-unicode.pdf",
+      "font": "Japan1-fd0-full.cff",
+      "collection": "Japan1",
+      "subset": false,
+      "fdselect_format": 0,
+      "vertical": true,
+      "explicit_unicode": true,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd3-full-h-fallback.pdf",
+      "font": "Japan1-fd3-full.cff",
+      "collection": "Japan1",
+      "subset": false,
+      "fdselect_format": 3,
+      "vertical": false,
+      "explicit_unicode": false,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "A",
+        "B"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd3-full-h-unicode.pdf",
+      "font": "Japan1-fd3-full.cff",
+      "collection": "Japan1",
+      "subset": false,
+      "fdselect_format": 3,
+      "vertical": false,
+      "explicit_unicode": true,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd3-full-v-fallback.pdf",
+      "font": "Japan1-fd3-full.cff",
+      "collection": "Japan1",
+      "subset": false,
+      "fdselect_format": 3,
+      "vertical": true,
+      "explicit_unicode": false,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "A",
+        "B"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd3-full-v-unicode.pdf",
+      "font": "Japan1-fd3-full.cff",
+      "collection": "Japan1",
+      "subset": false,
+      "fdselect_format": 3,
+      "vertical": true,
+      "explicit_unicode": true,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd0-subset-h-fallback.pdf",
+      "font": "Japan1-fd0-subset.cff",
+      "collection": "Japan1",
+      "subset": true,
+      "fdselect_format": 0,
+      "vertical": false,
+      "explicit_unicode": false,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "A",
+        "B"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd0-subset-h-unicode.pdf",
+      "font": "Japan1-fd0-subset.cff",
+      "collection": "Japan1",
+      "subset": true,
+      "fdselect_format": 0,
+      "vertical": false,
+      "explicit_unicode": true,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd0-subset-v-fallback.pdf",
+      "font": "Japan1-fd0-subset.cff",
+      "collection": "Japan1",
+      "subset": true,
+      "fdselect_format": 0,
+      "vertical": true,
+      "explicit_unicode": false,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "A",
+        "B"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd0-subset-v-unicode.pdf",
+      "font": "Japan1-fd0-subset.cff",
+      "collection": "Japan1",
+      "subset": true,
+      "fdselect_format": 0,
+      "vertical": true,
+      "explicit_unicode": true,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd3-subset-h-fallback.pdf",
+      "font": "Japan1-fd3-subset.cff",
+      "collection": "Japan1",
+      "subset": true,
+      "fdselect_format": 3,
+      "vertical": false,
+      "explicit_unicode": false,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "A",
+        "B"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd3-subset-h-unicode.pdf",
+      "font": "Japan1-fd3-subset.cff",
+      "collection": "Japan1",
+      "subset": true,
+      "fdselect_format": 3,
+      "vertical": false,
+      "explicit_unicode": true,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        400,
+        700
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          104,
+          700
+        ]
+      ],
+      "reader_origins": [
+        [
+          100,
+          92
+        ],
+        [
+          104,
+          92
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd3-subset-v-fallback.pdf",
+      "font": "Japan1-fd3-subset.cff",
+      "collection": "Japan1",
+      "subset": true,
+      "fdselect_format": 3,
+      "vertical": true,
+      "explicit_unicode": false,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "A",
+        "B"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    },
+    {
+      "path": "Japan1-fd3-subset-v-unicode.pdf",
+      "font": "Japan1-fd3-subset.cff",
+      "collection": "Japan1",
+      "subset": true,
+      "fdselect_format": 3,
+      "vertical": true,
+      "explicit_unicode": true,
+      "cids": [
+        34,
+        35
+      ],
+      "expected_unicode": [
+        "X",
+        "Y"
+      ],
+      "gids": [
+        1,
+        2
+      ],
+      "fds": [
+        0,
+        1
+      ],
+      "advances": [
+        -1200,
+        -900
+      ],
+      "text_origins": [
+        [
+          100,
+          700
+        ],
+        [
+          100,
+          688
+        ]
+      ],
+      "reader_origins": [
+        [
+          98,
+          100.8
+        ],
+        [
+          96.5,
+          112.8
+        ]
+      ]
+    }
+  ],
+  "sha256": {
+    "private-fd0-full.cff": "7db26739f9838104cbc96b1d5e9939588641b7196ccad71197b4dad272ab047c",
+    "private-fd0-full-h-fallback.pdf": "aafd653ffbddf2aa80d8125fb3be049ff351b990c42a6aa744d828af43c31a8f",
+    "private-fd0-full-h-unicode.pdf": "16495ee67dbfd274fb529b07c6adcc393320eb4e0678da9ec1aa09ce7178b9b3",
+    "private-fd0-full-v-fallback.pdf": "f9cdb86e81225d3f65c41b76b649006600baf84f523c614b22033a47b14bec53",
+    "private-fd0-full-v-unicode.pdf": "ac6f66155a627898cf14d43f1ab46b46cde04cc81e8501dce2302caaa4ae8cb6",
+    "private-fd3-full.cff": "80e763e25950327a8e9d9568f9b1b257645b6d1d5c0b5181cb316a1f32defb4e",
+    "private-fd3-full-h-fallback.pdf": "7d86927073d93bcdb36c411c2b39ff7212a83bac01fc0af77fc6b01b10f3c656",
+    "private-fd3-full-h-unicode.pdf": "71d82b1c224ca70275bfa9da6c3191eea390f3bb3a115d027be89d3786726fc6",
+    "private-fd3-full-v-fallback.pdf": "047a1386661f0c2d83dca8cfa2c7b3e814c77d1dba7da2a44c422128cc9e6954",
+    "private-fd3-full-v-unicode.pdf": "db7ca4e6ba146b6eadc37916e07a2025524bb2a065ee2c23ec62271a830bf0c5",
+    "private-fd0-subset.cff": "7d2232ff822f6e777b815b69b9d523a3dd8248bffaf6665a2f4b3c6870bb2b84",
+    "private-fd0-subset-h-fallback.pdf": "9cee32f6e8e3c3387d3bd733b88b1ca5990eed5ad094458141699c99be4d76e9",
+    "private-fd0-subset-h-unicode.pdf": "33d2fe42b6c42be9d72f3fb790cec373b74aefa81f725f858c84b9399c7f82b8",
+    "private-fd0-subset-v-fallback.pdf": "dfe0ba536f50fb77a085127213728eb3901fe055efecf090b0142747ca58acf4",
+    "private-fd0-subset-v-unicode.pdf": "0a129e46a8e60ba91d83e1b269741abc180b6b3be1960eea3b5199ce685ee8f6",
+    "private-fd3-subset.cff": "156b22264715aadec1362f47170ea63e993b3e66c2c13e3fd562a1c309746e14",
+    "private-fd3-subset-h-fallback.pdf": "94d1e8af0c931292eb8377d93eac8d56bf2b35d0a12f319466c8f8dec7ba4078",
+    "private-fd3-subset-h-unicode.pdf": "15e31e141e15c983935d37ec387e42b6889db37145a272adb4ac4534a7d89404",
+    "private-fd3-subset-v-fallback.pdf": "bd54f5535075411daa7737a86e18fdce890ee90106c9647057c4f3b92e703cc5",
+    "private-fd3-subset-v-unicode.pdf": "a340c72df3bbd29009c78d2c5a1806c82221ed3dcb280ab6014191a92f07adea",
+    "Japan1-fd0-full.cff": "bb8958d6149d15a8e1cd75aa1df8729e04dbe3bc21cfa6ab481e7382051c3a46",
+    "Japan1-fd0-full-h-fallback.pdf": "6ed280e766f204be705ae11c2d70feca7c5783a9c8e47cbbd4e6a2c81a8c2bb9",
+    "Japan1-fd0-full-h-unicode.pdf": "80ed71c26e91771bd5dc67baca52a401429702cf19216c60396d718585a45560",
+    "Japan1-fd0-full-v-fallback.pdf": "391f678bbbc224841449c40e7dc8d222ee4a8688d0006adf990da10244c89f20",
+    "Japan1-fd0-full-v-unicode.pdf": "79dcb49ffd2dd77a3a9c3e9d689d286dfa46d1c3447031ed826ab2cf37f7d735",
+    "Japan1-fd3-full.cff": "708c76fa18e25574f285b5ecc354df69e19b7558d0e14e4b8807e987c602b689",
+    "Japan1-fd3-full-h-fallback.pdf": "da0030f55f1a122dee6ea23bcd49744a610bc1bfad87caafa1f871616cd1841e",
+    "Japan1-fd3-full-h-unicode.pdf": "345b4b93d427821e5a2dedd75b1e339e7aa07fd6e5dcf09d16441e4f5301fd4c",
+    "Japan1-fd3-full-v-fallback.pdf": "6a2352e40c67c24bbf05b56a73402e341f2c7a3e8750a331f0874229323615e9",
+    "Japan1-fd3-full-v-unicode.pdf": "47259d3d90b32ff60986452c77f16fc841628ffaff93893aa3bf853ddea9a7ef",
+    "Japan1-fd0-subset.cff": "22cc3096f3bdae364d1b72ac641ee418a021d70a1003f68e7c9d7a0b14b5eb4b",
+    "Japan1-fd0-subset-h-fallback.pdf": "41c61ca5d3089f6f5c8133d9c61aa8ba8260f1dd39c87e9be168f3128f7aa04a",
+    "Japan1-fd0-subset-h-unicode.pdf": "abaddb733832f9f2c4c7c63f6cdd022946c7964ec5a210708941b01e5bfeefe7",
+    "Japan1-fd0-subset-v-fallback.pdf": "bd2ae530d79da8883ddfd1d2f29901b67f2961d9608eacbc52f1789c615afadf",
+    "Japan1-fd0-subset-v-unicode.pdf": "5b9ac6a66f04465640cc83f2af16575ac6fe6fd010b1c91b3f22df352304f848",
+    "Japan1-fd3-subset.cff": "b463005cfb74a0d25e62ce3c4827c2db3977d80c0d30f098b80c316150583973",
+    "Japan1-fd3-subset-h-fallback.pdf": "4f0b9249119301de230665634f517add0a6395bcc321e90deafc94c0629479fe",
+    "Japan1-fd3-subset-h-unicode.pdf": "ea45b5e7d228fb7a4c4a3c33b30d973219230b0dfa2b1e8c9c9613d449c370ee",
+    "Japan1-fd3-subset-v-fallback.pdf": "bc319c13c651a5b46c35ad62ba89d63d555dd04bf7f61f7843faaeb4dcf29f8e",
+    "Japan1-fd3-subset-v-unicode.pdf": "e213962c36c66df76d16ac90c91db930c2d378f47fe94f7bdcfc671412f3952a"
+  }
+}

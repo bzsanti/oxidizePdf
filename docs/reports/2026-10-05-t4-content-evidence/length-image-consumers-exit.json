@@ -1,0 +1,1 @@
+{"command": ["cargo", "test", "--locked", "--offline", "-p", "oxidize-pdf", "--test", "issue_516_in_memory_image_extraction_test", "--test", "issue_509_type3_charprocs_test"], "exit": 0}

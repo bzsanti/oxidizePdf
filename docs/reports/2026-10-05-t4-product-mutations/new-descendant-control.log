@@ -1,0 +1,17 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.81s
+     Running tests/text_tracking_recovery_contract_test.rs (target/debug/deps/text_tracking_recovery_contract_test-62d9e1ff39e7e205)
+
+running 9 tests
+test a_space_inside_a_unicode_sequence_is_not_a_space_glyph ... ok
+test multiple_source_glyphs_cannot_certify_per_glyph_tracking ... ok
+test larger_outlier_remains_a_word_gap_during_recovery ... ok
+test resolved_descendant_without_widths_does_not_enable_recovery ... ok
+test truncated_identity_codes_cannot_certify_tracking ... ok
+test resolved_unusable_descendant_never_enables_missing_descendant_recovery ... ok
+test damaged_type0_recovery_covers_full_em_tolerance_and_mode ... ok
+test vertical_encoding_does_not_enable_horizontal_recovery ... ok
+test damaged_type0_rejects_non_em_baselines_and_explicit_spacing ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

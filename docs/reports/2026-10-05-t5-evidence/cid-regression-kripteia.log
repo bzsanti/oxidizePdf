@@ -1,0 +1,50 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 94 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_496_cid_width_lookup_test.rs         7     94
+
+--- Worst Offenders ---
+  flat_path_uses_the_mapped_type0_space_cid_width_for_narrow_word_gaps (oxidize-pdf-core/tests/issue_496_cid_width_lookup_test.rs:139) - Score: 90
+    - Test 'flat_path_uses_the_mapped_type0_space_cid_width_for_narrow_word_gaps' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'flat_path_uses_the_mapped_type0_space_cid_width_for_narrow_word_gaps' asserts against a hardcoded constant instead of a computed expected value
+  real_widths_fix_the_wide_cid_and_expose_the_narrow_word_gap (oxidize-pdf-core/tests/issue_496_cid_width_lookup_test.rs:177) - Score: 90
+    i Test 'real_widths_fix_the_wide_cid_and_expose_the_narrow_word_gap' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'real_widths_fix_the_wide_cid_and_expose_the_narrow_word_gap' does not call any production code
+  missing_dw_uses_the_normative_1000_unit_default (oxidize-pdf-core/tests/issue_496_cid_width_lookup_test.rs:191) - Score: 90
+    - Test 'missing_dw_uses_the_normative_1000_unit_default' does not call any production code
+  dw_only_no_w_array_is_honored (oxidize-pdf-core/tests/issue_496_cid_width_lookup_test.rs:200) - Score: 90
+    i Test 'dw_only_no_w_array_is_honored' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'dw_only_no_w_array_is_honored' does not call any production code
+  wide_cid_glyph_does_not_get_a_spurious_space_when_w_is_present (oxidize-pdf-core/tests/issue_496_cid_width_lookup_test.rs:163) - Score: 100
+    i Test 'wide_cid_glyph_does_not_get_a_spurious_space_when_w_is_present' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/tests/issue_496_cid_width_lookup_test.rs:
+  flat_path_uses_the_mapped_type0_space_cid_width_for_narrow_word_gaps (line 139) - Score: 90
+    - Test 'flat_path_uses_the_mapped_type0_space_cid_width_for_narrow_word_gaps' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'flat_path_uses_the_mapped_type0_space_cid_width_for_narrow_word_gaps' asserts against a hardcoded constant instead of a computed expected value
+  wide_cid_glyph_does_not_get_a_spurious_space_when_w_is_present (line 163) - Score: 100
+    i Test 'wide_cid_glyph_does_not_get_a_spurious_space_when_w_is_present' has multiple assertions without diagnostic messages
+  real_widths_fix_the_wide_cid_and_expose_the_narrow_word_gap (line 177) - Score: 90
+    i Test 'real_widths_fix_the_wide_cid_and_expose_the_narrow_word_gap' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'real_widths_fix_the_wide_cid_and_expose_the_narrow_word_gap' does not call any production code
+  missing_dw_uses_the_normative_1000_unit_default (line 191) - Score: 90
+    - Test 'missing_dw_uses_the_normative_1000_unit_default' does not call any production code
+  dw_only_no_w_array_is_honored (line 200) - Score: 90
+    i Test 'dw_only_no_w_array_is_honored' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'dw_only_no_w_array_is_honored' does not call any production code
+  oversized_w_range_does_not_hang_or_allocate_unboundedly (line 210) - Score: 100
+    i Test 'oversized_w_range_does_not_hang_or_allocate_unboundedly' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'oversized_w_range_does_not_hang_or_allocate_unboundedly' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

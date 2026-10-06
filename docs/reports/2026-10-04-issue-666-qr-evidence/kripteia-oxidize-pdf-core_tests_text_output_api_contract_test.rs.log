@@ -1,0 +1,50 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 99 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_output_api_contract_test.rs           7     99
+
+--- Worst Offenders ---
+  all_standard14_styles_have_consistent_output_apis (oxidize-pdf-core/tests/text_output_api_contract_test.rs:65) - Score: 90
+    - Test 'all_standard14_styles_have_consistent_output_apis' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'all_standard14_styles_have_consistent_output_apis' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_standard14_styles_have_consistent_output_apis' uses .unwrap() which silently discards error information
+  embedded_type1_and_cff_outputs_preserve_encoding_precedence (oxidize-pdf-core/tests/text_output_api_contract_test.rs:86) - Score: 100
+    i Test 'embedded_type1_and_cff_outputs_preserve_encoding_precedence' uses .unwrap() which silently discards error information
+  symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences (oxidize-pdf-core/tests/text_output_api_contract_test.rs:97) - Score: 100
+    i Test 'symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences' uses .unwrap() which silently discards error information
+  cid_cff_inheritance_outputs_preserve_child_and_parent_text (oxidize-pdf-core/tests/text_output_api_contract_test.rs:114) - Score: 100
+    i Test 'cid_cff_inheritance_outputs_preserve_child_and_parent_text' uses .unwrap() which silently discards error information
+  type3_output_preserves_multiscalar_mapping_and_real_charprocs (oxidize-pdf-core/tests/text_output_api_contract_test.rs:130) - Score: 100
+
+--- Details ---
+oxidize-pdf-core/tests/text_output_api_contract_test.rs:
+  all_standard14_styles_have_consistent_output_apis (line 65) - Score: 90
+    - Test 'all_standard14_styles_have_consistent_output_apis' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'all_standard14_styles_have_consistent_output_apis' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_standard14_styles_have_consistent_output_apis' uses .unwrap() which silently discards error information
+  embedded_type1_and_cff_outputs_preserve_encoding_precedence (line 86) - Score: 100
+    i Test 'embedded_type1_and_cff_outputs_preserve_encoding_precedence' uses .unwrap() which silently discards error information
+  symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences (line 97) - Score: 100
+    i Test 'symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences' uses .unwrap() which silently discards error information
+  cid_cff_inheritance_outputs_preserve_child_and_parent_text (line 114) - Score: 100
+    i Test 'cid_cff_inheritance_outputs_preserve_child_and_parent_text' uses .unwrap() which silently discards error information
+  document_api_resets_same_resource_name_between_pages (line 137) - Score: 100
+    i Test 'document_api_resets_same_resource_name_between_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'document_api_resets_same_resource_name_between_pages' uses .unwrap() which silently discards error information
+  cid_type0_and_type2_program_variants_have_consistent_output_apis (line 168) - Score: 100
+    i Test 'cid_type0_and_type2_program_variants_have_consistent_output_apis' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_type0_and_type2_program_variants_have_consistent_output_apis' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

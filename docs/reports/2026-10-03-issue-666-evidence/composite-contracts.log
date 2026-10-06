@@ -1,0 +1,27 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.05s
+     Running tests/text_composite_font_contract_test.rs (target/debug/deps/text_composite_font_contract_test-8168be6f19c1ad07)
+
+running 6 tests
+test six_real_programs_and_fourteen_pdfs_match_their_frozen_hashes ... ok
+test full_and_subset_truetype_support_stream_cid_to_gid_map ... ok
+test full_and_subset_truetype_support_identity_cid_to_gid_map ... ok
+test full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct ... ok
+test multiple_cff_font_dicts_and_both_fdselect_formats_preserve_identity_cids ... ok
+test multiple_cff_font_dicts_preserve_remapped_source_codes_and_cid_widths ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_output_api_contract_test.rs (target/debug/deps/text_output_api_contract_test-193dd67eae72543e)
+
+running 7 tests
+test document_api_resets_same_resource_name_between_pages ... ok
+test type3_output_preserves_multiscalar_mapping_and_real_charprocs ... ok
+test embedded_type1_and_cff_outputs_preserve_encoding_precedence ... ok
+test cid_cff_inheritance_outputs_preserve_child_and_parent_text ... ok
+test all_standard14_styles_have_consistent_output_apis ... ok
+test symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences ... ok
+test cid_type0_and_type2_program_variants_have_consistent_output_apis ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+

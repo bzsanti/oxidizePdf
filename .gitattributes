@@ -10,6 +10,8 @@
 # Fonts and images used as fixtures are binary too.
 *.ttf   binary
 *.otf   binary
+*.pfb   binary
+*.cff   binary
 *.ttc   binary
 *.woff  binary
 *.woff2 binary
@@ -26,3 +28,10 @@
 *.spki binary
 *.sig  binary
 *.crl  binary
+
+# Preserve original Adobe AFM bytes and provenance hashes across platforms.
+*.afm binary
+
+# #666 oracles are byte-pinned, including TSV/JSON/text sources. Preserve their
+# original bytes on Windows as well; CRLF conversion invalidates their hashes.
+oxidize-pdf-core/tests/fixtures/text_contracts/** -text

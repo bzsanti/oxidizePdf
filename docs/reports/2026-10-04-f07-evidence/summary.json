@@ -1,0 +1,37 @@
+{
+  "issue": 666,
+  "scope": "F07 only; user authorized immediate correction without another issue",
+  "findings_fixed": 2,
+  "validation": {
+    "aggregate": {
+      "passed": 7180,
+      "failed": 0,
+      "ignored": 3,
+      "targets": 35
+    },
+    "final_code_after_indirect_flags": {
+      "passed": 7108,
+      "failed": 0,
+      "ignored": 3,
+      "targets": 33
+    },
+    "corpus": {
+      "passed": 72,
+      "failed": 0,
+      "note": "Extraction code unchanged after this run; final follow-up only resolves renderer Flags references. No baseline changes."
+    },
+    "symbolic_target": 12,
+    "external_cases": 16,
+    "mutations_rejected": 3,
+    "clippy": "pass",
+    "format": "pass"
+  },
+  "policy": "Unknown symbolic TrueType codes: None in resolved Unicode, U+FFFD per source byte in extraction; explicit Encoding/Differences/ToUnicode preserved. No post/cmap inversion heuristic added.",
+  "f07_local": "remaining policy and representation contracts completed",
+  "remaining": "Remote CI/integration not performed. Do not start another block without completing the active one.",
+  "red": {
+    "passed": 9,
+    "failed": 2
+  },
+  "security": "four scopes scanned, no alerts; manual review completed"
+}

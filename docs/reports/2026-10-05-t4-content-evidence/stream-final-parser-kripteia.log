@@ -1,0 +1,424 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 89 | Tests: 96 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/parser/content.rs                           96     89
+
+--- Worst Offenders ---
+  test_nested_arrays_malformed (oxidize-pdf-core/src/parser/content.rs:3733) - Score: 70
+    - Test 'test_nested_arrays_malformed' has identical neighborhood to 'test_content_with_inline_images'
+    - Test 'test_nested_arrays_malformed' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_nested_arrays_malformed' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_content_with_inline_images (oxidize-pdf-core/src/parser/content.rs:3771) - Score: 70
+    - Test 'test_content_with_inline_images' has identical neighborhood to 'test_nested_arrays_malformed'
+    - Test 'test_content_with_inline_images' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_content_with_inline_images' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_error_handling_malformed_string (oxidize-pdf-core/src/parser/content.rs:2897) - Score: 80
+    - Test 'test_error_handling_malformed_string' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_error_handling_malformed_string' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_error_handling_malformed_hex_string (oxidize-pdf-core/src/parser/content.rs:2908) - Score: 80
+    - Test 'test_error_handling_malformed_hex_string' has identical neighborhood to 'test_error_handling_malformed_name'
+    - Test 'test_error_handling_malformed_hex_string' only exercises the happy path — no None, Err, or edge-case inputs
+  test_error_handling_malformed_name (oxidize-pdf-core/src/parser/content.rs:2916) - Score: 80
+    - Test 'test_error_handling_malformed_name' has identical neighborhood to 'test_error_handling_malformed_hex_string'
+    - Test 'test_error_handling_malformed_name' only exercises the happy path — no None, Err, or edge-case inputs
+
+--- Details ---
+oxidize-pdf-core/src/parser/content.rs:
+  inline_length_distinguishes_absent_mask_defaults_from_invalid_values (line 2260) - Score: 100
+    i Test 'inline_length_distinguishes_absent_mask_defaults_from_invalid_values' has multiple assertions without diagnostic messages
+  inline_parameter_nesting_is_bounded_and_truncation_is_an_error (line 2277) - Score: 100
+    i Test 'inline_parameter_nesting_is_bounded_and_truncation_is_an_error' has multiple assertions without diagnostic messages
+    i Test 'inline_parameter_nesting_is_bounded_and_truncation_is_an_error' uses .unwrap() which silently discards error information
+  incremental_image_length_preserves_pixel_whitespace_and_malformed_payload (line 2300) - Score: 90
+    i Test 'incremental_image_length_preserves_pixel_whitespace_and_malformed_payload' uses .unwrap() which silently discards error information
+    - Test 'incremental_image_length_preserves_pixel_whitespace_and_malformed_payload' has low assert-to-setup ratio (7%): 2 asserts vs 25 setup lines
+  incremental_operations_match_batch_at_lexical_boundaries (line 2332) - Score: 90
+    - Test 'incremental_operations_match_batch_at_lexical_boundaries' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incremental_operations_match_batch_at_lexical_boundaries' uses .unwrap() which silently discards error information
+  incremental_inline_image_terminator_at_next_stream_preserves_bytes (line 2353) - Score: 90
+    - Test 'incremental_inline_image_terminator_at_next_stream_preserves_bytes' has a match arm with empty body, ignoring potential error cases
+    i Test 'incremental_inline_image_terminator_at_next_stream_preserves_bytes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_inline_image_terminator_at_next_stream_preserves_bytes' has multiple assertions without diagnostic messages
+    i Test 'incremental_inline_image_terminator_at_next_stream_preserves_bytes' uses .unwrap() which silently discards error information
+  test_tokenize_numbers (line 2372) - Score: 90
+    - Test 'test_tokenize_numbers' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenize_numbers' has multiple assertions without diagnostic messages
+  test_tokenize_strings (line 2388) - Score: 90
+    - Test 'test_tokenize_strings' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenize_strings' has multiple assertions without diagnostic messages
+  test_tokenize_hex_strings (line 2407) - Score: 90
+    - Test 'test_tokenize_hex_strings' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenize_hex_strings' has multiple assertions without diagnostic messages
+  test_tokenize_names (line 2422) - Score: 90
+    - Test 'test_tokenize_names' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenize_names' has multiple assertions without diagnostic messages
+  test_tokenize_operators (line 2441) - Score: 90
+    - Test 'test_tokenize_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenize_operators' has multiple assertions without diagnostic messages
+  test_parse_text_operators (line 2468) - Score: 90
+    - Test 'test_parse_text_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_text_operators' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_text_operators' has multiple assertions without diagnostic messages
+    i Test 'test_parse_text_operators' uses .unwrap() which silently discards error information
+  test_parse_graphics_operators (line 2487) - Score: 90
+    - Test 'test_parse_graphics_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_graphics_operators' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_graphics_operators' has multiple assertions without diagnostic messages
+    i Test 'test_parse_graphics_operators' uses .unwrap() which silently discards error information
+  test_parse_color_operators (line 2507) - Score: 90
+    - Test 'test_parse_color_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_color_operators' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_color_operators' has multiple assertions without diagnostic messages
+    i Test 'test_parse_color_operators' uses .unwrap() which silently discards error information
+  test_all_text_operators (line 2528) - Score: 90
+    - Test 'test_all_text_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_all_text_operators' has multiple assertions without diagnostic messages
+    i Test 'test_all_text_operators' uses .unwrap() which silently discards error information
+  test_all_graphics_state_operators (line 2555) - Score: 90
+    - Test 'test_all_graphics_state_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_all_graphics_state_operators' has multiple assertions without diagnostic messages
+    i Test 'test_all_graphics_state_operators' uses .unwrap() which silently discards error information
+  test_all_path_construction_operators (line 2582) - Score: 90
+    - Test 'test_all_path_construction_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_all_path_construction_operators' has multiple assertions without diagnostic messages
+    i Test 'test_all_path_construction_operators' uses .unwrap() which silently discards error information
+  test_all_path_painting_operators (line 2608) - Score: 90
+    - Test 'test_all_path_painting_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_all_path_painting_operators' has multiple assertions without diagnostic messages
+    i Test 'test_all_path_painting_operators' uses .unwrap() which silently discards error information
+  test_all_color_operators (line 2627) - Score: 90
+    - Test 'test_all_color_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_all_color_operators' has multiple assertions without diagnostic messages
+    i Test 'test_all_color_operators' uses .unwrap() which silently discards error information
+  test_xobject_and_marked_content_operators (line 2665) - Score: 90
+    - Test 'test_xobject_and_marked_content_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xobject_and_marked_content_operators' has multiple assertions without diagnostic messages
+    i Test 'test_xobject_and_marked_content_operators' uses .unwrap() which silently discards error information
+  test_complex_content_stream (line 2688) - Score: 90
+    - Test 'test_complex_content_stream' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_complex_content_stream' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_complex_content_stream' has multiple assertions without diagnostic messages
+    i Test 'test_complex_content_stream' uses .unwrap() which silently discards error information
+  test_tokenizer_whitespace_handling (line 2713) - Score: 90
+    - Test 'test_tokenizer_whitespace_handling' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenizer_whitespace_handling' has multiple assertions without diagnostic messages
+  test_tokenizer_edge_cases (line 2738) - Score: 90
+    - Test 'test_tokenizer_edge_cases' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenizer_edge_cases' has multiple assertions without diagnostic messages
+  test_string_parsing_edge_cases (line 2754) - Score: 90
+    - Test 'test_string_parsing_edge_cases' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_string_parsing_edge_cases' has multiple assertions without diagnostic messages
+  test_hex_string_parsing (line 2801) - Score: 90
+    - Test 'test_hex_string_parsing' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_hex_string_parsing' has multiple assertions without diagnostic messages
+  test_name_parsing_edge_cases (line 2824) - Score: 90
+    - Test 'test_name_parsing_edge_cases' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_name_parsing_edge_cases' has multiple assertions without diagnostic messages
+  test_operator_parsing_edge_cases (line 2851) - Score: 90
+    - Test 'test_operator_parsing_edge_cases' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_operator_parsing_edge_cases' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_operator_parsing_edge_cases' has multiple assertions without diagnostic messages
+    i Test 'test_operator_parsing_edge_cases' uses .unwrap() which silently discards error information
+  test_error_handling_insufficient_operands (line 2869) - Score: 90
+    - Test 'test_error_handling_insufficient_operands' only exercises the happy path — no None, Err, or edge-case inputs
+  test_error_handling_invalid_operator (line 2884) - Score: 90
+    - Test 'test_error_handling_invalid_operator' only exercises the happy path — no None, Err, or edge-case inputs
+  test_error_handling_malformed_string (line 2897) - Score: 80
+    - Test 'test_error_handling_malformed_string' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_error_handling_malformed_string' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_error_handling_malformed_hex_string (line 2908) - Score: 80
+    - Test 'test_error_handling_malformed_hex_string' has identical neighborhood to 'test_error_handling_malformed_name'
+    - Test 'test_error_handling_malformed_hex_string' only exercises the happy path — no None, Err, or edge-case inputs
+  test_error_handling_malformed_name (line 2916) - Score: 80
+    - Test 'test_error_handling_malformed_name' has identical neighborhood to 'test_error_handling_malformed_hex_string'
+    - Test 'test_error_handling_malformed_name' only exercises the happy path — no None, Err, or edge-case inputs
+  test_empty_content_stream (line 2924) - Score: 80
+    - Test 'test_empty_content_stream' has identical neighborhood to 'test_whitespace_only_content_stream'
+    - Test 'test_empty_content_stream' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_empty_content_stream' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_empty_content_stream' uses .unwrap() which silently discards error information
+  test_whitespace_only_content_stream (line 2931) - Score: 80
+    - Test 'test_whitespace_only_content_stream' has identical neighborhood to 'test_empty_content_stream'
+    - Test 'test_whitespace_only_content_stream' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_whitespace_only_content_stream' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_whitespace_only_content_stream' uses .unwrap() which silently discards error information
+  test_mixed_integer_and_real_operands (line 2938) - Score: 90
+    - Test 'test_mixed_integer_and_real_operands' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_mixed_integer_and_real_operands' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_mixed_integer_and_real_operands' has multiple assertions without diagnostic messages
+    i Test 'test_mixed_integer_and_real_operands' uses .unwrap() which silently discards error information
+  test_negative_operands (line 2949) - Score: 90
+    - Test 'test_negative_operands' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_negative_operands' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_negative_operands' has multiple assertions without diagnostic messages
+    i Test 'test_negative_operands' uses .unwrap() which silently discards error information
+  test_large_numbers (line 2962) - Score: 90
+    - Test 'test_large_numbers' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_large_numbers' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_large_numbers' has multiple assertions without diagnostic messages
+    i Test 'test_large_numbers' uses .unwrap() which silently discards error information
+  test_scientific_notation (line 2974) - Score: 90
+    - Test 'test_scientific_notation' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_scientific_notation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_scientific_notation' has multiple assertions without diagnostic messages
+    i Test 'test_scientific_notation' uses .unwrap() which silently discards error information
+  test_show_text_array_complex (line 2984) - Score: 90
+    - Test 'test_show_text_array_complex' only exercises the happy path — no None, Err, or edge-case inputs
+  test_dash_pattern_empty (line 2998) - Score: 80
+    - Test 'test_dash_pattern_empty' has identical neighborhood to 'test_dash_pattern_complex'
+    - Test 'test_dash_pattern_empty' only exercises the happy path — no None, Err, or edge-case inputs
+  test_dash_pattern_complex (line 3011) - Score: 80
+    - Test 'test_dash_pattern_complex' has identical neighborhood to 'test_dash_pattern_empty'
+    - Test 'test_dash_pattern_complex' only exercises the happy path — no None, Err, or edge-case inputs
+  test_pop_array_removes_array_end (line 3023) - Score: 100
+    i Test 'test_pop_array_removes_array_end' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pop_array_removes_array_end' has multiple assertions without diagnostic messages
+    i Test 'test_pop_array_removes_array_end' uses .unwrap() which silently discards error information
+  test_dash_array_parsing_valid (line 3047) - Score: 100
+    i Test 'test_dash_array_parsing_valid' has multiple assertions without diagnostic messages
+    i Test 'test_dash_array_parsing_valid' uses .unwrap() which silently discards error information
+  test_text_array_parsing_valid (line 3064) - Score: 90
+    i Test 'test_text_array_parsing_valid' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_array_parsing_valid' uses .unwrap() which silently discards error information
+    - Test 'test_text_array_parsing_valid' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  test_inline_image_handling (line 3079) - Score: 80
+    - Test 'test_inline_image_handling' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_inline_image_handling' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_inline_image_handling' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_inline_image_handling' has multiple assertions without diagnostic messages
+    i Test 'test_inline_image_handling' uses .unwrap() which silently discards error information
+  test_inline_image_with_filter (line 3101) - Score: 80
+    - Test 'test_inline_image_with_filter' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_inline_image_with_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_inline_image_with_filter' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_inline_image_with_filter' has multiple assertions without diagnostic messages
+    i Test 'test_inline_image_with_filter' uses .unwrap() which silently discards error information
+  test_content_parser_performance (line 3125) - Score: 100
+    i Test 'test_content_parser_performance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_parser_performance' has multiple assertions without diagnostic messages
+    i Test 'test_content_parser_performance' uses .unwrap() which silently discards error information
+  test_tokenizer_performance (line 3140) - Score: 90
+    - Test 'test_tokenizer_performance' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenizer_performance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_tokenizer_performance' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_performance' uses .unwrap() which silently discards error information
+  test_memory_usage_large_content (line 3159) - Score: 100
+    i Test 'test_memory_usage_large_content' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_memory_usage_large_content' uses .unwrap() which silently discards error information
+  test_concurrent_parsing (line 3178) - Score: 100
+    i Test 'test_concurrent_parsing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_concurrent_parsing' has multiple assertions without diagnostic messages
+    i Test 'test_concurrent_parsing' uses .unwrap() which silently discards error information
+  test_tokenizer_hex_string_edge_cases (line 3201) - Score: 100
+    i Test 'test_tokenizer_hex_string_edge_cases' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_hex_string_edge_cases' uses .unwrap() which silently discards error information
+  test_tokenizer_literal_string_escape_sequences (line 3227) - Score: 90
+    - Test 'test_tokenizer_literal_string_escape_sequences' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_tokenizer_literal_string_escape_sequences' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_literal_string_escape_sequences' uses .unwrap() which silently discards error information
+  test_tokenizer_nested_parentheses (line 3251) - Score: 90
+    - Test 'test_tokenizer_nested_parentheses' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_tokenizer_nested_parentheses' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_nested_parentheses' uses .unwrap() which silently discards error information
+  test_tokenizer_name_hex_escapes (line 3273) - Score: 100
+    i Test 'test_tokenizer_name_hex_escapes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_tokenizer_name_hex_escapes' uses .unwrap() which silently discards error information
+  test_tokenizer_number_edge_cases (line 3291) - Score: 100
+    i Test 'test_tokenizer_number_edge_cases' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_tokenizer_number_edge_cases' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_number_edge_cases' uses .unwrap() which silently discards error information
+  test_parser_complex_path_operations (line 3318) - Score: 90
+    - Test 'test_parser_complex_path_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_complex_path_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_complex_path_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_complex_path_operations' uses .unwrap() which silently discards error information
+  test_parser_bezier_curves (line 3332) - Score: 80
+    - Test 'test_parser_bezier_curves' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parser_bezier_curves' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_bezier_curves' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_bezier_curves' has multiple assertions without diagnostic messages
+    i Test 'test_parser_bezier_curves' uses .unwrap() which silently discards error information
+  test_parser_color_operations (line 3354) - Score: 80
+    - Test 'test_parser_color_operations' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parser_color_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_color_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_color_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_color_operations' uses .unwrap() which silently discards error information
+  test_parser_text_positioning_advanced (line 3372) - Score: 80
+    - Test 'test_parser_text_positioning_advanced' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parser_text_positioning_advanced' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_text_positioning_advanced' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_text_positioning_advanced' has multiple assertions without diagnostic messages
+    i Test 'test_parser_text_positioning_advanced' uses .unwrap() which silently discards error information
+  test_parser_graphics_state_operations (line 3388) - Score: 80
+    - Test 'test_parser_graphics_state_operations' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parser_graphics_state_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_graphics_state_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_graphics_state_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_graphics_state_operations' uses .unwrap() which silently discards error information
+  test_parser_xobject_operations (line 3404) - Score: 90
+    - Test 'test_parser_xobject_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_xobject_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_xobject_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_xobject_operations' uses .unwrap() which silently discards error information
+  test_parser_marked_content_operations (line 3418) - Score: 90
+    - Test 'test_parser_marked_content_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_marked_content_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_marked_content_operations' uses .unwrap() which silently discards error information
+  test_parser_error_handling_invalid_operators (line 3431) - Score: 90
+    - Test 'test_parser_error_handling_invalid_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_error_handling_invalid_operators' has multiple assertions without diagnostic messages
+  test_parser_whitespace_tolerance (line 3461) - Score: 80
+    - Test 'test_parser_whitespace_tolerance' has identical neighborhood to 'test_tokenizer_comment_handling'
+    - Test 'test_parser_whitespace_tolerance' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_whitespace_tolerance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_whitespace_tolerance' has multiple assertions without diagnostic messages
+    i Test 'test_parser_whitespace_tolerance' uses .unwrap() which silently discards error information
+  test_tokenizer_comment_handling (line 3470) - Score: 80
+    - Test 'test_tokenizer_comment_handling' has identical neighborhood to 'test_parser_whitespace_tolerance'
+    - Test 'test_tokenizer_comment_handling' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenizer_comment_handling' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_tokenizer_comment_handling' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_comment_handling' uses .unwrap() which silently discards error information
+  test_parser_stream_with_binary_data (line 3479) - Score: 80
+    - Test 'test_parser_stream_with_binary_data' has identical neighborhood to 'test_tokenizer_array_parsing'
+    - Test 'test_parser_stream_with_binary_data' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_stream_with_binary_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_stream_with_binary_data' has multiple assertions without diagnostic messages
+    i Test 'test_parser_stream_with_binary_data' uses .unwrap() which silently discards error information
+  test_tokenizer_array_parsing (line 3490) - Score: 80
+    - Test 'test_tokenizer_array_parsing' has identical neighborhood to 'test_parser_stream_with_binary_data'
+    - Test 'test_tokenizer_array_parsing' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenizer_array_parsing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_tokenizer_array_parsing' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_array_parsing' uses .unwrap() which silently discards error information
+  test_parser_rectangle_operations (line 3501) - Score: 80
+    - Test 'test_parser_rectangle_operations' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parser_rectangle_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_rectangle_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_rectangle_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_rectangle_operations' uses .unwrap() which silently discards error information
+  test_parser_clipping_operations (line 3521) - Score: 90
+    - Test 'test_parser_clipping_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_clipping_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_clipping_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_clipping_operations' uses .unwrap() which silently discards error information
+  test_parser_painting_operations (line 3533) - Score: 90
+    - Test 'test_parser_painting_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_painting_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_painting_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_painting_operations' uses .unwrap() which silently discards error information
+  test_parser_line_style_operations (line 3549) - Score: 90
+    - Test 'test_parser_line_style_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_line_style_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_line_style_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_line_style_operations' uses .unwrap() which silently discards error information
+  test_parser_text_state_operations (line 3562) - Score: 90
+    - Test 'test_parser_text_state_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_text_state_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_text_state_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_text_state_operations' uses .unwrap() which silently discards error information
+  test_parser_unicode_text (line 3575) - Score: 80
+    - Test 'test_parser_unicode_text' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parser_unicode_text' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_unicode_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_unicode_text' has multiple assertions without diagnostic messages
+    i Test 'test_parser_unicode_text' uses .unwrap() which silently discards error information
+  test_parser_stress_test_large_coordinates (line 3591) - Score: 80
+    - Test 'test_parser_stress_test_large_coordinates' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parser_stress_test_large_coordinates' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_stress_test_large_coordinates' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_stress_test_large_coordinates' has multiple assertions without diagnostic messages
+    i Test 'test_parser_stress_test_large_coordinates' uses .unwrap() which silently discards error information
+  test_parser_empty_content_stream (line 3607) - Score: 90
+    - Test 'test_parser_empty_content_stream' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parser_empty_content_stream' has multiple assertions without diagnostic messages
+    i Test 'test_parser_empty_content_stream' uses .unwrap() which silently discards error information
+  test_tokenizer_error_recovery (line 3618) - Score: 90
+    - Test 'test_tokenizer_error_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenizer_error_recovery' has multiple assertions without diagnostic messages
+  malformed_operator_does_not_discard_surrounding_text (line 3637) - Score: 100
+    i Test 'malformed_operator_does_not_discard_surrounding_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'malformed_operator_does_not_discard_surrounding_text' has multiple assertions without diagnostic messages
+  test_parser_optimization_repeated_operations (line 3665) - Score: 100
+    i Test 'test_parser_optimization_repeated_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_optimization_repeated_operations' has multiple assertions without diagnostic messages
+    i Test 'test_parser_optimization_repeated_operations' uses .unwrap() which silently discards error information
+  test_parser_memory_efficiency_large_strings (line 3681) - Score: 90
+    - Test 'test_parser_memory_efficiency_large_strings' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_parser_memory_efficiency_large_strings' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parser_memory_efficiency_large_strings' has multiple assertions without diagnostic messages
+    i Test 'test_parser_memory_efficiency_large_strings' uses .unwrap() which silently discards error information
+  test_content_stream_too_large (line 3698) - Score: 100
+    i Test 'test_content_stream_too_large' has multiple assertions without diagnostic messages
+    i Test 'test_content_stream_too_large' uses .unwrap() which silently discards error information
+  test_invalid_operator_handling (line 3718) - Score: 80
+    - Test 'test_invalid_operator_handling' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_invalid_operator_handling' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_nested_arrays_malformed (line 3733) - Score: 70
+    - Test 'test_nested_arrays_malformed' has identical neighborhood to 'test_content_with_inline_images'
+    - Test 'test_nested_arrays_malformed' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_nested_arrays_malformed' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_escape_sequences_in_strings (line 3743) - Score: 90
+    i Test 'test_escape_sequences_in_strings' uses .unwrap() which silently discards error information
+    - Test 'test_escape_sequences_in_strings' has low assert-to-setup ratio (17%): 3 asserts vs 15 setup lines
+  test_content_with_inline_images (line 3771) - Score: 70
+    - Test 'test_content_with_inline_images' has identical neighborhood to 'test_nested_arrays_malformed'
+    - Test 'test_content_with_inline_images' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_content_with_inline_images' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_operator_with_missing_operands (line 3781) - Score: 80
+    - Test 'test_operator_with_missing_operands' has identical neighborhood to 'test_content_with_inline_images'
+    - Test 'test_operator_with_missing_operands' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_tokenizer_handles_curly_braces (line 3800) - Score: 80
+    - Test 'test_tokenizer_handles_curly_braces' has identical neighborhood to 'test_tokenizer_handles_closing_paren'
+    - Test 'test_tokenizer_handles_curly_braces' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenizer_handles_curly_braces' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_handles_curly_braces' uses .unwrap() which silently discards error information
+  test_tokenizer_handles_closing_paren (line 3817) - Score: 80
+    - Test 'test_tokenizer_handles_closing_paren' has identical neighborhood to 'test_tokenizer_handles_curly_braces'
+    - Test 'test_tokenizer_handles_closing_paren' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenizer_handles_closing_paren' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_handles_closing_paren' uses .unwrap() which silently discards error information
+  test_inline_image_binary_with_curly_braces (line 3832) - Score: 90
+    - Test 'test_inline_image_binary_with_curly_braces' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_inline_image_binary_with_curly_braces' uses .unwrap() which silently discards error information
+  test_inline_image_binary_with_all_byte_values (line 3856) - Score: 90
+    - Test 'test_inline_image_binary_with_all_byte_values' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  test_inline_image_ei_detection (line 3875) - Score: 90
+    - Test 'test_inline_image_ei_detection' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_inline_image_ei_detection' uses .unwrap() which silently discards error information
+  test_tokenizer_no_infinite_loop_on_consecutive_delimiters (line 3891) - Score: 90
+    - Test 'test_tokenizer_no_infinite_loop_on_consecutive_delimiters' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_tokenizer_no_infinite_loop_on_consecutive_delimiters' has multiple assertions without diagnostic messages
+    i Test 'test_tokenizer_no_infinite_loop_on_consecutive_delimiters' uses .unwrap() which silently discards error information
+  test_content_parser_inline_image_produces_correct_operation (line 3909) - Score: 90
+    - Test 'test_content_parser_inline_image_produces_correct_operation' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_content_parser_inline_image_produces_correct_operation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_parser_inline_image_produces_correct_operation' has multiple assertions without diagnostic messages
+    i Test 'test_content_parser_inline_image_produces_correct_operation' uses .unwrap() which silently discards error information
+  test_octal_escape_overflow_777 (line 3934) - Score: 90
+    - Test 'test_octal_escape_overflow_777' has identical neighborhood to 'test_octal_escape_max_valid_377'
+    i Test 'test_octal_escape_overflow_777' uses .unwrap() which silently discards error information
+  test_octal_escape_overflow_400 (line 3947) - Score: 100
+    i Test 'test_octal_escape_overflow_400' uses .unwrap() which silently discards error information
+  test_octal_escape_overflow_577 (line 3959) - Score: 100
+    i Test 'test_octal_escape_overflow_577' uses .unwrap() which silently discards error information
+  test_octal_escape_max_valid_377 (line 3971) - Score: 90
+    - Test 'test_octal_escape_max_valid_377' has identical neighborhood to 'test_octal_escape_overflow_777'
+    i Test 'test_octal_escape_max_valid_377' uses .unwrap() which silently discards error information
+  test_octal_escape_overflow_mixed_with_valid (line 3982) - Score: 80
+    - Test 'test_octal_escape_overflow_mixed_with_valid' has identical neighborhood to 'test_octal_escape_max_valid_377'
+    - Test 'test_octal_escape_overflow_mixed_with_valid' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_octal_escape_overflow_mixed_with_valid' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

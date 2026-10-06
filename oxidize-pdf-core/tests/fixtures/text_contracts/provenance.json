@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "pdfbox_revision": "804cc824f1a19bcce85a3d0d60a8f10e98188e52",
+  "adobe_agl_revision": "4036a9ca80a62f64f9de4f7321a9a045ad0ecfd6",
+  "normative_reference": "PDF 32000-1:2008 Annex D.2-D.6; printed pages 653-672",
+  "normative_url": "https://raw.githubusercontent.com/adobe/dc-acrobat-sdk-docs/master/docs/pdfstandards/PDF32000_2008.pdf",
+  "pdfbox_url_template": "https://raw.githubusercontent.com/apache/pdfbox/804cc824f1a19bcce85a3d0d60a8f10e98188e52/pdfbox/src/main/java/org/apache/pdfbox/pdmodel/font/encoding/{encoding}.java",
+  "adobe_url_template": "https://raw.githubusercontent.com/adobe-type-tools/agl-aglfn/4036a9ca80a62f64f9de4f7321a9a045ad0ecfd6/{name}.txt",
+  "unicode_alias_policy": {
+    "nbspace": "00A0",
+    "sfthyphen": "00AD"
+  },
+  "undefined_policy": "inventory only; extraction behavior requires a separate contract",
+  "normative_crosscheck": "229 named rows; Standard, MacRoman, WinAnsi assignments checked; Symbol 189 and Zapf 188 complete assignments checked; PDFDocEncoding 256 positions checked (232 defined, 24 undefined); MacExpert 165 complete assignments checked",
+  "assigned_counts": {
+    "StandardEncoding": 149,
+    "WinAnsiEncoding": 224,
+    "MacRomanEncoding": 208,
+    "MacExpertEncoding": 165,
+    "SymbolEncoding": 189,
+    "ZapfDingbatsEncoding": 188,
+    "PDFDocEncoding": 232
+  },
+  "source_sha256": {
+    "text-contracts-StandardEncoding.java": "60df279e7c0b0d2da230864b52a47e85c62b92c721c6619f441e9ac7cd156e60",
+    "text-contracts-WinAnsiEncoding.java": "3f490da5a07c01f3301e7ec418a434d36854182208216f42a30a61d31863019a",
+    "text-contracts-MacRomanEncoding.java": "a6f2d5ec059119254b1b85311c5bcf7243507393fcd67dab7d328675ad5e0176",
+    "text-contracts-MacExpertEncoding.java": "c837b6b1bd6add722ec4b9cc5d3998e0dfb6c1feb2c92465cac5947f8ba6fc6f",
+    "text-contracts-SymbolEncoding.java": "ec97dafcd5bc6f3cc685ed5d7d9fe525a803904f47c233966332d673ef681184",
+    "text-contracts-ZapfDingbatsEncoding.java": "cb6dc9970f852742569ea797b3c9373af1e0dc98164142139d68db41c2f7eb04",
+    "text-contracts-glyphlist.txt": "a3b2f61ced9f3644cc0d4ecde5c59df34ca286c689d9484a43a710a81c466789",
+    "text-contracts-zapfdingbats.txt": "f6394e3cb8a447e84a1dad75d4baaf2aa7f45dc104faf369f4720e1a774ef2dc",
+    "text-contracts-iso32000.txt": "e8200d8937ccd68e7565bbec3db4f6505df60b721ba5e292be3acc4273f444bf",
+    "text-contracts-iso32000.pdf": "9de0ca9e8570d6209e8bd48a355be8eb6ec376acfc3fc3ae97cd8730351417ff"
+  },
+  "table_sha256": {
+    "StandardEncoding.tsv": "276f93a7055e3d274f882f435e5016a33e15d3cc0492534a5162bbed913adb53",
+    "WinAnsiEncoding.tsv": "7898de7f219b88915a066186ca90fd1f00c2fdd45fa2a371c4065fb2a90e0e96",
+    "MacRomanEncoding.tsv": "4949d9ceb741e1b8c5024a00195c1271f8338fb9bb5cdd1d99cefb06d638e4da",
+    "MacExpertEncoding.tsv": "1876dd5e59c2a3e3975d0ed7f1620552f49d42621d9412248ade3de6c082dcbb",
+    "SymbolEncoding.tsv": "b5d913ef70eae9d7745a2147b944b113e3d07c2cccef2136e30e29eaaf721c29",
+    "ZapfDingbatsEncoding.tsv": "7d1c148f50e6b6b9bafe2979482fbe905b5e7b8f06a46feb5281f00ea4b08837",
+    "PDFDocEncoding.tsv": "6b1815a8a28ba37c0f7d71cc9a6ab0cb18af8b6ba6fc2fed49e3b9291343a4ac"
+  }
+}

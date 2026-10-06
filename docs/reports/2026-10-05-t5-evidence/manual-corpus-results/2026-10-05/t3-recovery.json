@@ -1,0 +1,8 @@
+{
+  "graceful_failures": 41,
+  "parse_rate": 0.9772475027746947,
+  "parsed": 1761,
+  "text_extracted": 1560,
+  "text_rate": 0.8657047724750278,
+  "total": 1802
+}

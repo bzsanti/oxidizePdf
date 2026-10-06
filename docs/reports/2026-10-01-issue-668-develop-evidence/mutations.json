@@ -1,0 +1,20 @@
+[
+  {
+    "mutation": "builtin-selection",
+    "test": "symbol_builtin_encoding_matches_independent_table",
+    "exit_code": 101,
+    "assertion_detected": true
+  },
+  {
+    "mutation": "undefined-differences",
+    "test": "unresolved_differences_replace_instead_of_restoring_the_base_glyph",
+    "exit_code": 101,
+    "assertion_detected": true
+  },
+  {
+    "mutation": "afm-marker",
+    "test": "builtin_decoding_preserves_afm_widths_and_following_origins",
+    "exit_code": 101,
+    "assertion_detected": true
+  }
+]

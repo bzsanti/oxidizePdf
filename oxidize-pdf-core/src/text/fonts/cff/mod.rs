@@ -4,6 +4,7 @@
 //! `cff_subsetter` module, intended to be shared across CFF-related components.
 
 pub mod charstring;
+pub mod cid;
 pub mod dict;
 pub mod index;
 pub mod types;

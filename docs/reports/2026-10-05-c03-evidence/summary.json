@@ -1,0 +1,10 @@
+{
+  "tests_passed": 12,
+  "failed": 0,
+  "changed_since_c02": [
+    "TASKS.md",
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json",
+    "oxidize-pdf-core/tests/text_cjk_contract_test.rs"
+  ],
+  "product_unchanged": true
+}

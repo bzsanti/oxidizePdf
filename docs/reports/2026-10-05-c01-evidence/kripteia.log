@@ -1,0 +1,33 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 2 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_identity_contract_test.rs             2    100
+
+--- Worst Offenders ---
+  identity_never_treats_cids_as_unicode_or_combines_surrogate_looking_codes (oxidize-pdf-core/tests/text_identity_contract_test.rs:26) - Score: 100
+    i Test 'identity_never_treats_cids_as_unicode_or_combines_surrogate_looking_codes' has multiple assertions without diagnostic messages
+    i Test 'identity_never_treats_cids_as_unicode_or_combines_surrogate_looking_codes' uses .unwrap() which silently discards error information
+  identity_empty_and_odd_tail_have_explicit_consumer_policies (oxidize-pdf-core/tests/text_identity_contract_test.rs:68) - Score: 100
+    i Test 'identity_empty_and_odd_tail_have_explicit_consumer_policies' has multiple assertions without diagnostic messages
+    i Test 'identity_empty_and_odd_tail_have_explicit_consumer_policies' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_identity_contract_test.rs:
+  identity_never_treats_cids_as_unicode_or_combines_surrogate_looking_codes (line 26) - Score: 100
+    i Test 'identity_never_treats_cids_as_unicode_or_combines_surrogate_looking_codes' has multiple assertions without diagnostic messages
+    i Test 'identity_never_treats_cids_as_unicode_or_combines_surrogate_looking_codes' uses .unwrap() which silently discards error information
+  identity_empty_and_odd_tail_have_explicit_consumer_policies (line 68) - Score: 100
+    i Test 'identity_empty_and_odd_tail_have_explicit_consumer_policies' has multiple assertions without diagnostic messages
+    i Test 'identity_empty_and_odd_tail_have_explicit_consumer_policies' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -1,0 +1,315 @@
+{
+  "files": [
+    {
+      "path": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+      "score": 94,
+      "test_count": 11,
+      "tests": [
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'cjk_samples_have_pinned_identity_and_distinct_collections' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'cjk_samples_have_pinned_identity_and_distinct_collections' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'cjk_samples_have_pinned_identity_and_distinct_collections' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 69,
+          "name": "cjk_samples_have_pinned_identity_and_distinct_collections",
+          "score": 100,
+          "source_snippet": "fn cjk_samples_have_pinned_identity_and_distinct_collections() {\n    let manifest: serde_json::Value =\n        serde_json::from_str(include_str!(\"fixtures/text_contracts/cjk/provenance.json\")).unwrap();\n    assert_eq!(\n        manifest[\"samples_sha256\"].as_str().unwrap(),\n        format!(\"{:x}\", Sha256::digest(SAMPLES.as_bytes()))\n    );\n    let rows: Vec<Vec<_>> = SAMPLES\n        .lines()\n        .skip(1)\n        .map(|l| l.split('\\t').collect())\n        .collect();\n    assert_eq!(rows.len(), manifest[\"samples\"].as_u64().unwrap() as usize);\n    let maps: std::collections::BTreeSet<_> = rows.iter().map(|r| r[2]).collect();\n    assert_eq!(maps.len(), 35);\n    assert!(rows\n        .iter()\n        .any(|r| r[0] == \"KR\" && r[2] == \"UniAKR-UTF16-H\"));\n    assert!(rows\n        .iter()\n        .any(|r| r[0] == \"Korea1\" && r[2] == \"UniKS-UTF16-H\"));\n    assert!(rows.iter().any(|r| r[4] == \"non-bmp\"));\n    assert!(rows.iter().any(|r| r[4] == \"vertical-override\"));\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "NoProductionCall",
+              "message": "Test 'adobe_gb1_named_cmaps_decode_collection_cids' does not call any production code",
+              "severity_hint": "medium",
+              "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+            }
+          ],
+          "line": 94,
+          "name": "adobe_gb1_named_cmaps_decode_collection_cids",
+          "score": 90,
+          "source_snippet": "fn adobe_gb1_named_cmaps_decode_collection_cids() {\n    check(\"GB1\", false);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "NoProductionCall",
+              "message": "Test 'adobe_cns1_named_cmaps_decode_collection_cids' does not call any production code",
+              "severity_hint": "medium",
+              "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+            }
+          ],
+          "line": 98,
+          "name": "adobe_cns1_named_cmaps_decode_collection_cids",
+          "score": 90,
+          "source_snippet": "fn adobe_cns1_named_cmaps_decode_collection_cids() {\n    check(\"CNS1\", false);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "NoProductionCall",
+              "message": "Test 'adobe_japan1_named_cmaps_decode_collection_cids' does not call any production code",
+              "severity_hint": "medium",
+              "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+            }
+          ],
+          "line": 102,
+          "name": "adobe_japan1_named_cmaps_decode_collection_cids",
+          "score": 90,
+          "source_snippet": "fn adobe_japan1_named_cmaps_decode_collection_cids() {\n    check(\"Japan1\", false);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "NoProductionCall",
+              "message": "Test 'adobe_korea1_named_cmaps_decode_collection_cids' does not call any production code",
+              "severity_hint": "medium",
+              "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+            }
+          ],
+          "line": 106,
+          "name": "adobe_korea1_named_cmaps_decode_collection_cids",
+          "score": 90,
+          "source_snippet": "fn adobe_korea1_named_cmaps_decode_collection_cids() {\n    check(\"Korea1\", false);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "NoProductionCall",
+              "message": "Test 'adobe_kr_is_a_separate_collection' does not call any production code",
+              "severity_hint": "medium",
+              "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+            }
+          ],
+          "line": 110,
+          "name": "adobe_kr_is_a_separate_collection",
+          "score": 90,
+          "source_snippet": "fn adobe_kr_is_a_separate_collection() {\n    check(\"KR\", false);\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "NoProductionCall",
+              "message": "Test 'explicit_unicode_overrides_all_five_collection_fallbacks' does not call any production code",
+              "severity_hint": "medium",
+              "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+            }
+          ],
+          "line": 114,
+          "name": "explicit_unicode_overrides_all_five_collection_fallbacks",
+          "score": 90,
+          "source_snippet": "fn explicit_unicode_overrides_all_five_collection_fallbacks() {\n    for ordering in [\"GB1\", \"CNS1\", \"Japan1\", \"Korea1\", \"KR\"] {\n        check(ordering, true);\n    }\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 121,
+          "name": "resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences",
+          "score": 100,
+          "source_snippet": "fn resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences() {\n    for line in SAMPLES.lines().skip(1) {\n        let row: Vec<_> = line.split('\\t').collect();\n        let code: Vec<u8> = row[5]\n            .as_bytes()\n            .chunks_exact(2)\n            .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())\n            .collect();\n        for explicit in [false, true] {\n            let document =\n                PdfDocument::new(PdfReader::new(Cursor::new(fixture(&row, explicit))).unwrap());\n            let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n            let glyphs = font.decode_glyphs(&code).unwrap();\n            assert_eq!(glyphs.len(), 1, \"{} {}\", row[2], row[5]);\n            let glyph = &glyphs[0];\n            let expected: String = if explicit {\n                \"Z\".into()\n            } else {\n                row[7]\n                    .split(' ')\n                    .map(|scalar| char::from_u32(u32::from_str_radix(scalar, 16).unwrap()).unwrap())\n                    .collect()\n            };\n            assert_eq!(glyph.source_code, code);\n            assert_eq!(\n                glyph.cid,\n                Some(row[6].parse().unwrap()),\n                \"{} {}\",\n                row[2],\n                row[5]\n            );\n            assert_eq!(glyph.gid, Some(2));\n            assert_eq!(\n                glyph.unicode.as_deref(),\n                Some(expected.as_str()),\n                \"{} {}\",\n                row[2],\n                row[5]\n            );\n            assert_eq!(glyph.advance, 600.0);\n        }\n    }\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'cid_zero_fallback_preserves_following_text_and_explicit_unicode' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'cid_zero_fallback_preserves_following_text_and_explicit_unicode' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'cid_zero_fallback_preserves_following_text_and_explicit_unicode' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 168,
+          "name": "cid_zero_fallback_preserves_following_text_and_explicit_unicode",
+          "score": 100,
+          "source_snippet": "fn cid_zero_fallback_preserves_following_text_and_explicit_unicode() {\n    for encoding in [\"/Identity-H\", \"7 0 R\"] {\n        for explicit in [false, true] {\n            let unicode = if explicit { \"/ToUnicode 8 0 R\" } else { \"\" };\n            let font = format!(\"<< /Type /Font /Subtype /Type0 /BaseFont /Policy /Encoding {encoding} /DescendantFonts [6 0 R] {unicode} >>\");\n            let data = pdf(&font, b\"BT /F1 12 Tf <00000022> Tj ET\", vec![\n                b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Policy /CIDSystemInfo << /Registry (Adobe) /Ordering (Japan1) /Supplement 7 >> /DW 600 >>\".to_vec(),\n                stream_obj(\"\", b\"begincmap 1 begincodespacerange <0000> <FFFF> endcodespacerange 2 begincidchar <0000> 0 <0022> 34 endcidchar endcmap\"),\n                cmap(\"<0000> <005A>\\n<0022> <0041>\", 2, \"<0000> <FFFF>\"),\n            ]);\n            for options in [ParseOptions::strict(), ParseOptions::lenient()] {\n                assert_eq!(\n                    extract(data.clone(), options).text,\n                    if explicit { \"ZA\" } else { \"A\" }\n                );\n            }\n            let document = PdfDocument::new(PdfReader::new(Cursor::new(data)).unwrap());\n            let resolved = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n            let glyphs = resolved.decode_glyphs(&[0, 0, 0, 34]).unwrap();\n            assert_eq!(glyphs[0].cid, Some(0));\n            assert_eq!(\n                glyphs[0].unicode.as_deref(),\n                if explicit { Some(\"Z\") } else { None }\n            );\n            assert_eq!(glyphs[0].advance, 600.0);\n            assert_eq!(glyphs[1].unicode.as_deref(), Some(\"A\"));\n        }\n    }\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity' has multiple assertions without diagnostic messages",
+              "severity_hint": "info",
+              "suggestion": "Add a message to each assert: assert_eq!(a, b, \"reason\") to ease debugging."
+            },
+            {
+              "kind": "Informational",
+              "message": "Test 'named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity' uses .unwrap() which silently discards error information",
+              "severity_hint": "info",
+              "suggestion": "Consider .expect(\"reason\") for clearer panic messages in setup."
+            }
+          ],
+          "line": 199,
+          "name": "named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity",
+          "score": 100,
+          "source_snippet": "fn named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity() {\n    let row = [\n        \"Japan1\",\n        \"7\",\n        \"UniJIS-UTF16-H\",\n        \"H\",\n        \"policy\",\n        \"00E1\",\n        \"194\",\n        \"00E1\",\n    ];\n    let document = PdfDocument::new(PdfReader::new(Cursor::new(fixture(&row, false))).unwrap());\n    let font = ResolvedFontResource::from_page(&document, 0, \"F1\").unwrap();\n    assert!(font.decode_glyphs(&[0]).is_err());\n    assert!(font.decode_glyphs(&[0xD8, 0x40, 0xDC]).is_err());\n    let glyphs = font.decode_glyphs(&[0xFF, 0xFF, 0, 0xE1]).unwrap();\n    assert_eq!(glyphs[0].source_code, [0xFF, 0xFF]);\n    assert_eq!(glyphs[0].cid, None);\n    assert_eq!(glyphs[0].unicode, None);\n    assert_eq!(glyphs[0].advance, 600.0);\n    assert_eq!(glyphs[1].unicode.as_deref(), Some(\"á\"));\n}"
+        },
+        {
+          "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+          "issues": [
+            {
+              "kind": "Informational",
+              "message": "Test 'cid_zero_only_does_not_fall_back_to_source_bytes' asserts against a hardcoded constant instead of a computed expected value",
+              "severity_hint": "info",
+              "suggestion": "Derive expected values from test inputs when the constant is not inherent to the test design."
+            },
+            {
+              "kind": "LowAssertRatio",
+              "message": "Test 'cid_zero_only_does_not_fall_back_to_source_bytes' has low assert-to-setup ratio (7%): 1 asserts vs 13 setup lines",
+              "severity_hint": "low",
+              "suggestion": "Extract complex setup into helper functions or fixtures. Consider splitting this into multiple focused tests, each testing one behavior with less setup."
+            }
+          ],
+          "line": 223,
+          "name": "cid_zero_only_does_not_fall_back_to_source_bytes",
+          "score": 90,
+          "source_snippet": "fn cid_zero_only_does_not_fall_back_to_source_bytes() {\n    for (encoding, content) in [\n        (\"/Identity-H\", \"BT /F1 12 Tf <0000> Tj ET\"),\n        (\"7 0 R\", \"BT /F1 12 Tf <4141> Tj ET\"),\n    ] {\n        let data = pdf(\n            &format!(\"<< /Type /Font /Subtype /Type0 /BaseFont /Policy /Encoding {encoding} /DescendantFonts [6 0 R] >>\"),\n            content.as_bytes(),\n            vec![\n                b\"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Policy /CIDSystemInfo << /Registry (Adobe) /Ordering (Japan1) /Supplement 7 >> /DW 600 >>\".to_vec(),\n                stream_obj(\"\", b\"begincmap 1 begincodespacerange <00> <FF> endcodespacerange 1 begincidchar <41> 0 endcidchar endcmap\"),\n            ],\n        );\n        for options in [ParseOptions::strict(), ParseOptions::lenient()] {\n            assert_eq!(extract(data.clone(), options).text, \"\", \"{encoding}\");\n        }\n    }\n}"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "analysis_date": "2026-10-04T09:14:05.720661231+00:00",
+    "duration_ms": 286,
+    "kripteia_version": "0.15.0"
+  },
+  "output_schema_version": 1,
+  "score": 94,
+  "total_tests": 11,
+  "worst_offenders": [
+    {
+      "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+      "issues": [
+        {
+          "kind": "NoProductionCall",
+          "message": "Test 'adobe_gb1_named_cmaps_decode_collection_cids' does not call any production code",
+          "severity_hint": "medium",
+          "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+        }
+      ],
+      "line": 94,
+      "name": "adobe_gb1_named_cmaps_decode_collection_cids",
+      "score": 90,
+      "source_snippet": "fn adobe_gb1_named_cmaps_decode_collection_cids() {\n    check(\"GB1\", false);\n}"
+    },
+    {
+      "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+      "issues": [
+        {
+          "kind": "NoProductionCall",
+          "message": "Test 'adobe_cns1_named_cmaps_decode_collection_cids' does not call any production code",
+          "severity_hint": "medium",
+          "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+        }
+      ],
+      "line": 98,
+      "name": "adobe_cns1_named_cmaps_decode_collection_cids",
+      "score": 90,
+      "source_snippet": "fn adobe_cns1_named_cmaps_decode_collection_cids() {\n    check(\"CNS1\", false);\n}"
+    },
+    {
+      "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+      "issues": [
+        {
+          "kind": "NoProductionCall",
+          "message": "Test 'adobe_japan1_named_cmaps_decode_collection_cids' does not call any production code",
+          "severity_hint": "medium",
+          "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+        }
+      ],
+      "line": 102,
+      "name": "adobe_japan1_named_cmaps_decode_collection_cids",
+      "score": 90,
+      "source_snippet": "fn adobe_japan1_named_cmaps_decode_collection_cids() {\n    check(\"Japan1\", false);\n}"
+    },
+    {
+      "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+      "issues": [
+        {
+          "kind": "NoProductionCall",
+          "message": "Test 'adobe_korea1_named_cmaps_decode_collection_cids' does not call any production code",
+          "severity_hint": "medium",
+          "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+        }
+      ],
+      "line": 106,
+      "name": "adobe_korea1_named_cmaps_decode_collection_cids",
+      "score": 90,
+      "source_snippet": "fn adobe_korea1_named_cmaps_decode_collection_cids() {\n    check(\"Korea1\", false);\n}"
+    },
+    {
+      "file": "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+      "issues": [
+        {
+          "kind": "NoProductionCall",
+          "message": "Test 'adobe_kr_is_a_separate_collection' does not call any production code",
+          "severity_hint": "medium",
+          "suggestion": "A test should exercise production code, not just assert on literals. Call the function or method under test and verify its return value or side effects."
+        }
+      ],
+      "line": 110,
+      "name": "adobe_kr_is_a_separate_collection",
+      "score": 90,
+      "source_snippet": "fn adobe_kr_is_a_separate_collection() {\n    check(\"KR\", false);\n}"
+    }
+  ]
+}

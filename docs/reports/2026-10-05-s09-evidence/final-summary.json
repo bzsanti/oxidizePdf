@@ -1,0 +1,12 @@
+{
+  "targets": 59,
+  "passed": 7427,
+  "failed": 0,
+  "ignored": 3,
+  "changed_sources": [],
+  "real_gates": {
+    "flat_extraction_does_not_fuse_more_words_than_poppler": true,
+    "flat_extraction_does_not_transpose_more_words_than_poppler": true,
+    "reading_order_option_does_not_transpose_more_words_than_poppler": true
+  }
+}

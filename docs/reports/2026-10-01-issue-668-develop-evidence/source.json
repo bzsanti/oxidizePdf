@@ -1,0 +1,13 @@
+{
+  "base": "4a2c38a8c9b4e0629a9027b3ba6e89c1d85b3b3a",
+  "macroman_unchanged": true,
+  "files": {
+    "oxidize-pdf-core/src/text/extraction_cmap.rs": "5c6791efa1c4ca678911de52090dc06e9defa2e3d80804205e952c453ff10461",
+    "oxidize-pdf-core/src/text/fonts/standard.rs": "e921450ed1c20dbe00c0df02505305f897bab5f229a02fa5171e9c16b0ed2b46",
+    "oxidize-pdf-core/src/text/mod.rs": "f3b62660d64e8ff49ec421c63eac2f5cdd1747647fc6dcf3989524f52ac069ec",
+    "oxidize-pdf-core/src/text/pdf_simple_encodings.rs": "71be30dffcd518c9263b8da3e1f0478ed77f5e02f70fef2de67e44bc705190c2",
+    "oxidize-pdf-core/tests/text_encoding_contract_test.rs": "05039c15c299cae04f6d68003dcc0d2c0bd4c88c5d9e15e0ea24eb8429bdad03",
+    "oxidize-pdf-core/tests/text_expert_contract_test.rs": "1a5f74cb851dbb6e713dee271c5eeda7e3b1b5515df2cf93683fd3aae199b78c",
+    "oxidize-pdf-core/tests/issue_523_standard14_encoding_widths_test.rs": "7d66e3f135eaf3bbe4d69bb2ceaac7e0e22cd899f2e7d8606c6cc78a3d770331"
+  }
+}

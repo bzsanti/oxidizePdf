@@ -1,0 +1,34 @@
+{
+  "version": [
+    "1.26.5",
+    "1.26.10",
+    null
+  ],
+  "files": [
+    {
+      "file": "issue666-step5-cidchar.pdf",
+      "text": "ABéfi\n",
+      "warnings": ""
+    },
+    {
+      "file": "issue666-step5-cidrange.pdf",
+      "text": "ABéfi\n",
+      "warnings": ""
+    },
+    {
+      "file": "issue666-step5-expert.pdf",
+      "text": ",.ﬁ\n",
+      "warnings": ""
+    },
+    {
+      "file": "issue666-step5-identity.pdf",
+      "text": "ABéfi\n",
+      "warnings": ""
+    },
+    {
+      "file": "issue666-step5-swapped.pdf",
+      "text": "ABéfi\n",
+      "warnings": ""
+    }
+  ]
+}

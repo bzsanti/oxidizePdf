@@ -1,0 +1,12 @@
+{
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "unicode": "15.0.0",
+  "difflib_sha256": "0c6afc23568d55b3e9ac914f9c5361e3033e778aa5b58d3cc82835fc5c638679",
+  "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2\n",
+  "hashes": {
+    "oxidize-pdf-core/src/parser/content.rs": "510a613b9eb37393c0957b7e9ef54798e16270f7e849b7e6dd52b41f3e1daa9e",
+    "oxidize-pdf-core/examples/text_content_probe.rs": "9bb77bafe177c94c293db6c7c3db82b976fc508106c1445c0765ebfc2c0d5fca",
+    "tools/text_contracts/content_differential.py": "e9bef1978af4eaa335707c557c3358eaf148e0b4253830fcb490af6691837bd3",
+    "target/debug/examples/text_content_probe": "55a04aa4eb91e2582ec48613e106c524225b473298a563c5c9ff7851ed7c03c2"
+  }
+}

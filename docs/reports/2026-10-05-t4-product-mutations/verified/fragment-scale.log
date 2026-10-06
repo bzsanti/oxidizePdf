@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core)
+    Finished `test` profile [unoptimized] target(s) in 6.13s
+     Running tests/text_state_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_state_contract_test-5c0892ae06163479)
+
+running 1 test
+test zero_and_reflected_horizontal_scale_reach_fragment_extent ... FAILED
+
+failures:
+
+---- zero_and_reflected_horizontal_scale_reach_fragment_extent stdout ----
+
+thread 'zero_and_reflected_horizontal_scale_reach_fragment_extent' (4390) panicked at core/tests/text_state_contract_test.rs:47:13:
+TextFragment { text: "A", x: 100.0, y: 700.0, width: 5.0, height: 10.0, font_size: 10.0, font_name: Some("F1"), is_bold: false, is_italic: false, color: None, render_mode: Fill, space_decisions: [], mcid: None, struct_tag: None }, expected (100,700,0)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    zero_and_reflected_horizontal_scale_reach_fragment_extent
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test text_state_contract_test`

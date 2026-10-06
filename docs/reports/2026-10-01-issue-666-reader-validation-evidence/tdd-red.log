@@ -1,0 +1,23 @@
+E
+======================================================================
+ERROR: test_validate_readers (unittest.loader._FailedTest.test_validate_readers)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_validate_readers
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/unittest/loader.py", line 394, in _find_test_path
+    module = self._get_module_from_name(name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/loader.py", line 337, in _get_module_from_name
+    __import__(name)
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/tools/text_contracts/tests/test_validate_readers.py", line 12, in <module>
+    SPEC.loader.exec_module(runner)
+  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1128, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1186, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/tools/text_contracts/validate_readers.py'
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)

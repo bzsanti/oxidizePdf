@@ -1,0 +1,230 @@
+{
+  "mupdf": "1.26.10",
+  "pymupdf": "1.26.5",
+  "results": [
+    {
+      "name": "d0",
+      "expected_pdf_x": 105,
+      "mupdf_matches": true,
+      "width": 500,
+      "program": "500 0 d0 0 0 400 600 re f",
+      "chars": [
+        [
+          "f",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "i",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "B",
+          [
+            105.0,
+            92.0
+          ]
+        ]
+      ],
+      "sha256": "d7d2f84d5e0d70724102e981cd9f608a06d81a7f827757cfe8668642c75dddff",
+      "qpdf": "structural check passed; does not validate CharProc semantics"
+    },
+    {
+      "name": "d1",
+      "expected_pdf_x": 105,
+      "mupdf_matches": true,
+      "width": 500,
+      "program": "500 0 0 0 500 700 d1 0 0 400 600 re f",
+      "chars": [
+        [
+          "f",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "i",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "B",
+          [
+            105.0,
+            92.0
+          ]
+        ]
+      ],
+      "sha256": "d01ef289c7ce285ac0820dcf07ce679cbe84cc38c0c8b222f7892826a8936a4a",
+      "qpdf": "structural check passed; does not validate CharProc semantics"
+    },
+    {
+      "name": "mismatch",
+      "expected_pdf_x": 105,
+      "mupdf_matches": true,
+      "width": 500,
+      "program": "900 0 d0 0 0 400 600 re f",
+      "chars": [
+        [
+          "f",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "i",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "B",
+          [
+            105.0,
+            92.0
+          ]
+        ]
+      ],
+      "sha256": "f94e5ac5372066aeb77e25f34c1013bfb94fba3f60a999269df2aac1c23f2f53",
+      "qpdf": "structural check passed; does not validate CharProc semantics"
+    },
+    {
+      "name": "zero",
+      "expected_pdf_x": 100,
+      "mupdf_matches": true,
+      "width": 0,
+      "program": "0 0 d0",
+      "chars": [
+        [
+          "f",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "i",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "B",
+          [
+            100.0,
+            92.0
+          ]
+        ]
+      ],
+      "sha256": "de3747c0713a5c6d5ccac8fdfacdf3992958e70e93927fe4e01e8c3584d75f79",
+      "qpdf": "structural check passed; does not validate CharProc semantics"
+    },
+    {
+      "name": "negative",
+      "expected_pdf_x": 97.5,
+      "mupdf_matches": true,
+      "width": -250,
+      "program": "-250 0 d0",
+      "chars": [
+        [
+          "f",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "i",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "B",
+          [
+            97.5,
+            92.0
+          ]
+        ]
+      ],
+      "sha256": "f303399d3121185b015fafcec103adeb00db4e965c4243f5c7a44ffc286970bf",
+      "qpdf": "structural check passed; does not validate CharProc semantics"
+    },
+    {
+      "name": "fractional",
+      "expected_pdf_x": 101.255,
+      "mupdf_matches": false,
+      "width": 125.5,
+      "program": "125.5 0 d0",
+      "chars": [
+        [
+          "f",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "i",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "B",
+          [
+            101.25,
+            92.0
+          ]
+        ]
+      ],
+      "sha256": "eefa762db053d0aaf05d1bd4444f7fecca04f9735a976920cc7680f884692b18",
+      "qpdf": "structural check passed; does not validate CharProc semantics"
+    },
+    {
+      "name": "malformed",
+      "expected_pdf_x": 105,
+      "mupdf_matches": true,
+      "width": 500,
+      "program": "500 d1",
+      "chars": [
+        [
+          "f",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "i",
+          [
+            100.0,
+            92.0
+          ]
+        ],
+        [
+          "B",
+          [
+            105.0,
+            92.0
+          ]
+        ]
+      ],
+      "sha256": "8a85fd51a8eb25a8d870fd8e9240440b4e2ae5458431a614c84f88b3f249940b",
+      "qpdf": "structural check passed; does not validate CharProc semantics"
+    }
+  ]
+}

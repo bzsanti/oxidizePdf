@@ -1,0 +1,24 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core)
+    Finished `test` profile [unoptimized] target(s) in 7.23s
+     Running tests/text_tracking_recovery_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_tracking_recovery_contract_test-5b24db8e4602bb63)
+
+running 1 test
+test damaged_type0_recovery_covers_full_em_tolerance_and_mode ... FAILED
+
+failures:
+
+---- damaged_type0_recovery_covers_full_em_tolerance_and_mode stdout ----
+
+thread 'damaged_type0_recovery_covers_full_em_tolerance_and_mode' (4565) panicked at core/tests/text_tracking_recovery_contract_test.rs:50:9:
+assertion `left == right` failed
+  left: "11 0"
+ right: "1 1  0"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    damaged_type0_recovery_covers_full_em_tolerance_and_mode
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test text_tracking_recovery_contract_test`

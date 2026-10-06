@@ -1,0 +1,7 @@
+{
+  "base": "cbd579660c708f95fe20273c73442bc481d252ba",
+  "failed_job": "https://github.com/bzsanti/oxidizePdf/actions/runs/36923373277/job/110574606182",
+  "file": "oxidize-pdf-core/tests/issue_476_carriage_return_policy_test.rs",
+  "sha256": "2c718d7480a7fff2a7fdbeecbe9f418a451ecf258753794bbf5d55e7e8287084",
+  "production_changed": false
+}

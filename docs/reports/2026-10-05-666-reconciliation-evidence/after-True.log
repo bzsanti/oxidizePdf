@@ -1,0 +1,41 @@
+
+running 1 test
+test helvetica_styles_follow_adobe_implicit_metrics ... FAILED
+
+failures:
+
+---- helvetica_styles_follow_adobe_implicit_metrics stdout ----
+
+thread 'helvetica_styles_follow_adobe_implicit_metrics' (139) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/standard14-nan-probe/after-True.rs:63:5:
+Helvetica-Bold-implicit.pdf: expected "A" at(100,700), got "A" at(NaN,NaN)
+Helvetica-Bold-implicit.pdf: expected "i" at(107.22,700), got "i" at(NaN,NaN)
+Helvetica-Bold-implicit.pdf: expected "W" at(110,700), got "W" at(NaN,NaN)
+Helvetica-Bold-implicit.pdf: expected "A" at(100,700), got "A" at(NaN,NaN)
+Helvetica-Bold-implicit.pdf: expected "i" at(107.22,700), got "i" at(NaN,NaN)
+Helvetica-Bold-implicit.pdf: expected "W" at(110,700), got "W" at(NaN,NaN)
+Helvetica-BoldOblique-implicit.pdf: expected "A" at(100,700), got "A" at(NaN,NaN)
+Helvetica-BoldOblique-implicit.pdf: expected "i" at(107.22,700), got "i" at(NaN,NaN)
+Helvetica-BoldOblique-implicit.pdf: expected "W" at(110,700), got "W" at(NaN,NaN)
+Helvetica-BoldOblique-implicit.pdf: expected "A" at(100,700), got "A" at(NaN,NaN)
+Helvetica-BoldOblique-implicit.pdf: expected "i" at(107.22,700), got "i" at(NaN,NaN)
+Helvetica-BoldOblique-implicit.pdf: expected "W" at(110,700), got "W" at(NaN,NaN)
+Helvetica-Oblique-implicit.pdf: expected "A" at(100,700), got "A" at(NaN,NaN)
+Helvetica-Oblique-implicit.pdf: expected "i" at(106.67,700), got "i" at(NaN,NaN)
+Helvetica-Oblique-implicit.pdf: expected "W" at(108.89,700), got "W" at(NaN,NaN)
+Helvetica-Oblique-implicit.pdf: expected "A" at(100,700), got "A" at(NaN,NaN)
+Helvetica-Oblique-implicit.pdf: expected "i" at(106.67,700), got "i" at(NaN,NaN)
+Helvetica-Oblique-implicit.pdf: expected "W" at(108.89,700), got "W" at(NaN,NaN)
+Helvetica-implicit.pdf: expected "A" at(100,700), got "A" at(NaN,NaN)
+Helvetica-implicit.pdf: expected "i" at(106.67,700), got "i" at(NaN,NaN)
+Helvetica-implicit.pdf: expected "W" at(108.89,700), got "W" at(NaN,NaN)
+Helvetica-implicit.pdf: expected "A" at(100,700), got "A" at(NaN,NaN)
+Helvetica-implicit.pdf: expected "i" at(106.67,700), got "i" at(NaN,NaN)
+Helvetica-implicit.pdf: expected "W" at(108.89,700), got "W" at(NaN,NaN)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    helvetica_styles_follow_adobe_implicit_metrics
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.02s
+

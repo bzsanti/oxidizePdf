@@ -1,0 +1,22 @@
+[
+  "cargo",
+  "test",
+  "--locked",
+  "--offline",
+  "-p",
+  "oxidize-pdf",
+  "--test",
+  "text_cmap_boundary_contract_test",
+  "--test",
+  "text_usecmap_contract_test",
+  "--test",
+  "text_qr_regression_contract_test",
+  "--test",
+  "text_cjk_contract_test",
+  "--test",
+  "text_cid_contract_test",
+  "--test",
+  "text_vertical_contract_test",
+  "--test",
+  "issue_513_resolved_parser_fonts_test"
+]

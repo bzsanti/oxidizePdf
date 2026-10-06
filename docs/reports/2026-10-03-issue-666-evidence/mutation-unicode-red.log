@@ -1,0 +1,28 @@
+
+running 1 test
+test tounicode_overrides_pdf_differences_and_intrinsic_encoding ... FAILED
+
+failures:
+
+---- tounicode_overrides_pdf_differences_and_intrinsic_encoding stdout ----
+
+thread 'tounicode_overrides_pdf_differences_and_intrinsic_encoding' (416) panicked at contracts.rs:71:5:
+pfb-full strict: expected "XY", got "ZY"
+pfb-full lenient: expected "XY", got "ZY"
+pfb-subset strict: expected "XY", got "ZY"
+pfb-subset lenient: expected "XY", got "ZY"
+cff-full strict: expected "XY", got "ZY"
+cff-full lenient: expected "XY", got "ZY"
+cff-subset strict: expected "XY", got "ZY"
+cff-subset lenient: expected "XY", got "ZY"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tounicode_overrides_pdf_differences_and_intrinsic_encoding
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.01s
+
+    Finished `test` profile [unoptimized] target(s) in 0.07s
+     Running contracts.rs (target/debug/deps/contracts-e6990da33d84a623)
+error: test failed, to rerun pass `--test contracts`

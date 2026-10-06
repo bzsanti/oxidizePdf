@@ -1,0 +1,181 @@
+{
+  "tool": "FontTools4.60.1",
+  "license": "Original project fixtures; repository MIT license",
+  "programs": [
+    {
+      "name": "ContractMultiFD0",
+      "kind": "cff",
+      "subset": false,
+      "fdselect_format": 0,
+      "fds": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "charset": [
+        ".notdef",
+        "cid00017",
+        "cid00029",
+        "cid00042"
+      ],
+      "widths": [
+        500,
+        400,
+        700,
+        600
+      ],
+      "file": "cff-fd0-full.cff"
+    },
+    {
+      "name": "ContractMultiFD3",
+      "kind": "cff",
+      "subset": false,
+      "fdselect_format": 3,
+      "fds": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "charset": [
+        ".notdef",
+        "cid00017",
+        "cid00029",
+        "cid00042"
+      ],
+      "widths": [
+        500,
+        400,
+        700,
+        600
+      ],
+      "file": "cff-fd3-full.cff"
+    },
+    {
+      "name": "ContractTTUnicode",
+      "profile": "unicode",
+      "subset": false,
+      "symbolic": false,
+      "platform_id": 3,
+      "encoding_id": 1,
+      "format": 4,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B",
+        "C"
+      ],
+      "mapping": {
+        "32": 1,
+        "65": 2,
+        "66": 3,
+        "67": 4
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700,
+        600
+      ],
+      "kind": "ttf",
+      "file": "ttf-full.ttf"
+    },
+    {
+      "name": "ABCDEF+ContractMultiFD0",
+      "kind": "cff",
+      "subset": true,
+      "fdselect_format": 0,
+      "fds": [
+        0,
+        0,
+        1
+      ],
+      "charset": [
+        ".notdef",
+        "cid00017",
+        "cid00029"
+      ],
+      "widths": [
+        500,
+        400,
+        700
+      ],
+      "file": "cff-fd0-subset.cff"
+    },
+    {
+      "name": "ABCDEF+ContractMultiFD3",
+      "kind": "cff",
+      "subset": true,
+      "fdselect_format": 3,
+      "fds": [
+        0,
+        0,
+        1
+      ],
+      "charset": [
+        ".notdef",
+        "cid00017",
+        "cid00029"
+      ],
+      "widths": [
+        500,
+        400,
+        700
+      ],
+      "file": "cff-fd3-subset.cff"
+    },
+    {
+      "name": "ABCDEF+ContractTTUnicode",
+      "profile": "unicode",
+      "subset": true,
+      "symbolic": false,
+      "platform_id": 3,
+      "encoding_id": 1,
+      "format": 4,
+      "glyph_order": [
+        ".notdef",
+        "space",
+        "A",
+        "B"
+      ],
+      "mapping": {
+        "32": 1,
+        "65": 2,
+        "66": 3
+      },
+      "widths_by_gid": [
+        500,
+        250,
+        400,
+        700
+      ],
+      "kind": "ttf",
+      "file": "ttf-subset.ttf"
+    }
+  ],
+  "sha256": {
+    "cff-fd0-full.cff": "7db26739f9838104cbc96b1d5e9939588641b7196ccad71197b4dad272ab047c",
+    "cff-fd0-full-identity.pdf": "811d4fb56901f6f6cfb570abc8f11cd87ae8eefa39c63cabb891c7ad49530d55",
+    "cff-fd0-full-remapped.pdf": "78e879792d39382175c1f8388f6cf40d1693b450b64a131a2c2fe51bc261e36e",
+    "cff-fd3-full.cff": "80e763e25950327a8e9d9568f9b1b257645b6d1d5c0b5181cb316a1f32defb4e",
+    "cff-fd3-full-identity.pdf": "93373386f61ff112a07a81d7fd770957d9159a158dcd5d03e155f094ffe22f45",
+    "cff-fd3-full-remapped.pdf": "957b1cdbe6ed2088b9cfe633be70db4762f0f4579f6eb670c5be1305c5c43ce9",
+    "ttf-full.ttf": "1848b71aed85eb5801c7859b04ae8d05b2dafea45ef8eccafcafebf897ee6d0c",
+    "ttf-full-identity-gids.pdf": "c4e01cc178ec4315ad9ae545f1e5e1594d48b431c8555758c2cdae2c5d7c757d",
+    "ttf-full-stream-gids.pdf": "9cb09727716b0ec6d0b761057628eec745cfe1730fe51dd9ef49d20d606323cc",
+    "ttf-full-remapped.pdf": "6d38643fe8ccbf3be4b1112b8c6fc6edc653c36f8a1063a87d7d6fd509e38a67",
+    "cff-fd0-subset.cff": "7d2232ff822f6e777b815b69b9d523a3dd8248bffaf6665a2f4b3c6870bb2b84",
+    "cff-fd0-subset-identity.pdf": "8f18c8f83c8e726f0d6592c324bff1dab25a6e83cb92adbf930d831e816b6f0f",
+    "cff-fd0-subset-remapped.pdf": "9517b42cbcad9bd1344cd0ae8dd1836d6c11e9ada00b175b930a858d6a4c1584",
+    "cff-fd3-subset.cff": "156b22264715aadec1362f47170ea63e993b3e66c2c13e3fd562a1c309746e14",
+    "cff-fd3-subset-identity.pdf": "6f844b70b91f3b66a20e914bf2db6a2a8dbfa30d3efdf4b02a47771b93179160",
+    "cff-fd3-subset-remapped.pdf": "998d473e98016693bd5512fcec82f65fda9347c3ef25e59b7c520606282c9145",
+    "ttf-subset.ttf": "390d0ab7d7f6babf1ef87f75184ca17ac90543e191d755e2042c3495e21a5042",
+    "ttf-subset-identity-gids.pdf": "54b0ce86ccd2c1acd944baa4d9bbd621b0a30e8a09c9b59c5c6f2be9b693952f",
+    "ttf-subset-stream-gids.pdf": "5a864bbd5eeaa1969a0ca5d48892ad6be681465f28bd8e419d017caf47dc8de9",
+    "ttf-subset-remapped.pdf": "d6a60bc2e3bba918f3f1c7299d2710aa3a22f527b7482ef21e0e766884b20d71"
+  }
+}

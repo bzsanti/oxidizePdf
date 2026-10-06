@@ -1,0 +1,14 @@
+{
+  "changed_previous_files": [
+    "TASKS.md",
+    "oxidize-pdf-core/src/text/encoding_cmap.rs",
+    "oxidize-pdf-core/tests/text_cjk_contract_test.rs",
+    "tools/adobe_cjk_source_pins.json",
+    "tools/tests/test_adobe_source_pins.py",
+    "tools/tests/test_text_contract_coverage.py"
+  ],
+  "old_fixture_hashes_unchanged": true,
+  "extended_maps": 12,
+  "extended_samples": 43,
+  "regeneration": "samples.tsv and provenance.json byte-identical"
+}

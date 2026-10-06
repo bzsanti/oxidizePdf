@@ -1,0 +1,47 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...f-core/tests/text_differences_boundary_contract_test.rs        7     91
+
+--- Worst Offenders ---
+  integer_resets_do_not_remap_intermediate_base_encoding_codes (oxidize-pdf-core/tests/text_differences_boundary_contract_test.rs:62) - Score: 90
+    - Test 'integer_resets_do_not_remap_intermediate_base_encoding_codes' does not call any production code
+  first_and_last_byte_codes_are_valid_differences_positions (oxidize-pdf-core/tests/text_differences_boundary_contract_test.rs:66) - Score: 90
+    - Test 'first_and_last_byte_codes_are_valid_differences_positions' does not call any production code
+  name_sequence_can_end_exactly_at_code_255 (oxidize-pdf-core/tests/text_differences_boundary_contract_test.rs:70) - Score: 90
+    - Test 'name_sequence_can_end_exactly_at_code_255' does not call any production code
+  later_difference_entry_overrides_earlier_entry_for_same_code (oxidize-pdf-core/tests/text_differences_boundary_contract_test.rs:74) - Score: 90
+    - Test 'later_difference_entry_overrides_earlier_entry_for_same_code' does not call any production code
+  tounicode_overrides_differences_without_multiplying_source_advances (oxidize-pdf-core/tests/text_differences_boundary_contract_test.rs:78) - Score: 90
+    - Test 'tounicode_overrides_differences_without_multiplying_source_advances' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_differences_boundary_contract_test.rs:
+  integer_resets_do_not_remap_intermediate_base_encoding_codes (line 62) - Score: 90
+    - Test 'integer_resets_do_not_remap_intermediate_base_encoding_codes' does not call any production code
+  first_and_last_byte_codes_are_valid_differences_positions (line 66) - Score: 90
+    - Test 'first_and_last_byte_codes_are_valid_differences_positions' does not call any production code
+  name_sequence_can_end_exactly_at_code_255 (line 70) - Score: 90
+    - Test 'name_sequence_can_end_exactly_at_code_255' does not call any production code
+  later_difference_entry_overrides_earlier_entry_for_same_code (line 74) - Score: 90
+    - Test 'later_difference_entry_overrides_earlier_entry_for_same_code' does not call any production code
+  tounicode_overrides_differences_without_multiplying_source_advances (line 78) - Score: 90
+    - Test 'tounicode_overrides_differences_without_multiplying_source_advances' does not call any production code
+  fifteen_independently_verified_fixtures_match_frozen_hashes (line 82) - Score: 100
+    i Test 'fifteen_independently_verified_fixtures_match_frozen_hashes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'fifteen_independently_verified_fixtures_match_frozen_hashes' has multiple assertions without diagnostic messages
+    i Test 'fifteen_independently_verified_fixtures_match_frozen_hashes' uses .unwrap() which silently discards error information
+  invalid_counter_recovery_must_not_alias_valid_byte_mappings (line 99) - Score: 90
+    - Test 'invalid_counter_recovery_must_not_alias_valid_byte_mappings' has low assert-to-setup ratio (5%): 1 asserts vs 18 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

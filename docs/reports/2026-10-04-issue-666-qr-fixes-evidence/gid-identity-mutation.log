@@ -1,0 +1,33 @@
+
+running 6 tests
+test full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct ... FAILED
+test full_and_subset_truetype_support_stream_cid_to_gid_map ... FAILED
+test six_real_programs_and_fourteen_pdfs_match_their_frozen_hashes ... ok
+test cff_fixtures_preserve_identity_cid_text_and_pdf_widths ... ok
+test cff_fixtures_preserve_remapped_cid_text_and_pdf_widths ... ok
+test full_and_subset_truetype_support_identity_cid_to_gid_map ... ok
+
+failures:
+
+---- full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct stdout ----
+
+thread 'full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct' (173) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/gid-identity-mutation.rs:56:21:
+assertion `left == right` failed: ttf-full-remapped.pdf: GID 0
+  left: Some(29)
+ right: Some(3)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- full_and_subset_truetype_support_stream_cid_to_gid_map stdout ----
+
+thread 'full_and_subset_truetype_support_stream_cid_to_gid_map' (175) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-04-issue-666-qr-fixes-evidence/gid-identity-mutation.rs:56:21:
+assertion `left == right` failed: ttf-full-stream-gids.pdf: GID 0
+  left: Some(17)
+ right: Some(2)
+
+
+failures:
+    full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct
+    full_and_subset_truetype_support_stream_cid_to_gid_map
+
+test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

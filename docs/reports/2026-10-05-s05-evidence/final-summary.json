@@ -1,0 +1,8 @@
+{
+  "passed": 7311,
+  "failed": 0,
+  "ignored": 3,
+  "targets": 44,
+  "log": "aggregate.log",
+  "source_hashes": "final-hashes.json"
+}

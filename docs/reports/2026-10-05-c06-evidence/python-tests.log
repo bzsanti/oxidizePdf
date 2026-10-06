@@ -1,0 +1,13 @@
+.............F..
+======================================================================
+FAIL: test_partial_row_cannot_hide_remaining_work (test_text_contract_coverage.CoverageTraceability.test_partial_row_cannot_hide_remaining_work)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/tools/tests/test_text_contract_coverage.py", line 43, in test_partial_row_cannot_hide_remaining_work
+    self.assertIn("F01: incomplete row must state remaining work", VALIDATOR.validate(data, ROOT))
+AssertionError: 'F01: incomplete row must state remaining work' not found in []
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.039s
+
+FAILED (failures=1)

@@ -1,0 +1,33 @@
+{
+  "findings": 6,
+  "tests_passed": 46,
+  "tests_failed": 0,
+  "clippy": "pass",
+  "reviewed_files": [
+    "oxidize-pdf-core/src/fonts/type3.rs",
+    "oxidize-pdf-core/src/fonts/resolved.rs",
+    "oxidize-pdf-core/src/parser/content.rs",
+    "oxidize-pdf-core/src/text/extraction_cmap.rs",
+    "oxidize-pdf-core/src/text/extraction.rs",
+    "oxidize-pdf-core/tests/text_font_program_contract_test.rs",
+    "oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs",
+    "oxidize-pdf-core/tests/issue_509_type3_charprocs_test.rs",
+    "oxidize-pdf-core/tests/issue_573_type3_font_matrix_widths_test.rs",
+    "oxidize-pdf-core/tests/common/text_contracts.rs",
+    "docs/reports/2026-10-04-issue-666-type3-program-evidence/readers.py",
+    "docs/reports/2026-10-04-issue-666-type3-evidence/probe.py",
+    "docs/reports/2026-10-04-issue-666-type3-evidence/mutations.py",
+    "docs/reports/2026-10-04-issue-666-type3.md",
+    "docs/reports/2026-10-04-issue-666-type3-programs.md",
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json"
+  ],
+  "scope_limits": "Type3 paths in consumers/parser; not whole-file certification of unrelated font subtypes or content operators",
+  "verified_unchanged_files": 566,
+  "changed_reviewed_files": [],
+  "security_scans": 6,
+  "security_scanner_alerts": 0,
+  "manual_resource_finding": true,
+  "ops_mutation": "control8/8; altered operations8/8",
+  "reader_mutation": "exit0 despite B102.5 instead of known101.25",
+  "production_changes": 0
+}

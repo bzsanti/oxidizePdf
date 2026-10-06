@@ -1,0 +1,53 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 11 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_state_contract_test.rs               11     90
+
+--- Worst Offenders ---
+  default_spacing_and_scale_leave_declared_width_unchanged (oxidize-pdf-core/tests/text_state_contract_test.rs:57) - Score: 90
+    - Test 'default_spacing_and_scale_leave_declared_width_unchanged' does not call any production code
+  changes_apply_only_to_subsequent_advances_and_can_return_to_defaults (oxidize-pdf-core/tests/text_state_contract_test.rs:65) - Score: 90
+    - Test 'changes_apply_only_to_subsequent_advances_and_can_return_to_defaults' does not call any production code
+  word_spacing_uses_source_byte32_even_when_tounicode_changes_it (oxidize-pdf-core/tests/text_state_contract_test.rs:69) - Score: 90
+    - Test 'word_spacing_uses_source_byte32_even_when_tounicode_changes_it' does not call any production code
+  mapped_unicode_space_does_not_receive_word_spacing (oxidize-pdf-core/tests/text_state_contract_test.rs:81) - Score: 90
+    - Test 'mapped_unicode_space_does_not_receive_word_spacing' does not call any production code
+  character_spacing_applies_once_to_a_multiscalar_source_glyph (oxidize-pdf-core/tests/text_state_contract_test.rs:93) - Score: 90
+    - Test 'character_spacing_applies_once_to_a_multiscalar_source_glyph' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_state_contract_test.rs:
+  default_spacing_and_scale_leave_declared_width_unchanged (line 57) - Score: 90
+    - Test 'default_spacing_and_scale_leave_declared_width_unchanged' does not call any production code
+  changes_apply_only_to_subsequent_advances_and_can_return_to_defaults (line 65) - Score: 90
+    - Test 'changes_apply_only_to_subsequent_advances_and_can_return_to_defaults' does not call any production code
+  word_spacing_uses_source_byte32_even_when_tounicode_changes_it (line 69) - Score: 90
+    - Test 'word_spacing_uses_source_byte32_even_when_tounicode_changes_it' does not call any production code
+  mapped_unicode_space_does_not_receive_word_spacing (line 81) - Score: 90
+    - Test 'mapped_unicode_space_does_not_receive_word_spacing' does not call any production code
+  character_spacing_applies_once_to_a_multiscalar_source_glyph (line 93) - Score: 90
+    - Test 'character_spacing_applies_once_to_a_multiscalar_source_glyph' does not call any production code
+  bt_retains_spacing_and_scale_while_resetting_text_position (line 101) - Score: 90
+    - Test 'bt_retains_spacing_and_scale_while_resetting_text_position' does not call any production code
+  negative_spacing_is_in_text_units_and_scaled_once (line 109) - Score: 90
+    - Test 'negative_spacing_is_in_text_units_and_scaled_once' does not call any production code
+  zero_and_reflected_horizontal_scale_reach_fragment_extent (line 122) - Score: 90
+    - Test 'zero_and_reflected_horizontal_scale_reach_fragment_extent' does not call any production code
+  actualtext_accumulates_scaled_source_widths (line 135) - Score: 90
+    - Test 'actualtext_accumulates_scaled_source_widths' does not call any production code
+  word_spacing_changes_and_reset_affect_only_later_source_spaces (line 140) - Score: 90
+    - Test 'word_spacing_changes_and_reset_affect_only_later_source_spaces' does not call any production code
+  double_quote_sets_word_and_character_spacing_in_pdf_operand_order (line 153) - Score: 90
+    - Test 'double_quote_sets_word_and_character_spacing_in_pdf_operand_order' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

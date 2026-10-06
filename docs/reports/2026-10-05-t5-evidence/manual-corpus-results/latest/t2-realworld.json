@@ -1,0 +1,526 @@
+{
+  "tier": "t2-realworld",
+  "timestamp": "2026-10-05T22:28:39.517968847+00:00",
+  "total": 484,
+  "parsed": 481,
+  "panics": 0,
+  "timeouts": 0,
+  "text_extracted": 462,
+  "graceful_failures": 3,
+  "pass_rate": 0.993801652892562,
+  "total_duration_ms": 112663,
+  "by_pdf_version": {
+    "1.1": {
+      "total": 12,
+      "passed": 12
+    },
+    "1.4": {
+      "total": 190,
+      "passed": 190
+    },
+    "1.3": {
+      "total": 107,
+      "passed": 107
+    },
+    "1.2": {
+      "total": 79,
+      "passed": 79
+    },
+    "1.7": {
+      "total": 2,
+      "passed": 2
+    },
+    "1.0": {
+      "total": 2,
+      "passed": 2
+    },
+    "1.5": {
+      "total": 34,
+      "passed": 34
+    },
+    "unknown": {
+      "total": 3,
+      "passed": 0
+    },
+    "1.6": {
+      "total": 55,
+      "passed": 55
+    }
+  },
+  "by_generator": {
+    "Corel PDF Engine Version 9.654": {
+      "total": 4,
+      "passed": 4
+    },
+    "Acrobat Distiller 8.1.0 (Windows)": {
+      "total": 14,
+      "passed": 14
+    },
+    "Mac OS X 10.4.11 Quartz PDFContext": {
+      "total": 2,
+      "passed": 2
+    },
+    "Hewlett-Packard Intelligent Scanning Technology\n3": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe PDF Library 4.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat PDFWriter 3.0 for Windows": {
+      "total": 2,
+      "passed": 2
+    },
+    "OmniPage Pro 14 http://www.scansoft.com": {
+      "total": 1,
+      "passed": 1
+    },
+    "Corel PDF Engine Version 11.755": {
+      "total": 1,
+      "passed": 1
+    },
+    "Creo Normalizer JTP": {
+      "total": 2,
+      "passed": 2
+    },
+    "Adobe PDF Library 6.0": {
+      "total": 3,
+      "passed": 3
+    },
+    "Acrobat Distiller 2.0 for Windows": {
+      "total": 1,
+      "passed": 1
+    },
+    "Apogee Create Series3 v1.0": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat PDFWriter 4.0 for Windows NT": {
+      "total": 4,
+      "passed": 4
+    },
+    "Adobe PDF Library 8.0": {
+      "total": 4,
+      "passed": 4
+    },
+    "www.adlibsoftware.com:EXS3185-Windows 2003:TNG": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe PDF Library 5.0": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat Distiller 5.0 (Windows)": {
+      "total": 20,
+      "passed": 20
+    },
+    "Acrobat Distiller 3.02": {
+      "total": 2,
+      "passed": 2
+    },
+    "QuarkXPress(R) 7.3": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller Daemon 3.0 for Solaris 2.3 and later (SPARC)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 7.0.5 (Windows)": {
+      "total": 38,
+      "passed": 38
+    },
+    "Acrobat PDFWriter 2.0 for Macintosh": {
+      "total": 1,
+      "passed": 1
+    },
+    "Corel PDF Engine Version 10.719": {
+      "total": 2,
+      "passed": 2
+    },
+    "Adobe Photoshop for Macintosh -- Image Conversion Plug-in": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Net Distiller 1.0 for Windows": {
+      "total": 1,
+      "passed": 1
+    },
+    "PrimoPDF": {
+      "total": 1,
+      "passed": 1
+    },
+    "Aladdin Ghostscript 5.50": {
+      "total": 1,
+      "passed": 1
+    },
+    "unknown": {
+      "total": 71,
+      "passed": 68
+    },
+    "Mac OS X 10.4.8 Quartz PDFContext": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Web Capture 4.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 5.0 for Macintosh": {
+      "total": 1,
+      "passed": 1
+    },
+    "FDFMerge Lite 5.0.4 Windows SPDF_1096+ May  3 2004": {
+      "total": 1,
+      "passed": 1
+    },
+    "iText by lowagie.com (r1.01;p126)": {
+      "total": 2,
+      "passed": 2
+    },
+    "iText1.1 by lowagie.com (based on itext-paulo-142)": {
+      "total": 2,
+      "passed": 2
+    },
+    "Corel PDF Engine Version 9.543": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat PDFWriter 3.02 for Windows NT": {
+      "total": 3,
+      "passed": 3
+    },
+    "Acrobat PDFWriter 4.0 for Power Macintosh": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 5.0.5 (Windows)": {
+      "total": 34,
+      "passed": 34
+    },
+    "ECMP5": {
+      "total": 3,
+      "passed": 3
+    },
+    "Acrobat PDFWriter 4.05  for Power Macintosh": {
+      "total": 1,
+      "passed": 1
+    },
+    "PDFlib PLOP 2.0.0p6 (SunOS)/Acrobat Distiller 5.0.5 (Windows)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe PDF Library 7.0": {
+      "total": 6,
+      "passed": 6
+    },
+    "Acrobat PDFWriter 3.01 for Windows": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat PDFWriter 4.05 for Windows NT": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat Distiller 1.0.2 for Macintosh": {
+      "total": 1,
+      "passed": 1
+    },
+    "Microsoft® Office Access 2007": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 3.02 for Power Macintosh": {
+      "total": 1,
+      "passed": 1
+    },
+    "dgn2pdf": {
+      "total": 1,
+      "passed": 1
+    },
+    "GNU Ghostscript 7.07 / pdcat (www.glance.ch)": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat Distiller 5.0.2 for Macintosh": {
+      "total": 2,
+      "passed": 2
+    },
+    "Corel PDF Engine Version 9.398": {
+      "total": 1,
+      "passed": 1
+    },
+    "Corel PDF Engine Version 11.4.0.100": {
+      "total": 2,
+      "passed": 2
+    },
+    "Amyuni PDF Converter version 2.51-b": {
+      "total": 1,
+      "passed": 1
+    },
+    "RealPage data converter": {
+      "total": 1,
+      "passed": 1
+    },
+    " ": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat PDFWriter 3.02 for Windows": {
+      "total": 7,
+      "passed": 7
+    },
+    "www.adlibsoftware.com:EXS3167-Windows XP": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe PDF library 7.77": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat PDFWriter 3.0.1 for Power Macintosh": {
+      "total": 1,
+      "passed": 1
+    },
+    "Etymon PJ 1.10, Copyright (C) 1998-2000 Etymon Systems, Inc. <http://www.etymon.com/>. ": {
+      "total": 3,
+      "passed": 3
+    },
+    "ESP Ghostscript 7.07": {
+      "total": 1,
+      "passed": 1
+    },
+    "Photoshop PDF Plug-in 1.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "5,0,0,296": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat Distiller 3.01 for Windows": {
+      "total": 4,
+      "passed": 4
+    },
+    "www.adlibsys.com:EXS3145-W2KA": {
+      "total": 2,
+      "passed": 2
+    },
+    "": {
+      "total": 5,
+      "passed": 5
+    },
+    "Acrobat Distiller 8.0.0 (Windows)": {
+      "total": 6,
+      "passed": 6
+    },
+    "Acrobat Distiller 4.02 for Windows": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 6.0 (Windows)": {
+      "total": 34,
+      "passed": 34
+    },
+    "GNU Ghostscript 7.05": {
+      "total": 1,
+      "passed": 1
+    },
+    "ABBYY Hot Folder & Scheduling": {
+      "total": 1,
+      "passed": 1
+    },
+    "Corel PDF Engine Version 11.321": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 7.0 (Windows)": {
+      "total": 20,
+      "passed": 20
+    },
+    "Acrobat Distiller 6.0.1 for Macintosh": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat Distiller 2.1 PE for Windows": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 3.0 for Power Macintosh": {
+      "total": 2,
+      "passed": 2
+    },
+    "Microsoft® Office Word 2007": {
+      "total": 1,
+      "passed": 1
+    },
+    "Mac OS X 10.5.2 Quartz PDFContext": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Web Capture 4.05": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 6.0.1 (Windows)": {
+      "total": 22,
+      "passed": 22
+    },
+    "Acrobat Distiller 4.05 for Windows": {
+      "total": 11,
+      "passed": 11
+    },
+    "Hyf PDF Output Library 2.2.3 (Solaris)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat PDFWriter 4.0 for Windows": {
+      "total": 7,
+      "passed": 7
+    },
+    "Acrobat PDFWriter 2.01 for Windows": {
+      "total": 6,
+      "passed": 6
+    },
+    "Acrobat Distiller Command 3.0 for Solaris 2.3 and later (SPARC)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 3.0 for Windows": {
+      "total": 3,
+      "passed": 3
+    },
+    "StampPDF Batch 3.0 Windows SPDF_1085 Oct 13 2003": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe Acrobat 6.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller Command 3.01 for Solaris 2.3 and later (SPARC)": {
+      "total": 1,
+      "passed": 1
+    },
+    "StampPDF Batch 3.2.1 Solaris_x86 SPDF_1092 Jan 30 2004": {
+      "total": 1,
+      "passed": 1
+    },
+    "pdfeTeX-1.21a": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat PDFWriter 1.0 for Windows": {
+      "total": 1,
+      "passed": 1
+    },
+    "GNU Ghostscript 7.07": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat Web Capture 5.0": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat PDFWriter 5.0 for Windows NT": {
+      "total": 9,
+      "passed": 9
+    },
+    "Mac OS X 10.4.6 Quartz PDFContext": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller Daemon 3.01 for Solaris 2.3 and later (SPARC)": {
+      "total": 2,
+      "passed": 2
+    },
+    "Acrobat Distiller 4.0 for Macintosh": {
+      "total": 5,
+      "passed": 5
+    },
+    "ScanSoft PDF Create! 3": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe Acrobat 8.1": {
+      "total": 1,
+      "passed": 1
+    },
+    "AFPL Ghostscript 7.03": {
+      "total": 1,
+      "passed": 1
+    },
+    "Rumborak PDF-Writer Plus 1.0 RC9 / GS 8.50": {
+      "total": 1,
+      "passed": 1
+    },
+    "iText 2.1.4 (by lowagie.com)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat Distiller 3.01 for Power Macintosh": {
+      "total": 5,
+      "passed": 5
+    },
+    "Hyf PDF Output Library 2.3.0 (Windows)": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe Acrobat 7.08 Paper Capture Plug-in": {
+      "total": 1,
+      "passed": 1
+    },
+    "Adobe Acrobat 6.02 Image Conversion Plug-in": {
+      "total": 1,
+      "passed": 1
+    },
+    "Acrobat PDFWriter 5.0 for Windows": {
+      "total": 3,
+      "passed": 3
+    },
+    "Acrobat Distiller 4.05 for Macintosh": {
+      "total": 3,
+      "passed": 3
+    },
+    "Acrobat Distiller 2.1 for Windows": {
+      "total": 5,
+      "passed": 5
+    },
+    "Acrobat Distiller 4.0 for Windows": {
+      "total": 16,
+      "passed": 16
+    },
+    "Acrobat Distiller 5.0.5 for Macintosh": {
+      "total": 6,
+      "passed": 6
+    }
+  },
+  "parse_time_p50_ms": 3.0,
+  "parse_time_p95_ms": 61.0,
+  "parse_time_p99_ms": 168.0,
+  "failures": [
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t2-realworld/govdocs-subset1/001273.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t2-realworld/govdocs-subset1/001284.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    },
+    {
+      "path": "/home/runner/work/oxidizePdf/oxidizePdf/test-corpus/t2-realworld/govdocs-subset1/001294.pdf",
+      "panicked": false,
+      "timed_out": false,
+      "error_message": "Invalid PDF header",
+      "error_kind": ""
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 21 | Files: 2
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+/tmp/issue666-qr-scope/text_encoding_contract_test.rs             7     91
+/tmp/issue666-qr-scope/text_spacing_contract_test.rs             14     90
+
+--- Worst Offenders ---
+  declared_zero_widths_allow_uniform_advances (/tmp/issue666-qr-scope/text_spacing_contract_test.rs:47) - Score: 80
+    - Test 'declared_zero_widths_allow_uniform_advances' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'declared_zero_widths_allow_uniform_advances' does not call any production code
+  standard_encoding_matches_independent_table (/tmp/issue666-qr-scope/text_encoding_contract_test.rs:126) - Score: 90
+    - Test 'standard_encoding_matches_independent_table' does not call any production code
+  winansi_encoding_matches_independent_table (/tmp/issue666-qr-scope/text_encoding_contract_test.rs:130) - Score: 90
+    - Test 'winansi_encoding_matches_independent_table' does not call any production code
+  macroman_encoding_matches_independent_table (/tmp/issue666-qr-scope/text_encoding_contract_test.rs:134) - Score: 90
+    - Test 'macroman_encoding_matches_independent_table' does not call any production code
+  differences_override_the_base_encoding (/tmp/issue666-qr-scope/text_encoding_contract_test.rs:139) - Score: 90
+    i Test 'differences_override_the_base_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'differences_override_the_base_encoding' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+
+--- Details ---
+/tmp/issue666-qr-scope/text_encoding_contract_test.rs:
+  external_oracles_have_256_unique_positions_and_recorded_hashes (line 67) - Score: 100
+    i Test 'external_oracles_have_256_unique_positions_and_recorded_hashes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'external_oracles_have_256_unique_positions_and_recorded_hashes' has multiple assertions without diagnostic messages
+  standard_encoding_matches_independent_table (line 126) - Score: 90
+    - Test 'standard_encoding_matches_independent_table' does not call any production code
+  winansi_encoding_matches_independent_table (line 130) - Score: 90
+    - Test 'winansi_encoding_matches_independent_table' does not call any production code
+  macroman_encoding_matches_independent_table (line 134) - Score: 90
+    - Test 'macroman_encoding_matches_independent_table' does not call any production code
+  differences_override_the_base_encoding (line 139) - Score: 90
+    i Test 'differences_override_the_base_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'differences_override_the_base_encoding' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  tounicode_overrides_differences_and_supports_unicode_sequences (line 155) - Score: 90
+    i Test 'tounicode_overrides_differences_and_supports_unicode_sequences' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'tounicode_overrides_differences_and_supports_unicode_sequences' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  literal_and_hex_strings_preserve_the_same_source_codes (line 175) - Score: 90
+    i Test 'literal_and_hex_strings_preserve_the_same_source_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'literal_and_hex_strings_preserve_the_same_source_codes' has low assert-to-setup ratio (11%): 2 asserts vs 17 setup lines
+
+/tmp/issue666-qr-scope/text_spacing_contract_test.rs:
+  absent_widths_never_certify_tracking_for_standard_fonts (line 36) - Score: 90
+    - Test 'absent_widths_never_certify_tracking_for_standard_fonts' does not call any production code
+  declared_positive_widths_keep_word_separators (line 42) - Score: 90
+    - Test 'declared_positive_widths_keep_word_separators' does not call any production code
+  declared_zero_widths_allow_uniform_advances (line 47) - Score: 80
+    - Test 'declared_zero_widths_allow_uniform_advances' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'declared_zero_widths_allow_uniform_advances' does not call any production code
+  known_zero_width_single_word_needs_no_literal_space (line 57) - Score: 90
+    - Test 'known_zero_width_single_word_needs_no_literal_space' does not call any production code
+  excess_advance_remains_a_word_separator (line 62) - Score: 90
+    - Test 'excess_advance_remains_a_word_separator' does not call any production code
+  explicit_character_spacing_disables_tracking_inference (line 67) - Score: 90
+    - Test 'explicit_character_spacing_disables_tracking_inference' does not call any production code
+  explicit_word_spacing_disables_tracking_inference (line 72) - Score: 90
+    - Test 'explicit_word_spacing_disables_tracking_inference' does not call any production code
+  a_single_transition_does_not_certify_uniform_tracking (line 77) - Score: 90
+    - Test 'a_single_transition_does_not_certify_uniform_tracking' does not call any production code
+  ordinary_small_kerning_does_not_add_spaces (line 82) - Score: 90
+    - Test 'ordinary_small_kerning_does_not_add_spaces' does not call any production code
+  unresolved_type0_without_space_reaches_and_rejects_the_fallback (line 87) - Score: 90
+    - Test 'unresolved_type0_without_space_reaches_and_rejects_the_fallback' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unresolved_type0_without_space_reaches_and_rejects_the_fallback' asserts against a hardcoded constant instead of a computed expected value
+  strict_mode_does_not_enable_unknown_width_recovery (line 100) - Score: 90
+    - Test 'strict_mode_does_not_enable_unknown_width_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+  lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances (line 111) - Score: 90
+    - Test 'lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances' asserts against a hardcoded constant instead of a computed expected value
+  partial_em_adjustments_do_not_trigger_unknown_width_recovery (line 119) - Score: 90
+    - Test 'partial_em_adjustments_do_not_trigger_unknown_width_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+  glyph_origins_follow_declared_widths_kerns_and_horizontal_scale (line 130) - Score: 100
+    i Test 'glyph_origins_follow_declared_widths_kerns_and_horizontal_scale' has multiple assertions without diagnostic messages
+    i Test 'glyph_origins_follow_declared_widths_kerns_and_horizontal_scale' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

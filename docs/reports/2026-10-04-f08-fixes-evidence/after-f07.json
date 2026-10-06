@@ -1,0 +1,16 @@
+{
+  "issue": 666,
+  "block": "F08",
+  "passed": 52,
+  "failed": 0,
+  "ignored": 0,
+  "targets": [
+    "text_font_program_contract_test",
+    "text_type3_program_boundary_contract_test",
+    "issue_509_type3_charprocs_test",
+    "issue_573_type3_font_matrix_widths_test",
+    "issue_513_resolved_parser_fonts_test"
+  ],
+  "product_changes": false,
+  "decision": "F08 complete for local sequential work; CI deferred by user until #666 implementation is complete; integration remains global."
+}

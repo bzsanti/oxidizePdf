@@ -8,15 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
-### Documentation
-
-- Document explicit `TextExtractor::extract_from_page_with_recovery` usage for
-  missing checksums and truncated Flate streams, including omission diagnostics
-  and independent stream/text limits. Add regression coverage for page/Form
-  recovery and bounded live allocations (#680).
-
-## [5.2.0] - 2026-09-29
-
 ### Added
 
 - `Document::set_build_identification(BuildIdentification::Disabled)` omits the
@@ -34,9 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   APIs, render handwritten strokes and optional certificate labels, and pass the
   prepared appearance to existing detached signing APIs. Handwritten completion
   remains distinct from a cryptographic signature; DocMDP/FieldMDP restrictions
-  apply. Available in 5.2.0 (#646).
+  apply. Required for the next release (#646).
 
 ### Documentation
+
+- Document explicit `TextExtractor::extract_from_page_with_recovery` usage for
+  missing checksums and truncated Flate streams, including omission diagnostics
+  and independent stream/text limits. Add regression coverage for page/Form
+  recovery and bounded live allocations (#680).
 
 - Clarify that PAdES is outside the library scope and can be implemented by anyone
   as an independent external extension; document basic signature operations (#641).
@@ -46,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   external CMS responsibilities and the PAdES extension interfaces (#641).
 
 ### Fixed
+
+- Decode the complete PDF Standard, WinAnsi and MacExpert tables and select
+  built-in Symbol/ZapfDingbats encodings. Preserve Differences/ToUnicode
+  precedence and AFM widths; undefined codes recover visibly (#668).
+- Decode document text strings with PDFDocEncoding and recognize UTF-8 BOMs
+  under the effective PDF 2.0 version. Preserve valid content around malformed
+  Unicode and apply the same rules to metadata, ActualText, outlines, form field
+  names and signature text fields (#667).
 
 - Legacy incremental append, replacement and overlay retain catalog/page metadata,
   leaf pages, inherited resources and stable page references; encrypted inputs are
@@ -87,25 +91,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when splitting tagged PDFs; identify reachable zero-offset references and
   reject unsafe repairs without publishing partial outputs (#621).
 
-## [5.1.5] - 2026-09-26
-
-### Fixed
-
-- Remove native cryptography from certificate verification by consuming
-  `oxidize-webpki 0.1.0` from crates.io. Preserve WebPKI certificate chains,
-  trust, validity, key usage and CRL checks, with supported RSA, ECDSA and
-  Ed25519 algorithms unchanged (#627).
-- Preserve signed fixture bytes on Windows checkouts, preventing CRLF changes
-  from invalidating reference message digests (#627).
-
-### Changed
-
-- Gate supported product and binding dependency graphs against native code,
-  and validate an external certificate consumer with C/C++ compilers disabled.
-
-## [5.1.4] - 2026-09-25
-
-### Fixed
+- Replace native certificate-verification cryptography with Rust primitives,
+  preserving certificate chains, supported algorithms and CRL checks; add
+  dependency gates for supported product and binding configurations (#627).
 
 - Deliver streaming text callbacks incrementally, retaining operand state and
   allowing cancellation before parsing the remaining page (#618).
@@ -118,22 +106,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Preserve generated footers after imported content without a final newline,
   including trailing comments (#616).
-
-- Strip escaped LF, CR and CRLF continuations from PDF literal strings (#609).
-- Avoid synthetic spaces before punctuation in fragmented text runs (#610).
-- Preserve operands across page content streams according to PDF concatenation
-  semantics, with valid fixtures covering multi-stream text arrays (#613, #619).
-
-### Changed
-
-- Give OmniDocBench text serialization an explicit, verified contract; bind
-  predictions, evaluator inputs and scores through provenance manifests (#620).
-
-### Known limitations
-
-- Signature verification still uses the C-backed `ring` dependency through
-  `rustls-webpki`. Removing C from supported configurations and bindings remains
-  mandatory follow-up #627; this maintenance release does not resolve it.
 
 ## [5.1.3] - 2026-09-19
 

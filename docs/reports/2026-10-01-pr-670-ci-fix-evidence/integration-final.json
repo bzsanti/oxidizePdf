@@ -1,0 +1,15 @@
+{
+  "head": "a8b595ecafc5988038361a567808053815570aa8",
+  "integration_targets": 375,
+  "library_targets": 1,
+  "passed": 9766,
+  "failed": 0,
+  "ignored": 47,
+  "exit_code": 0,
+  "doctests": {
+    "passed": 220,
+    "failed": 0,
+    "ignored": 24
+  },
+  "log_sha256": "b0daedb0acc9d7d7f27d5f3f3c127879fc89062fbd46fd80dd9529ab37d75076"
+}

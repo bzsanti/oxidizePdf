@@ -1,0 +1,1 @@
+{"command": ["cargo", "test", "--locked", "--offline", "--all", "--features", "internal-testing", "--no-fail-fast"], "exit": 0}

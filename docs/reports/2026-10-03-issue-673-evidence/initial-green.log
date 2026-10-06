@@ -1,0 +1,29 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 14.55s
+     Running tests/text_cid_cff_contract_test.rs (target/debug/deps/text_cid_cff_contract_test-3fcb695627adadbd)
+
+running 6 tests
+test cid_keyed_cff_matches_its_independently_generated_program ... ok
+test embedded_encoding_remaps_codes_before_selecting_cff_cids ... ok
+test identity_h_cid_cff_preserves_explicit_unicode ... ok
+test cid_cff_vertical_advance_uses_w2 ... ok
+test cid_cff_widths_use_cids_not_charstring_indices ... ok
+test remapped_cid_cff_widths_follow_encoding_cids ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_vertical_contract_test.rs (target/debug/deps/text_vertical_contract_test-fcfbd6e3bb975c41)
+
+running 9 tests
+test dw2_overrides_default_vertical_advance ... ok
+test character_spacing_applies_on_the_vertical_axis ... ok
+test identity_v_uses_default_vertical_advance ... ok
+test embedded_wmode_one_selects_vertical_advance ... ok
+test missing_w2_entry_falls_back_to_dw2 ... ok
+test w2_array_overrides_dw2_for_the_selected_cid ... ok
+test horizontal_scale_does_not_scale_vertical_pen_advance ... ok
+test vertical_tj_adjustment_changes_y_with_the_pdf_sign ... ok
+test w2_range_overrides_dw2_for_the_selected_cid ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

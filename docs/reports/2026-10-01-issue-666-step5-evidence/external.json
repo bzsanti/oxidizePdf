@@ -1,0 +1,102 @@
+{
+  "fixtures": [
+    {
+      "file": "issue666-step5-cidchar.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step5-cidchar.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nSourceSans3-Regular                  CID TrueType      Custom           yes no  yes      4  0\n",
+        "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\nSyntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n"
+      },
+      "text": {
+        "exit": 0,
+        "stdout": "ABé\n\f",
+        "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\nSyntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n"
+      }
+    },
+    {
+      "file": "issue666-step5-cidrange.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step5-cidrange.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nSourceSans3-Regular                  CID TrueType      Custom           yes no  yes      4  0\n",
+        "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\nSyntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n"
+      },
+      "text": {
+        "exit": 0,
+        "stdout": "ABé\n\f",
+        "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\nSyntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n"
+      }
+    },
+    {
+      "file": "issue666-step5-expert.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step5-expert.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nContractExpert                       Type 1C           MacExpert        yes no  no       4  0\n",
+        "stderr": ""
+      },
+      "text": {
+        "exit": 0,
+        "stdout": ",.fi\n\f",
+        "stderr": ""
+      }
+    },
+    {
+      "file": "issue666-step5-identity.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step5-identity.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nSourceSans3-Regular                  CID TrueType      Identity-H       yes no  yes      4  0\n",
+        "stderr": ""
+      },
+      "text": {
+        "exit": 0,
+        "stdout": "ABéfi\n\f",
+        "stderr": ""
+      }
+    },
+    {
+      "file": "issue666-step5-swapped.pdf",
+      "qpdf": {
+        "exit": 0,
+        "stdout": "checking /tmp/issue666-step5-swapped.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+        "stderr": ""
+      },
+      "fonts": {
+        "exit": 0,
+        "stdout": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nSourceSans3-Regular                  CID TrueType      Custom           yes no  yes      4  0\n",
+        "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\nSyntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n"
+      },
+      "text": {
+        "exit": 0,
+        "stdout": "ABé\n\f",
+        "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\nSyntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n"
+      }
+    }
+  ],
+  "render_sha256": {
+    "cidchar": "314c208f4d072b983b9e2be2c0cfdcac99c19ce1ccc6a8896d58e3572cdd232d",
+    "cidrange": "314c208f4d072b983b9e2be2c0cfdcac99c19ce1ccc6a8896d58e3572cdd232d",
+    "identity": "314c208f4d072b983b9e2be2c0cfdcac99c19ce1ccc6a8896d58e3572cdd232d",
+    "swapped": "35b99c496b697e7db0ca36d29d3c0ac3470f08392e2159bcc05ce7e2a2ba7ba6"
+  },
+  "equivalent_maps_equal": true,
+  "swapped_gids_change_raster": true
+}

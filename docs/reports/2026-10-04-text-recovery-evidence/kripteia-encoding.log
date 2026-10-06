@@ -1,0 +1,73 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 12 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/text/encoding_cmap.rs                       12     93
+
+--- Worst Offenders ---
+  cidchar_and_cidrange_map_to_cids (oxidize-pdf-core/src/text/encoding_cmap.rs:372) - Score: 90
+    - Test 'cidchar_and_cidrange_map_to_cids' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'cidchar_and_cidrange_map_to_cids' has multiple assertions without diagnostic messages
+  gbk_codespace_yields_mixed_widths (oxidize-pdf-core/src/text/encoding_cmap.rs:403) - Score: 90
+    i Test 'gbk_codespace_yields_mixed_widths' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'gbk_codespace_yields_mixed_widths' has multiple assertions without diagnostic messages
+    - Test 'gbk_codespace_yields_mixed_widths' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+  parse_reads_codespace_and_usecmap_parent (oxidize-pdf-core/src/text/encoding_cmap.rs:428) - Score: 90
+    - Test 'parse_reads_codespace_and_usecmap_parent' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'parse_reads_codespace_and_usecmap_parent' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'parse_reads_codespace_and_usecmap_parent' has multiple assertions without diagnostic messages
+  single_cid_takes_precedence_over_overlapping_range (oxidize-pdf-core/src/text/encoding_cmap.rs:448) - Score: 90
+    - Test 'single_cid_takes_precedence_over_overlapping_range' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'single_cid_takes_precedence_over_overlapping_range' has multiple assertions without diagnostic messages
+  notdefrange_maps_to_notdef_cid (oxidize-pdf-core/src/text/encoding_cmap.rs:469) - Score: 90
+    - Test 'notdefrange_maps_to_notdef_cid' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'notdefrange_maps_to_notdef_cid' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/src/text/encoding_cmap.rs:
+  cidchar_and_cidrange_map_to_cids (line 372) - Score: 90
+    - Test 'cidchar_and_cidrange_map_to_cids' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'cidchar_and_cidrange_map_to_cids' has multiple assertions without diagnostic messages
+  gbk_codespace_yields_mixed_widths (line 403) - Score: 90
+    i Test 'gbk_codespace_yields_mixed_widths' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'gbk_codespace_yields_mixed_widths' has multiple assertions without diagnostic messages
+    - Test 'gbk_codespace_yields_mixed_widths' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+  parse_reads_codespace_and_usecmap_parent (line 428) - Score: 90
+    - Test 'parse_reads_codespace_and_usecmap_parent' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'parse_reads_codespace_and_usecmap_parent' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'parse_reads_codespace_and_usecmap_parent' has multiple assertions without diagnostic messages
+  parse_retains_vertical_writing_mode (line 439) - Score: 100
+    i Test 'parse_retains_vertical_writing_mode' asserts against a hardcoded constant instead of a computed expected value
+  single_cid_takes_precedence_over_overlapping_range (line 448) - Score: 90
+    - Test 'single_cid_takes_precedence_over_overlapping_range' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'single_cid_takes_precedence_over_overlapping_range' has multiple assertions without diagnostic messages
+  notdefrange_maps_to_notdef_cid (line 469) - Score: 90
+    - Test 'notdefrange_maps_to_notdef_cid' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'notdefrange_maps_to_notdef_cid' has multiple assertions without diagnostic messages
+  notdefchar_maps_to_notdef_cid (line 480) - Score: 90
+    - Test 'notdefchar_maps_to_notdef_cid' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'notdefchar_maps_to_notdef_cid' has multiple assertions without diagnostic messages
+  utf16be_decodes_bmp_and_surrogates (line 491) - Score: 90
+    i Test 'utf16be_decodes_bmp_and_surrogates' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'utf16be_decodes_bmp_and_surrogates' does not call any production code
+  utf16be_marks_trailing_odd_byte (line 498) - Score: 90
+    i Test 'utf16be_marks_trailing_odd_byte' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'utf16be_marks_trailing_odd_byte' does not call any production code
+  predefined_uni_families_resolve_to_collection_cmaps (line 505) - Score: 100
+    i Test 'predefined_uni_families_resolve_to_collection_cmaps' has multiple assertions without diagnostic messages
+  gbk_euc_h_loads_and_maps_ascii_and_cjk (line 526) - Score: 100
+    i Test 'gbk_euc_h_loads_and_maps_ascii_and_cjk' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'gbk_euc_h_loads_and_maps_ascii_and_cjk' has multiple assertions without diagnostic messages
+  adversarial_input_terminates_without_hang (line 545) - Score: 90
+    - Test 'adversarial_input_terminates_without_hang' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

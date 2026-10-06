@@ -1,0 +1,17 @@
+   Compiling oxidize-pdf v5.1.3 (/tmp/oxidize-review-664-20261001/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 2.41s
+     Running tests/text_transform_contract_test.rs (target/debug/deps/text_transform_contract_test-57da4620cfd91d58)
+
+running 9 tests
+test ctm_scale_composes_with_rotated_tm_in_pdf_order ... ok
+test ctm_shear_and_translation_apply_to_text_origins ... ok
+test ctm_nonuniform_scale_and_translation_apply_to_text_origins ... ok
+test bt_resets_text_matrix_and_retains_text_state ... ok
+test font_switch_changes_advance_without_resetting_text_matrix ... ok
+test tm_shear_preserves_both_advance_components ... ok
+test q_and_q_restore_ctm_before_the_next_text_object ... ok
+test nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state ... ok
+test tm_rotation_rotates_glyph_advance ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

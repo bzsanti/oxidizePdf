@@ -1,0 +1,269 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 92 | Files: 6
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...nal-review/oxidize-pdf-core/src/text/extraction_cmap.rs       10     91
+...inal-review/oxidize-pdf-core/src/text/fonts/standard.rs       15     97
+.../issue668-final-review/oxidize-pdf-core/src/text/mod.rs       37     99
+...core/tests/issue_523_standard14_encoding_widths_test.rs        1     90
+...w/oxidize-pdf-core/tests/text_encoding_contract_test.rs       24     95
+...iew/oxidize-pdf-core/tests/text_expert_contract_test.rs        5     98
+
+--- Worst Offenders ---
+  type0_utf16be_encoding_decodes_through_dispatch (target/issue668-final-review/oxidize-pdf-core/src/text/extraction_cmap.rs:1931) - Score: 80
+    i Test 'type0_utf16be_encoding_decodes_through_dispatch' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'type0_utf16be_encoding_decodes_through_dispatch' uses .unwrap() which silently discards error information
+    - Test 'type0_utf16be_encoding_decodes_through_dispatch' has low assert-to-setup ratio (8%): 2 asserts vs 24 setup lines
+    - Test 'type0_utf16be_encoding_decodes_through_dispatch' does not call any production code
+  test_glyph_name_to_unicode (target/issue668-final-review/oxidize-pdf-core/src/text/extraction_cmap.rs:1688) - Score: 90
+    i Test 'test_glyph_name_to_unicode' has multiple assertions without diagnostic messages
+    - Test 'test_glyph_name_to_unicode' does not call any production code
+  test_decode_with_encoding_differences (target/issue668-final-review/oxidize-pdf-core/src/text/extraction_cmap.rs:1775) - Score: 90
+    i Test 'test_decode_with_encoding_differences' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_decode_with_encoding_differences' uses .unwrap() which silently discards error information
+    - Test 'test_decode_with_encoding_differences' has low assert-to-setup ratio (8%): 2 asserts vs 22 setup lines
+  test_decode_winansi (target/issue668-final-review/oxidize-pdf-core/src/text/extraction_cmap.rs:1803) - Score: 90
+    i Test 'test_decode_winansi' has multiple assertions without diagnostic messages
+    - Test 'test_decode_winansi' does not call any production code
+  test_decode_macroman (target/issue668-final-review/oxidize-pdf-core/src/text/extraction_cmap.rs:1811) - Score: 90
+    i Test 'test_decode_macroman' has multiple assertions without diagnostic messages
+    - Test 'test_decode_macroman' does not call any production code
+
+--- Details ---
+target/issue668-final-review/oxidize-pdf-core/src/text/extraction_cmap.rs:
+  test_glyph_name_to_unicode (line 1688) - Score: 90
+    i Test 'test_glyph_name_to_unicode' has multiple assertions without diagnostic messages
+    - Test 'test_glyph_name_to_unicode' does not call any production code
+  test_decode_with_encoding_differences (line 1775) - Score: 90
+    i Test 'test_decode_with_encoding_differences' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_decode_with_encoding_differences' uses .unwrap() which silently discards error information
+    - Test 'test_decode_with_encoding_differences' has low assert-to-setup ratio (8%): 2 asserts vs 22 setup lines
+  test_decode_winansi (line 1803) - Score: 90
+    i Test 'test_decode_winansi' has multiple assertions without diagnostic messages
+    - Test 'test_decode_winansi' does not call any production code
+  test_decode_macroman (line 1811) - Score: 90
+    i Test 'test_decode_macroman' has multiple assertions without diagnostic messages
+    - Test 'test_decode_macroman' does not call any production code
+  test_font_info_creation (line 1827) - Score: 90
+    i Test 'test_font_info_creation' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_font_info_creation' does not call any production code
+  simple_font_one_byte_tounicode_under_two_byte_codespace_decodes (line 1846) - Score: 90
+    i Test 'simple_font_one_byte_tounicode_under_two_byte_codespace_decodes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'simple_font_one_byte_tounicode_under_two_byte_codespace_decodes' uses .unwrap() which silently discards error information
+    - Test 'simple_font_one_byte_tounicode_under_two_byte_codespace_decodes' has low assert-to-setup ratio (14%): 3 asserts vs 19 setup lines
+  embedded_encoding_cmap_decodes_via_cid_table (line 1883) - Score: 100
+    i Test 'embedded_encoding_cmap_decodes_via_cid_table' uses .unwrap() which silently discards error information
+  type0_utf16be_encoding_decodes_through_dispatch (line 1931) - Score: 80
+    i Test 'type0_utf16be_encoding_decodes_through_dispatch' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'type0_utf16be_encoding_decodes_through_dispatch' uses .unwrap() which silently discards error information
+    - Test 'type0_utf16be_encoding_decodes_through_dispatch' has low assert-to-setup ratio (8%): 2 asserts vs 24 setup lines
+    - Test 'type0_utf16be_encoding_decodes_through_dispatch' does not call any production code
+  explicit_bfchar_overrides_usecmap_cid_fallback (line 1961) - Score: 100
+    i Test 'explicit_bfchar_overrides_usecmap_cid_fallback' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'explicit_bfchar_overrides_usecmap_cid_fallback' uses .unwrap() which silently discards error information
+  extract_font_metrics_type3_font_matrix_scaling (line 1984) - Score: 90
+    - Test 'extract_font_metrics_type3_font_matrix_scaling' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'extract_font_metrics_type3_font_matrix_scaling' has multiple assertions without diagnostic messages
+    i Test 'extract_font_metrics_type3_font_matrix_scaling' uses .unwrap() which silently discards error information
+
+target/issue668-final-review/oxidize-pdf-core/src/text/fonts/standard.rs:
+  glyph_name_lookup_covers_non_winansi_and_symbolic_afm_glyphs (line 562) - Score: 100
+    i Test 'glyph_name_lookup_covers_non_winansi_and_symbolic_afm_glyphs' has multiple assertions without diagnostic messages
+  base_font_resolution_is_exact_and_rejects_lookalikes (line 591) - Score: 100
+    i Test 'base_font_resolution_is_exact_and_rejects_lookalikes' has multiple assertions without diagnostic messages
+  encoded_width_respects_base_encoding_and_differences (line 619) - Score: 100
+    i Test 'encoded_width_respects_base_encoding_and_differences' has multiple assertions without diagnostic messages
+  encoded_width_uses_symbolic_builtin_encodings (line 645) - Score: 100
+    i Test 'encoded_width_uses_symbolic_builtin_encodings' has multiple assertions without diagnostic messages
+  test_winansi_non_ascii_byte_widths_match_afm (line 663) - Score: 100
+    i Test 'test_winansi_non_ascii_byte_widths_match_afm' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_winansi_non_ascii_byte_widths_match_afm' has multiple assertions without diagnostic messages
+  test_char_width_unicode_maps_through_winansi (line 677) - Score: 100
+    i Test 'test_char_width_unicode_maps_through_winansi' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_char_width_unicode_maps_through_winansi' has multiple assertions without diagnostic messages
+  test_get_string_width_counts_chars_not_utf8_bytes (line 691) - Score: 90
+    - Test 'test_get_string_width_counts_chars_not_utf8_bytes' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_get_string_width_counts_chars_not_utf8_bytes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_string_width_counts_chars_not_utf8_bytes' has multiple assertions without diagnostic messages
+  test_helvetica_metrics (line 710) - Score: 100
+    i Test 'test_helvetica_metrics' asserts against a hardcoded constant instead of a computed expected value
+  test_times_metrics (line 734) - Score: 100
+    i Test 'test_times_metrics' asserts against a hardcoded constant instead of a computed expected value
+  test_courier_metrics (line 747) - Score: 100
+    i Test 'test_courier_metrics' asserts against a hardcoded constant instead of a computed expected value
+  test_user_space_conversion (line 762) - Score: 90
+    - Test 'test_user_space_conversion' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_user_space_conversion' has multiple assertions without diagnostic messages
+  test_get_standard_font_metrics (line 777) - Score: 100
+    i Test 'test_get_standard_font_metrics' has multiple assertions without diagnostic messages
+  test_font_families (line 791) - Score: 90
+    i Test 'test_font_families' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_font_families' does not call any production code
+  test_font_weights (line 799) - Score: 90
+    i Test 'test_font_weights' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_weights' has multiple assertions without diagnostic messages
+    - Test 'test_font_weights' does not call any production code
+  test_italic_flags (line 806) - Score: 90
+    i Test 'test_italic_flags' has multiple assertions without diagnostic messages
+    - Test 'test_italic_flags' does not call any production code
+
+target/issue668-final-review/oxidize-pdf-core/src/text/mod.rs:
+  test_text_context_new (line 583) - Score: 90
+    i Test 'test_text_context_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_context_new' has multiple assertions without diagnostic messages
+    - Test 'test_text_context_new' does not call any production code
+  test_text_context_default (line 592) - Score: 90
+    i Test 'test_text_context_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_context_default' has multiple assertions without diagnostic messages
+    - Test 'test_text_context_default' does not call any production code
+  test_set_font (line 599) - Score: 100
+    i Test 'test_set_font' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_font' has multiple assertions without diagnostic messages
+  test_position (line 607) - Score: 100
+    i Test 'test_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_position' has multiple assertions without diagnostic messages
+  test_write_simple_text (line 618) - Score: 100
+    i Test 'test_write_simple_text' has multiple assertions without diagnostic messages
+    i Test 'test_write_simple_text' uses .unwrap() which silently discards error information
+  test_write_text_with_escaping (line 630) - Score: 100
+    i Test 'test_write_text_with_escaping' uses .unwrap() which silently discards error information
+  test_write_line (line 639) - Score: 100
+    i Test 'test_write_line' has multiple assertions without diagnostic messages
+    i Test 'test_write_line' uses .unwrap() which silently discards error information
+  test_clear (line 696) - Score: 100
+    i Test 'test_clear' has multiple assertions without diagnostic messages
+    i Test 'test_clear' uses .unwrap() which silently discards error information
+  test_generate_operations (line 706) - Score: 100
+    i Test 'test_generate_operations' uses .unwrap() which silently discards error information
+  test_method_chaining (line 716) - Score: 100
+    i Test 'test_method_chaining' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_method_chaining' has multiple assertions without diagnostic messages
+  test_special_characters_encoding (line 741) - Score: 100
+    i Test 'test_special_characters_encoding' has multiple assertions without diagnostic messages
+    i Test 'test_special_characters_encoding' uses .unwrap() which silently discards error information
+  test_text_state_parameters_chaining (line 823) - Score: 100
+    i Test 'test_text_state_parameters_chaining' has multiple assertions without diagnostic messages
+  test_all_text_state_operators_generated (line 843) - Score: 100
+    i Test 'test_all_text_state_operators_generated' has multiple assertions without diagnostic messages
+  test_text_color_operations (line 875) - Score: 100
+    i Test 'test_text_color_operations' has multiple assertions without diagnostic messages
+  test_used_characters_tracking_ascii (line 938) - Score: 100
+    i Test 'test_used_characters_tracking_ascii' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_used_characters_tracking_ascii' has multiple assertions without diagnostic messages
+    i Test 'test_used_characters_tracking_ascii' uses .unwrap() which silently discards error information
+  test_used_characters_tracking_cjk (line 953) - Score: 100
+    i Test 'test_used_characters_tracking_cjk' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_used_characters_tracking_cjk' has multiple assertions without diagnostic messages
+    i Test 'test_used_characters_tracking_cjk' uses .unwrap() which silently discards error information
+  test_used_characters_multiple_writes (line 975) - Score: 100
+    i Test 'test_used_characters_multiple_writes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_used_characters_multiple_writes' has multiple assertions without diagnostic messages
+    i Test 'test_used_characters_multiple_writes' uses .unwrap() which silently discards error information
+  nan_char_spacing_sanitised_at_emission (line 996) - Score: 100
+    i Test 'nan_char_spacing_sanitised_at_emission' has multiple assertions without diagnostic messages
+    i Test 'nan_char_spacing_sanitised_at_emission' uses .unwrap() which silently discards error information
+  pos_inf_word_spacing_sanitised_at_emission (line 1012) - Score: 100
+    i Test 'pos_inf_word_spacing_sanitised_at_emission' has multiple assertions without diagnostic messages
+    i Test 'pos_inf_word_spacing_sanitised_at_emission' uses .unwrap() which silently discards error information
+  nan_horizontal_scaling_sanitised_at_emission (line 1028) - Score: 100
+    i Test 'nan_horizontal_scaling_sanitised_at_emission' uses .unwrap() which silently discards error information
+  nan_leading_and_text_rise_sanitised_at_emission (line 1040) - Score: 100
+    i Test 'nan_leading_and_text_rise_sanitised_at_emission' has multiple assertions without diagnostic messages
+    i Test 'nan_leading_and_text_rise_sanitised_at_emission' uses .unwrap() which silently discards error information
+  test_text_context_threads_metrics_store (line 1057) - Score: 100
+    i Test 'test_text_context_threads_metrics_store' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_context_threads_metrics_store' has multiple assertions without diagnostic messages
+
+target/issue668-final-review/oxidize-pdf-core/tests/issue_523_standard14_encoding_widths_test.rs:
+  pdf_font_dictionaries_drive_standard14_afm_widths (line 64) - Score: 90
+    - Test 'pdf_font_dictionaries_drive_standard14_afm_widths' has low assert-to-setup ratio (7%): 3 asserts vs 41 setup lines
+
+target/issue668-final-review/oxidize-pdf-core/tests/text_encoding_contract_test.rs:
+  external_oracles_have_256_unique_positions_and_recorded_hashes (line 67) - Score: 100
+    i Test 'external_oracles_have_256_unique_positions_and_recorded_hashes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'external_oracles_have_256_unique_positions_and_recorded_hashes' has multiple assertions without diagnostic messages
+  differences_override_the_base_encoding (line 144) - Score: 90
+    i Test 'differences_override_the_base_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'differences_override_the_base_encoding' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  tounicode_overrides_differences_and_supports_unicode_sequences (line 160) - Score: 90
+    i Test 'tounicode_overrides_differences_and_supports_unicode_sequences' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'tounicode_overrides_differences_and_supports_unicode_sequences' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  literal_and_hex_strings_preserve_the_same_source_codes (line 180) - Score: 90
+    i Test 'literal_and_hex_strings_preserve_the_same_source_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'literal_and_hex_strings_preserve_the_same_source_codes' has low assert-to-setup ratio (11%): 2 asserts vs 17 setup lines
+  symbol_builtin_encoding_matches_independent_table (line 203) - Score: 90
+    - Test 'symbol_builtin_encoding_matches_independent_table' does not call any production code
+  zapfdingbats_builtin_encoding_matches_independent_table (line 211) - Score: 90
+    - Test 'zapfdingbats_builtin_encoding_matches_independent_table' does not call any production code
+  tounicode_overrides_builtin_symbol_and_dingbats (line 219) - Score: 90
+    i Test 'tounicode_overrides_builtin_symbol_and_dingbats' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'tounicode_overrides_builtin_symbol_and_dingbats' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  differences_restart_the_code_counter_and_preserve_unmodified_codes (line 239) - Score: 90
+    i Test 'differences_restart_the_code_counter_and_preserve_unmodified_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'differences_restart_the_code_counter_and_preserve_unmodified_codes' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  macroman_undefined_codes_preserve_neighbors_with_replacement (line 256) - Score: 100
+    i Test 'macroman_undefined_codes_preserve_neighbors_with_replacement' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'macroman_undefined_codes_preserve_neighbors_with_replacement' uses .unwrap() which silently discards error information
+  macroman_overrides_cover_undefined_and_currency_codes (line 288) - Score: 90
+    i Test 'macroman_overrides_cover_undefined_and_currency_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'macroman_overrides_cover_undefined_and_currency_codes' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  simple_encoding_undefined_codes_recover_without_losing_neighbors (line 317) - Score: 90
+    - Test 'simple_encoding_undefined_codes_recover_without_losing_neighbors' has a match arm with empty body, ignoring potential error cases
+    i Test 'simple_encoding_undefined_codes_recover_without_losing_neighbors' asserts against a hardcoded constant instead of a computed expected value
+  builtin_symbol_and_zapf_keep_encoding_and_differences_precedence (line 343) - Score: 100
+    i Test 'builtin_symbol_and_zapf_keep_encoding_and_differences_precedence' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'builtin_symbol_and_zapf_keep_encoding_and_differences_precedence' has multiple assertions without diagnostic messages
+  builtin_font_selection_does_not_match_unrelated_names_or_type3 (line 371) - Score: 90
+    - Test 'builtin_font_selection_does_not_match_unrelated_names_or_type3' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'builtin_font_selection_does_not_match_unrelated_names_or_type3' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'builtin_font_selection_does_not_match_unrelated_names_or_type3' has multiple assertions without diagnostic messages
+  builtin_symbol_subset_names_and_explicit_tounicode_are_distinct (line 403) - Score: 90
+    i Test 'builtin_symbol_subset_names_and_explicit_tounicode_are_distinct' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'builtin_symbol_subset_names_and_explicit_tounicode_are_distinct' has multiple assertions without diagnostic messages
+    - Test 'builtin_symbol_subset_names_and_explicit_tounicode_are_distinct' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+  zapf_differences_resolve_adobe_names_before_builtin_codes (line 479) - Score: 90
+    i Test 'zapf_differences_resolve_adobe_names_before_builtin_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'zapf_differences_resolve_adobe_names_before_builtin_codes' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  unresolved_differences_replace_instead_of_restoring_the_base_glyph (line 495) - Score: 100
+    i Test 'unresolved_differences_replace_instead_of_restoring_the_base_glyph' asserts against a hardcoded constant instead of a computed expected value
+  all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding (line 528) - Score: 100
+    i Test 'all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding' has multiple assertions without diagnostic messages
+    i Test 'all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding' uses .unwrap() which silently discards error information
+  builtin_decoding_preserves_afm_widths_and_following_origins (line 556) - Score: 100
+    i Test 'builtin_decoding_preserves_afm_widths_and_following_origins' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'builtin_decoding_preserves_afm_widths_and_following_origins' has multiple assertions without diagnostic messages
+    i Test 'builtin_decoding_preserves_afm_widths_and_following_origins' uses .unwrap() which silently discards error information
+  custom_type3_names_keep_existing_byte_recovery_and_mapping_precedence (line 609) - Score: 100
+    i Test 'custom_type3_names_keep_existing_byte_recovery_and_mapping_precedence' asserts against a hardcoded constant instead of a computed expected value
+  unknown_intrinsic_type1_encoding_keeps_existing_recovery (line 627) - Score: 90
+    - Test 'unknown_intrinsic_type1_encoding_keeps_existing_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unknown_intrinsic_type1_encoding_keeps_existing_recovery' asserts against a hardcoded constant instead of a computed expected value
+
+target/issue668-final-review/oxidize-pdf-core/tests/text_expert_contract_test.rs:
+  expert_program_and_independent_name_inventory_are_pinned (line 34) - Score: 100
+    i Test 'expert_program_and_independent_name_inventory_are_pinned' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'expert_program_and_independent_name_inventory_are_pinned' uses .unwrap() which silently discards error information
+  macexpert_unambiguous_glyph_names_decode_without_tounicode (line 50) - Score: 100
+    i Test 'macexpert_unambiguous_glyph_names_decode_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  tounicode_can_choose_non_pua_text_for_expert_glyphs (line 61) - Score: 100
+    i Test 'tounicode_can_choose_non_pua_text_for_expert_glyphs' asserts against a hardcoded constant instead of a computed expected value
+  all_expert_codes_preserve_their_explicit_tounicode_values (line 73) - Score: 90
+    - Test 'all_expert_codes_preserve_their_explicit_tounicode_values' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'all_expert_codes_preserve_their_explicit_tounicode_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_expert_codes_preserve_their_explicit_tounicode_values' has multiple assertions without diagnostic messages
+    i Test 'all_expert_codes_preserve_their_explicit_tounicode_values' uses .unwrap() which silently discards error information
+  all_macexpert_codes_follow_agl_or_explicit_undefined_recovery (line 110) - Score: 100
+    i Test 'all_macexpert_codes_follow_agl_or_explicit_undefined_recovery' has multiple assertions without diagnostic messages
+    i Test 'all_macexpert_codes_follow_agl_or_explicit_undefined_recovery' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

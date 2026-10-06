@@ -1,0 +1,32 @@
+{
+  "minimal": {
+    "targets": 39,
+    "passed": 396,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "spi": {
+    "targets": 40,
+    "passed": 410,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "msrv-default": {
+    "targets": 39,
+    "passed": 396,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "msrv-minimal": {
+    "targets": 39,
+    "passed": 396,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "msrv-spi": {
+    "targets": 40,
+    "passed": 410,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  }
+}

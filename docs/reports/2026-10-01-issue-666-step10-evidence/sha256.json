@@ -1,0 +1,22 @@
+{
+  "base-final.log": "c16de4b44d6e6415aded15b904e34049542f272ddb91ff778a9a5820713d0360",
+  "clippy.log": "992d89afd61d10dea2d910503c8764ed3fab318c208e1c0972b257175057ad8a",
+  "issue-667-body.md": "b5870236f43094b3bdaf2a3ce45a623f4ebf49ea5b4cd98d056cf7b381416757",
+  "pdfs/metadata-0.json": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+  "pdfs/metadata-0.pdf": "e38ba7abe52c2279739bdc41b8bc5c6de98e7a8535b49f0e93dce0b64d25e510",
+  "pdfs/metadata-1.json": "798640599597df7a8daa32b1132f07850a68b5e71bd295650399a38074f52804",
+  "pdfs/metadata-1.pdf": "0b237807df20e9f6e7498610027850728bff00e87aefa1d77598314e6f2cf3bc",
+  "pdfs/metadata-2.json": "f2886017e9c7abacf804b54d64787dce2b611c9544ba21f3affdd126a6e50086",
+  "pdfs/metadata-2.pdf": "80c364052b3ecc108db23460fc1470477c0f29512bff28dae1fec8071b9d5e61",
+  "pdfs/metadata-3.json": "7a0c50b92434b015545fe93ab723db2d4b2cdd14a441405624a9ce8be29f1d5a",
+  "pdfs/metadata-3.pdf": "1a63f686b81cf8e982c015017d8f36035167d5b3998d8eab2a6d44d24b00d4fc",
+  "pdfs/metadata-4.json": "3d68ce21f2899a475713cdbe7562ba9bdb6b1dfde8af1f221bdff4a0935b53b2",
+  "pdfs/metadata-4.pdf": "3d1907d7d5df1b5569873e1171ee6e748022b999677ac59fb19d667e0a0a8717",
+  "pdfs/metadata-5.json": "3926a69d0f3826a5670bbc7f52f6ae1dea3d2c54c6c370624e5e35443ea00c3c",
+  "pdfs/metadata-5.pdf": "ddf97cf248707bfb13e78812292e571d3d531bb5b200796033a2d44aaf1065ed",
+  "pr664-final.log": "fc3fe9817ca1d967c19412d1bc4a93383041a09d45a60a250685d57bc3ac741f",
+  "pr665-final.log": "3122ca1b975e980d1d7afec6ed384f2b90313db78543b065801f24ba29ee8e88",
+  "readers.json": "e3c69903bba734f87dd69365674e7554cedd526b9e8dc15da7ea3cb376e28180",
+  "text_pdf20_string_contract_test.rs": "0978658e64a6c845ebe8ca44b0ae76f7fb2206c6e513adb713b3b06d3773b3c7",
+  "text_script_contract_test.rs": "2adb21743476939bf3f4e910bca957588db10fb9fdc378dbceaa4d48f1555b0e"
+}

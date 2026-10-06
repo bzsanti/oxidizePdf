@@ -1,0 +1,38 @@
+[
+  {
+    "case": "control",
+    "exit": 0,
+    "filter": "regression::",
+    "source_sha256": "510a613b9eb37393c0957b7e9ef54798e16270f7e849b7e6dd52b41f3e1daa9e"
+  },
+  {
+    "case": "nul-not-whitespace",
+    "exit": 101,
+    "filter": "regression::nul_separates",
+    "source_sha256": "9ce5cbf4ff6629a34cd7558376cf885d317f7821105b69913512e6e7f459de23"
+  },
+  {
+    "case": "ignore-raw-length",
+    "exit": 101,
+    "filter": "regression::unfiltered_length_keeps",
+    "source_sha256": "d9df9f562f84031dea84cbaeb1a38835efa2600c625cd0b75e2d663c268c08ee"
+  },
+  {
+    "case": "omit-row-padding",
+    "exit": 101,
+    "filter": "regression::unfiltered_length_uses",
+    "source_sha256": "927b1a87a33f5d250658af86562058e092682a29a7383bbfb8c652c9913aa4df"
+  },
+  {
+    "case": "invalid-mask-default",
+    "exit": 101,
+    "filter": "content::tests::inline_length_distinguishes",
+    "source_sha256": "9527012bd256f729060429aa2d4c2aa5b272d1e171852e490ba5593f498f6295"
+  },
+  {
+    "case": "retain-virtual-whitespace",
+    "exit": 101,
+    "filter": "content::tests::incremental_operations_match_batch",
+    "source_sha256": "fdd0ba760df875f2e97d0c849d8d649fbb24e19578038fde4ed2f1b1b311c9db"
+  }
+]

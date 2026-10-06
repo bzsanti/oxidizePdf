@@ -1,0 +1,11 @@
+{
+  "incoming": "8c0c80321f236a139e783722d8a337251a7ceaf2",
+  "previous_head": "a8b595ecafc5988038361a567808053815570aa8",
+  "manual_conflicts": [
+    "CHANGELOG.md",
+    "TASKS.md"
+  ],
+  "incoming_production_identical": true,
+  "encoding_production_identical": true,
+  "joint_contracts_passed": 65
+}

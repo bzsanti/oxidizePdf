@@ -1,0 +1,50 @@
+[
+  {
+    "file": "metadata-0.pdf",
+    "expected": "",
+    "actual": "",
+    "match": true,
+    "warnings": "",
+    "qpdf": 0
+  },
+  {
+    "file": "metadata-1.pdf",
+    "expected": "A",
+    "actual": "A",
+    "match": true,
+    "warnings": "",
+    "qpdf": 0
+  },
+  {
+    "file": "metadata-2.pdf",
+    "expected": "é",
+    "actual": "é",
+    "match": true,
+    "warnings": "",
+    "qpdf": 0
+  },
+  {
+    "file": "metadata-3.pdf",
+    "expected": "😀",
+    "actual": "😀",
+    "match": true,
+    "warnings": "",
+    "qpdf": 0
+  },
+  {
+    "file": "metadata-4.pdf",
+    "expected": "é",
+    "actual": "é",
+    "match": true,
+    "warnings": "",
+    "qpdf": 0
+  },
+  {
+    "file": "metadata-5.pdf",
+    "expected": "﻿A",
+    "actual": "﻿A",
+    "match": true,
+    "warnings": "",
+    "qpdf": 0
+  }
+]

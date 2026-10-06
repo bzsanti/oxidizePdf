@@ -1,0 +1,101 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 7.87s
+     Running tests/cid_cmap_test.rs (target/debug/deps/cid_cmap_test-f27e990f8a7501dd)
+
+running 8 tests
+test test_cid_collection_from_ordering ... ok
+test test_cns1_basic_latin_cids ... ok
+test test_cns1_known_cid_mappings ... ok
+test test_gb1_exists_and_has_entries ... ok
+test test_japan1_exists_and_has_entries ... ok
+test test_korea1_exists_and_has_entries ... ok
+test test_unknown_cid_returns_none ... ok
+test test_issue_157_cid_keyed_font_text_extraction ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/encoding_usecmap_external_test.rs (target/debug/deps/encoding_usecmap_external_test-9b311c9b8e9c3070)
+
+running 1 test
+test issue5010_usecmap_korea1_resolves_real_hangul ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_386_tz_pen_advance_test.rs (target/debug/deps/issue_386_tz_pen_advance_test-6c78c8b9186b84e7)
+
+running 4 tests
+test unscaled_flush_text_still_joins ... ok
+test ctm_scaled_flush_text_gets_no_spurious_space ... ok
+test tz_scaled_wide_gap_still_spaces ... ok
+test tz_scaled_flush_text_gets_no_spurious_space ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_458_tj_boundary_space_test.rs (target/debug/deps/issue_458_tj_boundary_space_test-bc0d6511bd1a6835)
+
+running 16 tests
+test a_gap_above_the_threshold_splits_the_runs ... ok
+test a_gap_below_the_threshold_leaves_the_runs_welded ... ok
+test a_hairline_gap_between_two_tj_operators_does_not_break_the_word ... ok
+test a_gap_between_two_tj_operators_on_one_line_becomes_a_space ... ok
+test a_leading_kern_produces_one_space_not_two ... ok
+test a_narrow_font_change_boundary_becomes_a_space ... ok
+test a_small_leading_kern_does_not_mask_a_real_boundary_gap ... ok
+test a_subthreshold_font_change_boundary_stays_welded ... ok
+test a_trailing_kern_followed_by_another_array_produces_one_space_not_two ... ok
+test ctm_scaling_does_not_turn_a_small_tj_boundary_residue_into_a_space ... ok
+test kerning_inside_one_tj_array_is_left_to_the_spacing_rule ... ok
+test tm_scaling_does_not_turn_a_small_tj_boundary_residue_into_a_space ... ok
+test issue_458_multi_column_table_cells_are_not_fused ... ok
+test tm_scaling_preserves_a_real_tj_boundary_space ... ok
+test form_xobject_preserves_the_last_shown_font_for_tj_boundaries ... ok
+test horizontal_text_scaling_is_included_in_the_tj_boundary_threshold ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_spacing_contract_test.rs (target/debug/deps/text_spacing_contract_test-040fabcda5bb0cc2)
+
+running 14 tests
+test glyph_origins_follow_declared_widths_kerns_and_horizontal_scale ... ok
+test absent_widths_never_certify_tracking_for_standard_fonts ... ok
+test lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances ... ok
+test excess_advance_remains_a_word_separator ... ok
+test a_single_transition_does_not_certify_uniform_tracking ... ok
+test explicit_character_spacing_disables_tracking_inference ... ok
+test explicit_word_spacing_disables_tracking_inference ... ok
+test declared_positive_widths_keep_word_separators ... ok
+test declared_zero_widths_allow_uniform_advances ... ok
+test partial_em_adjustments_do_not_trigger_unknown_width_recovery ... ok
+test strict_mode_does_not_enable_unknown_width_recovery ... ok
+test unresolved_type0_without_space_reaches_and_rejects_the_fallback ... ok
+test known_zero_width_single_word_needs_no_literal_space ... ok
+test ordinary_small_kerning_does_not_add_spaces ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_tj_scale_contract_test.rs (target/debug/deps/text_tj_scale_contract_test-adff38aa153acd86)
+
+running 4 tests
+test fixture_hashes_are_frozen ... ok
+test backward_tj_adjustment_scales_with_tz ... ok
+test forward_tj_adjustment_scales_with_tz ... ok
+test zero_tj_control_scales_only_source_width ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_usecmap_contract_test.rs (target/debug/deps/text_usecmap_contract_test-d04affbc6085c30f)
+
+running 10 tests
+test identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths ... ok
+test flat_maps_are_the_control ... ok
+test explicit_cid_mapping_precedes_notdef_range ... ok
+test encoding_inherits_parent_codespace_and_cids ... ok
+test child_unicode_overrides_one_code_and_inherits_the_other ... ok
+test child_cid_mapping_overrides_parent_width_selection ... ok
+test both_maps_follow_two_parent_levels ... ok
+test fixture_bytes_match_frozen_provenance ... ok
+test tounicode_inherits_parent_mapping ... ok
+test identity_parent_operator_preserves_two_byte_codes_and_cid_widths ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

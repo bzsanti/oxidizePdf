@@ -1,0 +1,8 @@
+
+running 1 test
+test explicit_encoding_glyph_width_advances_the_text_pen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.01s
+
+    Finished `test` profile [unoptimized] target(s) in 0.07s
+     Running contracts.rs (target/debug/deps/contracts-e6990da33d84a623)

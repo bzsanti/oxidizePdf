@@ -79,10 +79,12 @@ pub struct CMap {
     /// `"Identity-H"` or `"Identity-V"`, `map()` falls back to
     /// returning the input code as-is for any code the child CMap
     /// did not map explicitly, and `is_valid_code()` accepts the full
-    /// 2-byte (Identity-H) or 1-byte (Identity-V) space. External
-    /// CMap chaining (non-predefined parents) is recorded for
-    /// observability but does not enable any fallback.
+    /// 2-byte Identity-H/Identity-V space. External
+    /// named parents remain observable; document-owned stream parents
+    /// are resolved separately by the font parser.
     pub inherited_predefined: Option<String>,
+    parent: Option<Box<CMap>>,
+    explicit_wmode: bool,
 }
 
 impl Default for CMap {
@@ -102,6 +104,8 @@ impl CMap {
             mappings: Vec::new(),
             single_mappings: HashMap::new(),
             inherited_predefined: None,
+            parent: None,
+            explicit_wmode: false,
         }
     }
 
@@ -118,6 +122,8 @@ impl CMap {
             mappings: Vec::new(),
             single_mappings: HashMap::new(),
             inherited_predefined: None,
+            parent: None,
+            explicit_wmode: false,
         }
     }
 
@@ -134,6 +140,8 @@ impl CMap {
             mappings: Vec::new(),
             single_mappings: HashMap::new(),
             inherited_predefined: None,
+            parent: None,
+            explicit_wmode: false,
         }
     }
 
@@ -190,6 +198,7 @@ impl CMap {
                 Token::Name(n) if n == "WMode" => {
                     if let Some(Token::Integer(w)) = tokens.get(i + 1) {
                         cmap.wmode = *w as u8;
+                        cmap.explicit_wmode = true;
                         i += 2;
                     } else {
                         i += 1;
@@ -359,6 +368,12 @@ impl CMap {
             }
         }
 
+        if let Some(parent) = &self.parent {
+            if let Some(mapped) = parent.map(code) {
+                return Some(mapped);
+            }
+        }
+
         // Codespace-gated passthroughs (Identity). These synthesise a result
         // from the code itself rather than an explicit table, so they must
         // stay constrained to the declared codespace to avoid swallowing
@@ -424,7 +439,22 @@ impl CMap {
                 _ => {}
             }
         }
-        None
+        self.parent
+            .as_ref()
+            .and_then(|parent| parent.source_code_for_unicode(target))
+            .filter(|code| self.map(code).as_deref() == Some(target_bytes.as_slice()))
+    }
+
+    /// Preserve layer precedence, including child ranges over parent singles.
+    pub(crate) fn inherit(&mut self, parent: Self) {
+        if self.codespace_ranges.is_empty() {
+            self.codespace_ranges.clone_from(&parent.codespace_ranges);
+        }
+        if !self.explicit_wmode {
+            self.wmode = parent.wmode;
+        }
+        self.inherited_predefined = None;
+        self.parent = Some(Box::new(parent));
     }
 
     /// Check if a code is in valid codespace
@@ -451,12 +481,19 @@ impl CMap {
     /// Used by ToUnicode decoding to resolve codes the child CMap did
     /// not map explicitly (the code is treated as a CID into the table).
     pub(crate) fn inherited_ordering(&self) -> Option<&'static str> {
-        match self.inherited_predefined.as_deref()? {
+        let Some(name) = self.inherited_predefined.as_deref() else {
+            return self
+                .parent
+                .as_ref()
+                .and_then(|parent| parent.inherited_ordering());
+        };
+        match name {
             "Adobe-GB1-UCS2" => Some("GB1"),
             "Adobe-CNS1-UCS2" => Some("CNS1"),
             "Adobe-Japan1-UCS2" => Some("Japan1"),
-            // `Adobe-KR-UCS2` is an alias for the Korea1 collection used by some producers.
-            "Adobe-Korea1-UCS2" | "Adobe-KR-UCS2" => Some("Korea1"),
+            // KR and Korea1 have different CID assignments.
+            "Adobe-Korea1-UCS2" => Some("Korea1"),
+            "Adobe-KR-UCS2" => Some("KR"),
             _ => None,
         }
     }
@@ -488,8 +525,9 @@ impl CMap {
                         .collect();
                     String::from_utf16(&utf16_values).ok()
                 } else {
-                    // Try as UTF-8
-                    String::from_utf8(mapped.to_vec()).ok()
+                    // ToUnicode destinations are UTF-16BE, never UTF-8.
+                    // An incomplete code unit has no trustworthy Unicode value.
+                    None
                 }
             }
             _ => None,

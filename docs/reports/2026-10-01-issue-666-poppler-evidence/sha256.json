@@ -1,0 +1,18 @@
+{
+  "sources.json": "fed10c84d66e5b4a2f1a5e97b822678d7adac20ae6995822cfa511d8ff6dde59",
+  "oxidize-boundaries.json": "e872b8ba66340983ae51accf1ab792b6de1f0a10869b9af76f29d47abe8ccf6d",
+  "generate-boundaries.py": "1897097fdb28f8a4a201cb5d245feebabf355cddf3a57d1d7fa43def5227b017",
+  "boundary-probe.rs": "205e3ac3da991f03d687468ea16133c261b6f5010385f9d9ff55802eb3855cc1",
+  "oxidize-build.log": "4797fe319009d50e2ebfb2f8b4c0d74f8bdfe7a1d2e7d0d940a009e4b2b59555",
+  "mupdf-original-fixtures.json": "d5918302d3bd920cb719c7ee6f414162b67402be85ae0289ba48beb4232bef04",
+  "boundaries/code-FFFFFF.pdf": "a83d845e3112a9c2128dcd352c849af0bc4d27b37113c2ba82742e7087a5fb75",
+  "boundaries/code-01000000.pdf": "e64c56c7870672aeca6a928126cb427df8856148d9083431fb1030ead916b9a1",
+  "boundaries/code-41.pdf": "25b65a9e1b97a1786fd066da532ca8da2616419593f93c6f5d9de7e0be829b20",
+  "boundaries/results.json": "f437e0f600db466c862519561caa76aac10d7083a6a678a47b6a18e97b1f49e1",
+  "boundaries/code-010000.pdf": "78a7628556129fd9c1f9a1b2bab0704189fcd22303aa28bcea8359595180d35c",
+  "boundaries/code-E0000001.pdf": "e51138e28ce6fac58223d0cb82e7dfebc2bee0f3c83c711b92a72cca22e61655",
+  "boundaries/code-00000041.pdf": "0cbd7b2e40c236c6a29b0dd726d6ad7b865748e1ae8dc5f219415ae65d619359",
+  "boundaries/code-FFFF.pdf": "682d13d243698abc9ceea382fb66aa26e472548e6dd24d473d5fed151c52a77c",
+  "boundaries/code-0041.pdf": "3be48c0d834c77d8f72111db685a1b7be1a694c4ba6fee6c0e1abca2a1077319",
+  "boundaries/code-000041.pdf": "e9e0f425c4250ca15a376f7dff7038a19d5f2cafe0f06f87bc726aecfa1fc213"
+}

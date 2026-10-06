@@ -1,0 +1,282 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 4.56s
+     Running tests/text_cid_cff_contract_test.rs (target/debug/deps/text_cid_cff_contract_test-3fcb695627adadbd)
+
+running 6 tests
+test cid_keyed_cff_matches_its_independently_generated_program ... ok
+test cid_cff_widths_use_cids_not_charstring_indices ... ok
+test cid_cff_vertical_advance_uses_w2 ... FAILED
+test remapped_cid_cff_widths_follow_encoding_cids ... ok
+test identity_h_cid_cff_preserves_explicit_unicode ... ok
+test embedded_encoding_remaps_codes_before_selecting_cff_cids ... ok
+
+failures:
+
+---- cid_cff_vertical_advance_uses_w2 stdout ----
+
+thread 'cid_cff_vertical_advance_uses_w2' (424) panicked at oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:112:5:
+glyph 1: expected B at (100,688), got "B" at (105,700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    cid_cff_vertical_advance_uses_w2
+
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cid_cff_contract_test`
+     Running tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-576d6b91ec72df24)
+
+running 7 tests
+test cjk_samples_have_pinned_identity_and_distinct_collections ... ok
+test adobe_kr_is_a_separate_collection ... FAILED
+test adobe_cns1_named_cmaps_decode_collection_cids ... FAILED
+test adobe_korea1_named_cmaps_decode_collection_cids ... FAILED
+test adobe_japan1_named_cmaps_decode_collection_cids ... FAILED
+test adobe_gb1_named_cmaps_decode_collection_cids ... FAILED
+test explicit_unicode_overrides_all_five_collection_fallbacks ... ok
+
+failures:
+
+---- adobe_kr_is_a_separate_collection stdout ----
+
+thread 'adobe_kr_is_a_separate_collection' (435) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+UniAKR-UTF16-H first-cjk code=2F00 CID=14238: expected "一", got "⼀"
+UniAKR-UTF16-H last-cjk code=FA2F CID=18559: expected "隷", got "隷"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- adobe_cns1_named_cmaps_decode_collection_cids stdout ----
+
+thread 'adobe_cns1_named_cmaps_decode_collection_cids' (431) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+B5pc-H first-cjk code=A259 CID=281: expected "兙", got "�"
+B5pc-H last-cjk code=F9D5 CID=13645: expected "龘", got "�"
+B5pc-V first-cjk code=A259 CID=281: expected "兙", got "�"
+B5pc-V last-cjk code=F9D5 CID=13645: expected "龘", got "�"
+B5pc-V vertical-override code=A14B CID=13646: expected "︙", got "�"
+ETen-B5-H first-cjk code=A259 CID=281: expected "兙", got "�"
+ETen-B5-H last-cjk code=F9DC CID=14062: expected "嫺", got "�"
+ETen-B5-H non-bmp code=C87A CID=14000: expected "𠃌", got "�"
+ETen-B5-V first-cjk code=A259 CID=281: expected "兙", got "�"
+ETen-B5-V last-cjk code=F9DC CID=14062: expected "嫺", got "�"
+ETen-B5-V non-bmp code=C87A CID=14000: expected "𠃌", got "�"
+ETen-B5-V vertical-override code=A14B CID=13646: expected "︙", got "�"
+UniCNS-UCS2-H first-cjk code=2E9D CID=732: expected "月", got "⺝"
+UniCNS-UCS2-H last-cjk code=FA0D CID=9089: expected "嗀", got "嗀"
+UniCNS-UCS2-H non-bmp code=3D1D CID=14652: expected "𪏭", got "㴝"
+UniCNS-UCS2-V first-cjk code=2E9D CID=732: expected "月", got "⺝"
+UniCNS-UCS2-V last-cjk code=FA0D CID=9089: expected "嗀", got "嗀"
+UniCNS-UCS2-V non-bmp code=3D1D CID=14652: expected "𪏭", got "㴝"
+UniCNS-UCS2-V vertical-override code=2013 CID=120: expected "｜", got "–"
+UniCNS-UTF16-H first-cjk code=2F00 CID=595: expected "一", got "⼀"
+UniCNS-UTF16-H last-cjk code=FA0D CID=9089: expected "嗀", got "嗀"
+UniCNS-UTF16-H non-bmp code=3D1D CID=14652: expected "𪏭", got "㴝"
+UniCNS-UTF16-V first-cjk code=2F00 CID=595: expected "一", got "⼀"
+UniCNS-UTF16-V last-cjk code=FA0D CID=9089: expected "嗀", got "嗀"
+UniCNS-UTF16-V non-bmp code=3D1D CID=14652: expected "𪏭", got "㴝"
+UniCNS-UTF16-V vertical-override code=2013 CID=120: expected "｜", got "–"
+
+---- adobe_korea1_named_cmaps_decode_collection_cids stdout ----
+
+thread 'adobe_korea1_named_cmaps_decode_collection_cids' (434) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+KSC-EUC-H first-cjk code=B0A1 CID=1086: expected "가", got "�"
+KSC-EUC-H last-cjk code=FDFE CID=8055: expected "詰", got "�"
+KSC-EUC-V first-cjk code=B0A1 CID=1086: expected "가", got "�"
+KSC-EUC-V last-cjk code=FDFE CID=8055: expected "詰", got "�"
+KSC-EUC-V vertical-override code=A1A2 CID=8056: expected "、", got "�"
+KSCms-UHC-V first-cjk code=8141 CID=9333: expected "갂", got "�"
+KSCms-UHC-V last-cjk code=FDFE CID=8055: expected "詰", got "�"
+KSCms-UHC-V vertical-override code=A1A2 CID=8056: expected "、", got "�"
+UniKS-UCS2-H last-cjk code=FA0B CID=3815: expected "廓", got "廓"
+UniKS-UCS2-V last-cjk code=FA0B CID=3815: expected "廓", got "廓"
+UniKS-UCS2-V vertical-override code=2013 CID=8059: expected "\u{ad}", got "–"
+UniKS-UTF16-H first-cjk code=2F00 CID=6460: expected "一", got "⼀"
+UniKS-UTF16-H last-cjk code=FA2F CID=4510: expected "隷", got "隷"
+UniKS-UTF16-V first-cjk code=2F00 CID=6460: expected "一", got "⼀"
+UniKS-UTF16-V last-cjk code=FA2F CID=4510: expected "隷", got "隷"
+UniKS-UTF16-V vertical-override code=2013 CID=8059: expected "\u{ad}", got "–"
+
+---- adobe_japan1_named_cmaps_decode_collection_cids stdout ----
+
+thread 'adobe_japan1_named_cmaps_decode_collection_cids' (433) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+90ms-RKSJ-H non-bmp code=88A7 CID=1133: expected "逢\u{e0100}", got "逢"
+90ms-RKSJ-V first-cjk code=8157 CID=656: expected "仝", got "�"
+90ms-RKSJ-V last-cjk code=FC4B CID=8717: expected "黑", got "�"
+90ms-RKSJ-V non-bmp code=88A7 CID=1133: expected "逢\u{e0100}", got "�"
+90ms-RKSJ-V vertical-override code=8141 CID=7887: expected "、", got "�"
+90pv-RKSJ-H non-bmp code=8591 CID=8061: expected "🄀", got "�"
+90pv-RKSJ-V first-cjk code=8157 CID=656: expected "仝", got "�"
+90pv-RKSJ-V last-cjk code=EAA4 CID=8285: expected "熙", got "�"
+90pv-RKSJ-V non-bmp code=8591 CID=8061: expected "🄀", got "�"
+90pv-RKSJ-V vertical-override code=8141 CID=7887: expected "、", got "�"
+UniJIS-UCS2-H first-cjk code=2E83 CID=14305: expected "乚", got "⺃"
+UniJIS-UCS2-H last-cjk code=FA2D CID=8715: expected "鶴\u{fe00}", got "鶴"
+UniJIS-UCS2-H non-bmp code=2E87 CID=14105: expected "𠘨", got "⺇"
+UniJIS-UCS2-V first-cjk code=2E83 CID=14305: expected "乚", got "⺃"
+UniJIS-UCS2-V last-cjk code=FA2D CID=8715: expected "鶴\u{fe00}", got "鶴"
+UniJIS-UCS2-V non-bmp code=2E87 CID=14105: expected "𠘨", got "⺇"
+UniJIS-UTF16-H first-cjk code=2E83 CID=14305: expected "乚", got "⺃"
+UniJIS-UTF16-H last-cjk code=FA6D CID=13695: expected "舘\u{fe00}", got "舘"
+UniJIS-UTF16-H non-bmp code=2E87 CID=14105: expected "𠘨", got "⺇"
+UniJIS-UTF16-V first-cjk code=2E83 CID=14305: expected "乚", got "⺃"
+UniJIS-UTF16-V last-cjk code=FA6D CID=13695: expected "舘\u{fe00}", got "舘"
+UniJIS-UTF16-V non-bmp code=2E87 CID=14105: expected "𠘨", got "⺇"
+
+---- adobe_gb1_named_cmaps_decode_collection_cids stdout ----
+
+thread 'adobe_gb1_named_cmaps_decode_collection_cids' (432) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:64:5:
+GB-EUC-H first-cjk code=B0A1 CID=940: expected "啊", got "�"
+GB-EUC-H last-cjk code=F7FE CID=7702: expected "齄", got "�"
+GB-EUC-V first-cjk code=B0A1 CID=940: expected "啊", got "�"
+GB-EUC-V last-cjk code=F7FE CID=7702: expected "齄", got "�"
+GB-EUC-V vertical-override code=A1A2 CID=575: expected "、", got "�"
+GBK-EUC-H non-bmp code=FE51 CID=22048: expected "𠂇", got "�"
+GBK-EUC-V first-cjk code=8140 CID=10072: expected "丂", got "�"
+GBK-EUC-V last-cjk code=FEA0 CID=22126: expected "龻", got "�"
+GBK-EUC-V non-bmp code=FE51 CID=22048: expected "𠂇", got "�"
+GBK-EUC-V vertical-override code=A1A2 CID=575: expected "、", got "�"
+GBKp-EUC-H non-bmp code=FE51 CID=22048: expected "𠂇", got "�"
+GBKp-EUC-V first-cjk code=8140 CID=10072: expected "丂", got "�"
+GBKp-EUC-V last-cjk code=FEA0 CID=22126: expected "龻", got "�"
+GBKp-EUC-V non-bmp code=FE51 CID=22048: expected "𠂇", got "�"
+GBKp-EUC-V vertical-override code=A1A2 CID=575: expected "、", got "�"
+UniGB-UCS2-H first-cjk code=2F00 CID=4162: expected "一", got "⼀"
+UniGB-UCS2-H last-cjk code=FA20 CID=22040: expected "蘒\u{fe00}", got "蘒"
+UniGB-UCS2-H non-bmp code=E816 CID=22048: expected "𠂇", got "\u{e816}"
+UniGB-UCS2-V first-cjk code=2F00 CID=4162: expected "一", got "⼀"
+UniGB-UCS2-V last-cjk code=FA20 CID=22040: expected "蘒\u{fe00}", got "蘒"
+UniGB-UCS2-V non-bmp code=E816 CID=22048: expected "𠂇", got "\u{e816}"
+UniGB-UTF16-H first-cjk code=2F00 CID=4162: expected "一", got "⼀"
+UniGB-UTF16-H last-cjk code=FA20 CID=22040: expected "蘒\u{fe00}", got "蘒"
+UniGB-UTF16-V first-cjk code=2F00 CID=4162: expected "一", got "⼀"
+UniGB-UTF16-V last-cjk code=FA20 CID=22040: expected "蘒\u{fe00}", got "蘒"
+
+
+failures:
+    adobe_cns1_named_cmaps_decode_collection_cids
+    adobe_gb1_named_cmaps_decode_collection_cids
+    adobe_japan1_named_cmaps_decode_collection_cids
+    adobe_korea1_named_cmaps_decode_collection_cids
+    adobe_kr_is_a_separate_collection
+
+test result: FAILED. 2 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cjk_contract_test`
+     Running tests/text_spacing_contract_test.rs (target/debug/deps/text_spacing_contract_test-040fabcda5bb0cc2)
+
+running 14 tests
+test glyph_origins_follow_declared_widths_kerns_and_horizontal_scale ... FAILED
+test absent_widths_never_certify_tracking_for_standard_fonts ... ok
+test lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances ... ok
+test explicit_character_spacing_disables_tracking_inference ... ok
+test partial_em_adjustments_do_not_trigger_unknown_width_recovery ... ok
+test strict_mode_does_not_enable_unknown_width_recovery ... ok
+test declared_positive_widths_keep_word_separators ... ok
+test unresolved_type0_without_space_reaches_and_rejects_the_fallback ... ok
+test declared_zero_widths_allow_uniform_advances ... ok
+test excess_advance_remains_a_word_separator ... ok
+test a_single_transition_does_not_certify_uniform_tracking ... ok
+test known_zero_width_single_word_needs_no_literal_space ... ok
+test explicit_word_spacing_disables_tracking_inference ... ok
+test ordinary_small_kerning_does_not_add_spaces ... ok
+
+failures:
+
+---- glyph_origins_follow_declared_widths_kerns_and_horizontal_scale stdout ----
+
+thread 'glyph_origins_follow_declared_widths_kerns_and_horizontal_scale' (446) panicked at oxidize-pdf-core/tests/text_spacing_contract_test.rs:175:5:
+Tz 50: expected B (104, 700), actual (105.5, 700)
+Tz 200: expected B (116, 700), actual (113, 700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    glyph_origins_follow_declared_widths_kerns_and_horizontal_scale
+
+test result: FAILED. 13 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_spacing_contract_test`
+     Running tests/text_vertical_contract_test.rs (target/debug/deps/text_vertical_contract_test-fcfbd6e3bb975c41)
+
+running 9 tests
+test embedded_wmode_one_selects_vertical_advance ... FAILED
+test dw2_overrides_default_vertical_advance ... FAILED
+test w2_range_overrides_dw2_for_the_selected_cid ... FAILED
+test w2_array_overrides_dw2_for_the_selected_cid ... FAILED
+test missing_w2_entry_falls_back_to_dw2 ... FAILED
+test horizontal_scale_does_not_scale_vertical_pen_advance ... FAILED
+test vertical_tj_adjustment_changes_y_with_the_pdf_sign ... FAILED
+test character_spacing_applies_on_the_vertical_axis ... FAILED
+test identity_v_uses_default_vertical_advance ... FAILED
+
+failures:
+
+---- embedded_wmode_one_selects_vertical_advance stdout ----
+
+thread 'embedded_wmode_one_selects_vertical_advance' (456) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=true, metrics=: expected B pen=(100,690), actual "B"=(105,700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- dw2_overrides_default_vertical_advance stdout ----
+
+thread 'dw2_overrides_default_vertical_advance' (455) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=/DW2 [900 -1300]: expected B pen=(100,687), actual "B"=(105,700)
+
+---- w2_range_overrides_dw2_for_the_selected_cid stdout ----
+
+thread 'w2_range_overrides_dw2_for_the_selected_cid' (462) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=/DW2 [900 -1300] /W2 [17 19 -1200 272 880]: expected B pen=(100,688), actual "B"=(105,700)
+
+---- w2_array_overrides_dw2_for_the_selected_cid stdout ----
+
+thread 'w2_array_overrides_dw2_for_the_selected_cid' (461) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=/DW2 [900 -1300] /W2 [17 [-1200 272 880]]: expected B pen=(100,688), actual "B"=(105,700)
+
+---- missing_w2_entry_falls_back_to_dw2 stdout ----
+
+thread 'missing_w2_entry_falls_back_to_dw2' (459) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=/DW2 [900 -1300] /W2 [17 [-1200 272 880]]: expected B pen=(100,688), actual "B"=(105,700)
+glyph 2, embedded=false, metrics=/DW2 [900 -1300] /W2 [17 [-1200 272 880]]: expected A pen=(100,675), actual "A"=(110,700)
+
+---- horizontal_scale_does_not_scale_vertical_pen_advance stdout ----
+
+thread 'horizontal_scale_does_not_scale_vertical_pen_advance' (457) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:147:5:
+glyph 1, embedded=false, metrics=: expected B pen=(100,690), actual "B"=(102.5,700)
+glyph 1, embedded=false, metrics=: expected B pen=(100,690), actual "B"=(110,700)
+
+---- vertical_tj_adjustment_changes_y_with_the_pdf_sign stdout ----
+
+thread 'vertical_tj_adjustment_changes_y_with_the_pdf_sign' (460) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:133:5:
+glyph 1, embedded=false, metrics=: expected B pen=(100,687), actual "B"=(102,700)
+glyph 0, embedded=false, metrics=: expected A pen=(100,700), actual "A "=(100,700)
+glyph 1, embedded=false, metrics=: expected B pen=(100,693), actual "B"=(108,700)
+
+---- character_spacing_applies_on_the_vertical_axis stdout ----
+
+thread 'character_spacing_applies_on_the_vertical_axis' (454) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=: expected B pen=(100,692), actual "B"=(107,700)
+
+---- identity_v_uses_default_vertical_advance stdout ----
+
+thread 'identity_v_uses_default_vertical_advance' (458) panicked at oxidize-pdf-core/tests/text_vertical_contract_test.rs:74:5:
+glyph 1, embedded=false, metrics=: expected B pen=(100,690), actual "B"=(105,700)
+
+
+failures:
+    character_spacing_applies_on_the_vertical_axis
+    dw2_overrides_default_vertical_advance
+    embedded_wmode_one_selects_vertical_advance
+    horizontal_scale_does_not_scale_vertical_pen_advance
+    identity_v_uses_default_vertical_advance
+    missing_w2_entry_falls_back_to_dw2
+    vertical_tj_adjustment_changes_y_with_the_pdf_sign
+    w2_array_overrides_dw2_for_the_selected_cid
+    w2_range_overrides_dw2_for_the_selected_cid
+
+test result: FAILED. 0 passed; 9 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_vertical_contract_test`
+error: 4 targets failed:
+    `-p oxidize-pdf --test text_cid_cff_contract_test`
+    `-p oxidize-pdf --test text_cjk_contract_test`
+    `-p oxidize-pdf --test text_spacing_contract_test`
+    `-p oxidize-pdf --test text_vertical_contract_test`

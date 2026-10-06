@@ -1,0 +1,314 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 89 | Tests: 92 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/text/extraction.rs                          92     89
+
+--- Worst Offenders ---
+  test_append_bounded_no_limit_always_appends (oxidize-pdf-core/src/text/extraction.rs:5103) - Score: 80
+    - Test 'test_append_bounded_no_limit_always_appends' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_append_bounded_no_limit_always_appends' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_no_limit_always_appends' does not call any production code
+  test_append_bounded_undershoot_counts_separator (oxidize-pdf-core/src/text/extraction.rs:5113) - Score: 80
+    - Test 'test_append_bounded_undershoot_counts_separator' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_append_bounded_undershoot_counts_separator' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_undershoot_counts_separator' does not call any production code
+  test_append_bounded_zero_limit_truncates_immediately (oxidize-pdf-core/src/text/extraction.rs:5130) - Score: 80
+    - Test 'test_append_bounded_zero_limit_truncates_immediately' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_append_bounded_zero_limit_truncates_immediately' does not call any production code
+  test_append_bounded_is_noop_once_truncated (oxidize-pdf-core/src/text/extraction.rs:5139) - Score: 80
+    - Test 'test_append_bounded_is_noop_once_truncated' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_append_bounded_is_noop_once_truncated' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_is_noop_once_truncated' does not call any production code
+  test_append_bounded_fusion_with_trailing_whitespace_respects_budget (oxidize-pdf-core/src/text/extraction.rs:5187) - Score: 80
+    - Test 'test_append_bounded_fusion_with_trailing_whitespace_respects_budget' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_append_bounded_fusion_with_trailing_whitespace_respects_budget' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_fusion_with_trailing_whitespace_respects_budget' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/src/text/extraction.rs:
+  pen_delta_identity_matrix_returns_raw_deltas (line 5045) - Score: 90
+    - Test 'pen_delta_identity_matrix_returns_raw_deltas' does not call any production code
+  pen_delta_rotation_recovers_text_space_advance (line 5052) - Score: 100
+    i Test 'pen_delta_rotation_recovers_text_space_advance' has multiple assertions without diagnostic messages
+  pen_delta_mirrored_baseline_measures_advance_direction (line 5066) - Score: 100
+    i Test 'pen_delta_mirrored_baseline_measures_advance_direction' asserts against a hardcoded constant instead of a computed expected value
+  pen_delta_degenerate_matrix_falls_back_to_raw_deltas (line 5077) - Score: 90
+    i Test 'pen_delta_degenerate_matrix_falls_back_to_raw_deltas' has multiple assertions without diagnostic messages
+    - Test 'pen_delta_degenerate_matrix_falls_back_to_raw_deltas' does not call any production code
+  flat_space_threshold_uses_unscaled_fallback_for_tiny_baseline (line 5088) - Score: 90
+    - Test 'flat_space_threshold_uses_unscaled_fallback_for_tiny_baseline' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_append_bounded_no_limit_always_appends (line 5103) - Score: 80
+    - Test 'test_append_bounded_no_limit_always_appends' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_append_bounded_no_limit_always_appends' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_no_limit_always_appends' does not call any production code
+  test_append_bounded_undershoot_counts_separator (line 5113) - Score: 80
+    - Test 'test_append_bounded_undershoot_counts_separator' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_append_bounded_undershoot_counts_separator' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_undershoot_counts_separator' does not call any production code
+  test_append_bounded_zero_limit_truncates_immediately (line 5130) - Score: 80
+    - Test 'test_append_bounded_zero_limit_truncates_immediately' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_append_bounded_zero_limit_truncates_immediately' does not call any production code
+  test_append_bounded_is_noop_once_truncated (line 5139) - Score: 80
+    - Test 'test_append_bounded_is_noop_once_truncated' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_append_bounded_is_noop_once_truncated' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_is_noop_once_truncated' does not call any production code
+  test_append_bounded_fuses_hyphen_wrap_when_enabled (line 5149) - Score: 90
+    i Test 'test_append_bounded_fuses_hyphen_wrap_when_enabled' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_fuses_hyphen_wrap_when_enabled' does not call any production code
+  test_append_bounded_fuses_hyphen_wrap_with_trailing_horizontal_whitespace (line 5164) - Score: 90
+    i Test 'test_append_bounded_fuses_hyphen_wrap_with_trailing_horizontal_whitespace' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_fuses_hyphen_wrap_with_trailing_horizontal_whitespace' does not call any production code
+  test_append_bounded_preserves_trailing_horizontal_whitespace_without_hyphen (line 5177) - Score: 90
+    i Test 'test_append_bounded_preserves_trailing_horizontal_whitespace_without_hyphen' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_preserves_trailing_horizontal_whitespace_without_hyphen' does not call any production code
+  test_append_bounded_fusion_with_trailing_whitespace_respects_budget (line 5187) - Score: 80
+    - Test 'test_append_bounded_fusion_with_trailing_whitespace_respects_budget' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_append_bounded_fusion_with_trailing_whitespace_respects_budget' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_fusion_with_trailing_whitespace_respects_budget' does not call any production code
+  test_append_bounded_no_fusion_without_a_trailing_hyphen (line 5199) - Score: 90
+    i Test 'test_append_bounded_no_fusion_without_a_trailing_hyphen' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_no_fusion_without_a_trailing_hyphen' does not call any production code
+  test_append_bounded_does_not_fuse_when_merge_hyphenated_disabled (line 5213) - Score: 90
+    i Test 'test_append_bounded_does_not_fuse_when_merge_hyphenated_disabled' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_does_not_fuse_when_merge_hyphenated_disabled' does not call any production code
+  test_append_bounded_does_not_fuse_a_space_separator (line 5223) - Score: 90
+    i Test 'test_append_bounded_does_not_fuse_a_space_separator' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_does_not_fuse_a_space_separator' does not call any production code
+  test_append_bounded_hyphen_fusion_respects_budget (line 5235) - Score: 80
+    - Test 'test_append_bounded_hyphen_fusion_respects_budget' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_append_bounded_hyphen_fusion_respects_budget' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_append_bounded_hyphen_fusion_respects_budget' does not call any production code
+  test_clamp_to_budget_no_limit_or_fits_is_noop (line 5256) - Score: 90
+    i Test 'test_clamp_to_budget_no_limit_or_fits_is_noop' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_clamp_to_budget_no_limit_or_fits_is_noop' does not call any production code
+  test_clamp_to_budget_cuts_and_flags (line 5270) - Score: 80
+    - Test 'test_clamp_to_budget_cuts_and_flags' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_clamp_to_budget_cuts_and_flags' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_clamp_to_budget_cuts_and_flags' does not call any production code
+  test_clamp_to_budget_never_splits_utf8 (line 5279) - Score: 80
+    - Test 'test_clamp_to_budget_never_splits_utf8' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_clamp_to_budget_never_splits_utf8' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_clamp_to_budget_never_splits_utf8' does not call any production code
+  test_matrix_multiplication (line 5291) - Score: 90
+    i Test 'test_matrix_multiplication' has multiple assertions without diagnostic messages
+    - Test 'test_matrix_multiplication' does not call any production code
+  test_transform_point (line 5303) - Score: 90
+    i Test 'test_transform_point' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_transform_point' has multiple assertions without diagnostic messages
+    - Test 'test_transform_point' does not call any production code
+  test_extraction_options_default (line 5311) - Score: 90
+    i Test 'test_extraction_options_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extraction_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_extraction_options_default' does not call any production code
+  test_extraction_options_custom (line 5327) - Score: 90
+    i Test 'test_extraction_options_custom' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extraction_options_custom' has multiple assertions without diagnostic messages
+    - Test 'test_extraction_options_custom' does not call any production code
+  test_parse_font_style_bold (line 5354) - Score: 90
+    i Test 'test_parse_font_style_bold' has multiple assertions without diagnostic messages
+    - Test 'test_parse_font_style_bold' does not call any production code
+  test_parse_font_style_italic (line 5368) - Score: 90
+    i Test 'test_parse_font_style_italic' has multiple assertions without diagnostic messages
+    - Test 'test_parse_font_style_italic' does not call any production code
+  test_parse_font_style_bold_italic (line 5382) - Score: 90
+    i Test 'test_parse_font_style_bold_italic' has multiple assertions without diagnostic messages
+    - Test 'test_parse_font_style_bold_italic' does not call any production code
+  test_parse_font_style_regular (line 5389) - Score: 90
+    i Test 'test_parse_font_style_regular' has multiple assertions without diagnostic messages
+    - Test 'test_parse_font_style_regular' does not call any production code
+  test_parse_font_style_edge_cases (line 5397) - Score: 90
+    i Test 'test_parse_font_style_edge_cases' has multiple assertions without diagnostic messages
+    - Test 'test_parse_font_style_edge_cases' does not call any production code
+  test_text_fragment (line 5408) - Score: 90
+    i Test 'test_text_fragment' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_text_fragment' does not call any production code
+  test_extracted_text (line 5434) - Score: 80
+    i Test 'test_extracted_text' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_extracted_text' has low assert-to-setup ratio (9%): 4 asserts vs 41 setup lines
+    - Test 'test_extracted_text' does not call any production code
+  test_text_state_default (line 5483) - Score: 100
+    i Test 'test_text_state_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_state_default' has multiple assertions without diagnostic messages
+  test_matrix_operations (line 5499) - Score: 90
+    i Test 'test_matrix_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_matrix_operations' has multiple assertions without diagnostic messages
+    - Test 'test_matrix_operations' does not call any production code
+  test_text_extractor_new (line 5520) - Score: 90
+    i Test 'test_text_extractor_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_extractor_new' has multiple assertions without diagnostic messages
+    - Test 'test_text_extractor_new' does not call any production code
+  test_text_extractor_with_options (line 5533) - Score: 100
+    i Test 'test_text_extractor_with_options' has multiple assertions without diagnostic messages
+  test_calculate_text_width_with_no_font_info (line 5567) - Score: 90
+    i Test 'test_calculate_text_width_with_no_font_info' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_calculate_text_width_with_no_font_info' does not call any production code
+  test_calculate_text_width_with_empty_metrics (line 5579) - Score: 80
+    i Test 'test_calculate_text_width_with_empty_metrics' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_calculate_text_width_with_empty_metrics' has low assert-to-setup ratio (4%): 1 asserts vs 25 setup lines
+    - Test 'test_calculate_text_width_with_empty_metrics' does not call any production code
+  standard_14_no_widths_uses_effective_encoding_for_pen_advance (line 5612) - Score: 90
+    i Test 'standard_14_no_widths_uses_effective_encoding_for_pen_advance' has multiple assertions without diagnostic messages
+    - Test 'standard_14_no_widths_uses_effective_encoding_for_pen_advance' has low assert-to-setup ratio (10%): 2 asserts vs 19 setup lines
+  test_calculate_text_width_with_complete_metrics (line 5671) - Score: 90
+    - Test 'test_calculate_text_width_with_complete_metrics' has low assert-to-setup ratio (5%): 2 asserts vs 42 setup lines
+  width_from_codes_uses_char_code_not_decoded_unicode (line 5731) - Score: 90
+    i Test 'width_from_codes_uses_char_code_not_decoded_unicode' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'width_from_codes_uses_char_code_not_decoded_unicode' has low assert-to-setup ratio (8%): 3 asserts vs 33 setup lines
+  test_calculate_text_width_character_outside_range (line 5781) - Score: 80
+    - Test 'test_calculate_text_width_character_outside_range' has low assert-to-setup ratio (3%): 1 asserts vs 32 setup lines
+    - Test 'test_calculate_text_width_character_outside_range' does not call any production code
+  test_calculate_text_width_missing_width_in_array (line 5821) - Score: 80
+    i Test 'test_calculate_text_width_missing_width_in_array' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_calculate_text_width_missing_width_in_array' has low assert-to-setup ratio (3%): 1 asserts vs 32 setup lines
+    - Test 'test_calculate_text_width_missing_width_in_array' does not call any production code
+  test_calculate_text_width_empty_string (line 5861) - Score: 80
+    i Test 'test_calculate_text_width_empty_string' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_calculate_text_width_empty_string' has low assert-to-setup ratio (8%): 2 asserts vs 22 setup lines
+    - Test 'test_calculate_text_width_empty_string' does not call any production code
+  test_calculate_text_width_unicode_characters (line 5895) - Score: 80
+    i Test 'test_calculate_text_width_unicode_characters' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_calculate_text_width_unicode_characters' has low assert-to-setup ratio (4%): 1 asserts vs 27 setup lines
+    - Test 'test_calculate_text_width_unicode_characters' does not call any production code
+  test_calculate_text_width_different_font_sizes (line 5930) - Score: 80
+    - Test 'test_calculate_text_width_different_font_sizes' has low assert-to-setup ratio (10%): 3 asserts vs 26 setup lines
+    - Test 'test_calculate_text_width_different_font_sizes' does not call any production code
+  test_calculate_text_width_proportional_vs_monospace (line 5967) - Score: 80
+    - Test 'test_calculate_text_width_proportional_vs_monospace' has low assert-to-setup ratio (2%): 1 asserts vs 48 setup lines
+    - Test 'test_calculate_text_width_proportional_vs_monospace' does not call any production code
+  test_calculate_text_width_with_kerning (line 6029) - Score: 90
+    - Test 'test_calculate_text_width_with_kerning' has low assert-to-setup ratio (9%): 4 asserts vs 40 setup lines
+  test_parse_truetype_kern_table_minimal (line 6113) - Score: 90
+    i Test 'test_parse_truetype_kern_table_minimal' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_truetype_kern_table_minimal' has multiple assertions without diagnostic messages
+    i Test 'test_parse_truetype_kern_table_minimal' uses .unwrap() which silently discards error information
+    - Test 'test_parse_truetype_kern_table_minimal' has low assert-to-setup ratio (8%): 5 asserts vs 57 setup lines
+  test_parse_kern_table_no_kern_table (line 6196) - Score: 90
+    i Test 'test_parse_kern_table_no_kern_table' has multiple assertions without diagnostic messages
+    i Test 'test_parse_kern_table_no_kern_table' uses .unwrap() which silently discards error information
+    - Test 'test_parse_kern_table_no_kern_table' has low assert-to-setup ratio (10%): 3 asserts vs 26 setup lines
+  merge_into_lines_groups_same_baseline_fragments (line 6257) - Score: 100
+    i Test 'merge_into_lines_groups_same_baseline_fragments' asserts against a hardcoded constant instead of a computed expected value
+  merge_into_lines_inserts_space_only_when_gap_exceeds_threshold (line 6283) - Score: 90
+    i Test 'merge_into_lines_inserts_space_only_when_gap_exceeds_threshold' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_lines_inserts_space_only_when_gap_exceeds_threshold' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  standard_14_space_width_maps_base_fonts_and_substitutes (line 6310) - Score: 90
+    i Test 'standard_14_space_width_maps_base_fonts_and_substitutes' has multiple assertions without diagnostic messages
+    - Test 'standard_14_space_width_maps_base_fonts_and_substitutes' does not call any production code
+  merge_into_lines_keeps_emission_order_for_font_switch_overlap (line 6343) - Score: 90
+    i Test 'merge_into_lines_keeps_emission_order_for_font_switch_overlap' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_lines_keeps_emission_order_for_font_switch_overlap' has low assert-to-setup ratio (10%): 2 asserts vs 19 setup lines
+  merge_into_lines_keeps_emission_when_run_backfills_covered_span (line 6371) - Score: 90
+    i Test 'merge_into_lines_keeps_emission_when_run_backfills_covered_span' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_lines_keeps_emission_when_run_backfills_covered_span' has low assert-to-setup ratio (5%): 1 asserts vs 19 setup lines
+  merge_into_lines_uses_x_order_for_disjoint_backward_jump (line 6398) - Score: 90
+    i Test 'merge_into_lines_uses_x_order_for_disjoint_backward_jump' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_lines_uses_x_order_for_disjoint_backward_jump' has low assert-to-setup ratio (13%): 2 asserts vs 13 setup lines
+  merge_into_lines_unioned_bounding_box (line 6420) - Score: 100
+    i Test 'merge_into_lines_unioned_bounding_box' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'merge_into_lines_unioned_bounding_box' has multiple assertions without diagnostic messages
+  assign_row_ids_monotone_y_descending_keeps_zero (line 6439) - Score: 80
+    - Test 'assign_row_ids_monotone_y_descending_keeps_zero' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'assign_row_ids_monotone_y_descending_keeps_zero' does not call any production code
+  assign_row_ids_increments_on_y_up_jump_above_threshold (line 6450) - Score: 80
+    - Test 'assign_row_ids_increments_on_y_up_jump_above_threshold' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+    - Test 'assign_row_ids_increments_on_y_up_jump_above_threshold' does not call any production code
+  assign_row_ids_ignores_superscript_within_threshold (line 6463) - Score: 80
+    - Test 'assign_row_ids_ignores_superscript_within_threshold' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'assign_row_ids_ignores_superscript_within_threshold' does not call any production code
+  assign_row_ids_floor_2pt_for_small_fonts (line 6475) - Score: 80
+    - Test 'assign_row_ids_floor_2pt_for_small_fonts' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'assign_row_ids_floor_2pt_for_small_fonts' does not call any production code
+  assign_row_ids_empty_slice_returns_empty (line 6487) - Score: 90
+    - Test 'assign_row_ids_empty_slice_returns_empty' does not call any production code
+  merge_into_lines_splits_two_columns_emitted_sequentially (line 6494) - Score: 100
+    i Test 'merge_into_lines_splits_two_columns_emitted_sequentially' asserts against a hardcoded constant instead of a computed expected value
+  merge_into_lines_preserves_single_column_continuation (line 6525) - Score: 100
+    i Test 'merge_into_lines_preserves_single_column_continuation' asserts against a hardcoded constant instead of a computed expected value
+  merge_into_lines_splits_columns_with_uniform_mcid (line 6548) - Score: 100
+    i Test 'merge_into_lines_splits_columns_with_uniform_mcid' asserts against a hardcoded constant instead of a computed expected value
+  merge_close_fragments_superscript_merges_when_reconstruct_paragraphs (line 6578) - Score: 90
+    i Test 'merge_close_fragments_superscript_merges_when_reconstruct_paragraphs' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'merge_close_fragments_superscript_merges_when_reconstruct_paragraphs' has multiple assertions without diagnostic messages
+    - Test 'merge_close_fragments_superscript_merges_when_reconstruct_paragraphs' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  merge_close_fragments_superscript_does_not_merge_in_legacy_path (line 6602) - Score: 90
+    i Test 'merge_close_fragments_superscript_does_not_merge_in_legacy_path' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_close_fragments_superscript_does_not_merge_in_legacy_path' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  merge_close_fragments_preserves_render_mode_boundaries (line 6621) - Score: 90
+    i Test 'merge_close_fragments_preserves_render_mode_boundaries' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_close_fragments_preserves_render_mode_boundaries' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  merge_into_lines_preserves_render_mode_boundaries (line 6636) - Score: 90
+    i Test 'merge_into_lines_preserves_render_mode_boundaries' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_lines_preserves_render_mode_boundaries' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  merge_into_paragraphs_groups_consecutive_lines (line 6655) - Score: 90
+    i Test 'merge_into_paragraphs_groups_consecutive_lines' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_paragraphs_groups_consecutive_lines' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  merge_into_paragraphs_splits_on_large_vertical_gap (line 6672) - Score: 100
+    i Test 'merge_into_paragraphs_splits_on_large_vertical_gap' asserts against a hardcoded constant instead of a computed expected value
+  merge_into_paragraphs_splits_on_font_size_change (line 6694) - Score: 100
+    i Test 'merge_into_paragraphs_splits_on_font_size_change' asserts against a hardcoded constant instead of a computed expected value
+  merge_into_paragraphs_splits_on_weight_change (line 6721) - Score: 100
+    i Test 'merge_into_paragraphs_splits_on_weight_change' asserts against a hardcoded constant instead of a computed expected value
+  merge_into_paragraphs_preserves_render_mode_boundaries (line 6737) - Score: 90
+    i Test 'merge_into_paragraphs_preserves_render_mode_boundaries' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_paragraphs_preserves_render_mode_boundaries' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  hyphen_wrap_fusion_preserves_render_mode_boundaries (line 6756) - Score: 100
+    i Test 'hyphen_wrap_fusion_preserves_render_mode_boundaries' asserts against a hardcoded constant instead of a computed expected value
+  hyphen_wrap_fusion_drops_trailing_horizontal_whitespace (line 6773) - Score: 90
+    i Test 'hyphen_wrap_fusion_drops_trailing_horizontal_whitespace' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'hyphen_wrap_fusion_drops_trailing_horizontal_whitespace' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  reconstruct_text_from_fragments_drops_hyphen_trailing_horizontal_whitespace (line 6788) - Score: 90
+    i Test 'reconstruct_text_from_fragments_drops_hyphen_trailing_horizontal_whitespace' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'reconstruct_text_from_fragments_drops_hyphen_trailing_horizontal_whitespace' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  merge_into_paragraphs_tolerates_subpoint_font_size_jitter (line 6804) - Score: 90
+    i Test 'merge_into_paragraphs_tolerates_subpoint_font_size_jitter' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_paragraphs_tolerates_subpoint_font_size_jitter' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  merge_into_paragraphs_drops_hyphen_when_merge_hyphenated (line 6823) - Score: 90
+    i Test 'merge_into_paragraphs_drops_hyphen_when_merge_hyphenated' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_paragraphs_drops_hyphen_when_merge_hyphenated' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  merge_into_paragraphs_drops_hyphen_trailing_horizontal_whitespace (line 6842) - Score: 90
+    i Test 'merge_into_paragraphs_drops_hyphen_trailing_horizontal_whitespace' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'merge_into_paragraphs_drops_hyphen_trailing_horizontal_whitespace' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  decode_pdf_string_utf16be_bom_decodes_fi_ligature (line 6859) - Score: 90
+    i Test 'decode_pdf_string_utf16be_bom_decodes_fi_ligature' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'decode_pdf_string_utf16be_bom_decodes_fi_ligature' does not call any production code
+  decode_pdf_string_ascii_pdfdocencoding_passthrough (line 6865) - Score: 80
+    - Test 'decode_pdf_string_ascii_pdfdocencoding_passthrough' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'decode_pdf_string_ascii_pdfdocencoding_passthrough' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'decode_pdf_string_ascii_pdfdocencoding_passthrough' does not call any production code
+  decode_pdf_string_empty_input_returns_empty (line 6871) - Score: 80
+    - Test 'decode_pdf_string_empty_input_returns_empty' has identical neighborhood to 'decode_pdf_string_lone_bom_returns_empty'
+    i Test 'decode_pdf_string_empty_input_returns_empty' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'decode_pdf_string_empty_input_returns_empty' does not call any production code
+  decode_pdf_string_lone_bom_returns_empty (line 6876) - Score: 80
+    - Test 'decode_pdf_string_lone_bom_returns_empty' has identical neighborhood to 'decode_pdf_string_empty_input_returns_empty'
+    i Test 'decode_pdf_string_lone_bom_returns_empty' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'decode_pdf_string_lone_bom_returns_empty' does not call any production code
+  resolve_props_extracts_integer_mcid (line 6882) - Score: 100
+    i Test 'resolve_props_extracts_integer_mcid' has multiple assertions without diagnostic messages
+  resolve_props_decodes_utf16be_actualtext (line 6896) - Score: 90
+    i Test 'resolve_props_decodes_utf16be_actualtext' has multiple assertions without diagnostic messages
+    - Test 'resolve_props_decodes_utf16be_actualtext' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  resolve_props_negative_mcid_rejected (line 6921) - Score: 90
+    - Test 'resolve_props_negative_mcid_rejected' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  resolve_props_resource_ref_overflow_mcid_rejected (line 6935) - Score: 90
+    - Test 'resolve_props_resource_ref_overflow_mcid_rejected' has low assert-to-setup ratio (6%): 1 asserts vs 16 setup lines
+  sort_and_merge_fragments_nan_y_does_not_swallow_other_lines (line 6956) - Score: 90
+    - Test 'sort_and_merge_fragments_nan_y_does_not_swallow_other_lines' has low assert-to-setup ratio (5%): 1 asserts vs 19 setup lines
+  sort_and_merge_fragments_keeps_emission_regions_atomic (line 6985) - Score: 90
+    - Test 'sort_and_merge_fragments_keeps_emission_regions_atomic' has low assert-to-setup ratio (6%): 1 asserts vs 16 setup lines
+  sort_and_merge_fragments_uses_mcid_as_a_region_boundary (line 7010) - Score: 90
+    - Test 'sort_and_merge_fragments_uses_mcid_as_a_region_boundary' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+  column_detection_does_not_join_independent_layout_regions (line 7030) - Score: 90
+    - Test 'column_detection_does_not_join_independent_layout_regions' has low assert-to-setup ratio (5%): 1 asserts vs 21 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

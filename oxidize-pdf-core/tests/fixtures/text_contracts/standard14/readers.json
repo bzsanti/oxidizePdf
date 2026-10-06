@@ -1,0 +1,6726 @@
+{
+  "schema_version": 1,
+  "issue": 666,
+  "cases": [
+    {
+      "id": "Courier-Bold-implicit",
+      "path": "Courier-Bold-implicit.pdf",
+      "sha256": "5816cfaacd485368a8fb58c618197e1c5534d14d47f3fea14bb877eef13bf00c",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-explicit",
+      "path": "Courier-Bold-explicit.pdf",
+      "sha256": "f105ed2f5ae4b334e25119653a42780dfdb1581daf326e735fe40b48d88903f7",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-implicit",
+      "path": "Courier-BoldOblique-implicit.pdf",
+      "sha256": "1b45a1ba4252f388598fd556a93955e411207f53741444beb2d744be6cca49cb",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-explicit",
+      "path": "Courier-BoldOblique-explicit.pdf",
+      "sha256": "24496616b9ab46e43214788450e0c6d39bb8712416463116cc3150d01fc5a0dc",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-implicit",
+      "path": "Courier-Oblique-implicit.pdf",
+      "sha256": "245488027cbf645ff7119818d16289225b7913a24cb696e627acb76841f89367",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-explicit",
+      "path": "Courier-Oblique-explicit.pdf",
+      "sha256": "4304d9042b76732c4ec3d121d1669cbef99ad330a55e778ef00b449aa0200a3f",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-implicit",
+      "path": "Courier-implicit.pdf",
+      "sha256": "4a6fbaa0870039de1c488df8905d4855ce4264f503f0cdaa9daa986339aa2803",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-explicit",
+      "path": "Courier-explicit.pdf",
+      "sha256": "ddc9a15165aaff22894369e6052b53cb95a6d838e8666c96f0569877495f88e1",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-implicit",
+      "path": "Helvetica-Bold-implicit.pdf",
+      "sha256": "db45bcdbc626a3e4177e9a595d6590fd05ee7151f7ae9a8d69f6aba88ab79227",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            110.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-explicit",
+      "path": "Helvetica-Bold-explicit.pdf",
+      "sha256": "fccd40dacfa1bdd4a02279203129ca77ccbeed4ca84986b1da2819490082bca5",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-implicit",
+      "path": "Helvetica-BoldOblique-implicit.pdf",
+      "sha256": "34f8324c562d571c7ac77e2712b1df361c050473b1299a43bdedc8c4e15905b2",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            110.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-explicit",
+      "path": "Helvetica-BoldOblique-explicit.pdf",
+      "sha256": "9378810bb9af5d48cf6a0489b2c5d29d3b21dcb8d9284821670ba88f000b5484",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-implicit",
+      "path": "Helvetica-Oblique-implicit.pdf",
+      "sha256": "ae6e556039d8b4d90fa167ab5ffaa6674f5c75ff63c5a4140a4fad95ae4a0a97",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            108.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-explicit",
+      "path": "Helvetica-Oblique-explicit.pdf",
+      "sha256": "74a945a4a01f84b87ffe4f6624e3955c3222584e38d7544fa01db41fb85ffa1c",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-implicit",
+      "path": "Helvetica-implicit.pdf",
+      "sha256": "9f1da8c3d8ef403d9319b7164072d8a618a30cbbf64e8451eba800e57b029fd3",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            108.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-explicit",
+      "path": "Helvetica-explicit.pdf",
+      "sha256": "cd1380f4557c69c282b7b6374394d657aff099fab39f60d6de2fc696137f61f4",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-implicit",
+      "path": "Symbol-implicit.pdf",
+      "sha256": "9fe12cd5b1bcb96d8e9bec8b1b0591b0e478e26587ba66acc9b94f82a2206877",
+      "expected_text": "ΑαΩ",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "Ω",
+          "origin": [
+            113.53,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-explicit",
+      "path": "Symbol-explicit.pdf",
+      "sha256": "c14926a7db3c8f3edd48ab26ffd267f89f75c1891c23c36786915e1cd63986f3",
+      "expected_text": "ΑαΩ",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "Ω",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-implicit",
+      "path": "Times-Bold-implicit.pdf",
+      "sha256": "7e06a706240400e4d430e12301494debffc520c1c9706ab61827a64370aaacc1",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            110.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-explicit",
+      "path": "Times-Bold-explicit.pdf",
+      "sha256": "7eb98e2867c048c0b95d0e21548145bba655ab102c6d0b6dfbc1969f27240d06",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-implicit",
+      "path": "Times-BoldItalic-implicit.pdf",
+      "sha256": "0681e4537a029ffc2decf9c45362b0a1fc87c2cb3b21be5df90df06558ad1392",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            109.45,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-explicit",
+      "path": "Times-BoldItalic-explicit.pdf",
+      "sha256": "dbdfb99920aa0c7120390b3e3029cfbccf0320ee6be540793e9d5bef7a262b0e",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-implicit",
+      "path": "Times-Italic-implicit.pdf",
+      "sha256": "7b87975fe15c56fdfd41fb7e0a4a2d7f655ab175e3929f2b2041b31108dfde61",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            108.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-explicit",
+      "path": "Times-Italic-explicit.pdf",
+      "sha256": "e981395f4066fc6ce68f680889e7d997fb8a29882516699f3ecfc66ac69231ab",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-implicit",
+      "path": "Times-Roman-implicit.pdf",
+      "sha256": "65da4c78feb1d0b80aa6f0e24fb9c2522062dc24f3666be7b309c357987d5529",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            110.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-explicit",
+      "path": "Times-Roman-explicit.pdf",
+      "sha256": "6d7cda2bba0d30af968376a20ac6935ed02688313e0638f5403a8747eb88ec4c",
+      "expected_text": "AiW",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "W",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-implicit",
+      "path": "ZapfDingbats-implicit.pdf",
+      "sha256": "09c7185cae487a0c7c49dd30a689d103ac67b7df5b6c2588e706c3e99fe1ada3",
+      "expected_text": "✁✂✃",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✃",
+          "origin": [
+            119.35,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-explicit",
+      "path": "ZapfDingbats-explicit.pdf",
+      "sha256": "a7d582d4cd7dfff26c4cacc4b6865c65d89a1be2beaf2562367fdc9035d3e951",
+      "expected_text": "✁✂✃",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            103.91,
+            92
+          ]
+        },
+        {
+          "text": "✃",
+          "origin": [
+            107.82,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Courier-Bold",
+      "path": "Courier-Bold-to-Courier-Bold.pdf",
+      "sha256": "7812f89fffd2cd91b170da0e1f21e639a12db65a3e2ce12ffcc73a6f9267924a",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Courier-BoldOblique",
+      "path": "Courier-Bold-to-Courier-BoldOblique.pdf",
+      "sha256": "9e2d338decadf52621eb14ea802b04fdf58aadfb4d25d894746bfbb430b9ce0a",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Courier-Oblique",
+      "path": "Courier-Bold-to-Courier-Oblique.pdf",
+      "sha256": "7ef82625446f3b45c4328f01835bcfc824423d87e9cb5af4978ecdaa83fddcca",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Courier",
+      "path": "Courier-Bold-to-Courier.pdf",
+      "sha256": "a7038a372fbe69d0482c4125e4778defa4f85a5504f5e07a98aa5ae6efa2c484",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Helvetica-Bold",
+      "path": "Courier-Bold-to-Helvetica-Bold.pdf",
+      "sha256": "ae17bdd48967102414946754f9d890c5725f4cd893bb7200020330c5e24ea841",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Helvetica-BoldOblique",
+      "path": "Courier-Bold-to-Helvetica-BoldOblique.pdf",
+      "sha256": "3fea61bb288348bacc638aafbd5bb882cc67b840cf6b08e89b5ad6ae1f25cc9b",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Helvetica-Oblique",
+      "path": "Courier-Bold-to-Helvetica-Oblique.pdf",
+      "sha256": "8264955f5887cbfcc842bb87a7b18d1a3407de527a7b4800c2b1a18879de8acf",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Helvetica",
+      "path": "Courier-Bold-to-Helvetica.pdf",
+      "sha256": "b26cbf2664b3aaab4de8d864bde2dd91c649383105bae37591196e0c327c1f02",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Symbol",
+      "path": "Courier-Bold-to-Symbol.pdf",
+      "sha256": "3165e660d1e80d650b79a45b3b0cd32467c2f05ae1bbf65a2d9b2553507c7d45",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Times-Bold",
+      "path": "Courier-Bold-to-Times-Bold.pdf",
+      "sha256": "8329d33c972d73a1487a2e653aa893305f00bf2f457e38b048dafce6d30e72e1",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Times-BoldItalic",
+      "path": "Courier-Bold-to-Times-BoldItalic.pdf",
+      "sha256": "42ddfd239a572bc28c6ba9286fc4a8e5bc20c6b354a91cd4c1f46123f935fd0d",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Times-Italic",
+      "path": "Courier-Bold-to-Times-Italic.pdf",
+      "sha256": "067fe0f1ea156b2de96af4141de21fbdf07ed6de93cc1fe6fc973a01991c61b9",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.11,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-Times-Roman",
+      "path": "Courier-Bold-to-Times-Roman.pdf",
+      "sha256": "a32f3fbd596f241ebf533a0a230cbaae8a24689a80d5e4b4e4816d195669a16f",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Bold-to-ZapfDingbats",
+      "path": "Courier-Bold-to-ZapfDingbats.pdf",
+      "sha256": "a2c8c348d60bae6057144e81bbc134e552b314e7490f8c324c190f09a057e837",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            115.74,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Courier-Bold",
+      "path": "Courier-BoldOblique-to-Courier-Bold.pdf",
+      "sha256": "dc006978588237486ef98b59822e41d61e7866194d0615b7eab761b558f6da63",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Courier-BoldOblique",
+      "path": "Courier-BoldOblique-to-Courier-BoldOblique.pdf",
+      "sha256": "6ac54fe08c3ebc666de1450bb0c927b80579d7de77cd3fa2da98ffd6ce55b722",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Courier-Oblique",
+      "path": "Courier-BoldOblique-to-Courier-Oblique.pdf",
+      "sha256": "21ce57b29d41dfaced4f2f45edb8117323e0dbcec6be71a47208663e30a52c2a",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Courier",
+      "path": "Courier-BoldOblique-to-Courier.pdf",
+      "sha256": "b6cb429ccdc2f78512849e8f96d06a186bd7c1b08028dfa1f8d7ed086c704ebc",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Helvetica-Bold",
+      "path": "Courier-BoldOblique-to-Helvetica-Bold.pdf",
+      "sha256": "3943140f0e3f4a20d22d16312cc299e1711496262668f3950e27625dde843e6e",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Helvetica-BoldOblique",
+      "path": "Courier-BoldOblique-to-Helvetica-BoldOblique.pdf",
+      "sha256": "461e8e8f7e1d27bb8f04905d05dc197f5322bc38f8618444d50c28c224f3b48e",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Helvetica-Oblique",
+      "path": "Courier-BoldOblique-to-Helvetica-Oblique.pdf",
+      "sha256": "9e398b72d5e8e7472f21c1cce24fbf44abf637c16ca8a40d8a2b1a8533d69996",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Helvetica",
+      "path": "Courier-BoldOblique-to-Helvetica.pdf",
+      "sha256": "ff3e192bbde9829b204e0c293b823127d5ebaf718a5b70ec3d8a77baa449e091",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Symbol",
+      "path": "Courier-BoldOblique-to-Symbol.pdf",
+      "sha256": "f88e977095a672f3030ff4d2b896540664b935741da9861955f489418ed562b8",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Times-Bold",
+      "path": "Courier-BoldOblique-to-Times-Bold.pdf",
+      "sha256": "44b12cb96fcb6851695d8056cc5f802e431cc14dfb089e8240ea63fe66dbf3fa",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Times-BoldItalic",
+      "path": "Courier-BoldOblique-to-Times-BoldItalic.pdf",
+      "sha256": "25fe70187259f3e6ee0afefce44c2942b39f3a09fa4efeb193cea247a75eec28",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Times-Italic",
+      "path": "Courier-BoldOblique-to-Times-Italic.pdf",
+      "sha256": "5ad77bd7331b4c0ac84c222f34209fe27abc731ae3a9173b67aa349860bee812",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.11,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-Times-Roman",
+      "path": "Courier-BoldOblique-to-Times-Roman.pdf",
+      "sha256": "a71d4287160688fab31972e2ed8d6223766194ba91cb069c365ab669f131db3e",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-BoldOblique-to-ZapfDingbats",
+      "path": "Courier-BoldOblique-to-ZapfDingbats.pdf",
+      "sha256": "4685445d69e7743bd0be39b68c13dfd2cf15a14215da10fd0e60d37bd2791614",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            115.74,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Courier-Bold",
+      "path": "Courier-Oblique-to-Courier-Bold.pdf",
+      "sha256": "ef51fe3a6fb436367fa6ceea12f852a3db85be19a3b15b9926f75132dc304ff8",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Courier-BoldOblique",
+      "path": "Courier-Oblique-to-Courier-BoldOblique.pdf",
+      "sha256": "a9ff4a1aec4da083825a1c9a2cdadc4fc133b894f08c4b21e89423461b853e46",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Courier-Oblique",
+      "path": "Courier-Oblique-to-Courier-Oblique.pdf",
+      "sha256": "eb7bcf4e813929a9b393894d691153984042b5ccce8c60d6215c21cb27f276ad",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Courier",
+      "path": "Courier-Oblique-to-Courier.pdf",
+      "sha256": "aa7f29a8dd025d9c4dc0e73e50fe8b3d5d20bff6961c4165c38def60e1daf856",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Helvetica-Bold",
+      "path": "Courier-Oblique-to-Helvetica-Bold.pdf",
+      "sha256": "a43332568ab90b830a42cf1c7e2be9c1ea1fdd8b59333f187730353b64a945d4",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Helvetica-BoldOblique",
+      "path": "Courier-Oblique-to-Helvetica-BoldOblique.pdf",
+      "sha256": "8ce2cce6df6b06b57746d06b86d2d832e6c985710c36cc38e4d15ef2af5af440",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Helvetica-Oblique",
+      "path": "Courier-Oblique-to-Helvetica-Oblique.pdf",
+      "sha256": "886d664c9003953079bae9e157e4f4dc0ab214f378c45827e724b3c19bf9dba4",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Helvetica",
+      "path": "Courier-Oblique-to-Helvetica.pdf",
+      "sha256": "1aaaeccda9f849a92788ca348817a203d50438328bc75e02216bbf8444d550ea",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Symbol",
+      "path": "Courier-Oblique-to-Symbol.pdf",
+      "sha256": "176f770ffb1a0536b2c47c700ba0fd45140263401f92be881311c886aa8483c6",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Times-Bold",
+      "path": "Courier-Oblique-to-Times-Bold.pdf",
+      "sha256": "0676b39409d722f1aa0ddb462df184a8da79e54322a4bf79e767af517ab39bc5",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Times-BoldItalic",
+      "path": "Courier-Oblique-to-Times-BoldItalic.pdf",
+      "sha256": "1d4150579f949748485b946f9a441d4d031ed4abce0228e8b6276f4885c2b384",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Times-Italic",
+      "path": "Courier-Oblique-to-Times-Italic.pdf",
+      "sha256": "587348640bce685f6c6eaa25648504e409098b9e02bb42928a01a66b1bc8ba33",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.11,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-Times-Roman",
+      "path": "Courier-Oblique-to-Times-Roman.pdf",
+      "sha256": "7524b8ea9bfcd8ecae3c1628c94f3e9482cabd71613394d16c1c21f3fbfed1cf",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-Oblique-to-ZapfDingbats",
+      "path": "Courier-Oblique-to-ZapfDingbats.pdf",
+      "sha256": "5ca8bfc9f1a2c6478d1edf94e7f7ae079e26f9df2046462b696c3a864703698f",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            115.74,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Courier-Bold",
+      "path": "Courier-to-Courier-Bold.pdf",
+      "sha256": "f53336a4f6b2b040791c81dd777b6da7eff4b7bb2f408d1062c2e9c1a038a96a",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Courier-BoldOblique",
+      "path": "Courier-to-Courier-BoldOblique.pdf",
+      "sha256": "db48abc3bb9743deaf831ec95eeead40c412a3862e67586b1d8043a3729c2731",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Courier-Oblique",
+      "path": "Courier-to-Courier-Oblique.pdf",
+      "sha256": "e22b97cb527bb79f1242844247d1e55208e25b89b80fbdc94a3590427ff5e573",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Courier",
+      "path": "Courier-to-Courier.pdf",
+      "sha256": "fb4e181b5d220781612adafc80355e4443181525a5f1a56b0c55c2ad99d01738",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.0,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Helvetica-Bold",
+      "path": "Courier-to-Helvetica-Bold.pdf",
+      "sha256": "44d9659f140cf07305b07fd1e7867b9ea4b1a3ec380fe622650ad754780fb923",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Helvetica-BoldOblique",
+      "path": "Courier-to-Helvetica-BoldOblique.pdf",
+      "sha256": "bbae04b217baabd2ca48b96bb0288f0d7ca1d2d9155fa02ffe6b3066465066af",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Helvetica-Oblique",
+      "path": "Courier-to-Helvetica-Oblique.pdf",
+      "sha256": "fa09e3bc6143978e7769d27cac03f2c85b7c0ae3c9449c5cf6bd1313bb64bd0b",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Helvetica",
+      "path": "Courier-to-Helvetica.pdf",
+      "sha256": "133e20a74175577c665d9f1ed14b98768fed02364a39b8b44f07d2de110720a6",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Symbol",
+      "path": "Courier-to-Symbol.pdf",
+      "sha256": "8e58a7b4bf0bc2946df9f2ab31092c27d36fff5ac759467950d96901238452e4",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Times-Bold",
+      "path": "Courier-to-Times-Bold.pdf",
+      "sha256": "9c82e162289b175840b2d42e4b6740c7f7044de11f339384ec3997c23f6f6130",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Times-BoldItalic",
+      "path": "Courier-to-Times-BoldItalic.pdf",
+      "sha256": "6aa32282ea02978779e48768d96932a359d72afdf56c200386f26d9cbdd0b9dd",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Times-Italic",
+      "path": "Courier-to-Times-Italic.pdf",
+      "sha256": "3841b02a4d46257d7116c7b4ac3fb3d74e626e557f954e2be08c77a3bffe3612",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.11,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-Times-Roman",
+      "path": "Courier-to-Times-Roman.pdf",
+      "sha256": "87db4ef568e2753e737e058f9e965975f2c384ddb4faa88a7053d5e3b80695ef",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Courier-to-ZapfDingbats",
+      "path": "Courier-to-ZapfDingbats.pdf",
+      "sha256": "9a8e2239c19d0a689b4879821f3a4374184736e8d86f2051931976054d3a1d33",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            106.0,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            115.74,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Courier-Bold",
+      "path": "Helvetica-Bold-to-Courier-Bold.pdf",
+      "sha256": "af2cf5a53a6fac3f7d4e84b0c36e0f1648f98d140c14aa0ecf61d1709a202aeb",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Courier-BoldOblique",
+      "path": "Helvetica-Bold-to-Courier-BoldOblique.pdf",
+      "sha256": "34d482e325ed2e2fa0a407de32e0a4ce8a9a3e30beb1a53dabcfd0d1a85a7598",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Courier-Oblique",
+      "path": "Helvetica-Bold-to-Courier-Oblique.pdf",
+      "sha256": "7ef24caa6a5c5cf01e3f6e422ab995accc234f69494e5208c018973db73947f8",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Courier",
+      "path": "Helvetica-Bold-to-Courier.pdf",
+      "sha256": "ec079760693165ab6d0bd87e35153d547bc4bc8526196a224385524bd9f09d0e",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Helvetica-Bold",
+      "path": "Helvetica-Bold-to-Helvetica-Bold.pdf",
+      "sha256": "983dbd5c1b7719aeb43badfda33afac434c8267135dbfc1955b0900a15149a94",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Helvetica-BoldOblique",
+      "path": "Helvetica-Bold-to-Helvetica-BoldOblique.pdf",
+      "sha256": "f5490167d2e0ca1238181bae6f716392b963490f879493dfc3f178d879bb0f02",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Helvetica-Oblique",
+      "path": "Helvetica-Bold-to-Helvetica-Oblique.pdf",
+      "sha256": "1cdf22f97db61f8b31d7914fc1f5b862951a82441df25c7d2db6a80f002a00b1",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Helvetica",
+      "path": "Helvetica-Bold-to-Helvetica.pdf",
+      "sha256": "cfc27203b65ce9018c0f9da402d30564d194c7ab03bd4a52fad758b82c0427e5",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Symbol",
+      "path": "Helvetica-Bold-to-Symbol.pdf",
+      "sha256": "adbb1a1c1861e2986e34d7994ee68e85bc01044bccf41871b821ce40d990d46e",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Times-Bold",
+      "path": "Helvetica-Bold-to-Times-Bold.pdf",
+      "sha256": "1e7c566a091c6526307f424e00a9b7fbc4be4b1887197ed73a97e2af1e7546de",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Times-BoldItalic",
+      "path": "Helvetica-Bold-to-Times-BoldItalic.pdf",
+      "sha256": "fdf37c854921d8819d0be1ef9af334562e5e61e2f0d7abfabe4b6e00babc493c",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Times-Italic",
+      "path": "Helvetica-Bold-to-Times-Italic.pdf",
+      "sha256": "585fb6b4a53ba472eef9ab8e99139b0640604f0958932c6066df3257aee07237",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-Times-Roman",
+      "path": "Helvetica-Bold-to-Times-Roman.pdf",
+      "sha256": "b3a79903199715a663733bdf7047aad1f602898b6eafeffebf192f67c4f02ba1",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Bold-to-ZapfDingbats",
+      "path": "Helvetica-Bold-to-ZapfDingbats.pdf",
+      "sha256": "97f5e5c5beab9f6e83a0a01884cc642fe0d3b040c0d426aff4dde905598ab7e5",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Courier-Bold",
+      "path": "Helvetica-BoldOblique-to-Courier-Bold.pdf",
+      "sha256": "cedcbf455d6a9c96222308f142cf5e6989bd962651d22835f50bc26ca5f40847",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Courier-BoldOblique",
+      "path": "Helvetica-BoldOblique-to-Courier-BoldOblique.pdf",
+      "sha256": "b6e40e3ae6e53b7dc426134ac76fd4897530f204fcbb51adc67d3289afd4c8d5",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Courier-Oblique",
+      "path": "Helvetica-BoldOblique-to-Courier-Oblique.pdf",
+      "sha256": "d14991d507360961c23aca9368a5e0dd34d594372ca1e16301706b54aa0fa015",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Courier",
+      "path": "Helvetica-BoldOblique-to-Courier.pdf",
+      "sha256": "07c72f6821f282d86d95e4ad509d420affc974a249c8e649c9e1e5906edb15af",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Helvetica-Bold",
+      "path": "Helvetica-BoldOblique-to-Helvetica-Bold.pdf",
+      "sha256": "9d148a444e747775690df264e965fdf1a491dd3a19ad67a55e81a213bca635f7",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Helvetica-BoldOblique",
+      "path": "Helvetica-BoldOblique-to-Helvetica-BoldOblique.pdf",
+      "sha256": "4029e7ad5c281871b1affbc4c7868ae021e7cb7d880b1f85984d5d5e0c5ec157",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Helvetica-Oblique",
+      "path": "Helvetica-BoldOblique-to-Helvetica-Oblique.pdf",
+      "sha256": "9a329a6175746d8626bbed1ac92fc425e3b057f6a60e73df509a847d3f319100",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Helvetica",
+      "path": "Helvetica-BoldOblique-to-Helvetica.pdf",
+      "sha256": "c83643733ef2c8fdf9646bd151356464cc0d6daa2f2e16d7712bad8c492b11f5",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Symbol",
+      "path": "Helvetica-BoldOblique-to-Symbol.pdf",
+      "sha256": "312c1d343634b5bd781ec54804dfecdfb03fc41720c81a8b65b389e0d72df3a5",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Times-Bold",
+      "path": "Helvetica-BoldOblique-to-Times-Bold.pdf",
+      "sha256": "6b59d3cda6382a3a7f141d5e952a73546cd94de86f0f81578201c6336f767438",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Times-BoldItalic",
+      "path": "Helvetica-BoldOblique-to-Times-BoldItalic.pdf",
+      "sha256": "cea4e2531ef7ea2bf8249fb5979c81b5957a574b5756e7d5ca4529c401ba23f7",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Times-Italic",
+      "path": "Helvetica-BoldOblique-to-Times-Italic.pdf",
+      "sha256": "9f0af6ec828e6433d01b1c1ba35f7c704000acff90f2c7bb97f46b276dd33111",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-Times-Roman",
+      "path": "Helvetica-BoldOblique-to-Times-Roman.pdf",
+      "sha256": "6be0e95331ac226df398c928e7a839331f57286c62e9efdcf0747be2b700ec12",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-BoldOblique-to-ZapfDingbats",
+      "path": "Helvetica-BoldOblique-to-ZapfDingbats.pdf",
+      "sha256": "7b50c5185d62ba2734848019427671d9881c5a9ae40073eeb9560acb9782283c",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Courier-Bold",
+      "path": "Helvetica-Oblique-to-Courier-Bold.pdf",
+      "sha256": "bc12f62a0fe8e53665836b64a0a6294c8e158dd85c491f8bbbc84735dcfe6976",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Courier-BoldOblique",
+      "path": "Helvetica-Oblique-to-Courier-BoldOblique.pdf",
+      "sha256": "95a6d7900c86c7732e86afc12dd72c16fb76ad43571b20ceb74ee554c09b3f56",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Courier-Oblique",
+      "path": "Helvetica-Oblique-to-Courier-Oblique.pdf",
+      "sha256": "fc3d1ffa9509f130127465ffa6b22503850af4d1b277ac938219f94d330ac544",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Courier",
+      "path": "Helvetica-Oblique-to-Courier.pdf",
+      "sha256": "096461447739147a239121caa3628094347dd2aa8c79fd5b9e540f2d22cd2ea3",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Helvetica-Bold",
+      "path": "Helvetica-Oblique-to-Helvetica-Bold.pdf",
+      "sha256": "ca6888f2c10574fef4312d587be5fcfe198aac3adb50c303f141518d004607d7",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Helvetica-BoldOblique",
+      "path": "Helvetica-Oblique-to-Helvetica-BoldOblique.pdf",
+      "sha256": "8a0263c93faf3ef083877609e7d4672d757aa8ef20fd07bf6b38ffa41207d449",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Helvetica-Oblique",
+      "path": "Helvetica-Oblique-to-Helvetica-Oblique.pdf",
+      "sha256": "99547cdb84bd7e99c762330b073d3cd8c79db232eacbdd83f2e949264d50b3c7",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.34,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Helvetica",
+      "path": "Helvetica-Oblique-to-Helvetica.pdf",
+      "sha256": "00139063d7890e47f96146282ad504cb25b7d329def5104fb696b5662cf9635c",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.34,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Symbol",
+      "path": "Helvetica-Oblique-to-Symbol.pdf",
+      "sha256": "ea18438960e1e289b61c5aa88cbc412498521b8fc6d0c111ecbf831689661457",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Times-Bold",
+      "path": "Helvetica-Oblique-to-Times-Bold.pdf",
+      "sha256": "c5e0c062e89021c960e43f22e34126ed4326992a575814d051220124107f9eda",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Times-BoldItalic",
+      "path": "Helvetica-Oblique-to-Times-BoldItalic.pdf",
+      "sha256": "a450111945c155541bafb1ea8d7ea68a2d2308ba43083b5c4f35a9eb39334c93",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.34,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Times-Italic",
+      "path": "Helvetica-Oblique-to-Times-Italic.pdf",
+      "sha256": "0a25efdb11ebea83660f1dc08485badfe8d335900edd4a6883d0d73ad0d3b149",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.78,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-Times-Roman",
+      "path": "Helvetica-Oblique-to-Times-Roman.pdf",
+      "sha256": "61d088210a0500cdf5c82d62fc742c3a289b8d74eda1535e80cbfc0e5dfe8f74",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-Oblique-to-ZapfDingbats",
+      "path": "Helvetica-Oblique-to-ZapfDingbats.pdf",
+      "sha256": "c3d8115377939ad4ba72257ff075454e6e77902f8260e58fd64ad8b36ef585b1",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            116.41,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Courier-Bold",
+      "path": "Helvetica-to-Courier-Bold.pdf",
+      "sha256": "47e1f7ad1bd4f811553dd854c2a74ab41e470ca243311f68330074db417a5838",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Courier-BoldOblique",
+      "path": "Helvetica-to-Courier-BoldOblique.pdf",
+      "sha256": "8a8907e23c6135cc6c4b9193509ab7ea0dea200ceb630fb7e6f27031ca67188c",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Courier-Oblique",
+      "path": "Helvetica-to-Courier-Oblique.pdf",
+      "sha256": "71bba400645475f3c921b469da5ab7231098ddd023081ac484e959fc440ebaf7",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Courier",
+      "path": "Helvetica-to-Courier.pdf",
+      "sha256": "26fa37a2bda5860c38c383cf6ec305a4a883ab27e6eff0f5d5df8bed33bed832",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Helvetica-Bold",
+      "path": "Helvetica-to-Helvetica-Bold.pdf",
+      "sha256": "628a22cabe3e6a8df16e26511f0d833e733d28d6a30b93676ed3e25e3e6b9209",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Helvetica-BoldOblique",
+      "path": "Helvetica-to-Helvetica-BoldOblique.pdf",
+      "sha256": "8998fbece913b8c9799412d616a5a84d62c0cd7cfcddbd3b00df0dff3b2dc087",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Helvetica-Oblique",
+      "path": "Helvetica-to-Helvetica-Oblique.pdf",
+      "sha256": "4f9929875f1722eb1324e45bf49b67c330d8dc8d2d6a9f300d1c29726c2f6e91",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.34,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Helvetica",
+      "path": "Helvetica-to-Helvetica.pdf",
+      "sha256": "eff043444b426984bf4b25006ce6a3f2907da60938d162719ea8a72cee111e67",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.34,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Symbol",
+      "path": "Helvetica-to-Symbol.pdf",
+      "sha256": "b6a723ad317b921f7a21db68b5ad2dd4b8520f40207efbce47163e78a5619d85",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Times-Bold",
+      "path": "Helvetica-to-Times-Bold.pdf",
+      "sha256": "993f5ea5a21adbb524ca0bd7dfa43e38218016bd057f8cf089c926a1194a57d5",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Times-BoldItalic",
+      "path": "Helvetica-to-Times-BoldItalic.pdf",
+      "sha256": "6fb1f2910adb1f620d8f4598be7c517d353a0f5ba260fd9a230dc394281402d3",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.34,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Times-Italic",
+      "path": "Helvetica-to-Times-Italic.pdf",
+      "sha256": "2f5cc75d4c4e8af41b5d73ac4edacbd7c5a81b2e7f8da5d5e3575692dffff938",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.78,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-Times-Roman",
+      "path": "Helvetica-to-Times-Roman.pdf",
+      "sha256": "463003760b7673ebc9e5ec7300e36093284b06b62a176a8d259ead6510eed159",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Helvetica-to-ZapfDingbats",
+      "path": "Helvetica-to-ZapfDingbats.pdf",
+      "sha256": "7b35f74fac311e35f77955d7ed9c4c7c3a46f278619a858a982cce0effe46794",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            116.41,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Courier-Bold",
+      "path": "Symbol-to-Courier-Bold.pdf",
+      "sha256": "8f60595ebdb4bb4d6edcfefb244592d2a677c0a7a275c994bc6134dddd514885",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Courier-BoldOblique",
+      "path": "Symbol-to-Courier-BoldOblique.pdf",
+      "sha256": "58307c79c178899f3422748c3f474a4deeb635310d9f0e6a4900ae58e1b6abfd",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Courier-Oblique",
+      "path": "Symbol-to-Courier-Oblique.pdf",
+      "sha256": "349317e6ddc899799fb72d2ddcb8c05f19f19d99811c399822f9fd7365588d6a",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Courier",
+      "path": "Symbol-to-Courier.pdf",
+      "sha256": "61595f00bdb3f8660271b9b4e003b1337da6ad10579c2d9b60c0f832f64c2ba5",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Helvetica-Bold",
+      "path": "Symbol-to-Helvetica-Bold.pdf",
+      "sha256": "de6f255fb6ef7bb623a2ad64462936d79bfa84f85b624935e145c81de0484f71",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Helvetica-BoldOblique",
+      "path": "Symbol-to-Helvetica-BoldOblique.pdf",
+      "sha256": "163ba58e0bf7246690e46c5e63d2e76b82d2678f066fafd5c2028b043df095f3",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Helvetica-Oblique",
+      "path": "Symbol-to-Helvetica-Oblique.pdf",
+      "sha256": "ef0d68ab6182f3f5c4b11fa3f4aace168304b5eba1130c6642de4387005a9813",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Helvetica",
+      "path": "Symbol-to-Helvetica.pdf",
+      "sha256": "eee3763a245daa6db03777e33748090d860e5b59ac202f901875a4fa698e7708",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Symbol",
+      "path": "Symbol-to-Symbol.pdf",
+      "sha256": "95d6474edb269c26c8c72cee508178eb50999bf786de3bfe4c08c761577a33ab",
+      "expected_text": "ΑΑα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Times-Bold",
+      "path": "Symbol-to-Times-Bold.pdf",
+      "sha256": "be54efd2427bf6aead7522d590cce15512a83d8feb8b8a2c842f57e4033fd831",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Times-BoldItalic",
+      "path": "Symbol-to-Times-BoldItalic.pdf",
+      "sha256": "22633d18eb7bd5b2ea65914f79272d69fb9cd37c491415140cc059d2e8cd0554",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Times-Italic",
+      "path": "Symbol-to-Times-Italic.pdf",
+      "sha256": "13451f65c5ed125855f4f315eae234e71248a123799fe860420187af57a12fa3",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-Times-Roman",
+      "path": "Symbol-to-Times-Roman.pdf",
+      "sha256": "c55127ba8a800635b20a1b201918708cbd9f8df504b88ae64dd00629bb2efc07",
+      "expected_text": "ΑAα",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Symbol-to-ZapfDingbats",
+      "path": "Symbol-to-ZapfDingbats.pdf",
+      "sha256": "bb30f7254539b8ec3502900ec421a27e2b06a32d602ed32015fe5f23faf3283e",
+      "expected_text": "Α✁α",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "Α",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "α",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Courier-Bold",
+      "path": "Times-Bold-to-Courier-Bold.pdf",
+      "sha256": "d40b437701ed727032503e6ef4d0b6995613d9fae3035f3486f5f7abb0ec7d17",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Courier-BoldOblique",
+      "path": "Times-Bold-to-Courier-BoldOblique.pdf",
+      "sha256": "4e76962f5e1e82731fb056b01849e94140e69466358dcf366ee5c99c483f8112",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Courier-Oblique",
+      "path": "Times-Bold-to-Courier-Oblique.pdf",
+      "sha256": "157c73b31ded150abad0e4347bc2a407f57ce36e0b504f802faf5b1aaa1f0e2e",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Courier",
+      "path": "Times-Bold-to-Courier.pdf",
+      "sha256": "93cd39a16eaf36a679932c72177dd21e9ee4ee68ff41a3d9aadf695b9ebe0c84",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Helvetica-Bold",
+      "path": "Times-Bold-to-Helvetica-Bold.pdf",
+      "sha256": "49f250e51c563f4058f382883a94ab26d48d5c478df7abf6991d7ee564c0844f",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Helvetica-BoldOblique",
+      "path": "Times-Bold-to-Helvetica-BoldOblique.pdf",
+      "sha256": "bf302983128233df08f3df8ee4dcf32797c2a2e7dc80d4dc7b60d0ed449135cf",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Helvetica-Oblique",
+      "path": "Times-Bold-to-Helvetica-Oblique.pdf",
+      "sha256": "d5b3f421f2a4491f3eb067199326f06a166547ce0bc3b77821e2336c07839042",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Helvetica",
+      "path": "Times-Bold-to-Helvetica.pdf",
+      "sha256": "711aa48dec535f2d93912b49e3e00e47a2504fd1031b86707b41789830560f3b",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Symbol",
+      "path": "Times-Bold-to-Symbol.pdf",
+      "sha256": "42ab9df5b83e17e6b8844db2871a9e41635cfe9b9af7c1f2f828fd9297a3ded1",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Times-Bold",
+      "path": "Times-Bold-to-Times-Bold.pdf",
+      "sha256": "db3c7614955f461b027b4171e0c6c15ff1c4b55025110f6d522e31b1bca6cc5c",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Times-BoldItalic",
+      "path": "Times-Bold-to-Times-BoldItalic.pdf",
+      "sha256": "d01bad1db9d4e1de2fc82c21c4c999b34db74b140cde8d83b7e955dbb5763b91",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Times-Italic",
+      "path": "Times-Bold-to-Times-Italic.pdf",
+      "sha256": "f7a482adc662f4e4f214de384fa08627768097920664265ed030b9981a43b1dc",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-Times-Roman",
+      "path": "Times-Bold-to-Times-Roman.pdf",
+      "sha256": "477ab2b541e0a59587c7d5bab177e3488ca33e507337ab4cc9a01a5e9d27fad8",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Bold-to-ZapfDingbats",
+      "path": "Times-Bold-to-ZapfDingbats.pdf",
+      "sha256": "d0810c1c060c4e7545d71c4b65d32917f843b5b1eedb5b51d7ec4ec1bba51417",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Courier-Bold",
+      "path": "Times-BoldItalic-to-Courier-Bold.pdf",
+      "sha256": "09b550c8a2674d65a63f50dc781b12e9829efde84646d0ccc3decb79d7e942f9",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Courier-BoldOblique",
+      "path": "Times-BoldItalic-to-Courier-BoldOblique.pdf",
+      "sha256": "53bfe1dc7ee76a5fbe9e3e0babb05721e3058ed15034657b1882bed36cead48f",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Courier-Oblique",
+      "path": "Times-BoldItalic-to-Courier-Oblique.pdf",
+      "sha256": "fc8b3671474c3941aadb2e94ffcea284d1e71de52db426d0c162175990bfc01c",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Courier",
+      "path": "Times-BoldItalic-to-Courier.pdf",
+      "sha256": "63758d3158c4f909787807d39d78eac5faa5b8256a0a2d9dd5bc7032cefe90de",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.67,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Helvetica-Bold",
+      "path": "Times-BoldItalic-to-Helvetica-Bold.pdf",
+      "sha256": "a02da016acc9820800e0a1a8a83d7eced8b9ecff6742b6cbc223256aaee9c8c4",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Helvetica-BoldOblique",
+      "path": "Times-BoldItalic-to-Helvetica-BoldOblique.pdf",
+      "sha256": "8ee5025e6a55f0801143c902e8120751736d1a6d803108552cf6074c11aebb1e",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Helvetica-Oblique",
+      "path": "Times-BoldItalic-to-Helvetica-Oblique.pdf",
+      "sha256": "964d91cf1220fb365c64c8cac40e295495f1bafae5ded1795dc8fad934825550",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.34,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Helvetica",
+      "path": "Times-BoldItalic-to-Helvetica.pdf",
+      "sha256": "5d78e395e700bad35861c191cb6d52be7904498c71e061cd97e63d79bb58d759",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.34,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Symbol",
+      "path": "Times-BoldItalic-to-Symbol.pdf",
+      "sha256": "3b097975abe63351bc65d503b5b6d55f3383d3d381f0f26e55474c069e367382",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Times-Bold",
+      "path": "Times-BoldItalic-to-Times-Bold.pdf",
+      "sha256": "429e4ff0653caf855ba00aadce5870fdd40208fcc1fb70e9ff1848af84dde819",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Times-BoldItalic",
+      "path": "Times-BoldItalic-to-Times-BoldItalic.pdf",
+      "sha256": "39639fa244247cd3c632e1441d00d7b4c874c6fa333664a1497d75151a671784",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.34,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Times-Italic",
+      "path": "Times-BoldItalic-to-Times-Italic.pdf",
+      "sha256": "35af14688c9a9893d88ce817596b6420fea1d457c17ea31b0116ee35cec494d9",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.78,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-Times-Roman",
+      "path": "Times-BoldItalic-to-Times-Roman.pdf",
+      "sha256": "27d63d150ef22bc8b5b223b31b75aeb55f103c27481ae8d67f18a2dc551e380e",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-BoldItalic-to-ZapfDingbats",
+      "path": "Times-BoldItalic-to-ZapfDingbats.pdf",
+      "sha256": "6260c401dfe572506df08333014f30957598f890d7950058aaf0c8d68ec541f3",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            106.67,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            116.41,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Courier-Bold",
+      "path": "Times-Italic-to-Courier-Bold.pdf",
+      "sha256": "d16c8ce4f679c87ced1e4a733a9b681d254af00850387241da630a04c2429b1c",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.11,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Courier-BoldOblique",
+      "path": "Times-Italic-to-Courier-BoldOblique.pdf",
+      "sha256": "269b6028d587f56fcbbf217eb27909836b39cc8b1732bae2e06ffeb6b7112a75",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.11,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Courier-Oblique",
+      "path": "Times-Italic-to-Courier-Oblique.pdf",
+      "sha256": "540a60ea03d398e21160490f71f99217467aabaf2ae8860f1d1a79dfc30e69db",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.11,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Courier",
+      "path": "Times-Italic-to-Courier.pdf",
+      "sha256": "ef196cf7be2fa5c057adb6fc1d683c9071ddde3c938bdbba79accce2c9c7ff60",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.11,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Helvetica-Bold",
+      "path": "Times-Italic-to-Helvetica-Bold.pdf",
+      "sha256": "4e3c9bc19f259aee998213ef85926374f4e1c8b2ec6875f3c894f920748a5571",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Helvetica-BoldOblique",
+      "path": "Times-Italic-to-Helvetica-BoldOblique.pdf",
+      "sha256": "40974cf644369e0355aee5cadfae3d428f315d887e563555fd07066a6318c65a",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Helvetica-Oblique",
+      "path": "Times-Italic-to-Helvetica-Oblique.pdf",
+      "sha256": "f4c18ad57624b29026ab104e2d9267757f71b817ab1239e08a26e1fc71099253",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.78,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Helvetica",
+      "path": "Times-Italic-to-Helvetica.pdf",
+      "sha256": "24855f70a5acf903e2dcb93c26bf002a0e52cf7de944bdbdcde49b0af47c84ff",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.78,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Symbol",
+      "path": "Times-Italic-to-Symbol.pdf",
+      "sha256": "a57820833a61fb190e7179a60ce9587b498fb5e5a8cab61e23158db66dd5216e",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Times-Bold",
+      "path": "Times-Italic-to-Times-Bold.pdf",
+      "sha256": "8a590b5f0b4e64136bc0921933ff94f12cf1a24fcc3e9fee7962ba9721fd7431",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Times-BoldItalic",
+      "path": "Times-Italic-to-Times-BoldItalic.pdf",
+      "sha256": "a871c088839d65b3ef230b5deba23f96d514d144bfc4f098b85c62458434e5bc",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.78,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Times-Italic",
+      "path": "Times-Italic-to-Times-Italic.pdf",
+      "sha256": "8517b5f0a6ed3e0967f1ad95590260d9108061597af5c24edfcdc42b0c0bccde",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            112.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-Times-Roman",
+      "path": "Times-Italic-to-Times-Roman.pdf",
+      "sha256": "1987b31aa0e3d041862162d7a2e848170bd5efb55e9a49e4908bcba21fed5289",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Italic-to-ZapfDingbats",
+      "path": "Times-Italic-to-ZapfDingbats.pdf",
+      "sha256": "aaaaca9846ccd4f9732503244c5ad39be099629be201bdbc032acd617e7d0614",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            106.11,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            115.85,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Courier-Bold",
+      "path": "Times-Roman-to-Courier-Bold.pdf",
+      "sha256": "ee58145ec8a4cc5b35c06acd7ad62a24eb6965d628e515e6a65ee57e7d78e5e6",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Courier-BoldOblique",
+      "path": "Times-Roman-to-Courier-BoldOblique.pdf",
+      "sha256": "7067187ac8b7023f5518f89b3f597a16a9f6ce3fb24894516446109463a697ce",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Courier-Oblique",
+      "path": "Times-Roman-to-Courier-Oblique.pdf",
+      "sha256": "71fb0f68ebbf5adad9d27a34f272c7a7907804769bc6c474997a8412d8bbe407",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Courier",
+      "path": "Times-Roman-to-Courier.pdf",
+      "sha256": "bd8e63bf4a2965277622d20d50eb52cb383ccf257590413441a2b1659f44423e",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.22,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Helvetica-Bold",
+      "path": "Times-Roman-to-Helvetica-Bold.pdf",
+      "sha256": "8210f5f0484a22852c028ba854c94a83fd7e5d45499deffcf50bc79ec39cba0d",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Helvetica-BoldOblique",
+      "path": "Times-Roman-to-Helvetica-BoldOblique.pdf",
+      "sha256": "126a585b37f1347832c11e26963c686428105d970279e6ceaa480afe13c754a9",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Helvetica-Oblique",
+      "path": "Times-Roman-to-Helvetica-Oblique.pdf",
+      "sha256": "5de33e39acfe3bbe3a025b07917f18a5e587dbb9188c21e5aa6f55fe89409653",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Helvetica",
+      "path": "Times-Roman-to-Helvetica.pdf",
+      "sha256": "39bd33ec015699bc726158bb891c14d7a6dcf5a3d71c6223ff7a2c95ab528d7a",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Symbol",
+      "path": "Times-Roman-to-Symbol.pdf",
+      "sha256": "60a630fe714e5e44a85d8903d65a44363f3ac9241b41655d3dae5296016c44d2",
+      "expected_text": "AΑi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Times-Bold",
+      "path": "Times-Roman-to-Times-Bold.pdf",
+      "sha256": "475ffd37e718ffa5f55ea7d0b90b52fe9259a696b0177b2ebf52ad5250122b42",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Times-BoldItalic",
+      "path": "Times-Roman-to-Times-BoldItalic.pdf",
+      "sha256": "020abb18f1ca5e6128c3e1a47600c2a5b971763b18ae2b41aff7511c1befbac0",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.89,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Times-Italic",
+      "path": "Times-Roman-to-Times-Italic.pdf",
+      "sha256": "8976635ff96118d05b195fb6ce734533ef1236e537499e5900bdde9929d2f64c",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            113.33,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-Times-Roman",
+      "path": "Times-Roman-to-Times-Roman.pdf",
+      "sha256": "a06e8cb8e3dc105bb380d1f66674d885b3b0807d1aed25c2567f17da3d28ebcd",
+      "expected_text": "AAi",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            114.44,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Times-Roman-to-ZapfDingbats",
+      "path": "Times-Roman-to-ZapfDingbats.pdf",
+      "sha256": "a6078da20edf7a11ff2c93610ea6e496e58a835eecda8320ce797371ccc642b8",
+      "expected_text": "A✁i",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            107.22,
+            92
+          ]
+        },
+        {
+          "text": "i",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Courier-Bold",
+      "path": "ZapfDingbats-to-Courier-Bold.pdf",
+      "sha256": "a31de1ed0fdcb66be4ee4ab51db9bd0b2056682c9517da371db73d595bfbe287",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            115.74,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Courier-BoldOblique",
+      "path": "ZapfDingbats-to-Courier-BoldOblique.pdf",
+      "sha256": "3422a338187921594d4971b76c9dfb9bbbc9f92c6e663dc69020c7a7a58d4f83",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            115.74,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Courier-Oblique",
+      "path": "ZapfDingbats-to-Courier-Oblique.pdf",
+      "sha256": "4f1df7cbd0f6695c16ab96a37c4a996ab2d2359a70e77a52edd8340b23cd8d0f",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            115.74,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Courier",
+      "path": "ZapfDingbats-to-Courier.pdf",
+      "sha256": "0c4d822d240b54936b8802b14d64c16c3bd6eaa1a999286922a9903c1ad34a44",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            115.74,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Helvetica-Bold",
+      "path": "ZapfDingbats-to-Helvetica-Bold.pdf",
+      "sha256": "5473245e3b2d031c6f10622c98a860cfd50657f040b601d05b2fc6ad4f4a88f2",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Helvetica-BoldOblique",
+      "path": "ZapfDingbats-to-Helvetica-BoldOblique.pdf",
+      "sha256": "3d9492c4e09489bed8fd40c52ce0f5ca415b12d5ba2978808ad6348f6e07f47e",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Helvetica-Oblique",
+      "path": "ZapfDingbats-to-Helvetica-Oblique.pdf",
+      "sha256": "ead7b0dec5e5c773fb5ca446d7298dd0fc18a322a381025f82190771768381c8",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            116.41,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Helvetica",
+      "path": "ZapfDingbats-to-Helvetica.pdf",
+      "sha256": "dec0087acb3d7c74133d20ea5fcb3c1f285c459a887c6c2544b2f86b3ad9fce8",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            116.41,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Symbol",
+      "path": "ZapfDingbats-to-Symbol.pdf",
+      "sha256": "f9aca51f34f7d4e584f8c448eb82d8c6823e34161968af8f6bc96ed6e9824c9f",
+      "expected_text": "✁Α✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "Α",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Times-Bold",
+      "path": "ZapfDingbats-to-Times-Bold.pdf",
+      "sha256": "447d9019e1e2f906b2fcd7430ed057abe6769f29dcf1b6d13215c3acfb634e0c",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Times-BoldItalic",
+      "path": "ZapfDingbats-to-Times-BoldItalic.pdf",
+      "sha256": "196018c2098bb6cf7f045144b5ce97cdc29d36bd0f199b34b34e54e7dc8224a4",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            116.41,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Times-Italic",
+      "path": "ZapfDingbats-to-Times-Italic.pdf",
+      "sha256": "04c39f9f9a2a091481fa54b4fe22076b86a1e7a97ffd3fcfbab915a0b5dfc0d2",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            115.85,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-Times-Roman",
+      "path": "ZapfDingbats-to-Times-Roman.pdf",
+      "sha256": "b1d60f199ee9c8399d2a370c40adebc9f8ae38e0d3bd624177b161798ca52b39",
+      "expected_text": "✁A✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            116.96,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ZapfDingbats-to-ZapfDingbats",
+      "path": "ZapfDingbats-to-ZapfDingbats.pdf",
+      "sha256": "875daa74e5ba8434defad7753157ca3d43cf92711648771d0559c975972f1cad",
+      "expected_text": "✁✁✂",
+      "expectation_source": "Adobe AFM sources revision 0675784d24b28a55c607cad6b74596ce19ce333c; font widths /100 at10pt; explicit Widths391 overrides AFM. Whitespace inference is not a normative metric claim.",
+      "expected_trace_origins": [
+        {
+          "text": "✁",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "✁",
+          "origin": [
+            109.74,
+            92
+          ]
+        },
+        {
+          "text": "✂",
+          "origin": [
+            119.48,
+            92
+          ]
+        }
+      ]
+    }
+  ]
+}

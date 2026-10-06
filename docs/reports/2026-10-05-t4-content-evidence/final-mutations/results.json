@@ -1,0 +1,37 @@
+[
+  {
+    "case": "control",
+    "exit": 0,
+    "source_sha256": "e9bef1978af4eaa335707c557c3358eaf148e0b4253830fcb490af6691837bd3"
+  },
+  {
+    "case": "autojunk",
+    "exit": 1,
+    "source_sha256": "5b7655934b0cef242e7a11b8e6ac6db7f6e3542599595664d651c0f325591554"
+  },
+  {
+    "case": "case-folding",
+    "exit": 1,
+    "source_sha256": "8ecc44c0252788c74ec3229d4e788901dd130b5fbfc6ba600330350dafc45015"
+  },
+  {
+    "case": "bytes-not-scalars",
+    "exit": 1,
+    "source_sha256": "5cf55d74d7829104e48b64b45eeeb9686cb1bdf7106e9fbca2adaf093f453f5c"
+  },
+  {
+    "case": "invented-denominator",
+    "exit": 1,
+    "source_sha256": "865c8851dc5be146e7393512268abf73f98e6807bf4c95306973437163e169bf"
+  },
+  {
+    "case": "unverified-input",
+    "exit": 1,
+    "source_sha256": "1d0e2df17682a6df6e8e774d8a917d802d9a30b91e459e1c913cd666400d3604"
+  },
+  {
+    "case": "positional-page-alignment",
+    "exit": 1,
+    "source_sha256": "23761fd714763e39a9868fc4c87c987dd43e7b76c40a4addfb2c72141a126e50"
+  }
+]

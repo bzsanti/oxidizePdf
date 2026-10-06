@@ -1,0 +1,94 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 4.41s
+     Running tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-576d6b91ec72df24)
+
+running 16 tests
+test cid_zero_only_does_not_fall_back_to_source_bytes ... ok
+test cjk_samples_have_pinned_identity_and_distinct_collections ... ok
+test cid_zero_fallback_preserves_following_text_and_explicit_unicode ... ok
+test adobe_kr_is_a_separate_collection ... ok
+test adobe_korea1_named_cmaps_decode_collection_cids ... ok
+test adobe_japan1_named_cmaps_decode_collection_cids ... ok
+test adobe_gb1_named_cmaps_decode_collection_cids ... ok
+test named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity ... ok
+test adobe_cns1_named_cmaps_decode_collection_cids ... ok
+test korea1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test kr_and_korea1_are_not_interchangeable_in_either_direction ... ok
+test japan1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test cns1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test explicit_unicode_overrides_all_five_collection_fallbacks ... ok
+test resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences ... ok
+test kr_extended_official_maps_preserve_identity_and_unicode_authority ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.47s
+
+     Running tests/text_cmap_boundary_contract_test.rs (target/debug/deps/text_cmap_boundary_contract_test-6d539187c231099f)
+
+running 14 tests
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... ok
+test child_notdef_char_overrides_only_its_parent_fallback_code ... ok
+test inherited_notdef_range_retains_parent_cid_and_width ... ok
+test codespace_length_uses_the_full_prefix_not_just_the_first_byte ... ok
+test notdef_range_selects_one_cid_without_incrementing ... ok
+test large_cidrange_offsets_do_not_alias_the_first_cid ... ok
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... ok
+test cid_maximum_is_valid_but_five_byte_pdf_codes_are_rejected_by_renderer ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+test ordinary_parent_mapping_wins_over_child_notdef ... ok
+test ordinary_child_mapping_wins_over_inherited_notdef ... ok
+test later_mappings_override_earlier_entries_within_the_same_layer ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... ok
+test out_of_range_cids_never_wrap_into_valid_glyphs ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/text_qr_regression_contract_test.rs (target/debug/deps/text_qr_regression_contract_test-afa95a00ec074ab8)
+
+running 15 tests
+test inherited_adobe_kr_dictionary ... ok
+test legacy_collection_matches_stay_exhaustive ... ok
+test inherited_adobe_kr_operator ... ok
+test resolved_intrinsic_cff ... ok
+test resolved_encoding_parent ... ok
+test resolved_intrinsic_type1 ... ok
+test resolved_named_parent ... ok
+test resolved_flat_control ... ok
+test resolved_vertical_advance ... ok
+test strict_public_extraction_rejects_cyclic_usecmap ... ok
+test resolved_unicode_parent ... ok
+test page_and_form_strict_cycles_error_while_lenient_keeps_child ... ok
+test type1_procedure_is_not_executed ... ok
+test resolved_intrinsic_differences_and_tounicode_precedence ... ok
+test indirect_cid_collection_matches_direct_extraction ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/text_recovery_boundary_contract_test.rs (target/debug/deps/text_recovery_boundary_contract_test-7dd20d1680fef3b8)
+
+running 8 tests
+test encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping ... FAILED
+test simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace ... ok
+test complete_codes_and_empty_string_remain_valid ... ok
+test identity_collection_preserves_odd_tail_including_after_notdef ... ok
+test unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible ... ok
+test never_joins_partial_codes_across_tj_strings ... ok
+test complete_unmapped_code_does_not_reinterpret_its_suffix ... ok
+test preserves_valid_text_and_marks_every_incomplete_tail_once ... ok
+
+failures:
+
+---- encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping stdout ----
+
+thread 'encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping' (705) panicked at oxidize-pdf-core/tests/text_recovery_boundary_contract_test.rs:102:13:
+assertion `left == right` failed: 002200
+  left: "��"
+ right: "A�"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping
+
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_recovery_boundary_contract_test`
