@@ -1,0 +1,47 @@
+{
+  "base": "410358d8b199c15910e7434e6be2ec7d278a03c7",
+  "version": "5.1.4",
+  "workspace": {
+    "passed": 9801,
+    "failed": 0,
+    "ignored": 73
+  },
+  "contract_python": 33,
+  "exporter_rust": 6,
+  "clippy": "pass",
+  "format": "pass",
+  "package": "pass",
+  "crate_sha256": "915196fd59e4d5f661247220552d950b65a8ef6e9763377b1a8214551e6f2144",
+  "logs": {
+    "tests": {
+      "path": "/tmp/oxidize-5.1.4-tests.log",
+      "sha256": "507c8f3da2c928f98b61251d9b064151cd50c1b53741c071a8c6d6d700a52ec6"
+    },
+    "clippy": {
+      "path": "/tmp/oxidize-5.1.4-clippy.log",
+      "sha256": "80d40b5c92ccbd988db3cae0fffd9cbf9767d1b034f90dbc418a4b7d199bbc5f"
+    },
+    "contract": {
+      "path": "/tmp/oxidize-5.1.4-contract.log",
+      "sha256": "3c6f023baf0f896e919368e4a3d744e032401a0a95384db04b62eae66abf7c29"
+    },
+    "exporter": {
+      "path": "/tmp/oxidize-5.1.4-exporter.log",
+      "sha256": "85daca6ecdef2bbf355ac3170c65777e50ef9b0aef083439c34b8953f07837c0"
+    },
+    "package": {
+      "path": "/tmp/oxidize-5.1.4-package.log",
+      "sha256": "fc6bd1f14348a68ccd6dc91ed1b15931ef3f40d174aefe5c50e55cb84413d7ef"
+    },
+    "kripteia-rust": {
+      "path": "/tmp/oxidize-5.1.4-kripteia-rust.log",
+      "sha256": "4599519024f53219938c64cc0ec3a6b352dba2000119177188c65d666e0bc0f9"
+    },
+    "kripteia-python": {
+      "path": "/tmp/oxidize-5.1.4-kripteia-python.log",
+      "sha256": "6c7cd50a9e787d7b86e8a6044efd5c19eef6846faeb025e7039ea22bc44bc7be"
+    }
+  },
+  "external_corpus": "Prior integrated evidence; not rerun in this checkout",
+  "publication": "pending"
+}

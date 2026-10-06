@@ -1,0 +1,19 @@
+{
+  "develop": "36ef67e3444dc37d5426e8c3951dec427efc836c",
+  "main": "9ab7ac6530d6e064d48a3b274568af1b6d901462",
+  "product_paths_identical": [
+    "oxidize-pdf-core",
+    "scripts",
+    ".github",
+    "tools",
+    ".gitattributes"
+  ],
+  "dependency_lock_unchanged_except_own_version": true,
+  "changelog_5_2_0_and_older_identical": true,
+  "restored_task_sections": [
+    "## Preparaci\u00f3n del release 5.2.0 \u2014 2026-09-29",
+    "## Release 5.1.5 para #627 \u2014 2026-09-26",
+    "## Avisos de dependencias retiradas durante release 5.1.4",
+    "## Release 5.1.4 \u2014 2026-09-25"
+  ]
+}

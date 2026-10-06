@@ -1,11 +1,30 @@
+## Release 5.3.0 — 2026-10-06
+
+- Issue: #684 — release: publish 5.3.0 and reconcile release history — https://github.com/bzsanti/oxidizePdf/issues/684
+- Estado: activa, candidato preparado y validado localmente. Prioridad P1. Responsable Codex.
+- Base: develop 36ef67e3444dc37d5426e8c3951dec427efc836c; main/v5.2.0 9ab7ac6530d6e064d48a3b274568af1b6d901462. Trabajo aislado en target/release530; cambios locales anteriores preservados.
+- Criterio de cierre: historial de releases conservado, versión/documentación 5.3.0 coherentes, producto idéntico a develop, QR y validación del paquete aprobados, PR de release integrado en main, tag/GitHub/crates.io verificados y metadatos sincronizados a develop por PR.
+
+| Requisito | Estado / evidencia | Bloqueante y siguiente acción |
+|---|---|---|
+| Historial y versiones coherentes | Demostrado: 5.3.0 coherente e historial anterior preservado | Ningún bloqueo local |
+| Producto revisado conservado | Demostrado: identidad exacta con develop y lock salvo versión propia | #642/#658 y #661 excluidos |
+| Validación de candidato y QR | Demostrado: 10.389 PASS/0 FAIL/71 ignorados, Clippy, paquete signatures y Kripteia | CI remota pendiente |
+| Publicación y sincronización | Pendiente | CI/merge de release a main, tag, registros y PR hacia develop |
+
+- Última validación: suite completa exit0, Clippy y paquete con signatures aprobados; QR cerrado para el delta. Evidencia: docs/reports/2026-10-06-release-5.3.0-review.md y directorio contiguo. Siguiente acción: commit con hook original, PR de release a main y CI.
+
 ## Integración autorizada de PRs verdes — 2026-10-06
 
 - Issue: #680 — TextExtractor::extract_from_page fails with StreamDecodeError("FlateDecode incomplete or truncated zlib stream") on truncated streams — https://github.com/bzsanti/oxidizePdf/issues/680
 - Issue: #677 — Tagged split rejects missing page StructParents keys in 5.2.0 (#621) — https://github.com/bzsanti/oxidizePdf/issues/677
-- Estado: usuario autoriza fusionar los PRs verdes; #683 MERGED en develop, commit 091d4abf7b2686e22c36427b1759b3ec11484193. #682 requiere conciliar solo TASKS.md y revalidar CI. Prioridad P1. Responsable Codex.
-- Criterio de cierre: #682 y #683 MERGED en develop después de sus checks; sin bypass, release ni cierre administrativo de issues. #658 permanece borrador por aceptación de seguridad pendiente.
-- Última validación: ambos PR tenían 29 SUCCESS y 2 SKIPPED, sin checks pendientes; #683 fusionado sobre ese HEAD. La conciliación de #682 conserva ambos bloques de seguimiento, sin conflictos de código.
-- Siguiente acción: contratos combinados y hook original; publicar actualización #682, esperar CI y fusionar su HEAD validado.
+- Estado: integración solicitada completada. PR #683 y PR #682 MERGED en develop, cada uno con 29 SUCCESS/2 SKIPPED y ningún check pendiente al fusionar. Prioridad P1. Responsable Codex.
+- #683: HEAD3cdf880, merge 091d4abf7b2686e22c36427b1759b3ec11484193, 2026-10-06T13:51:20Z.
+- #682: HEADaa19e39f19d80bf6d23770a378a31c45c04fdf44, merge 36ef67e3444dc37d5426e8c3951dec427efc836c, 2026-10-06T15:05:08Z.
+- Conflicto secuencial resuelto: al fusionar #683, #682 entró en conflicto únicamente en TASKS.md. Conservados ambos bloques e historial; diez fuentes relevantes idénticas a las revisadas. 69 contratos combinados y hook original aprobados (formato/Clippy/build y biblioteca6.801 PASS/0 FAIL/3 ignorados). Nueva CI esperada hasta concluir Windows; merge protegido por HEAD exacto, sin bypass.
+- Última validación: GitHub confirma ambos merges y solo #658 abierto/borrador, base develop. #658 conserva aceptación de seguridad RSA pendiente y queda excluido de esta integración aunque sus checks automáticos estén aprobados. No se cambió main ni se realizó release o cierre administrativo de issues.
+- Criterio de cierre de esta orden: cumplido. Evidencia: docs/reports/2026-10-06-pr-682-evidence/integration.json, after683-tests.log, after683-commit.log y final-ci-watch.log. La CI posterior al merge es una ejecución separada; no se atribuye aquí su resultado.
+- Siguiente acción exacta: ninguna fusión pendiente entre los PR autorizados y listos. #661 conserva implementación pendiente; #658 depende de aceptación de seguridad. Checkout raíz y cambios preexistentes preservados.
 
 ## Base de integración de #682 — 2026-10-06
 
@@ -976,3 +995,70 @@
 - Closure: focused contracts, review and CI approved, integration verified; do not close the issue on local validation alone.
 - Next action: append this commit to the existing PR branch without rewriting its history; check remote CI before integration.
 - Constraints: no changes from #667/#668 or the general #666 implementation; no merge/release in this follow-up.
+
+## Historial de preparación de releases conservado desde main
+
+Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 figura al inicio.
+
+## Preparación del release 5.2.0 — 2026-09-29
+
+- Issue: #659 — release: prepare oxidize-pdf 5.2.0 — https://github.com/bzsanti/oxidizePdf/issues/659
+- Estado: `[-]` preparación en curso. Prioridad P1. Responsable Codex.
+- Autorización: usuario solicita iniciar release tras CI #658 y selecciona 5.2.0.
+- Base: develop 48d8b8f; historial main/v5.1.5 se conserva mediante merge.
+- Criterio de cierre de preparación: versiones/notas coherentes, validación proporcional y PR de promoción a main revisable.
+- Última validación: workspace 9934 pasan/0 fallos/71 omitidas; firmas 43 pasan/0 fallos/3 omitidas; Clippy, empaquetado y compilación de ejemplos pasan. Runtime RAG omitido por falta de corpus. #658 permanece borrador por RSA y se excluye del release.
+- Siguiente acción: publicar PR a main y verificar su CI. Tag/publicación requieren CI verde y merge verificado conforme al proceso.
+- Restricciones: preservar WIP original; sin #642, sin PAdES y sin cambios a métricas/baselines.
+
+
+## Release 5.1.5 para #627 — 2026-09-26
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[-]` preparación en curso. Prioridad: P1. Responsable: Codex.
+- #631 integrado en develop f9132e16 con CI completa verde sobre b8ae9af9.
+- Criterio de cierre: PR de promoción main con CI verde, etiqueta y publicación
+  GitHub/crates.io confirmadas; después binding fijado a la release del registro.
+- Base: develop integrado + main v5.1.4; conflicto de TASKS resuelto conservando
+  ambas entradas. Changelog 5.1.4 preservado; versión 5.1.5 y proveedor publicado.
+- Siguiente acción: validar paquete y QR, crear PR de release, verificar CI antes
+  de integrar y publicar exclusivamente mediante GitHub Actions.
+- No cerrar #627 hasta pin y validación final de Python. Cambios ajenos preservados.
+
+
+## Avisos de dependencias retiradas durante release 5.1.4
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P2.
+- Responsable: mantenimiento (`bzsanti`), responsable de crear/vincular issue.
+- Issue: pendiente; las issues abiertas consultadas no cubren estos avisos.
+- Última validación: `cargo package --locked --offline` avisa de chacha20 0.10.0
+  y spin 0.9.8 retirados del registro. Ambas entradas ya estaban en develop;
+  la release no cambia el grafo de dependencias. No se infiere vulnerabilidad.
+- Dependencia externa y desbloqueo: issue específica confirmada OPEN.
+- Criterio de cierre: investigar motivo de retirada y resolver/validar el
+  seguimiento de dependencias con evidencia reproducible.
+- Siguiente acción: mantenimiento crea/vincula issue antes de corregir.
+- Restricciones: no actualizar dependencias ni recalibrar métricas bajo esta
+  entrada sin issue; no confundir con la eliminación de C de #627.
+
+
+
+## Release 5.1.4 — 2026-09-25
+
+- Issue: #629 — release: publish oxidize-pdf 5.1.4 maintenance fixes — https://github.com/bzsanti/oxidizePdf/issues/629
+- Estado: `[-]` preparación y validación en curso. Prioridad: P1.
+- Responsable: Codex / bzsanti. Publicación autorizada por el usuario.
+- Alcance: develop `410358d`, fixes #609/#610/#613/#615–#619 y contrato #620.
+- Última validación: #629 OPEN, última GitHub Release y registro crates.io 5.1.3;
+  #620 integrado por #628. Copia independiente: `/tmp/oxidize-release-5.1.4`.
+- Criterio de cierre: gates locales y CI verdes, PR fusionado en main,
+  etiqueta sobre merge validado, workflow exitoso, GitHub Release y crates.io.
+- Validación local final: workspace 9.801 pasan (73 ignorados), Clippy all-targets,
+  formato, contrato Python 33/Rust 6 y compilación del paquete pasan. QR cerrado
+  antes del PR; Kripteia Rust 94/100 y Security inspeccionado. Corpus oficial:
+  evidencia integrada previa, no nueva ejecución. Informes de release en docs/reports.
+- Siguiente acción: publicar rama y PR a main, esperar CI verde y fusionar;
+  etiquetar el merge validado y verificar workflow, GitHub Release y crates.io.
+- Restricciones: preservar cambios locales y baselines; #627 permanece pendiente
+  y obligatoria. Esta versión conserva C en signatures/bindings por autorización
+  explícita de publicar antes de #627. No corregir hallazgos ajenos sin issue.

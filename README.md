@@ -22,7 +22,7 @@ workflows or continue into structure-aware chunks for AI/RAG applications.
 
 ```toml
 [dependencies]
-oxidize-pdf = "5.1.3"
+oxidize-pdf = "5.3.0"
 ```
 
 Structure-aware RAG remains a first-class workflow:
@@ -68,7 +68,7 @@ See the [protocol, environment and comparison](docs/reports/2026-09-28-generatio
 
 ```toml
 [dependencies]
-oxidize-pdf = "5.1.3"
+oxidize-pdf = "5.3.0"
 ```
 
 ### RAG Pipeline
@@ -187,10 +187,10 @@ long-term validation data where required. Embedding CMS alone does not establish
 profile compliance or certification. See the
 [operation-level signature contract](docs/signatures.md).
 
-Known 5.1.5 limits include simulated success in the unsupported certificate-based
-recipient-encryption handler, malformed Flate/predictor error handling, and a
-non-optional writer build marker. See the [versioned inventory](docs/CLAIMS.md)
-for evidence and follow-up issues before selecting these workflows.
+Version 5.2.0 rejects simulated public-key operations and malformed Flate/predictor
+data, adds explicit recovery diagnostics, and makes build identification optional.
+See the [versioned inventory](docs/CLAIMS.md) and migration guides for the exact
+behavior and remaining limits.
 
 Certificate-based **recipient encryption is unsupported**. The legacy
 `PublicKeySecurityHandler` returns explicit errors for cryptographic operations;
