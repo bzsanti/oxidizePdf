@@ -1,4 +1,5 @@
 use std::io::{Cursor, Write};
+
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use oxidize_pdf::parser::filters::decode_stream_with_recovery;
@@ -43,16 +44,29 @@ fn test_truncated_compressed_stream_filter() {
     // Truncate the last 4 bytes (Adler32 checksum)
     let truncated_checksum = &compressed[..compressed.len() - 4];
     let mut dict = PdfDictionary::new();
-    dict.insert("Filter".into(), PdfObject::Name(PdfName::new("FlateDecode".into())));
+    dict.insert(
+        "Filter".into(),
+        PdfObject::Name(PdfName::new("FlateDecode".into())),
+    );
 
-    let res = decode_stream_with_recovery(truncated_checksum, &dict, &ParseOptions::lenient(), 1000);
-    assert!(res.is_ok(), "Expected recovery on missing checksum, got: {:?}", res);
+    let res =
+        decode_stream_with_recovery(truncated_checksum, &dict, &ParseOptions::lenient(), 1000);
+    assert!(
+        res.is_ok(),
+        "Expected recovery on missing checksum, got: {:?}",
+        res
+    );
     assert_eq!(res.unwrap().data, raw);
 
     // Truncate 10 bytes into the compressed data stream
     let truncated_data = &compressed[..compressed.len() - 10];
-    let res_data = decode_stream_with_recovery(truncated_data, &dict, &ParseOptions::lenient(), 1000);
-    assert!(res_data.is_ok(), "Expected recovery on truncated data, got: {:?}", res_data);
+    let res_data =
+        decode_stream_with_recovery(truncated_data, &dict, &ParseOptions::lenient(), 1000);
+    assert!(
+        res_data.is_ok(),
+        "Expected recovery on truncated data, got: {:?}",
+        res_data
+    );
     let recovered_bytes = res_data.unwrap().data;
     assert!(!recovered_bytes.is_empty());
     assert!(String::from_utf8_lossy(&recovered_bytes).contains("Hello World"));
@@ -65,18 +79,28 @@ fn test_extract_from_page_with_stream_recovery() {
     let truncated = &compressed[..compressed.len() - 4]; // missing Adler32 checksum
     let pdf_bytes = build_pdf(truncated);
 
-    let reader = PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap();
+    let reader =
+        PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap();
     let doc = reader.into_document();
 
     // 1. By default, extract_from_page propagates the Flate error
     let mut extractor_default = TextExtractor::new();
     let res_default = extractor_default.extract_from_page(&doc, 0);
-    assert!(res_default.is_err(), "Default extract_from_page should fail on corrupt stream");
+    assert!(
+        res_default.is_err(),
+        "Default extract_from_page should fail on corrupt stream"
+    );
 
     // 2. With with_stream_recovery(true), extract_from_page recovers and extracts the text
     let mut extractor_recovered = TextExtractor::new().with_stream_recovery(true);
-    let extracted = extractor_recovered.extract_from_page(&doc, 0).expect("with_stream_recovery(true) should succeed");
-    assert!(extracted.text.contains("Recoverable Text"), "Expected recovered text, got: {:?}", extracted.text);
+    let extracted = extractor_recovered
+        .extract_from_page(&doc, 0)
+        .expect("with_stream_recovery(true) should succeed");
+    assert!(
+        extracted.text.contains("Recoverable Text"),
+        "Expected recovered text, got: {:?}",
+        extracted.text
+    );
 }
 
 #[test]
@@ -86,17 +110,29 @@ fn test_form_xobject_stream_recovery() {
     let truncated = &compressed[..compressed.len() - 4]; // missing Adler32 checksum
     let pdf_bytes = build_form_pdf(truncated);
 
-    let reader = PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap();
+    let reader =
+        PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap();
     let doc = reader.into_document();
 
     // 1. By default, extract_from_page propagates the error from the corrupt Form XObject
     let mut extractor_default = TextExtractor::new();
     let res_default = extractor_default.extract_from_page(&doc, 0);
-    assert!(res_default.is_err(), "Default extract_from_page should fail on corrupt Form XObject stream");
+    assert!(
+        res_default.is_err(),
+        "Default extract_from_page should fail on corrupt Form XObject stream"
+    );
 
     // 2. With with_stream_recovery(true), extract_from_page recovers both the page body and the Form XObject text
     let mut extractor_recovered = TextExtractor::new().with_stream_recovery(true);
-    let extracted = extractor_recovered.extract_from_page(&doc, 0).expect("with_stream_recovery(true) should succeed");
-    assert!(extracted.text.contains("PageBodyText"), "Expected page body text");
-    assert!(extracted.text.contains("Recoverable Form Text"), "Expected form text to be recovered");
+    let extracted = extractor_recovered
+        .extract_from_page(&doc, 0)
+        .expect("with_stream_recovery(true) should succeed");
+    assert!(
+        extracted.text.contains("PageBodyText"),
+        "Expected page body text"
+    );
+    assert!(
+        extracted.text.contains("Recoverable Form Text"),
+        "Expected form text to be recovered"
+    );
 }
