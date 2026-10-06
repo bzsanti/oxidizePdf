@@ -25,7 +25,7 @@ use super::{ParseError, ParseOptions, ParseResult};
 /// to gigabytes of output. A single PDF page rarely exceeds a few MB of
 /// decompressed content; 256 MB is generous enough for legitimate documents
 /// (e.g., large maps, engineering drawings) while protecting against attacks.
-const MAX_DECOMPRESSED_SIZE: usize = 256 * 1024 * 1024;
+pub(crate) const MAX_DECOMPRESSED_SIZE: usize = 256 * 1024 * 1024;
 
 /// Maximum compression ratio allowed (input:output), applied only to large
 /// outputs (see `RATIO_GUARD_MIN_OUTPUT`).
