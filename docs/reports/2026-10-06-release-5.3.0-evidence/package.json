@@ -1,0 +1,8 @@
+{
+  "version": "5.3.0",
+  "sha256": "c6121e87132ded6a400d42f25a004912dfaa6db6e246735c0bd578f7f9ff710b",
+  "bytes": 7323087,
+  "files": 1595,
+  "verified_features": "signatures",
+  "recipient_encryption_excluded": true
+}

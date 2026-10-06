@@ -1,0 +1,12 @@
+{
+  "issue": 659,
+  "version": "5.2.0",
+  "candidate": "43c08e25b634f79962b85995f73e30afaf4efdc3",
+  "develop": "48d8b8f8bbf08b2976fd739e6c2462c9552a3cc6",
+  "main": "fb4042fd5239b0951979770bab4945c2614a0db8",
+  "source_tests_gates_identical_to_develop": true,
+  "excluded_pr": 658,
+  "package_sha256": "9101ec34ceef3951a3ff7cc7de05f8ec181df45d6fafd1d410997bd66ee93afa",
+  "packaged_files": 1020,
+  "packaging_note": "Verification package only; created with --allow-dirty before the release metadata commit. Publication workflow must produce the release artifact from the final tagged main commit."
+}

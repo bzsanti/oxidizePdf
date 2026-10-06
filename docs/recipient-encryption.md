@@ -42,5 +42,5 @@ provide recipient encryption.
 not itself supply certificate-aware writer/reader integration. Real recipient
 encryption, key derivation, randomness, CMS envelopes and independent
 interoperability are tracked in [#642](https://github.com/bzsanti/oxidizePdf/issues/642).
-Advanced PAdES is outside #640 and #642 and remains reserved for commercial
-extensions; neither issue changes the basic signing extension boundary.
+PAdES is outside the scope of oxidize-pdf. Anyone can implement it as an
+independent external extension without incorporating it into this library.

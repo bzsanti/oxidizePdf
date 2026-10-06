@@ -1,0 +1,8 @@
+{
+  "exit_code": 0,
+  "result_blocks": 414,
+  "passed": 10389,
+  "failed": 0,
+  "ignored": 71,
+  "command": "cargo test --locked --offline --workspace --features internal-testing --no-fail-fast"
+}
