@@ -1,3 +1,19 @@
+## Recuperación segura de tagged split — #677 — 2026-10-06
+
+- Issue: #677 — Tagged split rejects missing page StructParents keys in 5.2.0 (#621) — https://github.com/bzsanti/oxidizePdf/issues/677
+- Estado: implementación, QR y validación local terminados; publicación pendiente, issue OPEN. Prioridad P1. Responsable Codex.
+- Base: develop 9c3f4b57969dd69fc9efa128495a8b0a7c7f4f74; checkout aislado target/issue677-fix. Retomada la secuencia tras entregar las correcciones de #682; #661 continúa pendiente.
+- Criterio de cierre: reconstruir únicamente claves ausentes desde propietarios MCID inequívocos; preservar contenido, ActualText, referencias y permisos; salidas 3/3/6 correctas y fallos sin publicación parcial; regresiones discriminantes y revisión de calidad/seguridad.
+- Bloqueantes delimitados: asignación determinista sin colisiones con páginas/OBJR; conservar las claves reparadas al reescribir páginas; verificar rechazo de ambigüedad/contenido inconsistente y atomicidad.
+- Última validación: inspección confirma rechazo en associate_mcid y segunda escritura de diccionario de página en reorder; pruebas nuevas pendientes.
+- Siguiente acción: fixture compartido con ActualText, demostrar RED, implementar y validar los contratos de salida y rechazo.
+- Avance validado: RED inicial 3 PASS/6 FAIL (cuatro casos de recuperación rechazados y dos guardas ocultas); GREEN final 63 PASS/1 ignorado preexistente en siete suites. Trece contratos #677 incluyen ActualText, propietarios exactos, MCR/inherencia, colisiones, permisos y conservación de destinos existentes.
+- Revisión en curso: tres mutaciones detectadas por fallo funcional (colisiones, doble escritura, validación de tags); control restaurado13/13. Seis análisis Kripteia y Security ejecutados sin alertas de seguridad; pendientes validación de workspace y cierre del informe. La escritura duplicada detectada con páginas anidadas se corrigió componiendo las modificaciones antes de escribir.
+- Siguiente acción: completar validación obligatoria, informe QR y preparar PR contra develop; sin merge/release ni cierre de issue.
+
+- Suite completa terminada: 10.380 PASS/0 FAIL/71 ignorados preexistentes, 412 resúmenes, --workspace --features internal-testing --no-fail-fast. Fuentes coinciden con hashes revisados; qpdf acepta tres salidas y Poppler conserva texto/orden frente a fuente. Informe: docs/reports/2026-10-06-issue-677-review.md.
+- Clippy all-targets con internal-testing y -D warnings aprobado. Se prepara commit con hook original completo y PR contra develop; no se da por aprobada CI remota todavía.
+
 ## T5 — Integración y mantenimiento (terminada)
 
 - Issue: #666 — test(text): build normative encoding and glyph-spacing contract batteries — https://github.com/bzsanti/oxidizePdf/issues/666

@@ -1,0 +1,72 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 10 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...issue677-fix/oxidize-pdf-core/src/operations/reorder.rs       10     97
+
+--- Worst Offenders ---
+  test_reorder_options_default (target/issue677-fix/oxidize-pdf-core/src/operations/reorder.rs:1904) - Score: 90
+    i Test 'test_reorder_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_reorder_options_default' does not call any production code
+  test_reorder_options_custom (target/issue677-fix/oxidize-pdf-core/src/operations/reorder.rs:1912) - Score: 90
+    i Test 'test_reorder_options_custom' has multiple assertions without diagnostic messages
+    - Test 'test_reorder_options_custom' does not call any production code
+  test_reorder_pages_simple (target/issue677-fix/oxidize-pdf-core/src/operations/reorder.rs:1987) - Score: 90
+    i Test 'test_reorder_pages_simple' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_reorder_pages_simple' has multiple assertions without diagnostic messages
+    i Test 'test_reorder_pages_simple' uses .unwrap() which silently discards error information
+    - Test 'test_reorder_pages_simple' has low assert-to-setup ratio (19%): 6 asserts vs 26 setup lines
+  test_validate_page_order_empty (target/issue677-fix/oxidize-pdf-core/src/operations/reorder.rs:1924) - Score: 100
+    i Test 'test_validate_page_order_empty' has multiple assertions without diagnostic messages
+    i Test 'test_validate_page_order_empty' uses .unwrap() which silently discards error information
+  test_validate_page_order_out_of_bounds (target/issue677-fix/oxidize-pdf-core/src/operations/reorder.rs:1955) - Score: 100
+    i Test 'test_validate_page_order_out_of_bounds' has multiple assertions without diagnostic messages
+    i Test 'test_validate_page_order_out_of_bounds' uses .unwrap() which silently discards error information
+
+--- Details ---
+target/issue677-fix/oxidize-pdf-core/src/operations/reorder.rs:
+  test_reorder_options_default (line 1904) - Score: 90
+    i Test 'test_reorder_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_reorder_options_default' does not call any production code
+  test_reorder_options_custom (line 1912) - Score: 90
+    i Test 'test_reorder_options_custom' has multiple assertions without diagnostic messages
+    - Test 'test_reorder_options_custom' does not call any production code
+  test_validate_page_order_empty (line 1924) - Score: 100
+    i Test 'test_validate_page_order_empty' has multiple assertions without diagnostic messages
+    i Test 'test_validate_page_order_empty' uses .unwrap() which silently discards error information
+  test_validate_page_order_out_of_bounds (line 1955) - Score: 100
+    i Test 'test_validate_page_order_out_of_bounds' has multiple assertions without diagnostic messages
+    i Test 'test_validate_page_order_out_of_bounds' uses .unwrap() which silently discards error information
+  test_reorder_pages_simple (line 1987) - Score: 90
+    i Test 'test_reorder_pages_simple' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_reorder_pages_simple' has multiple assertions without diagnostic messages
+    i Test 'test_reorder_pages_simple' uses .unwrap() which silently discards error information
+    - Test 'test_reorder_pages_simple' has low assert-to-setup ratio (19%): 6 asserts vs 26 setup lines
+  test_reverse_pages (line 2034) - Score: 100
+    i Test 'test_reverse_pages' has multiple assertions without diagnostic messages
+    i Test 'test_reverse_pages' uses .unwrap() which silently discards error information
+  test_swap_pages (line 2063) - Score: 100
+    i Test 'test_swap_pages' has multiple assertions without diagnostic messages
+    i Test 'test_swap_pages' uses .unwrap() which silently discards error information
+  test_move_page (line 2088) - Score: 100
+    i Test 'test_move_page' has multiple assertions without diagnostic messages
+    i Test 'test_move_page' uses .unwrap() which silently discards error information
+  test_duplicate_pages_in_order (line 2113) - Score: 100
+    i Test 'test_duplicate_pages_in_order' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_duplicate_pages_in_order' has multiple assertions without diagnostic messages
+    i Test 'test_duplicate_pages_in_order' uses .unwrap() which silently discards error information
+  test_single_page_reorder (line 2142) - Score: 100
+    i Test 'test_single_page_reorder' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_single_page_reorder' has multiple assertions without diagnostic messages
+    i Test 'test_single_page_reorder' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

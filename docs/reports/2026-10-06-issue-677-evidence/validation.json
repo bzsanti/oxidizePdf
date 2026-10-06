@@ -1,0 +1,30 @@
+{
+  "base": "9c3f4b57969dd69fc9efa128495a8b0a7c7f4f74",
+  "workspace": {
+    "command": "cargo test --locked --offline --workspace --features internal-testing --no-fail-fast",
+    "exit": 0,
+    "passed": 10380,
+    "failed": 0,
+    "ignored": 71,
+    "summaries": 412,
+    "log_sha256": "dbbe158dd60d2753dc821a870f6a2b7a5d4ddcc218e6ecf473e73cd25e90ba03"
+  },
+  "focused": {
+    "passed": 63,
+    "failed": 0,
+    "ignored": 1
+  },
+  "mutations_detected": 3,
+  "restored_control": 13,
+  "interop": {
+    "qpdf_outputs": 3,
+    "poppler_source_output_comparison": true,
+    "poppler_actualtext_oracle": false
+  },
+  "kripteia_files": 6,
+  "clippy": {
+    "command": "cargo clippy --locked --offline -p oxidize-pdf --all-targets --features internal-testing -- -D warnings",
+    "exit": 0
+  },
+  "publication": "pending"
+}

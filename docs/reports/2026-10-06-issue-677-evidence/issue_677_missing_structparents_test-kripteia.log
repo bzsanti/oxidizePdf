@@ -1,0 +1,57 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 13 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/issue_677_missing_structparents_test.rs       13     90
+
+--- Worst Offenders ---
+  missing_keys_and_indexes_preserve_content_actualtext_and_three_parts (target/issue677-fix/oxidize-pdf-core/tests/issue_677_missing_structparents_test.rs:105) - Score: 90
+    - Helper 'verify' starts a resource and is invoked by 5 tests
+  missing_keys_with_existing_indexes_preserve_reordered_pages (target/issue677-fix/oxidize-pdf-core/tests/issue_677_missing_structparents_test.rs:113) - Score: 90
+    - Helper 'verify' starts a resource and is invoked by 5 tests
+  page_reparenting_preserves_reconstructed_keys (target/issue677-fix/oxidize-pdf-core/tests/issue_677_missing_structparents_test.rs:121) - Score: 90
+    - Helper 'verify' starts a resource and is invoked by 5 tests
+  fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys (target/issue677-fix/oxidize-pdf-core/tests/issue_677_missing_structparents_test.rs:135) - Score: 90
+    - Helper 'verify' starts a resource and is invoked by 5 tests
+  ambiguous_owners_on_later_page_publish_no_parts (target/issue677-fix/oxidize-pdf-core/tests/issue_677_missing_structparents_test.rs:191) - Score: 90
+    - Helper 'rejects' starts a resource and is invoked by 8 tests
+
+--- Details ---
+target/issue677-fix/oxidize-pdf-core/tests/issue_677_missing_structparents_test.rs:
+  missing_keys_and_indexes_preserve_content_actualtext_and_three_parts (line 105) - Score: 90
+    - Helper 'verify' starts a resource and is invoked by 5 tests
+  missing_keys_with_existing_indexes_preserve_reordered_pages (line 113) - Score: 90
+    - Helper 'verify' starts a resource and is invoked by 5 tests
+  page_reparenting_preserves_reconstructed_keys (line 121) - Score: 90
+    - Helper 'verify' starts a resource and is invoked by 5 tests
+  fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys (line 135) - Score: 90
+    - Helper 'verify' starts a resource and is invoked by 5 tests
+  ambiguous_owners_on_later_page_publish_no_parts (line 191) - Score: 90
+    - Helper 'rejects' starts a resource and is invoked by 8 tests
+  missing_content_on_later_page_publishes_no_parts (line 199) - Score: 90
+    - Helper 'rejects' starts a resource and is invoked by 8 tests
+  invalid_explicit_keys_are_not_treated_as_missing (line 207) - Score: 90
+    - Helper 'rejects' starts a resource and is invoked by 8 tests
+  ambiguous_existing_keys_are_not_renumbered (line 224) - Score: 90
+    - Helper 'rejects' starts a resource and is invoked by 8 tests
+  missing_effective_page_is_not_guessed (line 236) - Score: 90
+    - Helper 'rejects' starts a resource and is invoked by 8 tests
+  explicit_mcr_and_inherited_page_recover_missing_keys (line 247) - Score: 90
+    - Helper 'verify' starts a resource and is invoked by 5 tests
+  distinct_structure_owners_for_one_mcid_are_rejected (line 264) - Score: 90
+    - Helper 'rejects' starts a resource and is invoked by 8 tests
+  duplicate_content_mcid_is_not_repaired (line 278) - Score: 90
+    - Helper 'rejects' starts a resource and is invoked by 8 tests
+  certificate_permissions_still_precede_missing_key_repair (line 297) - Score: 90
+    - Helper 'rejects' starts a resource and is invoked by 8 tests
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

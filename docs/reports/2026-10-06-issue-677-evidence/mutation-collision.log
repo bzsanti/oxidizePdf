@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.09s
+     Running tests/issue_677_missing_structparents_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-cargo/debug/deps/issue_677_missing_structparents_test-4a0f3777a65a0a34)
+
+running 1 test
+test fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys ... FAILED
+
+failures:
+
+---- fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys stdout ----
+
+thread 'fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys' (366) panicked at oxidize-pdf-core/tests/issue_677_missing_structparents_test.rs:33:6:
+called `Result::unwrap()` on an `Err` value: PdfError(InvalidStructure("projected tagged structure is invalid: [TaggedPdfFinding { severity: Error, code: ParentTreeOwnerMismatch, path: \"/StructTreeRoot/ParentTree/0[0]\", message: \"ParentTree MCID slot does not point back to its structure element\", object: Some(TaggedPdfObjectRef { object_number: 50, generation: 0 }) }, TaggedPdfFinding { severity: Error, code: ParentTreeOwnerMismatch, path: \"/StructTreeRoot/ParentTree/0[0]\", message: \"ParentTree MCID slot does not point back to its structure element\", object: Some(TaggedPdfObjectRef { object_number: 51, generation: 0 }) }]"))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_677_missing_structparents_test`

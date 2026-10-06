@@ -1,0 +1,70 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 89 | Tests: 14 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...x/oxidize-pdf-core/tests/issue_621_tagged_split_test.rs       14     89
+
+--- Worst Offenders ---
+  valid_tagged_twelve_page_split_preserves_each_part (target/issue677-fix/oxidize-pdf-core/tests/issue_621_tagged_split_test.rs:115) - Score: 65
+    - Test 'valid_tagged_twelve_page_split_preserves_each_part' does not call any production code
+    - Test 'valid_tagged_twelve_page_split_preserves_each_part' executes production code without asserting on its behaviour
+  missing_zero_offset_parent_and_id_indexes_are_reconstructed (target/issue677-fix/oxidize-pdf-core/tests/issue_621_tagged_split_test.rs:119) - Score: 65
+    - Test 'missing_zero_offset_parent_and_id_indexes_are_reconstructed' does not call any production code
+    - Test 'missing_zero_offset_parent_and_id_indexes_are_reconstructed' executes production code without asserting on its behaviour
+  unrelated_missing_reference_identifies_object_and_publishes_nothing (target/issue677-fix/oxidize-pdf-core/tests/issue_621_tagged_split_test.rs:123) - Score: 90
+    - Test 'unrelated_missing_reference_identifies_object_and_publishes_nothing' has identical neighborhood to 'corrupt_nonzero_index_is_not_silently_rebuilt'
+    i Test 'unrelated_missing_reference_identifies_object_and_publishes_nothing' has multiple assertions without diagnostic messages
+    i Test 'unrelated_missing_reference_identifies_object_and_publishes_nothing' uses .unwrap() which silently discards error information
+  corrupt_nonzero_index_is_not_silently_rebuilt (target/issue677-fix/oxidize-pdf-core/tests/issue_621_tagged_split_test.rs:140) - Score: 90
+    - Test 'corrupt_nonzero_index_is_not_silently_rebuilt' has identical neighborhood to 'unrelated_missing_reference_identifies_object_and_publishes_nothing'
+    i Test 'corrupt_nonzero_index_is_not_silently_rebuilt' has multiple assertions without diagnostic messages
+    i Test 'corrupt_nonzero_index_is_not_silently_rebuilt' uses .unwrap() which silently discards error information
+  zero_offset_index_alias_in_metadata_is_not_exempted (target/issue677-fix/oxidize-pdf-core/tests/issue_621_tagged_split_test.rs:192) - Score: 90
+    - Helper 'rejects_fixture' starts a resource and is invoked by 6 tests
+
+--- Details ---
+target/issue677-fix/oxidize-pdf-core/tests/issue_621_tagged_split_test.rs:
+  valid_tagged_twelve_page_split_preserves_each_part (line 115) - Score: 65
+    - Test 'valid_tagged_twelve_page_split_preserves_each_part' does not call any production code
+    - Test 'valid_tagged_twelve_page_split_preserves_each_part' executes production code without asserting on its behaviour
+  missing_zero_offset_parent_and_id_indexes_are_reconstructed (line 119) - Score: 65
+    - Test 'missing_zero_offset_parent_and_id_indexes_are_reconstructed' does not call any production code
+    - Test 'missing_zero_offset_parent_and_id_indexes_are_reconstructed' executes production code without asserting on its behaviour
+  unrelated_missing_reference_identifies_object_and_publishes_nothing (line 123) - Score: 90
+    - Test 'unrelated_missing_reference_identifies_object_and_publishes_nothing' has identical neighborhood to 'corrupt_nonzero_index_is_not_silently_rebuilt'
+    i Test 'unrelated_missing_reference_identifies_object_and_publishes_nothing' has multiple assertions without diagnostic messages
+    i Test 'unrelated_missing_reference_identifies_object_and_publishes_nothing' uses .unwrap() which silently discards error information
+  corrupt_nonzero_index_is_not_silently_rebuilt (line 140) - Score: 90
+    - Test 'corrupt_nonzero_index_is_not_silently_rebuilt' has identical neighborhood to 'unrelated_missing_reference_identifies_object_and_publishes_nothing'
+    i Test 'corrupt_nonzero_index_is_not_silently_rebuilt' has multiple assertions without diagnostic messages
+    i Test 'corrupt_nonzero_index_is_not_silently_rebuilt' uses .unwrap() which silently discards error information
+  invalid_later_part_does_not_publish_earlier_parts (line 157) - Score: 100
+    i Test 'invalid_later_part_does_not_publish_earlier_parts' has multiple assertions without diagnostic messages
+    i Test 'invalid_later_part_does_not_publish_earlier_parts' uses .unwrap() which silently discards error information
+  zero_offset_index_alias_in_metadata_is_not_exempted (line 192) - Score: 90
+    - Helper 'rejects_fixture' starts a resource and is invoked by 6 tests
+  cyclic_structure_fails_without_output (line 204) - Score: 90
+    - Helper 'rejects_fixture' starts a resource and is invoked by 6 tests
+  missing_marked_content_is_not_declared_accessible (line 216) - Score: 90
+    - Helper 'rejects_fixture' starts a resource and is invoked by 6 tests
+  broken_structure_parent_is_rejected (line 228) - Score: 90
+    - Helper 'rejects_fixture' starts a resource and is invoked by 6 tests
+  certified_source_is_rejected_before_attempting_tag_repair (line 249) - Score: 90
+    - Helper 'rejects_fixture' starts a resource and is invoked by 6 tests
+  missing_index_with_wrong_generation_is_not_repaired (line 259) - Score: 90
+    - Helper 'rejects_fixture' starts a resource and is invoked by 6 tests
+  sparse_parent_tree_allocation_is_bounded (line 271) - Score: 100
+    i Test 'sparse_parent_tree_allocation_is_bounded' uses .unwrap() which silently discards error information
+  tagged_annotation_parent_mapping_is_retained_only_in_its_part (line 298) - Score: 100
+    i Test 'tagged_annotation_parent_mapping_is_retained_only_in_its_part' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
