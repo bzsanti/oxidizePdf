@@ -395,6 +395,10 @@ fn mutate_pdf_bytes_lossless(
             _ => None,
         })
         .collect();
+    let retained_refs: HashSet<_> = retained
+        .iter()
+        .map(|&i| source_pages[i].reference)
+        .collect();
     let deleted_refs: HashSet<_> = source_pages
         .iter()
         .enumerate()
@@ -417,12 +421,7 @@ fn mutate_pdf_bytes_lossless(
                 .iter()
                 .map(|page| (page.reference, page.dictionary.clone()))
                 .collect(),
-            &source_pages
-                .iter()
-                .enumerate()
-                .filter(|(i, _)| retained.contains(i))
-                .map(|(_, p)| p.reference)
-                .collect(),
+            &retained_refs,
         )?
     } else {
         super::tagged_split::Projection::default()
@@ -463,6 +462,10 @@ fn mutate_pdf_bytes_lossless(
     let mut projected_ids: Vec<_> = projection.replacements.keys().copied().collect();
     projected_ids.sort_unstable();
     for id in projected_ids {
+        // Pages are written once below, after tag repair and page-tree edits.
+        if retained_refs.contains(&id) {
+            continue;
+        }
         update.replace(id, projection.replacements[&id].clone())?;
         replacements.insert(id);
     }
@@ -483,9 +486,16 @@ fn mutate_pdf_bytes_lossless(
                 rotation,
             } => {
                 let page = &source_pages[source_index];
-                let mut dictionary = page.dictionary.clone();
-                let mut changed = dictionary.get("Parent").and_then(PdfObject::as_reference)
-                    != Some(root_reference);
+                // Preserve reconstructed tag keys when flattening the page tree
+                // or applying rotation later in the same incremental update.
+                let mut dictionary = match projection.replacements.get(&page.reference) {
+                    Some(PdfObject::Dictionary(dictionary)) => dictionary.clone(),
+                    Some(_) => return Err(invalid_lossless("projected page is not a dictionary")),
+                    None => page.dictionary.clone(),
+                };
+                let mut changed = projection.replacements.contains_key(&page.reference)
+                    || dictionary.get("Parent").and_then(PdfObject::as_reference)
+                        != Some(root_reference);
                 dictionary.insert(
                     "Parent".to_string(),
                     PdfObject::Reference(root_reference.0, root_reference.1),

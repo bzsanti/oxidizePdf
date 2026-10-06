@@ -1,0 +1,22 @@
+Poppler 24.02.0 extracts visible text rather than ActualText on this source fixture and on its outputs. This check proves preservation of its observable extraction, not independent ActualText interpretation. Native tests check exact ActualText separately.
+checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-interop/part-0.pdf
+PDF Version: 1.4
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+Part 0: exact source text/order preserved: ['visible page 1', 'visible page 2', 'visible page 3']
+checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-interop/part-1.pdf
+PDF Version: 1.4
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+Part 1: exact source text/order preserved: ['visible page 4', 'visible page 5', 'visible page 6']
+checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-interop/part-2.pdf
+PDF Version: 1.4
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+Part 2: exact source text/order preserved: ['visible page 7', 'visible page 8', 'visible page 9', 'visible page 10', 'visible page 11', 'visible page 12']

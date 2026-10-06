@@ -1,0 +1,11 @@
+{
+  "base": "9c3f4b57969dd69fc9efa128495a8b0a7c7f4f74",
+  "files": {
+    "oxidize-pdf-core/src/operations/tagged_split.rs": "b4881cc23fcbd9b87274d5e1685c2f0bea15ae08edab2d83376324e236eadf9a",
+    "oxidize-pdf-core/src/operations/reorder.rs": "864e04126c2ff0d06fab0e5ff58c4111144b602d84c84d9f0fea57e23c79d2aa",
+    "oxidize-pdf-core/tests/issue_677_missing_structparents_test.rs": "7d40bc593763b9c80376e79141509474b6f270e34ad253938cf1cbbd778bc373",
+    "oxidize-pdf-core/tests/issue_621_tagged_split_test.rs": "4a518fc1d16842d5e770e550ad65c53f07049e39a0f07312cca1ebe8f4722a4a",
+    "oxidize-pdf-core/tests/common/tagged_split_fixture.rs": "7cca6c9566d29b97eb443694a418fbac0a08bfb08f3b942eca671c56faae6132",
+    "oxidize-pdf-core/tests/common/tagged_missing_keys_fixture.rs": "f72723fc4d597b25fb0d2a504da38a9c82576b13247af424ce234720c47225fe"
+  }
+}

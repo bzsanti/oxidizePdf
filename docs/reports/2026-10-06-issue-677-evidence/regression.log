@@ -1,0 +1,108 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 8.84s
+     Running tests/issue_498_tagged_actual_text_test.rs (target/issue677-cargo/debug/deps/issue_498_tagged_actual_text_test-d0dbc8e1e332fe69)
+
+running 5 tests
+test rejects_a_structure_reference_to_an_unknown_mcid ... ok
+test rejects_a_structure_reference_to_an_unknown_page ... ok
+test rejects_an_mcid_owned_by_multiple_structure_elements ... ok
+test actual_text_mcid_is_connected_through_the_parent_tree ... ok
+test parent_tree_maps_multiple_pages_and_preserves_mcid_holes ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_531_lossless_page_reorder_test.rs (target/issue677-cargo/debug/deps/issue_531_lossless_page_reorder_test-a0e09f2029ff07c4)
+
+running 9 tests
+test rejects_malformed_parent_links_and_page_counts ... ok
+test rejects_encrypted_documents ... ok
+test rejects_non_permutations_without_replacing_existing_destination ... ok
+test flat_tree_rewrites_only_the_page_tree_root ... ok
+test permits_ordinary_approval_signatures ... ok
+test atomically_replaces_the_input_when_paths_are_identical ... ok
+test nested_tree_reorder_preserves_prefix_ids_and_effective_inheritance ... ok
+test accepts_a_source_with_an_existing_incremental_revision ... ok
+test supports_xref_stream_sources_and_emits_an_incremental_xref_stream ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.70s
+
+     Running tests/issue_532_docmdp_permissions_test.rs (target/issue677-cargo/debug/deps/issue_532_docmdp_permissions_test-412a9900736d4f69)
+
+running 9 tests
+test rejects_docmdp_without_catalog_certification_entry ... ok
+test rejects_a_certification_dictionary_redefined_after_signing ... ok
+test rejects_conflicting_certification_signatures ... ok
+test rejects_page_reordering_for_every_docmdp_permission_level ... ok
+test rejects_a_cryptographically_intact_certification_signature ... ok
+test rejects_malformed_or_unsupported_transform_parameters ... ok
+test permits_a_real_cryptographically_intact_approval_signature ... ok
+test permits_multiple_approval_signatures_and_later_incremental_revisions ... ok
+test qpdf_accepts_the_certification_fixture_when_available ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/issue_538_page_tree_mutations_test.rs (target/issue677-cargo/debug/deps/issue_538_page_tree_mutations_test-46854d9969c30e15)
+
+running 9 tests
+test qpdf_and_poppler_accept_classic_and_xref_stream_page_mutations ... ignored, requires qpdf and Poppler command-line tools
+test rejects_deletion_referenced_by_catalog_semantics_without_touching_destination ... ok
+test rejects_dangling_page_links_and_unsupported_widget_duplication ... ok
+test rejects_imports_with_named_destinations_or_optional_content ... ok
+test mutates_a_nested_page_tree_and_preserves_effective_inheritance ... ok
+test applies_mixed_move_rotate_delete_and_duplicate_atomically ... ok
+test imports_a_page_and_its_reachable_object_graph ... ok
+test rejects_encryption_docmdp_and_page_labels_without_replacing_output ... ok
+test supports_xref_stream_input_and_rejects_invalid_batches ... ok
+
+test result: ok. 8 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 23.51s
+
+     Running tests/issue_544_tagged_pdf_validation_test.rs (target/issue677-cargo/debug/deps/issue_544_tagged_pdf_validation_test-4f692f74ce007c51)
+
+running 5 tests
+test cross_checks_missing_figure_alt_with_verapdf_when_available ... ok
+test exposes_stable_machine_readable_findings ... ok
+test round_trips_nested_table_and_figure_structure ... ok
+test validates_a_tagged_pdf_created_by_the_public_writer ... ok
+test dry_run_and_incremental_edit_preserve_unrelated_bytes_and_unknown_entries ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/issue_621_tagged_split_test.rs (target/issue677-cargo/debug/deps/issue_621_tagged_split_test-42967e2665dc7ddd)
+
+running 14 tests
+test cyclic_structure_fails_without_output ... ok
+test broken_structure_parent_is_rejected ... ok
+test corrupt_nonzero_index_is_not_silently_rebuilt ... ok
+test certified_source_is_rejected_before_attempting_tag_repair ... ok
+test missing_index_with_wrong_generation_is_not_repaired ... ok
+test missing_marked_content_is_not_declared_accessible ... ok
+test invalid_later_part_does_not_publish_earlier_parts ... ok
+test unrelated_missing_reference_identifies_object_and_publishes_nothing ... ok
+test zero_offset_index_alias_in_metadata_is_not_exempted ... ok
+test sparse_parent_tree_allocation_is_bounded ... ok
+test tagged_annotation_parent_mapping_is_retained_only_in_its_part ... ok
+test explicit_mcr_and_inherited_page_associations_survive_split ... ok
+test missing_zero_offset_parent_and_id_indexes_are_reconstructed ... ok
+test valid_tagged_twelve_page_split_preserves_each_part ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/issue_677_missing_structparents_test.rs (target/issue677-cargo/debug/deps/issue_677_missing_structparents_test-4a0f3777a65a0a34)
+
+running 13 tests
+test ambiguous_existing_keys_are_not_renumbered ... ok
+test distinct_structure_owners_for_one_mcid_are_rejected ... ok
+test ambiguous_owners_on_later_page_publish_no_parts ... ok
+test certificate_permissions_still_precede_missing_key_repair ... ok
+test missing_effective_page_is_not_guessed ... ok
+test invalid_explicit_keys_are_not_treated_as_missing ... ok
+test duplicate_content_mcid_is_not_repaired ... ok
+test missing_content_on_later_page_publishes_no_parts ... ok
+test explicit_mcr_and_inherited_page_recover_missing_keys ... ok
+test fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys ... ok
+test missing_keys_and_indexes_preserve_content_actualtext_and_three_parts ... ok
+test missing_keys_with_existing_indexes_preserve_reordered_pages ... ok
+test page_reparenting_preserves_reconstructed_keys ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
