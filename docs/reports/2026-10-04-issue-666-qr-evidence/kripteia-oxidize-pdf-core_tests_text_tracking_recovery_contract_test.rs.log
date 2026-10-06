@@ -1,0 +1,57 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 94 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/text_tracking_recovery_contract_test.rs        8     94
+
+--- Worst Offenders ---
+  vertical_encoding_does_not_enable_horizontal_recovery (oxidize-pdf-core/tests/text_tracking_recovery_contract_test.rs:171) - Score: 80
+    - Test 'vertical_encoding_does_not_enable_horizontal_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'vertical_encoding_does_not_enable_horizontal_recovery' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'vertical_encoding_does_not_enable_horizontal_recovery' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  resolved_descendant_without_widths_does_not_enable_recovery (oxidize-pdf-core/tests/text_tracking_recovery_contract_test.rs:96) - Score: 90
+    - Test 'resolved_descendant_without_widths_does_not_enable_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'resolved_descendant_without_widths_does_not_enable_recovery' asserts against a hardcoded constant instead of a computed expected value
+  a_space_inside_a_unicode_sequence_is_not_a_space_glyph (oxidize-pdf-core/tests/text_tracking_recovery_contract_test.rs:125) - Score: 90
+    - Test 'a_space_inside_a_unicode_sequence_is_not_a_space_glyph' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'a_space_inside_a_unicode_sequence_is_not_a_space_glyph' asserts against a hardcoded constant instead of a computed expected value
+  truncated_identity_codes_cannot_certify_tracking (oxidize-pdf-core/tests/text_tracking_recovery_contract_test.rs:155) - Score: 90
+    - Test 'truncated_identity_codes_cannot_certify_tracking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'truncated_identity_codes_cannot_certify_tracking' asserts against a hardcoded constant instead of a computed expected value
+  damaged_type0_recovery_covers_full_em_tolerance_and_mode (oxidize-pdf-core/tests/text_tracking_recovery_contract_test.rs:35) - Score: 100
+    i Test 'damaged_type0_recovery_covers_full_em_tolerance_and_mode' asserts against a hardcoded constant instead of a computed expected value
+
+--- Details ---
+oxidize-pdf-core/tests/text_tracking_recovery_contract_test.rs:
+  damaged_type0_recovery_covers_full_em_tolerance_and_mode (line 35) - Score: 100
+    i Test 'damaged_type0_recovery_covers_full_em_tolerance_and_mode' asserts against a hardcoded constant instead of a computed expected value
+  damaged_type0_rejects_non_em_baselines_and_explicit_spacing (line 64) - Score: 100
+    i Test 'damaged_type0_rejects_non_em_baselines_and_explicit_spacing' asserts against a hardcoded constant instead of a computed expected value
+  resolved_descendant_without_widths_does_not_enable_recovery (line 96) - Score: 90
+    - Test 'resolved_descendant_without_widths_does_not_enable_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'resolved_descendant_without_widths_does_not_enable_recovery' asserts against a hardcoded constant instead of a computed expected value
+  multiple_source_glyphs_cannot_certify_per_glyph_tracking (line 111) - Score: 100
+    i Test 'multiple_source_glyphs_cannot_certify_per_glyph_tracking' asserts against a hardcoded constant instead of a computed expected value
+  a_space_inside_a_unicode_sequence_is_not_a_space_glyph (line 125) - Score: 90
+    - Test 'a_space_inside_a_unicode_sequence_is_not_a_space_glyph' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'a_space_inside_a_unicode_sequence_is_not_a_space_glyph' asserts against a hardcoded constant instead of a computed expected value
+  larger_outlier_remains_a_word_gap_during_recovery (line 140) - Score: 100
+    i Test 'larger_outlier_remains_a_word_gap_during_recovery' asserts against a hardcoded constant instead of a computed expected value
+  truncated_identity_codes_cannot_certify_tracking (line 155) - Score: 90
+    - Test 'truncated_identity_codes_cannot_certify_tracking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'truncated_identity_codes_cannot_certify_tracking' asserts against a hardcoded constant instead of a computed expected value
+  vertical_encoding_does_not_enable_horizontal_recovery (line 171) - Score: 80
+    - Test 'vertical_encoding_does_not_enable_horizontal_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'vertical_encoding_does_not_enable_horizontal_recovery' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'vertical_encoding_does_not_enable_horizontal_recovery' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

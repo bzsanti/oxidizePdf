@@ -1,0 +1,41 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 28.31s
+     Running tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-35cd01b364d73c29)
+
+running 22 tests
+test builtin_font_selection_does_not_match_unrelated_names_or_type3 ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test builtin_symbol_subset_names_and_explicit_tounicode_are_distinct ... ok
+test differences_restart_the_code_counter_and_preserve_unmodified_codes ... ok
+test builtin_decoding_preserves_afm_widths_and_following_origins ... ok
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test differences_override_the_base_encoding ... ok
+test builtin_symbol_and_zapf_keep_encoding_and_differences_precedence ... ok
+test macroman_overrides_cover_undefined_and_currency_codes ... ok
+test tounicode_overrides_builtin_symbol_and_dingbats ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test unresolved_differences_replace_instead_of_restoring_the_base_glyph ... ok
+test macroman_undefined_codes_preserve_neighbors_with_replacement ... ok
+test zapf_differences_resolve_adobe_names_before_builtin_codes ... ok
+test standard_encoding_matches_independent_table ... ok
+test macroman_encoding_matches_independent_table ... ok
+test symbol_builtin_encoding_matches_independent_table ... ok
+test winansi_encoding_matches_independent_table ... ok
+test zapfdingbats_builtin_encoding_matches_independent_table ... ok
+test all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding ... ok
+test simple_encoding_undefined_codes_recover_without_losing_neighbors ... ok
+test latin_standard14_fonts_use_complete_explicit_pdf_encodings_in_both_modes ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.12s
+
+     Running tests/text_expert_contract_test.rs (target/debug/deps/text_expert_contract_test-c5639169e2368127)
+
+running 5 tests
+test expert_program_and_independent_name_inventory_are_pinned ... ok
+test macexpert_unambiguous_glyph_names_decode_without_tounicode ... ok
+test tounicode_can_choose_non_pua_text_for_expert_glyphs ... ok
+test all_expert_codes_preserve_their_explicit_tounicode_values ... ok
+test all_macexpert_codes_follow_agl_or_explicit_undefined_recovery ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s

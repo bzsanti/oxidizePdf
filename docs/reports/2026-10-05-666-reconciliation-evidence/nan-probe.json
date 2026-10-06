@@ -1,0 +1,22 @@
+[
+  {
+    "version": "before",
+    "nan_mutation": false,
+    "exit": 0
+  },
+  {
+    "version": "before",
+    "nan_mutation": true,
+    "exit": 0
+  },
+  {
+    "version": "after",
+    "nan_mutation": false,
+    "exit": 0
+  },
+  {
+    "version": "after",
+    "nan_mutation": true,
+    "exit": 101
+  }
+]

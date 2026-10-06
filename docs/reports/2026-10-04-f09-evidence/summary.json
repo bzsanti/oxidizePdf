@@ -1,0 +1,40 @@
+{
+  "issue": 666,
+  "block": "F09",
+  "status": "locally-complete",
+  "ci": "deferred until all #666 implementation complete",
+  "F10": "not started",
+  "runs": {
+    "validation": {
+      "targets": 38,
+      "passed": 7239,
+      "failed": 0,
+      "ignored": 3
+    },
+    "final-code": {
+      "targets": 36,
+      "passed": 7168,
+      "failed": 0,
+      "ignored": 3
+    },
+    "final-consumers": {
+      "targets": 2,
+      "passed": 25,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "consolidated": {
+    "passed": 7241,
+    "failed": 0,
+    "ignored": 3,
+    "method": "final-code7168 plus one added consumer test validated in final-consumers25 plus unchanged-extraction corpus72 from validation; not one run"
+  },
+  "external_pdfs": 32,
+  "byte_identical_regenerated_files": 41,
+  "mutations_detected": 3,
+  "findings_resolved": 5,
+  "kripteia_scopes": 10,
+  "clippy": "pass -D warnings",
+  "format": "pass"
+}

@@ -1,0 +1,56 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.69s
+     Running tests/text_font_program_contract_test.rs (target/debug/deps/text_font_program_contract_test-905eb1f36d6ff5ce)
+
+running 10 tests
+test type3_charproc_names_supply_unicode_without_tounicode ... ok
+test bfrange_sequential_destination_increments_unicode ... ok
+test bfrange_array_preserves_sequences_and_surrogate_pairs ... ok
+test type3_advance_uses_font_matrix_and_declared_width ... ok
+test type3_text_matrix_rotates_the_pen_even_when_font_matrix_does_not ... ok
+test type3_nonuniform_font_matrix_combines_with_character_and_horizontal_scaling ... ok
+test type3_tounicode_overrides_charproc_names ... ok
+test resolved_type3_retains_full_matrix_but_reports_horizontal_advance ... ok
+test type3_tj_adjustment_is_in_text_units_not_glyph_matrix_units ... ok
+test type3_non_scalar_matrices_preserve_horizontal_text_pen_contract ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_output_api_contract_test.rs (target/debug/deps/text_output_api_contract_test-193dd67eae72543e)
+
+running 7 tests
+test document_api_resets_same_resource_name_between_pages ... ok
+test type3_output_preserves_multiscalar_mapping_and_real_charprocs ... ok
+test symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences ... ok
+test all_standard14_styles_have_consistent_output_apis ... ok
+test cid_cff_inheritance_outputs_preserve_child_and_parent_text ... ok
+test cid_type0_and_type2_program_variants_have_consistent_output_apis ... ok
+test embedded_type1_and_cff_outputs_preserve_encoding_precedence ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/text_tj_scale_contract_test.rs (target/debug/deps/text_tj_scale_contract_test-adff38aa153acd86)
+
+running 4 tests
+test fixture_hashes_are_frozen ... ok
+test backward_tj_adjustment_scales_with_tz ... ok
+test zero_tj_control_scales_only_source_width ... ok
+test forward_tj_adjustment_scales_with_tz ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_transform_contract_test.rs (target/debug/deps/text_transform_contract_test-57da4620cfd91d58)
+
+running 9 tests
+test ctm_shear_and_translation_apply_to_text_origins ... ok
+test bt_resets_text_matrix_and_retains_text_state ... ok
+test ctm_nonuniform_scale_and_translation_apply_to_text_origins ... ok
+test ctm_scale_composes_with_rotated_tm_in_pdf_order ... ok
+test q_and_q_restore_ctm_before_the_next_text_object ... ok
+test font_switch_changes_advance_without_resetting_text_matrix ... ok
+test nested_forms_compose_matrices_shadow_fonts_and_restore_parent_state ... ok
+test tm_shear_preserves_both_advance_components ... ok
+test tm_rotation_rotates_glyph_advance ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

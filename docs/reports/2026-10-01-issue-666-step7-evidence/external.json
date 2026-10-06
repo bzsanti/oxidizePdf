@@ -1,0 +1,108 @@
+{
+  "cases": [
+    {
+      "file": "issue666-step7-equivalent.pdf",
+      "mupdf": "AB\n",
+      "origins": [
+        {
+          "text": "A",
+          "origin": [
+            100.0,
+            92.0
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104.0,
+            92.0
+          ]
+        }
+      ],
+      "pdffonts": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nContractCID                          CID Type 0C       Custom           yes no  yes      4  0\n",
+      "stderr": "",
+      "poppler": "AB\n\f",
+      "poppler_stderr": ""
+    },
+    {
+      "file": "issue666-step7-identity.pdf",
+      "mupdf": "AB\n",
+      "origins": [
+        {
+          "text": "A",
+          "origin": [
+            100.0,
+            92.0
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104.0,
+            92.0
+          ]
+        }
+      ],
+      "pdffonts": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nContractCID                          CID Type 0C       Identity-H       yes no  yes      4  0\n",
+      "stderr": "",
+      "poppler": "AB\n\f",
+      "poppler_stderr": ""
+    },
+    {
+      "file": "issue666-step7-remapped.pdf",
+      "mupdf": "BA\n",
+      "origins": [
+        {
+          "text": "B",
+          "origin": [
+            100.0,
+            92.0
+          ]
+        },
+        {
+          "text": "A",
+          "origin": [
+            107.0,
+            92.0
+          ]
+        }
+      ],
+      "pdffonts": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nContractCID                          CID Type 0C       Custom           yes no  yes      4  0\n",
+      "stderr": "",
+      "poppler": "BA\n\f",
+      "poppler_stderr": ""
+    },
+    {
+      "file": "issue666-step7-vertical.pdf",
+      "mupdf": "A\nB\n",
+      "origins": [
+        {
+          "text": "A",
+          "origin": [
+            98.0,
+            100.79998779296875
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            96.5,
+            112.79998779296875
+          ]
+        }
+      ],
+      "pdffonts": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nContractCID                          CID Type 0C       Identity-V       yes no  yes      4  0\n",
+      "stderr": "",
+      "poppler": "A\nB\n\f",
+      "poppler_stderr": ""
+    }
+  ],
+  "raster_sha256": {
+    "issue666-step7-equivalent": "6a674b62ea8aefba121dceb15e1398394d24f3e1f8ddd753ce822f85ac671da2",
+    "issue666-step7-identity": "6a674b62ea8aefba121dceb15e1398394d24f3e1f8ddd753ce822f85ac671da2",
+    "issue666-step7-remapped": "729cc89688e150c644a3074a884228cb988141c68bcfbf5ba349b1d1489d61f7",
+    "issue666-step7-vertical": "5275f1ceb62b9d6e9a77aff150baf8be637b9ef24049eec9ac172558d5eba836"
+  },
+  "equivalent_maps_equal": true,
+  "reversed_order_differs": true
+}

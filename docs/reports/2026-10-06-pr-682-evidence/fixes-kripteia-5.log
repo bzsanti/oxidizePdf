@@ -1,0 +1,33 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 1 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+.../oxidize-pdf-core/tests/issue_680_memory_budget_test.rs        1    100
+
+--- Worst Offenders ---
+  recovery_keeps_one_expanded_buffer_live (target/pr682-fix/oxidize-pdf-core/tests/issue_680_memory_budget_test.rs:46) - Score: 100
+    i Test 'recovery_keeps_one_expanded_buffer_live' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'recovery_keeps_one_expanded_buffer_live' has multiple assertions without diagnostic messages
+    i Test 'recovery_keeps_one_expanded_buffer_live' uses .unwrap() which silently discards error information
+
+--- Details ---
+target/pr682-fix/oxidize-pdf-core/tests/issue_680_memory_budget_test.rs:
+  recovery_keeps_one_expanded_buffer_live (line 46) - Score: 100
+    i Test 'recovery_keeps_one_expanded_buffer_live' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'recovery_keeps_one_expanded_buffer_live' has multiple assertions without diagnostic messages
+    i Test 'recovery_keeps_one_expanded_buffer_live' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+--- Unsafe Usages (3) ---
+  target/pr682-fix/oxidize-pdf-core/tests/issue_680_memory_budget_test.rs:20 — fn alloc
+  target/pr682-fix/oxidize-pdf-core/tests/issue_680_memory_budget_test.rs:27 — fn dealloc
+  target/pr682-fix/oxidize-pdf-core/tests/issue_680_memory_budget_test.rs:31 — fn realloc
+

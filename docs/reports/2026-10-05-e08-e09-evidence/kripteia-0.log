@@ -1,0 +1,126 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 92 | Tests: 26 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/text/cmap.rs                                26     92
+
+--- Worst Offenders ---
+  test_simple_cmap_parsing (oxidize-pdf-core/src/text/cmap.rs:1020) - Score: 80
+    - Test 'test_simple_cmap_parsing' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_simple_cmap_parsing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_simple_cmap_parsing' has multiple assertions without diagnostic messages
+    i Test 'test_simple_cmap_parsing' uses .unwrap() which silently discards error information
+    - Test 'test_simple_cmap_parsing' has low assert-to-setup ratio (15%): 5 asserts vs 29 setup lines
+  test_one_byte_bfchar_under_two_byte_codespace (oxidize-pdf-core/src/text/cmap.rs:1092) - Score: 80
+    - Test 'test_one_byte_bfchar_under_two_byte_codespace' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_one_byte_bfchar_under_two_byte_codespace' has multiple assertions without diagnostic messages
+    i Test 'test_one_byte_bfchar_under_two_byte_codespace' uses .unwrap() which silently discards error information
+    - Test 'test_one_byte_bfchar_under_two_byte_codespace' has low assert-to-setup ratio (15%): 4 asserts vs 23 setup lines
+  test_parse_hex (oxidize-pdf-core/src/text/cmap.rs:972) - Score: 90
+    i Test 'test_parse_hex' has multiple assertions without diagnostic messages
+    - Test 'test_parse_hex' does not call any production code
+  test_calculate_offset (oxidize-pdf-core/src/text/cmap.rs:981) - Score: 90
+    i Test 'test_calculate_offset' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_calculate_offset' has multiple assertions without diagnostic messages
+    - Test 'test_calculate_offset' does not call any production code
+  test_calculate_offset_with_byte_borrow (oxidize-pdf-core/src/text/cmap.rs:993) - Score: 90
+    i Test 'test_calculate_offset_with_byte_borrow' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_calculate_offset_with_byte_borrow' has multiple assertions without diagnostic messages
+    - Test 'test_calculate_offset_with_byte_borrow' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/src/text/cmap.rs:
+  test_code_range (line 948) - Score: 100
+    i Test 'test_code_range' has multiple assertions without diagnostic messages
+  test_identity_cmap (line 961) - Score: 100
+    i Test 'test_identity_cmap' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_identity_cmap' has multiple assertions without diagnostic messages
+  test_parse_hex (line 972) - Score: 90
+    i Test 'test_parse_hex' has multiple assertions without diagnostic messages
+    - Test 'test_parse_hex' does not call any production code
+  test_calculate_offset (line 981) - Score: 90
+    i Test 'test_calculate_offset' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_calculate_offset' has multiple assertions without diagnostic messages
+    - Test 'test_calculate_offset' does not call any production code
+  test_calculate_offset_with_byte_borrow (line 993) - Score: 90
+    i Test 'test_calculate_offset_with_byte_borrow' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_calculate_offset_with_byte_borrow' has multiple assertions without diagnostic messages
+    - Test 'test_calculate_offset_with_byte_borrow' does not call any production code
+  test_tounicode_builder (line 1005) - Score: 100
+    i Test 'test_tounicode_builder' has multiple assertions without diagnostic messages
+    i Test 'test_tounicode_builder' uses .unwrap() which silently discards error information
+  test_simple_cmap_parsing (line 1020) - Score: 80
+    - Test 'test_simple_cmap_parsing' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_simple_cmap_parsing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_simple_cmap_parsing' has multiple assertions without diagnostic messages
+    i Test 'test_simple_cmap_parsing' uses .unwrap() which silently discards error information
+    - Test 'test_simple_cmap_parsing' has low assert-to-setup ratio (15%): 5 asserts vs 29 setup lines
+  test_cmap_to_unicode (line 1058) - Score: 100
+    i Test 'test_cmap_to_unicode' has multiple assertions without diagnostic messages
+  test_bf_range_mapping (line 1072) - Score: 90
+    i Test 'test_bf_range_mapping' has multiple assertions without diagnostic messages
+    - Test 'test_bf_range_mapping' does not call any production code
+  test_one_byte_bfchar_under_two_byte_codespace (line 1092) - Score: 80
+    - Test 'test_one_byte_bfchar_under_two_byte_codespace' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_one_byte_bfchar_under_two_byte_codespace' has multiple assertions without diagnostic messages
+    i Test 'test_one_byte_bfchar_under_two_byte_codespace' uses .unwrap() which silently discards error information
+    - Test 'test_one_byte_bfchar_under_two_byte_codespace' has low assert-to-setup ratio (15%): 4 asserts vs 23 setup lines
+  test_multibyte_mapping (line 1123) - Score: 100
+    i Test 'test_multibyte_mapping' has multiple assertions without diagnostic messages
+    i Test 'test_multibyte_mapping' uses .unwrap() which silently discards error information
+  boe_single_line_codespacerange_parses_full_cmap (line 1159) - Score: 90
+    - Test 'boe_single_line_codespacerange_parses_full_cmap' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'boe_single_line_codespacerange_parses_full_cmap' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'boe_single_line_codespacerange_parses_full_cmap' has multiple assertions without diagnostic messages
+  single_line_beginbfchar_parses (line 1230) - Score: 90
+    - Test 'single_line_beginbfchar_parses' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'single_line_beginbfchar_parses' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'single_line_beginbfchar_parses' has multiple assertions without diagnostic messages
+  single_line_beginbfrange_parses (line 1244) - Score: 90
+    - Test 'single_line_beginbfrange_parses' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'single_line_beginbfrange_parses' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'single_line_beginbfrange_parses' has multiple assertions without diagnostic messages
+  bfrange_array_form_increments_src_with_big_endian_carry (line 1264) - Score: 90
+    - Test 'bfrange_array_form_increments_src_with_big_endian_carry' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'bfrange_array_form_increments_src_with_big_endian_carry' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'bfrange_array_form_increments_src_with_big_endian_carry' has multiple assertions without diagnostic messages
+  increment_be_carries_across_byte_boundary (line 1307) - Score: 90
+    i Test 'increment_be_carries_across_byte_boundary' has multiple assertions without diagnostic messages
+    - Test 'increment_be_carries_across_byte_boundary' does not call any production code
+  mixed_single_line_and_multi_line_directives_parse (line 1325) - Score: 90
+    - Test 'mixed_single_line_and_multi_line_directives_parse' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'mixed_single_line_and_multi_line_directives_parse' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'mixed_single_line_and_multi_line_directives_parse' has multiple assertions without diagnostic messages
+  bfrange_array_form_with_empty_array_emits_zero_mappings_no_panic (line 1350) - Score: 90
+    - Test 'bfrange_array_form_with_empty_array_emits_zero_mappings_no_panic' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'bfrange_array_form_with_empty_array_emits_zero_mappings_no_panic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'bfrange_array_form_with_empty_array_emits_zero_mappings_no_panic' has multiple assertions without diagnostic messages
+  stray_close_delimiters_do_not_hang_tokenizer (line 1378) - Score: 90
+    - Test 'stray_close_delimiters_do_not_hang_tokenizer' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'stray_close_delimiters_do_not_hang_tokenizer' has multiple assertions without diagnostic messages
+  usecmap_identity_h_inheritance_provides_fallback (line 1408) - Score: 90
+    - Test 'usecmap_identity_h_inheritance_provides_fallback' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'usecmap_identity_h_inheritance_provides_fallback' has multiple assertions without diagnostic messages
+  usecmap_identity_v_inheritance_provides_fallback (line 1440) - Score: 90
+    - Test 'usecmap_identity_v_inheritance_provides_fallback' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'usecmap_identity_v_inheritance_provides_fallback' has multiple assertions without diagnostic messages
+  usecmap_non_identity_parent_does_not_enable_identity_fallback (line 1462) - Score: 90
+    - Test 'usecmap_non_identity_parent_does_not_enable_identity_fallback' only exercises the happy path — no None, Err, or edge-case inputs
+  unterminated_hex_string_does_not_discard_following_mappings (line 1480) - Score: 90
+    - Test 'unterminated_hex_string_does_not_discard_following_mappings' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unterminated_hex_string_does_not_discard_following_mappings' has multiple assertions without diagnostic messages
+  usecmap_external_ucs2_parent_maps_to_ordering (line 1509) - Score: 90
+    - Test 'usecmap_external_ucs2_parent_maps_to_ordering' only exercises the happy path — no None, Err, or edge-case inputs
+  source_code_for_unicode_resolves_single_and_range_mappings (line 1518) - Score: 100
+    i Test 'source_code_for_unicode_resolves_single_and_range_mappings' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

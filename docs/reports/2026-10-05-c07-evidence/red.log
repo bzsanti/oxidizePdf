@@ -1,0 +1,42 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.80s
+     Running tests/text_cmap_boundary_contract_test.rs (target/debug/deps/text_cmap_boundary_contract_test-6d539187c231099f)
+
+running 11 tests
+test large_cidrange_offsets_do_not_alias_the_first_cid ... FAILED
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... ok
+test inherited_notdef_range_retains_parent_cid_and_width ... ok
+test child_notdef_char_overrides_only_its_parent_fallback_code ... ok
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... ok
+test out_of_range_cids_never_wrap_into_valid_glyphs ... FAILED
+test ordinary_parent_mapping_wins_over_child_notdef ... ok
+test ordinary_child_mapping_wins_over_inherited_notdef ... ok
+test notdef_range_selects_one_cid_without_incrementing ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... ok
+
+failures:
+
+---- large_cidrange_offsets_do_not_alias_the_first_cid stdout ----
+
+thread 'large_cidrange_offsets_do_not_alias_the_first_cid' (162) panicked at oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs:283:9:
+assertion `left == right` failed
+  left: [Some(17), None, Some(17)]
+ right: [Some(17), None, None]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- out_of_range_cids_never_wrap_into_valid_glyphs stdout ----
+
+thread 'out_of_range_cids_never_wrap_into_valid_glyphs' (167) panicked at oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs:255:17:
+assertion `left == right` failed: 1 begincidchar <03> -1 endcidchar
+  left: Some(65535)
+ right: None
+
+
+failures:
+    large_cidrange_offsets_do_not_alias_the_first_cid
+    out_of_range_cids_never_wrap_into_valid_glyphs
+
+test result: FAILED. 9 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cmap_boundary_contract_test`

@@ -72,7 +72,13 @@ impl StandardFontMetrics {
             return self.get_glyph_width(glyph);
         }
 
-        if encoding.is_none() && matches!(self.name, "Symbol" | "ZapfDingbats") {
+        // The font parser may have resolved the built-in encoding explicitly.
+        // Keep the source-code AFM lookup in that case as well as when absent.
+        if matches!(
+            (self.name, encoding),
+            ("Symbol", None | Some("SymbolEncoding"))
+                | ("ZapfDingbats", None | Some("ZapfDingbatsEncoding"))
+        ) {
             return Some(self.get_char_width(code));
         }
 

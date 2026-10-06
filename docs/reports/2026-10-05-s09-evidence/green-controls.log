@@ -1,0 +1,31 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.41s
+     Running tests/plaintext_td_operator_test.rs (target/debug/deps/plaintext_td_operator_test-5825cd90c7f14181)
+
+running 5 tests
+test plaintext_td_does_not_fuse_words_under_the_default_config ... ok
+test plaintext_td_breaks_the_line_so_words_do_not_fuse ... ok
+test plaintext_td_leading_magnitude_does_not_exceed_ty ... ok
+test plaintext_td_sets_leading_for_subsequent_t_star ... ok
+test plaintext_td_is_equivalent_to_tl_plus_td_lowercase ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_output_api_contract_test.rs (target/debug/deps/text_output_api_contract_test-193dd67eae72543e)
+
+running 12 tests
+test document_api_resets_same_resource_name_between_pages ... ok
+test plain_outputs_propagate_unrepresentable_geometry_errors ... ok
+test nonzero_metrics_keep_tj_word_spaces_in_all_output_apis ... ok
+test plain_outputs_keep_certified_zero_width_tracking ... ok
+test mixed_page_and_nested_cid_forms_preserve_semantic_text_in_all_apis ... ok
+test type3_output_preserves_multiscalar_mapping_and_real_charprocs ... ok
+test tracking_layout_retains_outlier_spaces_and_transformed_run_extent ... ok
+test all_standard14_styles_have_consistent_output_apis ... ok
+test cid_cff_inheritance_outputs_preserve_child_and_parent_text ... ok
+test embedded_type1_and_cff_outputs_preserve_encoding_precedence ... ok
+test symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences ... ok
+test cid_type0_and_type2_program_variants_have_consistent_output_apis ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+

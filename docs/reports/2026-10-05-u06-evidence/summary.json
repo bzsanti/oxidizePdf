@@ -1,0 +1,10 @@
+{
+  "status": "locally-complete",
+  "passed": 38,
+  "failed": 0,
+  "changed_previous_files": [
+    "TASKS.md",
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json"
+  ],
+  "product_unchanged": true
+}

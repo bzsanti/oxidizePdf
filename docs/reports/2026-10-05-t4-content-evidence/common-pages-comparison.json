@@ -1,0 +1,66 @@
+{
+  "common_compared_pages": 6937,
+  "before_totals": {
+    "reference_scalars": 4219513,
+    "candidate_scalars": 4233679,
+    "reference_whitespace": 850537,
+    "candidate_whitespace": 842206,
+    "reference_replacements": 0,
+    "candidate_replacements": 13660,
+    "matched": 3708751,
+    "substitutions": 11620,
+    "deletions": 499142,
+    "insertions": 513308,
+    "multiset_deficit": 39370,
+    "multiset_excess": 53536
+  },
+  "after_totals": {
+    "reference_scalars": 4219513,
+    "candidate_scalars": 4241594,
+    "reference_whitespace": 850537,
+    "candidate_whitespace": 845338,
+    "reference_replacements": 0,
+    "candidate_replacements": 14100,
+    "matched": 3711184,
+    "substitutions": 11808,
+    "deletions": 496521,
+    "insertions": 518602,
+    "multiset_deficit": 31904,
+    "multiset_excess": 53985
+  },
+  "changed_pages": [
+    {
+      "path": "format-corpus/preserve_447403.pdf",
+      "page": 0,
+      "before": {
+        "reference_scalars": 9387,
+        "candidate_scalars": 0,
+        "reference_whitespace": 2714,
+        "candidate_whitespace": 0,
+        "reference_replacements": 0,
+        "candidate_replacements": 0,
+        "matched": 0,
+        "substitutions": 0,
+        "deletions": 9387,
+        "insertions": 0,
+        "multiset_deficit": 9387,
+        "multiset_excess": 0
+      },
+      "after": {
+        "reference_scalars": 9387,
+        "candidate_scalars": 7915,
+        "reference_whitespace": 2714,
+        "candidate_whitespace": 3132,
+        "reference_replacements": 0,
+        "candidate_replacements": 440,
+        "matched": 2433,
+        "substitutions": 188,
+        "deletions": 6766,
+        "insertions": 5294,
+        "multiset_deficit": 1921,
+        "multiset_excess": 449
+      }
+    }
+  ],
+  "scope": "Same input hashes/comparator; comparison uses only pages comparable in both runs. Other pages/statuses remain in the full reports. Anchored edit counts are not ground-truth loss."
+}

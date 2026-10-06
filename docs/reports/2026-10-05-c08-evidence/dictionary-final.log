@@ -1,0 +1,106 @@
+    Finished `test` profile [unoptimized] target(s) in 0.17s
+     Running tests/text_cid_collection_policy_contract_test.rs (target/debug/deps/text_cid_collection_policy_contract_test-f30f06a374652993)
+
+running 6 tests
+test incompatible_collection_cid_zero_does_not_silently_erase_unknown_text ... ok
+test named_gb1_cmap_cannot_decode_cids_through_a_different_collection ... ok
+test invalid_explicit_supplement_does_not_certify_collection_unicode ... ok
+test cumulative_supplements_do_not_require_equality_or_invent_a_new_collection ... ok
+test embedded_dictionary_metadata_must_not_authorize_another_collection ... ok
+test embedded_metadata_cannot_conflict_with_a_named_parent ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-576d6b91ec72df24)
+
+running 16 tests
+test cjk_samples_have_pinned_identity_and_distinct_collections ... ok
+test cid_zero_only_does_not_fall_back_to_source_bytes ... ok
+test cid_zero_fallback_preserves_following_text_and_explicit_unicode ... ok
+test adobe_kr_is_a_separate_collection ... ok
+test adobe_korea1_named_cmaps_decode_collection_cids ... ok
+test adobe_japan1_named_cmaps_decode_collection_cids ... ok
+test adobe_cns1_named_cmaps_decode_collection_cids ... ok
+test named_cmap_rejects_truncated_renderer_codes_and_keeps_unmapped_identity ... ok
+test adobe_gb1_named_cmaps_decode_collection_cids ... ok
+test korea1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test japan1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test cns1_all_declared_maps_reject_an_unrelated_unicode_collection ... ok
+test kr_and_korea1_are_not_interchangeable_in_either_direction ... ok
+test explicit_unicode_overrides_all_five_collection_fallbacks ... ok
+test resolved_fonts_preserve_adobe_codes_cids_gids_and_unicode_sequences ... ok
+test kr_extended_official_maps_preserve_identity_and_unicode_authority ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.23s
+
+     Running tests/text_cmap_boundary_contract_test.rs (target/debug/deps/text_cmap_boundary_contract_test-6d539187c231099f)
+
+running 14 tests
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... ok
+test large_cidrange_offsets_do_not_alias_the_first_cid ... ok
+test child_notdef_char_overrides_only_its_parent_fallback_code ... ok
+test inherited_notdef_range_retains_parent_cid_and_width ... ok
+test cid_maximum_is_valid_but_five_byte_pdf_codes_are_rejected_by_renderer ... ok
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... ok
+test codespace_length_uses_the_full_prefix_not_just_the_first_byte ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+test notdef_range_selects_one_cid_without_incrementing ... ok
+test ordinary_parent_mapping_wins_over_child_notdef ... ok
+test ordinary_child_mapping_wins_over_inherited_notdef ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... ok
+test later_mappings_override_earlier_entries_within_the_same_layer ... ok
+test out_of_range_cids_never_wrap_into_valid_glyphs ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_qr_regression_contract_test.rs (target/debug/deps/text_qr_regression_contract_test-afa95a00ec074ab8)
+
+running 15 tests
+test legacy_collection_matches_stay_exhaustive ... ok
+test inherited_adobe_kr_dictionary ... ok
+test inherited_adobe_kr_operator ... ok
+test resolved_intrinsic_cff ... ok
+test resolved_flat_control ... ok
+test resolved_encoding_parent ... ok
+test resolved_vertical_advance ... ok
+test resolved_intrinsic_type1 ... ok
+test resolved_named_parent ... ok
+test resolved_unicode_parent ... ok
+test strict_public_extraction_rejects_cyclic_usecmap ... ok
+test page_and_form_strict_cycles_error_while_lenient_keeps_child ... ok
+test type1_procedure_is_not_executed ... ok
+test resolved_intrinsic_differences_and_tounicode_precedence ... ok
+test indirect_cid_collection_matches_direct_extraction ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_recovery_boundary_contract_test.rs (target/debug/deps/text_recovery_boundary_contract_test-7dd20d1680fef3b8)
+
+running 8 tests
+test simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace ... ok
+test complete_codes_and_empty_string_remain_valid ... ok
+test never_joins_partial_codes_across_tj_strings ... ok
+test encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping ... ok
+test identity_collection_preserves_odd_tail_including_after_notdef ... ok
+test complete_unmapped_code_does_not_reinterpret_its_suffix ... ok
+test unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible ... ok
+test preserves_valid_text_and_marks_every_incomplete_tail_once ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_usecmap_contract_test.rs (target/debug/deps/text_usecmap_contract_test-d04affbc6085c30f)
+
+running 10 tests
+test explicit_cid_mapping_precedes_notdef_range ... ok
+test child_unicode_overrides_one_code_and_inherits_the_other ... ok
+test encoding_inherits_parent_codespace_and_cids ... ok
+test fixture_bytes_match_frozen_provenance ... ok
+test child_cid_mapping_overrides_parent_width_selection ... ok
+test both_maps_follow_two_parent_levels ... ok
+test identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths ... ok
+test flat_maps_are_the_control ... ok
+test identity_parent_operator_preserves_two_byte_codes_and_cid_widths ... ok
+test tounicode_inherits_parent_mapping ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.04s
+     Running tests/text_cjk_contract_test.rs (target/debug/deps/text_cjk_contract_test-576d6b91ec72df24)
+
+running 1 test
+test kr_extended_official_maps_preserve_identity_and_unicode_authority ... FAILED
+
+failures:
+
+---- kr_extended_official_maps_preserve_identity_and_unicode_authority stdout ----
+
+thread 'kr_extended_official_maps_preserve_identity_and_unicode_authority' (181) panicked at oxidize-pdf-core/tests/text_cjk_contract_test.rs:440:26:
+called `Result::unwrap()` on an `Err` value: SyntaxError { position: 0, message: "unsupported predefined CMap /Adobe-KR-0" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    kr_extended_official_maps_preserve_identity_and_unicode_authority
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_cjk_contract_test`

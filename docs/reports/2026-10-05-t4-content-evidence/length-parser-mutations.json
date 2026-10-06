@@ -1,0 +1,32 @@
+[
+  {
+    "case": "control",
+    "exit": 0,
+    "filter": "regression::",
+    "source_sha256": "8ed0ee8382e621772b50c388dcee45bcb3ee4fef00995fde116fe9b2826751bf"
+  },
+  {
+    "case": "nul-not-whitespace",
+    "exit": 101,
+    "filter": "regression::nul_separates",
+    "source_sha256": "dbc3bb71e8f5f07efbefe79dfbe52d8cbc0d7d81374bb2ba01f07e747b585b48"
+  },
+  {
+    "case": "ignore-raw-length",
+    "exit": 101,
+    "filter": "regression::unfiltered_length_keeps",
+    "source_sha256": "3693bd0727e2d24201acb258f3e915cb36f0867dab401a293f18cab75380b728"
+  },
+  {
+    "case": "omit-row-padding",
+    "exit": 101,
+    "filter": "regression::unfiltered_length_uses",
+    "source_sha256": "c1c0a91bc004d59a28a25055d505b5a2378d59d655635d2e28fe8af6315aadd2"
+  },
+  {
+    "case": "invalid-mask-default",
+    "exit": 101,
+    "filter": "content::tests::inline_length_distinguishes",
+    "source_sha256": "f88472a4dc3ffc68a641c3361f33bd2f59310aef79a2cd94fb567adf50afc1c9"
+  }
+]

@@ -290,6 +290,11 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(self.reader.borrow().version().to_string())
     }
 
+    /// Effective version after applying an optional catalog /Version upgrade.
+    pub fn effective_version(&self) -> ParseResult<super::header::PdfVersion> {
+        self.reader.borrow_mut().effective_version()
+    }
+
     /// Return an owned catalog for crate-internal document-level consumers.
     pub(crate) fn catalog_dictionary(&self) -> ParseResult<PdfDictionary> {
         self.reader.borrow_mut().catalog().cloned()

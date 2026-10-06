@@ -1,0 +1,63 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 92 | Tests: 12 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ze-pdf-core/tests/text_document_string_contract_test.rs       12     92
+
+--- Worst Offenders ---
+  metadata_matches_pdfdocencoding_normative_table (oxidize-pdf-core/tests/text_document_string_contract_test.rs:129) - Score: 90
+    - Test 'metadata_matches_pdfdocencoding_normative_table' does not call any production code
+  actualtext_matches_pdfdocencoding_normative_table (oxidize-pdf-core/tests/text_document_string_contract_test.rs:133) - Score: 90
+    - Test 'actualtext_matches_pdfdocencoding_normative_table' does not call any production code
+  metadata_utf16be_bom_sequences_are_exact (oxidize-pdf-core/tests/text_document_string_contract_test.rs:147) - Score: 90
+    - Test 'metadata_utf16be_bom_sequences_are_exact' does not call any production code
+  actualtext_utf16be_bom_sequences_are_exact (oxidize-pdf-core/tests/text_document_string_contract_test.rs:153) - Score: 90
+    - Test 'actualtext_utf16be_bom_sequences_are_exact' does not call any production code
+  empty_document_strings_remain_empty (oxidize-pdf-core/tests/text_document_string_contract_test.rs:159) - Score: 90
+    i Test 'empty_document_strings_remain_empty' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'empty_document_strings_remain_empty' has multiple assertions without diagnostic messages
+    - Test 'empty_document_strings_remain_empty' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_document_string_contract_test.rs:
+  document_oracle_preserves_defined_and_undefined_positions (line 89) - Score: 100
+    i Test 'document_oracle_preserves_defined_and_undefined_positions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'document_oracle_preserves_defined_and_undefined_positions' uses .unwrap() which silently discards error information
+  metadata_matches_pdfdocencoding_normative_table (line 129) - Score: 90
+    - Test 'metadata_matches_pdfdocencoding_normative_table' does not call any production code
+  actualtext_matches_pdfdocencoding_normative_table (line 133) - Score: 90
+    - Test 'actualtext_matches_pdfdocencoding_normative_table' does not call any production code
+  metadata_utf16be_bom_sequences_are_exact (line 147) - Score: 90
+    - Test 'metadata_utf16be_bom_sequences_are_exact' does not call any production code
+  actualtext_utf16be_bom_sequences_are_exact (line 153) - Score: 90
+    - Test 'actualtext_utf16be_bom_sequences_are_exact' does not call any production code
+  empty_document_strings_remain_empty (line 159) - Score: 90
+    i Test 'empty_document_strings_remain_empty' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'empty_document_strings_remain_empty' has multiple assertions without diagnostic messages
+    - Test 'empty_document_strings_remain_empty' does not call any production code
+  bookmark_titles_match_pdfdocencoding_normative_table (line 224) - Score: 90
+    - Test 'bookmark_titles_match_pdfdocencoding_normative_table' does not call any production code
+  stored_form_values_match_pdfdocencoding_normative_table (line 228) - Score: 90
+    - Test 'stored_form_values_match_pdfdocencoding_normative_table' does not call any production code
+  bookmarks_and_form_values_preserve_utf16be_sequences (line 232) - Score: 90
+    i Test 'bookmarks_and_form_values_preserve_utf16be_sequences' has multiple assertions without diagnostic messages
+    - Test 'bookmarks_and_form_values_preserve_utf16be_sequences' does not call any production code
+  empty_bookmarks_and_form_values_remain_empty (line 239) - Score: 90
+    i Test 'empty_bookmarks_and_form_values_remain_empty' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'empty_bookmarks_and_form_values_remain_empty' has multiple assertions without diagnostic messages
+    - Test 'empty_bookmarks_and_form_values_remain_empty' does not call any production code
+  undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes (line 248) - Score: 100
+    i Test 'undefined_pdfdoc_bytes_are_visible_replacements_without_losing_suffixes' uses .unwrap() which silently discards error information
+  malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail (line 265) - Score: 90
+    - Test 'malformed_utf16_preserves_valid_units_and_exposes_incomplete_tail' has low assert-to-setup ratio (6%): 1 asserts vs 17 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

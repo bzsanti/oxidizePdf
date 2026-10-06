@@ -1,0 +1,22 @@
+{
+  "oxidize-pdf-core/src/parser/filters.rs": {
+    "sha256": "a069649a670b5cd315512b2f5c5d42258c878a581278f69741289a02eb7e9281",
+    "only_rustdoc_changes": true,
+    "changed_lines": 0
+  },
+  "oxidize-pdf-core/src/parser/filters/recovery.rs": {
+    "sha256": "5667e97f3350a0bb3e8a1f40819fae26e6b5987918392c597f993beef8ce1a18",
+    "only_rustdoc_changes": true,
+    "changed_lines": 0
+  },
+  "oxidize-pdf-core/src/text/extraction.rs": {
+    "sha256": "b8fbd1524191ae8547197726d2fad0648c29a06e08cd47181a9472f6f34d3f8b",
+    "only_rustdoc_changes": true,
+    "changed_lines": 6
+  },
+  "oxidize-pdf-core/src/text/extraction/recovery.rs": {
+    "sha256": "af1582d4d6ec2192c98c20a562e97dd660baba9056f8530f885b9d5059fc8cff",
+    "only_rustdoc_changes": true,
+    "changed_lines": 34
+  }
+}

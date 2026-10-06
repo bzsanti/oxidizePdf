@@ -1,0 +1,20 @@
+    Finished `test` profile [unoptimized] target(s) in 0.16s
+     Running tests/text_encoding_contract_test.rs (target/debug/deps/text_encoding_contract_test-8b823f1d04deae6c)
+
+running 1 test
+
+thread 'unknown_intrinsic_type1_encoding_keeps_existing_recovery' (17) panicked at oxidize-pdf-core/tests/text_encoding_contract_test.rs:623:9:
+assertion `left == right` failed
+  left: "�€�"
+ right: "A€C"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test unknown_intrinsic_type1_encoding_keeps_existing_recovery ... FAILED
+
+failures:
+
+failures:
+    unknown_intrinsic_type1_encoding_keeps_existing_recovery
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_encoding_contract_test`

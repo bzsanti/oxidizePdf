@@ -1,0 +1,950 @@
+{
+  "schema_version": 1,
+  "versions": {
+    "pymupdf": "1.26.5",
+    "mupdf": "1.26.10",
+    "poppler": "24.02.0",
+    "qpdf": "11.9.0"
+  },
+  "environment_errors": [],
+  "accepted": true,
+  "cases": [
+    {
+      "id": "Type1-reset",
+      "path": "Type1-reset.pdf",
+      "expected_text": "BBA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "BBA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  110.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  110,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "BBA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type1-reset.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "c07643e226e29e37f8f27714e9a82b3e280a48d8ce796a461352a291ec26bf60"
+    },
+    {
+      "id": "Type1-boundaries",
+      "path": "Type1-boundaries.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type1-boundaries.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "938d3119b67dc301bee00ff6e5206efa97f51e084198ca56b32fe85ee44844f6"
+    },
+    {
+      "id": "Type1-continuation",
+      "path": "Type1-continuation.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type1-continuation.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "fa5f2aed16f73edadfad982fd367e761898cb562dcb40d2f74cc87df1118fcde"
+    },
+    {
+      "id": "Type1-last-entry",
+      "path": "Type1-last-entry.pdf",
+      "expected_text": "B",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "B\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "B\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type1-last-entry.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "165e635314453c93ef5ebda7ceff9b99ecd224d436a8005b827f8a0e7e5b2b5d"
+    },
+    {
+      "id": "Type1-unicode",
+      "path": "Type1-unicode.pdf",
+      "expected_text": "fi😀",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi😀\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "fi😀\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type1-unicode.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "cd2d36b9cd702c93a622fbc796679f33ee3c0cba75cbb92345a53b020d0cb9be"
+    },
+    {
+      "id": "TrueType-reset",
+      "path": "TrueType-reset.pdf",
+      "expected_text": "BBA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "BBA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  110.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  110,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "BBA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/TrueType-reset.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "535199b676824be2238345d1cbefebe7bb7e001f2ea70d19fe972c47964c1592"
+    },
+    {
+      "id": "TrueType-boundaries",
+      "path": "TrueType-boundaries.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/TrueType-boundaries.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "bb5b9152f4acca2f8481ff1d0f9a0d0348e6982a15f15479b248b967b00c728f"
+    },
+    {
+      "id": "TrueType-continuation",
+      "path": "TrueType-continuation.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/TrueType-continuation.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "368b5aa6a9b27b77bb41e25bf63c1a0346c4527e06028d644273ed50bff1b92c"
+    },
+    {
+      "id": "TrueType-last-entry",
+      "path": "TrueType-last-entry.pdf",
+      "expected_text": "B",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "B\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "B\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/TrueType-last-entry.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "b5f61d327565bf9b994ceec9a87837d89f710cf7262a91687f2c9c3cb43676ac"
+    },
+    {
+      "id": "TrueType-unicode",
+      "path": "TrueType-unicode.pdf",
+      "expected_text": "fi😀",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi😀\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "fi😀\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/TrueType-unicode.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "9e88b494d8aff294fd3729e8b793b729d474dcea71f599bc84f301d0cb03fc5b"
+    },
+    {
+      "id": "Type3-reset",
+      "path": "Type3-reset.pdf",
+      "expected_text": "BBA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "BBA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  110.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  110,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "BBA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type3-reset.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "990f47d9b94ca523589547892dd5d47a1fb052eb86f7977cfcc2a8929cee4d97"
+    },
+    {
+      "id": "Type3-boundaries",
+      "path": "Type3-boundaries.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type3-boundaries.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "223797fe15fa519f64eab0a6d0d160d4bb7faf186a3bb33302b0cec93eb608f8"
+    },
+    {
+      "id": "Type3-continuation",
+      "path": "Type3-continuation.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  105,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type3-continuation.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "6bcfdcde4bf9c03efd35830ddc9a00a7ef06d87d3196d8d1be3dad6eb4a06bcb"
+    },
+    {
+      "id": "Type3-last-entry",
+      "path": "Type3-last-entry.pdf",
+      "expected_text": "B",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "B\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "B\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type3-last-entry.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "c8ba94f498354321297790668a9ebaa8e75ec4750627baa8fe50e9444674fbf6"
+    },
+    {
+      "id": "Type3-unicode",
+      "path": "Type3-unicode.pdf",
+      "expected_text": "fi😀",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi😀\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "fi😀\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/differences/Type3-unicode.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "e938168e33a8f0fd6cc588e010f1c27ccb74d72a54889921c2008a076deda3fa"
+    }
+  ],
+  "summary": {
+    "match": 30,
+    "known_limitation": 0,
+    "mismatch": 0,
+    "error": 0,
+    "structure_ok": 15
+  }
+}

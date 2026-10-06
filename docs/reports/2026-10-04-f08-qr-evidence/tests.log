@@ -1,0 +1,77 @@
+    Finished `test` profile [unoptimized] target(s) in 0.21s
+     Running tests/issue_509_type3_charprocs_test.rs (target/debug/deps/issue_509_type3_charprocs_test-806db9656a960f27)
+
+running 8 tests
+test bounded_decode_limits_output_not_ascii_encoded_input ... ok
+test bounded_decode_stops_ascii85_expansion_during_output ... ok
+test bounded_decode_rejects_filters_without_a_bounded_decoder ... ok
+test non_type3_font_is_rejected ... ok
+test bounded_decode_stops_flate_expansion_at_the_local_limit ... ok
+test malformed_charproc_is_rejected_with_glyph_context ... ok
+test d0_metrics_are_exposed_without_changing_content_operation ... ok
+test resolves_opaque_control_code_to_parsed_charproc ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_513_resolved_parser_fonts_test.rs (target/debug/deps/issue_513_resolved_parser_fonts_test-f63f4f8a7a1d4ec6)
+
+running 16 tests
+test decodes_win_ansi_without_confusing_code_and_unicode ... ok
+test rejects_circular_font_resource_without_panicking ... ok
+test rejects_non_cid_descendant_in_type0_font ... ok
+test exposes_type3_through_the_coherent_resource_model ... ok
+test rejects_odd_cid_to_gid_map_without_panicking ... ok
+test cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings ... ok
+test rejects_type0_font_without_required_encoding ... ok
+test resolves_non_identity_encoding_cmap_and_default_identity_gid ... ok
+test resolves_cidfont_type0_open_type_program_and_vertical_mode ... ok
+test resolves_inherited_identity_type2_into_renderer_glyphs ... ok
+test unmapped_composite_code_uses_default_cid_width ... ok
+test type3_uses_tounicode_when_decoding_glyphs ... ok
+test rejects_oversized_cid_to_gid_map_after_bounded_decompression ... ok
+test resolves_symbol_difference_as_a_bullet_not_latin_x ... ok
+test named_unicode_encoding_resolves_cid_before_width_and_unicode ... ok
+test rejects_oversized_embedded_font_after_bounded_decompression ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running tests/issue_573_type3_font_matrix_widths_test.rs (target/debug/deps/issue_573_type3_font_matrix_widths_test-ab72b315f11356b3)
+
+running 4 tests
+test type3_with_arbitrary_font_matrix ... ok
+test type3_with_milli_em_font_matrix_preserves_widths ... ok
+test type3_with_unit_font_matrix_scales_widths_to_milli_ems ... ok
+test type3_with_indirect_font_matrix_and_widths ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_font_program_contract_test.rs (target/debug/deps/text_font_program_contract_test-905eb1f36d6ff5ce)
+
+running 10 tests
+test type3_charproc_names_supply_unicode_without_tounicode ... ok
+test bfrange_sequential_destination_increments_unicode ... ok
+test bfrange_array_preserves_sequences_and_surrogate_pairs ... ok
+test type3_advance_uses_font_matrix_and_declared_width ... ok
+test type3_text_matrix_rotates_the_pen_even_when_font_matrix_does_not ... ok
+test type3_nonuniform_font_matrix_combines_with_character_and_horizontal_scaling ... ok
+test type3_tounicode_overrides_charproc_names ... ok
+test resolved_type3_retains_full_matrix_but_reports_horizontal_advance ... ok
+test type3_tj_adjustment_is_in_text_units_not_glyph_matrix_units ... ok
+test type3_non_scalar_matrices_preserve_horizontal_text_pen_contract ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_type3_program_boundary_contract_test.rs (target/debug/deps/text_type3_program_boundary_contract_test-ae9d8bb57dcac467)
+
+running 8 tests
+test valid_text_metadata_survives_unrenderable_charproc ... ok
+test inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance ... ok
+test type3_differences_counter_cannot_wrap_after_byte_255 ... ok
+test malformed_declared_widths_are_rejected_by_program_consumer ... ok
+test consistent_d0_and_d1_preserve_metrics_and_program_operations ... ok
+test type3_differences_accepts_byte_255_and_explicit_counter_resets ... ok
+test zero_negative_and_fractional_declared_widths_are_not_replaced_by_defaults ... ok
+test malformed_charprocs_fail_with_context_in_both_parser_modes ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

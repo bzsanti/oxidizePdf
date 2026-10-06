@@ -1,0 +1,90 @@
+{
+  "run": 37382295498,
+  "head": "a2562e2aea63417276c68897c949f7b4f1a4b3a1",
+  "jobs": [
+    {
+      "job": "text-contracts-macos-latest-stable-default",
+      "targets": 40,
+      "passed": 403,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-macos-latest-stable-minimal",
+      "targets": 40,
+      "passed": 403,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-macos-latest-stable-spi",
+      "targets": 41,
+      "passed": 417,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-ubuntu-latest-1.88-default",
+      "targets": 40,
+      "passed": 403,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-ubuntu-latest-1.88-minimal",
+      "targets": 40,
+      "passed": 403,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-ubuntu-latest-1.88-spi",
+      "targets": 41,
+      "passed": 417,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-ubuntu-latest-stable-default",
+      "targets": 40,
+      "passed": 403,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-ubuntu-latest-stable-minimal",
+      "targets": 40,
+      "passed": 403,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-ubuntu-latest-stable-spi",
+      "targets": 41,
+      "passed": 417,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-windows-latest-stable-default",
+      "targets": 40,
+      "passed": 403,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-windows-latest-stable-minimal",
+      "targets": 40,
+      "passed": 403,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "job": "text-contracts-windows-latest-stable-spi",
+      "targets": 41,
+      "passed": 417,
+      "failed": 0,
+      "ignored": 0
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "file": "issue666-step2-type3-normal.pdf",
+    "qpdf_exit": 0,
+    "qpdf": "checking /tmp/issue666-step2-type3-normal.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "poppler_exit": 0,
+    "text": "AB\n\f"
+  },
+  {
+    "file": "issue666-step2-type3-scaled.pdf",
+    "qpdf_exit": 0,
+    "qpdf": "checking /tmp/issue666-step2-type3-scaled.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "poppler_exit": 0,
+    "text": "AB\n\f"
+  },
+  {
+    "file": "issue666-step2-type3-unicode.pdf",
+    "qpdf_exit": 0,
+    "qpdf": "checking /tmp/issue666-step2-type3-unicode.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "poppler_exit": 0,
+    "text": "fi😀\n\f"
+  }
+]

@@ -1,5 +1,6 @@
 pub mod cid_to_unicode;
 pub mod cmap;
+mod cmap_collection;
 pub(crate) mod encoding;
 pub(crate) mod encoding_cmap;
 pub mod extraction;
@@ -16,6 +17,7 @@ mod layout;
 mod list;
 pub mod metrics;
 pub mod ocr;
+mod pdf_simple_encodings;
 pub mod plaintext;
 pub mod structured;
 pub mod table;
@@ -1068,3 +1070,6 @@ mod tests {
         );
     }
 }
+
+mod font_program_names;
+mod intrinsic_encoding;

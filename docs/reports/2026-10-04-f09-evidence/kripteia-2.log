@@ -1,0 +1,27 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 1 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/text/fonts/cff/dict.rs                       1    100
+
+--- Worst Offenders ---
+  real_full_and_subset_programs_select_both_font_dicts (oxidize-pdf-core/src/text/fonts/cff/dict.rs:455) - Score: 100
+    i Test 'real_full_and_subset_programs_select_both_font_dicts' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'real_full_and_subset_programs_select_both_font_dicts' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/text/fonts/cff/dict.rs:
+  real_full_and_subset_programs_select_both_font_dicts (line 455) - Score: 100
+    i Test 'real_full_and_subset_programs_select_both_font_dicts' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'real_full_and_subset_programs_select_both_font_dicts' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

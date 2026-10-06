@@ -1,0 +1,1 @@
+<< /CharProcs 92 0 R /Encoding 93 0 R /FirstChar 32 /FontBBox [ -206 -552 2068 2008 ] /FontMatrix [ 0.000488 0 0 0.000488 0 0 ] /LastChar 255 /Name /Trebuchet-MS-Bold-Bold /Subtype /Type3 /Type /Font /Widths 94 0 R >>

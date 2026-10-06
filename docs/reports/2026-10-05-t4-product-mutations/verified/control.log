@@ -1,0 +1,112 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core)
+    Finished `test` profile [unoptimized] target(s) in 11.91s
+     Running tests/text_encoding_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_encoding_contract_test-0bf3ae362130d2a3)
+
+running 24 tests
+test builtin_decoding_preserves_afm_widths_and_following_origins ... ok
+test builtin_symbol_subset_names_and_explicit_tounicode_are_distinct ... ok
+test builtin_font_selection_does_not_match_unrelated_names_or_type3 ... ok
+test differences_restart_the_code_counter_and_preserve_unmodified_codes ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test builtin_symbol_and_zapf_keep_encoding_and_differences_precedence ... ok
+test differences_override_the_base_encoding ... ok
+test custom_type3_names_preserve_unknown_markers_and_mapping_precedence ... ok
+test macroman_overrides_cover_undefined_and_currency_codes ... ok
+test tounicode_overrides_builtin_symbol_and_dingbats ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test unknown_intrinsic_type1_names_preserve_markers_and_explicit_unicode ... ok
+test unresolved_differences_replace_instead_of_restoring_the_base_glyph ... ok
+test macroman_undefined_codes_preserve_neighbors_with_replacement ... ok
+test zapf_differences_resolve_adobe_names_before_builtin_codes ... ok
+test standard_encoding_matches_independent_table ... ok
+test symbol_builtin_encoding_matches_independent_table ... ok
+test macroman_encoding_matches_independent_table ... ok
+test winansi_encoding_matches_independent_table ... ok
+test zapfdingbats_builtin_encoding_matches_independent_table ... ok
+test all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding ... ok
+test simple_encoding_undefined_codes_recover_without_losing_neighbors ... ok
+test latin_standard14_fonts_use_complete_explicit_pdf_encodings_in_both_modes ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.99s
+
+     Running tests/text_spacing_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_spacing_contract_test-d2f8de657aaf0009)
+
+running 25 tests
+test glyph_origins_follow_declared_widths_kerns_and_horizontal_scale ... ok
+test absent_widths_never_certify_tracking_for_standard_fonts ... ok
+test a_single_transition_does_not_certify_uniform_tracking ... ok
+test excess_advance_remains_a_word_separator ... ok
+test explicit_character_spacing_disables_tracking_inference ... ok
+test declared_zero_widths_allow_uniform_advances ... ok
+test declared_positive_widths_keep_word_separators ... ok
+test lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances ... ok
+test explicit_word_spacing_disables_tracking_inference ... ok
+test one_source_glyph_is_not_the_same_as_one_unicode_scalar ... ok
+test known_zero_width_single_word_needs_no_literal_space ... ok
+test partial_em_adjustments_do_not_trigger_unknown_width_recovery ... ok
+test ordinary_small_kerning_does_not_add_spaces ... ok
+test resolved_cid_tracking_counts_source_glyphs_per_string ... ok
+test strict_mode_does_not_enable_unknown_width_recovery ... ok
+test nonuniform_advances_without_a_majority_keep_ordinary_gaps ... ok
+test multiple_source_glyphs_disable_simple_font_tracking ... ok
+test unresolved_type0_without_space_reaches_and_rejects_the_fallback ... ok
+test leading_and_trailing_kerns_do_not_certify_tracking ... ok
+test tracking_outlier_compares_only_excess_against_strict_threshold ... ok
+test minimum_support_and_strict_majority_are_both_required ... ok
+test literal_spaces_and_adjustments_have_distinct_evidence ... ok
+test separator_evidence_follows_unicode_not_the_source_byte ... ok
+test tracking_threshold_and_backward_kern_controls ... ok
+test ordinary_tj_gap_threshold_is_strict_for_both_signs ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running tests/text_state_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_state_contract_test-5c0892ae06163479)
+
+running 17 tests
+test default_spacing_and_scale_leave_declared_width_unchanged ... ok
+test bt_retains_spacing_and_scale_while_resetting_text_position ... ok
+test actualtext_accumulates_scaled_source_widths ... ok
+test consecutive_tj_and_tj_arrays_keep_one_continuous_pen ... ok
+test changes_apply_only_to_subsequent_advances_and_can_return_to_defaults ... ok
+test character_spacing_applies_once_to_a_multiscalar_source_glyph ... ok
+test double_quote_sets_word_and_character_spacing_in_pdf_operand_order ... ok
+test mapped_unicode_space_does_not_receive_word_spacing ... ok
+test q_restores_text_parameters_but_not_the_text_object_pen ... ok
+test q_restores_leading_without_rewinding_the_line_matrix ... ok
+test negative_spacing_is_in_text_units_and_scaled_once ... ok
+test q_restores_word_spacing_before_the_next_source_space ... ok
+test nested_forms_restore_font_resources_and_text_parameters_at_each_return ... ok
+test word_spacing_changes_and_reset_affect_only_later_source_spaces ... ok
+test word_spacing_uses_source_byte32_even_when_tounicode_changes_it ... ok
+test zero_and_reflected_horizontal_scale_reach_fragment_extent ... ok
+test tracking_inference_does_not_leak_between_consecutive_tj_arrays ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_tj_scale_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_tj_scale_contract_test-f1ec1e6a8bfd3ace)
+
+running 5 tests
+test fixture_hashes_are_frozen ... ok
+test forward_tj_adjustment_scales_with_tz ... ok
+test backward_tj_adjustment_scales_with_tz ... ok
+test zero_tj_control_scales_only_source_width ... ok
+test numeric_only_and_split_tj_adjustments_preserve_the_pen ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/text_tracking_recovery_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_tracking_recovery_contract_test-5b24db8e4602bb63)
+
+running 9 tests
+test multiple_source_glyphs_cannot_certify_per_glyph_tracking ... ok
+test a_space_inside_a_unicode_sequence_is_not_a_space_glyph ... ok
+test larger_outlier_remains_a_word_gap_during_recovery ... ok
+test resolved_descendant_without_widths_does_not_enable_recovery ... ok
+test truncated_identity_codes_cannot_certify_tracking ... ok
+test resolved_unusable_descendant_never_enables_missing_descendant_recovery ... ok
+test vertical_encoding_does_not_enable_horizontal_recovery ... ok
+test damaged_type0_recovery_covers_full_em_tolerance_and_mode ... ok
+test damaged_type0_rejects_non_em_baselines_and_explicit_spacing ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

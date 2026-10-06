@@ -1,0 +1,27 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.31s
+     Running tests/text_output_api_contract_test.rs (target/debug/deps/text_output_api_contract_test-193dd67eae72543e)
+
+running 6 tests
+test document_api_resets_same_resource_name_between_pages ... ok
+test type3_output_preserves_multiscalar_mapping_and_real_charprocs ... ok
+test all_standard14_styles_have_consistent_output_apis ... ok
+test symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences ... ok
+test embedded_type1_and_cff_outputs_preserve_encoding_precedence ... ok
+test cid_cff_inheritance_outputs_preserve_child_and_parent_text ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/text_standard14_metrics_contract_test.rs (target/debug/deps/text_standard14_metrics_contract_test-77fe3bfd266fac8a)
+
+running 7 tests
+test times_styles_follow_adobe_implicit_metrics ... ok
+test helvetica_styles_follow_adobe_implicit_metrics ... ok
+test courier_styles_follow_adobe_monospaced_metrics ... ok
+test symbol_and_zapf_follow_adobe_metrics ... ok
+test declared_widths_override_implicit_metrics_for_all_fourteen_fonts ... ok
+test frozen_afm_sources_license_and_pdfs_are_unchanged ... ok
+test every_font_pair_and_return_transition_selects_the_current_metrics ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+

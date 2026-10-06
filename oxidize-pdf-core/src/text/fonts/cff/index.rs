@@ -39,7 +39,7 @@ impl CffIndex {
     }
 
     pub fn get_item<'a>(&self, index: usize, cff: &'a [u8]) -> Option<&'a [u8]> {
-        if index + 1 >= self.item_offsets.len() {
+        if index >= self.count() {
             return None;
         }
         let start = self.item_offsets[index];
@@ -52,18 +52,19 @@ impl CffIndex {
 
     pub fn raw_bytes<'a>(&self, cff: &'a [u8]) -> &'a [u8] {
         let end = self.start_offset + self.byte_length;
-        &cff[self.start_offset..end.min(cff.len())]
+        cff.get(self.start_offset..end.min(cff.len()))
+            .unwrap_or(&[])
     }
 }
 
 pub fn parse_cff_index(cff: &[u8], pos: usize) -> ParseResult<CffIndex> {
-    if pos + 2 > cff.len() {
-        return Err(ParseError::SyntaxError {
-            position: pos,
-            message: "CFF INDEX truncated (count)".to_string(),
-        });
-    }
-    let count = u16::from_be_bytes([cff[pos], cff[pos + 1]]) as usize;
+    let invalid = || ParseError::SyntaxError {
+        position: pos,
+        message: "invalid or truncated CFF INDEX".into(),
+    };
+    let data = cff.get(pos..).ok_or_else(invalid)?;
+    let header = data.get(..2).ok_or_else(invalid)?;
+    let count = usize::from(u16::from_be_bytes([header[0], header[1]]));
     if count == 0 {
         return Ok(CffIndex {
             start_offset: pos,
@@ -71,37 +72,25 @@ pub fn parse_cff_index(cff: &[u8], pos: usize) -> ParseResult<CffIndex> {
             item_offsets: vec![],
         });
     }
-    if pos + 3 > cff.len() {
-        return Err(ParseError::SyntaxError {
-            position: pos + 2,
-            message: "CFF INDEX truncated (offSize)".to_string(),
-        });
+    let off_size = usize::from(*data.get(2).ok_or_else(invalid)?);
+    if !(1..=4).contains(&off_size) {
+        return Err(invalid());
     }
-    let off_size = cff[pos + 2] as usize;
-    if off_size < 1 || off_size > 4 {
-        return Err(ParseError::SyntaxError {
-            position: pos + 2,
-            message: format!("CFF INDEX invalid offSize: {}", off_size),
-        });
-    }
-    let offsets_start = pos + 3;
-    let offsets_end = offsets_start + (count + 1) * off_size;
-    if offsets_end > cff.len() {
-        return Err(ParseError::SyntaxError {
-            position: offsets_start,
-            message: "CFF INDEX offset array truncated".to_string(),
-        });
-    }
-    let data_base = offsets_end;
+    let data_base = 3 + (count + 1) * off_size;
+    let payload = data.get(data_base..).ok_or_else(invalid)?;
     let mut item_offsets = Vec::with_capacity(count + 1);
+    let mut previous = 1usize;
     for i in 0..=count {
-        let off_pos = offsets_start + i * off_size;
-        let raw_offset = read_offset(cff, off_pos, off_size)?;
-        let abs_offset = data_base + (raw_offset as usize) - 1;
-        item_offsets.push(abs_offset);
+        let raw = usize::try_from(read_offset(data, 3 + i * off_size, off_size)?)
+            .map_err(|_| invalid())?;
+        if raw < previous || (i == 0 && raw != 1) || raw - 1 > payload.len() {
+            return Err(invalid());
+        }
+        // Both additions are bounded by the validated subslices above.
+        item_offsets.push(pos + data_base + raw - 1);
+        previous = raw;
     }
-    let data_len = item_offsets[count] - data_base;
-    let byte_length = 3 + (count + 1) * off_size + data_len;
+    let byte_length = data_base + previous - 1;
     Ok(CffIndex {
         start_offset: pos,
         byte_length,

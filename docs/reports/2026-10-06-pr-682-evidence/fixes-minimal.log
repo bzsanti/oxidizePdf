@@ -1,0 +1,25 @@
+   Compiling simd-adler32 v0.3.9
+   Compiling miniz_oxide v0.8.9
+   Compiling flate2 v1.1.9
+   Compiling oxidize-pdf v5.2.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 29.31s
+     Running tests/issue_680_flate_stream_recovery_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-cargo/debug/deps/issue_680_flate_stream_recovery_test-ee8247c85e47be89)
+
+running 7 tests
+test test_truncated_compressed_stream_filter ... ok
+test incomplete_payload_recovers_complete_text_operators_with_a_diagnostic ... ok
+test omitted_form_is_reported_even_when_page_text_survives ... ok
+test test_form_xobject_stream_recovery ... ok
+test text_budget_does_not_limit_decoded_operators ... ok
+test test_extract_from_page_with_stream_recovery ... ok
+test stream_limit_is_fatal_for_valid_and_damaged_content_and_forms ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_680_memory_budget_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-cargo/debug/deps/issue_680_memory_budget_test-96fab7b5c86438ed)
+
+running 1 test
+test recovery_keeps_one_expanded_buffer_live ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+

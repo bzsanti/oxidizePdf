@@ -24,7 +24,7 @@
 mod common;
 
 use common::pdf_assembler::{assemble_pdf, stream_obj};
-use oxidize_pdf::parser::PdfReader;
+use oxidize_pdf::parser::{ParseError, ParseOptions, PdfReader};
 use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 use std::io::Cursor;
 
@@ -212,11 +212,26 @@ fn oversized_w_range_does_not_hang_or_allocate_unboundedly() {
     // CIDs are a u16, max 0xFFFF) must not materialize a multi-billion-entry
     // HashMap or loop for an unreasonable amount of time -- a malformed or
     // adversarial `/W` array must degrade gracefully, not hang or OOM.
-    let text = extract("/W [0 4294967295 500]");
-    assert!(
-        !text.is_empty(),
-        "extraction must complete (not hang/OOM) with an oversized /W range"
-    );
+    let bytes = build_pdf("/W [0 4294967295 500]");
+    for options in [ParseOptions::strict(), ParseOptions::lenient()] {
+        let strict = options.strict_mode;
+        let doc = PdfReader::new_with_options(Cursor::new(bytes.clone()), options)
+            .expect("PDF structure should parse")
+            .into_document();
+        let result = TextExtractor::new().extract_from_page(&doc, 0);
+        if strict {
+            // #666's explicit metric policy rejects malformed W in strict mode;
+            // rejecting the range must not try to enumerate its billions of CIDs.
+            assert!(
+                matches!(result, Err(ParseError::SyntaxError { message, .. })
+                if message == "invalid last CID in W")
+            );
+        } else {
+            // Recovery discards invalid metrics, not the independent ToUnicode.
+            // With DW's default1000, no positive word gap remains in this fixture.
+            assert_eq!(result.unwrap().text, "PANNo:BLUPM6342P");
+        }
+    }
 }
 
 #[test]

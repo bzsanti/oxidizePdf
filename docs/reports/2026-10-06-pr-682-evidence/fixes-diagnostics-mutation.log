@@ -1,0 +1,62 @@
+   Compiling oxidize-pdf v5.2.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.21s
+     Running tests/issue_680_flate_stream_recovery_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-cargo/debug/deps/issue_680_flate_stream_recovery_test-33afc16419a3feae)
+
+running 7 tests
+test test_truncated_compressed_stream_filter ... ok
+test incomplete_payload_recovers_complete_text_operators_with_a_diagnostic ... FAILED
+test omitted_form_is_reported_even_when_page_text_survives ... FAILED
+test test_extract_from_page_with_stream_recovery ... FAILED
+test test_form_xobject_stream_recovery ... FAILED
+test text_budget_does_not_limit_decoded_operators ... FAILED
+test stream_limit_is_fatal_for_valid_and_damaged_content_and_forms ... ok
+
+failures:
+
+---- incomplete_payload_recovers_complete_text_operators_with_a_diagnostic stdout ----
+
+thread 'incomplete_payload_recovers_complete_text_operators_with_a_diagnostic' (371) panicked at oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:264:5:
+assertion `left == right` failed
+  left: 0
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- omitted_form_is_reported_even_when_page_text_survives stdout ----
+
+thread 'omitted_form_is_reported_even_when_page_text_survives' (372) panicked at oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:173:5:
+assertion `left == right` failed
+  left: 0
+ right: 1
+
+---- test_extract_from_page_with_stream_recovery stdout ----
+
+thread 'test_extract_from_page_with_stream_recovery' (374) panicked at oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:113:9:
+assertion `left == right` failed
+  left: 0
+ right: 1
+
+---- test_form_xobject_stream_recovery stdout ----
+
+thread 'test_form_xobject_stream_recovery' (375) panicked at oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:146:5:
+assertion `left == right` failed
+  left: 0
+ right: 1
+
+---- text_budget_does_not_limit_decoded_operators stdout ----
+
+thread 'text_budget_does_not_limit_decoded_operators' (377) panicked at oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:212:13:
+assertion `left == right` failed
+  left: 0
+ right: 1
+
+
+failures:
+    incomplete_payload_recovers_complete_text_operators_with_a_diagnostic
+    omitted_form_is_reported_even_when_page_text_survives
+    test_extract_from_page_with_stream_recovery
+    test_form_xobject_stream_recovery
+    text_budget_does_not_limit_decoded_operators
+
+test result: FAILED. 2 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_680_flate_stream_recovery_test`

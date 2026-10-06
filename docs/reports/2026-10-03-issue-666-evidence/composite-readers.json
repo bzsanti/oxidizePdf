@@ -1,0 +1,972 @@
+{
+  "schema_version": 1,
+  "versions": {
+    "pymupdf": "1.26.5",
+    "mupdf": "1.26.10",
+    "poppler": "24.02.0",
+    "qpdf": "11.9.0"
+  },
+  "environment_errors": [],
+  "accepted": true,
+  "cases": [
+    {
+      "id": "cff-fd0-full-identity",
+      "path": "cff-fd0-full-identity.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/cff-fd0-full-identity.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "811d4fb56901f6f6cfb570abc8f11cd87ae8eefa39c63cabb891c7ad49530d55"
+    },
+    {
+      "id": "cff-fd0-full-remapped",
+      "path": "cff-fd0-full-remapped.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/cff-fd0-full-remapped.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "78e879792d39382175c1f8388f6cf40d1693b450b64a131a2c2fe51bc261e36e"
+    },
+    {
+      "id": "cff-fd3-full-identity",
+      "path": "cff-fd3-full-identity.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/cff-fd3-full-identity.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "93373386f61ff112a07a81d7fd770957d9159a158dcd5d03e155f094ffe22f45"
+    },
+    {
+      "id": "cff-fd3-full-remapped",
+      "path": "cff-fd3-full-remapped.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/cff-fd3-full-remapped.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "957b1cdbe6ed2088b9cfe633be70db4762f0f4579f6eb670c5be1305c5c43ce9"
+    },
+    {
+      "id": "ttf-full-identity-gids",
+      "path": "ttf-full-identity-gids.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/ttf-full-identity-gids.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "c4e01cc178ec4315ad9ae545f1e5e1594d48b431c8555758c2cdae2c5d7c757d"
+    },
+    {
+      "id": "ttf-full-stream-gids",
+      "path": "ttf-full-stream-gids.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/ttf-full-stream-gids.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "9cb09727716b0ec6d0b761057628eec745cfe1730fe51dd9ef49d20d606323cc"
+    },
+    {
+      "id": "ttf-full-remapped",
+      "path": "ttf-full-remapped.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/ttf-full-remapped.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "6d38643fe8ccbf3be4b1112b8c6fc6edc653c36f8a1063a87d7d6fd509e38a67"
+    },
+    {
+      "id": "cff-fd0-subset-identity",
+      "path": "cff-fd0-subset-identity.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/cff-fd0-subset-identity.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "8f18c8f83c8e726f0d6592c324bff1dab25a6e83cb92adbf930d831e816b6f0f"
+    },
+    {
+      "id": "cff-fd0-subset-remapped",
+      "path": "cff-fd0-subset-remapped.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/cff-fd0-subset-remapped.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "9517b42cbcad9bd1344cd0ae8dd1836d6c11e9ada00b175b930a858d6a4c1584"
+    },
+    {
+      "id": "cff-fd3-subset-identity",
+      "path": "cff-fd3-subset-identity.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/cff-fd3-subset-identity.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "6f844b70b91f3b66a20e914bf2db6a2a8dbfa30d3efdf4b02a47771b93179160"
+    },
+    {
+      "id": "cff-fd3-subset-remapped",
+      "path": "cff-fd3-subset-remapped.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/cff-fd3-subset-remapped.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "998d473e98016693bd5512fcec82f65fda9347c3ef25e59b7c520606282c9145"
+    },
+    {
+      "id": "ttf-subset-identity-gids",
+      "path": "ttf-subset-identity-gids.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/ttf-subset-identity-gids.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "54b0ce86ccd2c1acd944baa4d9bbd621b0a30e8a09c9b59c5c6f2be9b693952f"
+    },
+    {
+      "id": "ttf-subset-stream-gids",
+      "path": "ttf-subset-stream-gids.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/ttf-subset-stream-gids.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "5a864bbd5eeaa1969a0ca5d48892ad6be681465f28bd8e419d017caf47dc8de9"
+    },
+    {
+      "id": "ttf-subset-remapped",
+      "path": "ttf-subset-remapped.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  107.0,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core/tests/fixtures/text_contracts/composite/ttf-subset-remapped.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "d6a60bc2e3bba918f3f1c7299d2710aa3a22f527b7482ef21e0e766884b20d71"
+    }
+  ],
+  "summary": {
+    "match": 28,
+    "known_limitation": 0,
+    "mismatch": 0,
+    "error": 0,
+    "structure_ok": 14
+  }
+}

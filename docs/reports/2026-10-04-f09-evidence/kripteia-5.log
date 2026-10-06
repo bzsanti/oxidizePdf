@@ -1,0 +1,58 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_cff_program_contract_test.rs          8    100
+
+--- Worst Offenders ---
+  real_full_and_subset_cff_select_distinct_font_dicts_and_charstrings (oxidize-pdf-core/tests/text_cff_program_contract_test.rs:7) - Score: 100
+    i Test 'real_full_and_subset_cff_select_distinct_font_dicts_and_charstrings' uses .unwrap() which silently discards error information
+  charset_formats_zero_one_two_preserve_nonidentity_cids (oxidize-pdf-core/tests/text_cff_program_contract_test.rs:105) - Score: 100
+    i Test 'charset_formats_zero_one_two_preserve_nonidentity_cids' has multiple assertions without diagnostic messages
+    i Test 'charset_formats_zero_one_two_preserve_nonidentity_cids' uses .unwrap() which silently discards error information
+  charset_rejects_duplicates_reserved_zero_ranges_and_truncation (oxidize-pdf-core/tests/text_cff_program_contract_test.rs:131) - Score: 100
+    i Test 'charset_rejects_duplicates_reserved_zero_ranges_and_truncation' has multiple assertions without diagnostic messages
+  fdselect_requires_full_ordered_coverage_and_existing_font_dicts (oxidize-pdf-core/tests/text_cff_program_contract_test.rs:152) - Score: 100
+    i Test 'fdselect_requires_full_ordered_coverage_and_existing_font_dicts' has multiple assertions without diagnostic messages
+    i Test 'fdselect_requires_full_ordered_coverage_and_existing_font_dicts' uses .unwrap() which silently discards error information
+  cff_index_rejects_zero_descending_out_of_file_and_overflowing_offsets (oxidize-pdf-core/tests/text_cff_program_contract_test.rs:176) - Score: 100
+    i Test 'cff_index_rejects_zero_descending_out_of_file_and_overflowing_offsets' has multiple assertions without diagnostic messages
+    i Test 'cff_index_rejects_zero_descending_out_of_file_and_overflowing_offsets' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_cff_program_contract_test.rs:
+  real_full_and_subset_cff_select_distinct_font_dicts_and_charstrings (line 7) - Score: 100
+    i Test 'real_full_and_subset_cff_select_distinct_font_dicts_and_charstrings' uses .unwrap() which silently discards error information
+  charset_formats_zero_one_two_preserve_nonidentity_cids (line 105) - Score: 100
+    i Test 'charset_formats_zero_one_two_preserve_nonidentity_cids' has multiple assertions without diagnostic messages
+    i Test 'charset_formats_zero_one_two_preserve_nonidentity_cids' uses .unwrap() which silently discards error information
+  charset_rejects_duplicates_reserved_zero_ranges_and_truncation (line 131) - Score: 100
+    i Test 'charset_rejects_duplicates_reserved_zero_ranges_and_truncation' has multiple assertions without diagnostic messages
+  fdselect_requires_full_ordered_coverage_and_existing_font_dicts (line 152) - Score: 100
+    i Test 'fdselect_requires_full_ordered_coverage_and_existing_font_dicts' has multiple assertions without diagnostic messages
+    i Test 'fdselect_requires_full_ordered_coverage_and_existing_font_dicts' uses .unwrap() which silently discards error information
+  cff_index_rejects_zero_descending_out_of_file_and_overflowing_offsets (line 176) - Score: 100
+    i Test 'cff_index_rejects_zero_descending_out_of_file_and_overflowing_offsets' has multiple assertions without diagnostic messages
+    i Test 'cff_index_rejects_zero_descending_out_of_file_and_overflowing_offsets' uses .unwrap() which silently discards error information
+  cid_cff_collection_unicode_direction_and_subset_matrix (line 194) - Score: 100
+    i Test 'cid_cff_collection_unicode_direction_and_subset_matrix' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_cff_collection_unicode_direction_and_subset_matrix' has multiple assertions without diagnostic messages
+    i Test 'cid_cff_collection_unicode_direction_and_subset_matrix' uses .unwrap() which silently discards error information
+  cid_cff_selection_fixtures_retain_frozen_identity (line 267) - Score: 100
+    i Test 'cid_cff_selection_fixtures_retain_frozen_identity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_cff_selection_fixtures_retain_frozen_identity' has multiple assertions without diagnostic messages
+    i Test 'cid_cff_selection_fixtures_retain_frozen_identity' uses .unwrap() which silently discards error information
+  name_keyed_opentype_cff_used_as_cidfont_keeps_identity_glyph_indices (line 290) - Score: 100
+    i Test 'name_keyed_opentype_cff_used_as_cidfont_keeps_identity_glyph_indices' has multiple assertions without diagnostic messages
+    i Test 'name_keyed_opentype_cff_used_as_cidfont_keeps_identity_glyph_indices' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

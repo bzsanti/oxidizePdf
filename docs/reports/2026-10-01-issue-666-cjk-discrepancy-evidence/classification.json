@@ -1,0 +1,341 @@
+{
+  "sources": {
+    "Adobe-GB1-UCS2": {
+      "url": "https://github.com/ArtifexSoftware/mupdf/blob/1.26.10/resources/cmaps/Adobe-GB1-UCS2",
+      "sha256": "2220f25b5ae2c0cc7e9ef639e3ca88da69d453477510b73afdf13f0b9958ce66"
+    },
+    "Adobe-CNS1-UCS2": {
+      "url": "https://github.com/ArtifexSoftware/mupdf/blob/1.26.10/resources/cmaps/Adobe-CNS1-UCS2",
+      "sha256": "fd2d777934649a40f8fecb5d6fa19ac94bbe468fa15e615a060fca0cefb6c74f"
+    },
+    "Adobe-Japan1-UCS2": {
+      "url": "https://github.com/ArtifexSoftware/mupdf/blob/1.26.10/resources/cmaps/Adobe-Japan1-UCS2",
+      "sha256": "f9d0adc9f2185ab1673a424a08f822130b0cce8fa2df2b75a9db2650082d31f5"
+    },
+    "UniJIS-UTF16-H": {
+      "url": "https://github.com/ArtifexSoftware/mupdf/blob/1.26.10/resources/cmaps/UniJIS-UTF16-H",
+      "sha256": "1a1c1206a5dd57cd33fcfa89c3370405d75109b52770b47198dff3dfd67fd8bd"
+    },
+    "UniJIS-X": {
+      "url": "https://github.com/ArtifexSoftware/mupdf/blob/1.26.10/resources/cmaps/UniJIS-X",
+      "sha256": "3b68cabacea60672fc230c2e9a0e7316b1cc9cbd4d112449f38a988017d7b0ef"
+    }
+  },
+  "counts": {
+    "historical-CID-Unicode-table": 21,
+    "missing-built-in-resource": 8,
+    "code-absent-in-historical-UniJIS-parent": 2
+  },
+  "cases": [
+    {
+      "index": 20,
+      "cmap": "UniGB-UCS2-H",
+      "code": "FA20",
+      "cid": 22040,
+      "current_adobe": "蘒︀\n",
+      "mupdf_table": "蘒",
+      "mupdf_actual": "蘒\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 23,
+      "cmap": "UniGB-UCS2-V",
+      "code": "FA20",
+      "cid": 22040,
+      "current_adobe": "蘒︀\n",
+      "mupdf_table": "蘒",
+      "mupdf_actual": "蘒\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 25,
+      "cmap": "UniGB-UCS2-V",
+      "code": "2014",
+      "cid": 598,
+      "current_adobe": "—\n",
+      "mupdf_table": "︱",
+      "mupdf_actual": "︱\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 27,
+      "cmap": "UniGB-UTF16-H",
+      "code": "FA20",
+      "cid": 22040,
+      "current_adobe": "蘒︀\n",
+      "mupdf_table": "蘒",
+      "mupdf_actual": "蘒\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 31,
+      "cmap": "UniGB-UTF16-V",
+      "code": "FA20",
+      "cid": 22040,
+      "current_adobe": "蘒︀\n",
+      "mupdf_table": "蘒",
+      "mupdf_actual": "蘒\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 34,
+      "cmap": "UniGB-UTF16-V",
+      "code": "2014",
+      "cid": 598,
+      "current_adobe": "—\n",
+      "mupdf_table": "︱",
+      "mupdf_actual": "︱\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 49,
+      "cmap": "UniCNS-UCS2-H",
+      "code": "3D1D",
+      "cid": 14652,
+      "current_adobe": "𪏭\n",
+      "mupdf_table": "㴝",
+      "mupdf_actual": "㴝\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 52,
+      "cmap": "UniCNS-UCS2-V",
+      "code": "3D1D",
+      "cid": 14652,
+      "current_adobe": "𪏭\n",
+      "mupdf_table": "㴝",
+      "mupdf_actual": "㴝\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 56,
+      "cmap": "UniCNS-UTF16-H",
+      "code": "3D1D",
+      "cid": 14652,
+      "current_adobe": "𪏭\n",
+      "mupdf_table": "㴝",
+      "mupdf_actual": "㴝\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 60,
+      "cmap": "UniCNS-UTF16-V",
+      "code": "3D1D",
+      "cid": 14652,
+      "current_adobe": "𪏭\n",
+      "mupdf_table": "㴝",
+      "mupdf_actual": "㴝\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 65,
+      "cmap": "90ms-RKSJ-H",
+      "code": "88A7",
+      "cid": 1133,
+      "current_adobe": "逢󠄀\n",
+      "mupdf_table": "逢",
+      "mupdf_actual": "逢\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 68,
+      "cmap": "90ms-RKSJ-V",
+      "code": "88A7",
+      "cid": 1133,
+      "current_adobe": "逢󠄀\n",
+      "mupdf_table": "逢",
+      "mupdf_actual": "逢\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 72,
+      "cmap": "90pv-RKSJ-H",
+      "code": "8591",
+      "cid": 8061,
+      "current_adobe": "🄀\n",
+      "mupdf_table": "0.",
+      "mupdf_actual": "0.\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 73,
+      "cmap": "90pv-RKSJ-V",
+      "code": "8157",
+      "cid": 656,
+      "current_adobe": "仝\n",
+      "mupdf_table": "仝",
+      "mupdf_actual": "W\n",
+      "classification": "missing-built-in-resource"
+    },
+    {
+      "index": 74,
+      "cmap": "90pv-RKSJ-V",
+      "code": "EAA4",
+      "cid": 8285,
+      "current_adobe": "熙\n",
+      "mupdf_table": "熙",
+      "mupdf_actual": "Œ⁄\n",
+      "classification": "missing-built-in-resource"
+    },
+    {
+      "index": 75,
+      "cmap": "90pv-RKSJ-V",
+      "code": "8591",
+      "cid": 8061,
+      "current_adobe": "🄀\n",
+      "mupdf_table": "0.",
+      "mupdf_actual": "\n",
+      "classification": "missing-built-in-resource"
+    },
+    {
+      "index": 76,
+      "cmap": "90pv-RKSJ-V",
+      "code": "8141",
+      "cid": 7887,
+      "current_adobe": "、\n",
+      "mupdf_table": "、",
+      "mupdf_actual": "A\n",
+      "classification": "missing-built-in-resource"
+    },
+    {
+      "index": 78,
+      "cmap": "UniJIS-UCS2-H",
+      "code": "FA2D",
+      "cid": 8715,
+      "current_adobe": "鶴︀\n",
+      "mupdf_table": "鶴",
+      "mupdf_actual": "鶴\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 79,
+      "cmap": "UniJIS-UCS2-H",
+      "code": "2E87",
+      "cid": 14105,
+      "current_adobe": "𠘨\n",
+      "mupdf_table": "⺇",
+      "mupdf_actual": "⺇\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 81,
+      "cmap": "UniJIS-UCS2-V",
+      "code": "FA2D",
+      "cid": 8715,
+      "current_adobe": "鶴︀\n",
+      "mupdf_table": "鶴",
+      "mupdf_actual": "鶴\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 82,
+      "cmap": "UniJIS-UCS2-V",
+      "code": "2E87",
+      "cid": 14105,
+      "current_adobe": "𠘨\n",
+      "mupdf_table": "⺇",
+      "mupdf_actual": "⺇\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 85,
+      "cmap": "UniJIS-UTF16-H",
+      "code": "FA6D",
+      "cid": 13695,
+      "current_adobe": "舘︀\n",
+      "mupdf_table": "舘",
+      "mupdf_actual": "舘\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 86,
+      "cmap": "UniJIS-UTF16-H",
+      "code": "2E87",
+      "cid": 14105,
+      "current_adobe": "𠘨\n",
+      "mupdf_table": "⺇",
+      "mupdf_actual": "⺇\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 87,
+      "cmap": "UniJIS-UTF16-H",
+      "code": "D82CDD32",
+      "cid": 12269,
+      "current_adobe": "𛄲\n",
+      "mupdf_table": "こ",
+      "mupdf_actual": "",
+      "classification": "code-absent-in-historical-UniJIS-parent"
+    },
+    {
+      "index": 89,
+      "cmap": "UniJIS-UTF16-V",
+      "code": "FA6D",
+      "cid": 13695,
+      "current_adobe": "舘︀\n",
+      "mupdf_table": "舘",
+      "mupdf_actual": "舘\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 90,
+      "cmap": "UniJIS-UTF16-V",
+      "code": "2E87",
+      "cid": 14105,
+      "current_adobe": "𠘨\n",
+      "mupdf_table": "⺇",
+      "mupdf_actual": "⺇\n",
+      "classification": "historical-CID-Unicode-table"
+    },
+    {
+      "index": 91,
+      "cmap": "UniJIS-UTF16-V",
+      "code": "D82CDD32",
+      "cid": 12270,
+      "current_adobe": "𛄲\n",
+      "mupdf_table": "こ",
+      "mupdf_actual": "",
+      "classification": "code-absent-in-historical-UniJIS-parent"
+    },
+    {
+      "index": 113,
+      "cmap": "UniAKR-UTF16-H",
+      "code": "2F00",
+      "cid": 14238,
+      "current_adobe": "一\n",
+      "mupdf_table": null,
+      "mupdf_actual": "/\u0000",
+      "classification": "missing-built-in-resource"
+    },
+    {
+      "index": 114,
+      "cmap": "UniAKR-UTF16-H",
+      "code": "FA2F",
+      "cid": 18559,
+      "current_adobe": "隷\n",
+      "mupdf_table": null,
+      "mupdf_actual": "œ/\n",
+      "classification": "missing-built-in-resource"
+    },
+    {
+      "index": 115,
+      "cmap": "UniAKR-UTF16-H",
+      "code": "D840DCD7",
+      "cid": 22402,
+      "current_adobe": "𠃗\n",
+      "mupdf_table": null,
+      "mupdf_actual": "Ø@Ü×\n",
+      "classification": "missing-built-in-resource"
+    },
+    {
+      "index": 116,
+      "cmap": "UniAKR-UTF16-H",
+      "code": "D840DCD7",
+      "cid": 22402,
+      "current_adobe": "𠃗\n",
+      "mupdf_table": null,
+      "mupdf_actual": "Ø@Ü×\n",
+      "classification": "missing-built-in-resource"
+    }
+  ]
+}

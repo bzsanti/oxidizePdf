@@ -1,0 +1,58 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 99 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...f-core/tests/text_cid_truetype_program_contract_test.rs        7     99
+
+--- Worst Offenders ---
+  private_unknown_recovery_consumes_whole_codes_and_truncated_tails (oxidize-pdf-core/tests/text_cid_truetype_program_contract_test.rs:258) - Score: 90
+    - Test 'private_unknown_recovery_consumes_whole_codes_and_truncated_tails' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  full_subset_identity_stream_and_remapped_hv_select_real_glyphs (oxidize-pdf-core/tests/text_cid_truetype_program_contract_test.rs:23) - Score: 100
+    i Test 'full_subset_identity_stream_and_remapped_hv_select_real_glyphs' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'full_subset_identity_stream_and_remapped_hv_select_real_glyphs' has multiple assertions without diagnostic messages
+    i Test 'full_subset_identity_stream_and_remapped_hv_select_real_glyphs' uses .unwrap() which silently discards error information
+  explicit_collection_and_unknown_text_preserve_source_glyph_positions (oxidize-pdf-core/tests/text_cid_truetype_program_contract_test.rs:74) - Score: 100
+    i Test 'explicit_collection_and_unknown_text_preserve_source_glyph_positions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'explicit_collection_and_unknown_text_preserve_source_glyph_positions' uses .unwrap() which silently discards error information
+  frozen_original_fonts_and_forty_pdfs_are_unchanged (oxidize-pdf-core/tests/text_cid_truetype_program_contract_test.rs:124) - Score: 100
+    i Test 'frozen_original_fonts_and_forty_pdfs_are_unchanged' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'frozen_original_fonts_and_forty_pdfs_are_unchanged' has multiple assertions without diagnostic messages
+    i Test 'frozen_original_fonts_and_forty_pdfs_are_unchanged' uses .unwrap() which silently discards error information
+  stream_map_distinguishes_zero_missing_and_big_endian_limits (oxidize-pdf-core/tests/text_cid_truetype_program_contract_test.rs:149) - Score: 100
+    i Test 'stream_map_distinguishes_zero_missing_and_big_endian_limits' has multiple assertions without diagnostic messages
+    i Test 'stream_map_distinguishes_zero_missing_and_big_endian_limits' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_cid_truetype_program_contract_test.rs:
+  full_subset_identity_stream_and_remapped_hv_select_real_glyphs (line 23) - Score: 100
+    i Test 'full_subset_identity_stream_and_remapped_hv_select_real_glyphs' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'full_subset_identity_stream_and_remapped_hv_select_real_glyphs' has multiple assertions without diagnostic messages
+    i Test 'full_subset_identity_stream_and_remapped_hv_select_real_glyphs' uses .unwrap() which silently discards error information
+  explicit_collection_and_unknown_text_preserve_source_glyph_positions (line 74) - Score: 100
+    i Test 'explicit_collection_and_unknown_text_preserve_source_glyph_positions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'explicit_collection_and_unknown_text_preserve_source_glyph_positions' uses .unwrap() which silently discards error information
+  frozen_original_fonts_and_forty_pdfs_are_unchanged (line 124) - Score: 100
+    i Test 'frozen_original_fonts_and_forty_pdfs_are_unchanged' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'frozen_original_fonts_and_forty_pdfs_are_unchanged' has multiple assertions without diagnostic messages
+    i Test 'frozen_original_fonts_and_forty_pdfs_are_unchanged' uses .unwrap() which silently discards error information
+  stream_map_distinguishes_zero_missing_and_big_endian_limits (line 149) - Score: 100
+    i Test 'stream_map_distinguishes_zero_missing_and_big_endian_limits' has multiple assertions without diagnostic messages
+    i Test 'stream_map_distinguishes_zero_missing_and_big_endian_limits' uses .unwrap() which silently discards error information
+  absent_direct_and_indirect_identity_preserve_compatibility (line 200) - Score: 100
+    i Test 'absent_direct_and_indirect_identity_preserve_compatibility' uses .unwrap() which silently discards error information
+  invalid_maps_fail_resolution_but_preserve_explicit_text_metadata (line 219) - Score: 100
+    i Test 'invalid_maps_fail_resolution_but_preserve_explicit_text_metadata' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'invalid_maps_fail_resolution_but_preserve_explicit_text_metadata' uses .unwrap() which silently discards error information
+  private_unknown_recovery_consumes_whole_codes_and_truncated_tails (line 258) - Score: 90
+    - Test 'private_unknown_recovery_consumes_whole_codes_and_truncated_tails' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

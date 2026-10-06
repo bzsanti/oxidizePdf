@@ -1,0 +1,50 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 92 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-core/tests/text_inline_image_boundary_contract_test.rs        6     92
+
+--- Worst Offenders ---
+  pdf_whitespace_delimits_inline_image_without_swallowing_following_text (oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:10) - Score: 90
+    - Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' has a match arm with empty body, ignoring potential error cases
+    i Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' uses .unwrap() which silently discards error information
+  unfiltered_length_keeps_embedded_ei_inside_pixels_and_recovers_tight_end_marker (oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:89) - Score: 90
+    - Test 'unfiltered_length_keeps_embedded_ei_inside_pixels_and_recovers_tight_end_marker' does not call any production code
+  unfiltered_length_uses_components_and_per_row_bit_padding (oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:96) - Score: 90
+    - Test 'unfiltered_length_uses_components_and_per_row_bit_padding' does not call any production code
+  indexed_inline_palette_is_one_component_and_retains_its_binary_lookup (oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:108) - Score: 90
+    - Test 'indexed_inline_palette_is_one_component_and_retains_its_binary_lookup' has a match arm with empty body, ignoring potential error cases
+    i Test 'indexed_inline_palette_is_one_component_and_retains_its_binary_lookup' has multiple assertions without diagnostic messages
+  filters_unknown_color_spaces_and_overflow_do_not_guess_raw_length (oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:135) - Score: 90
+    - Test 'filters_unknown_color_spaces_and_overflow_do_not_guess_raw_length' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:
+  pdf_whitespace_delimits_inline_image_without_swallowing_following_text (line 10) - Score: 90
+    - Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' has a match arm with empty body, ignoring potential error cases
+    i Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' uses .unwrap() which silently discards error information
+  nul_separates_tokens_and_hex_digits_but_remains_literal_data (line 43) - Score: 100
+    i Test 'nul_separates_tokens_and_hex_digits_but_remains_literal_data' has multiple assertions without diagnostic messages
+    i Test 'nul_separates_tokens_and_hex_digits_but_remains_literal_data' uses .unwrap() which silently discards error information
+  unfiltered_length_keeps_embedded_ei_inside_pixels_and_recovers_tight_end_marker (line 89) - Score: 90
+    - Test 'unfiltered_length_keeps_embedded_ei_inside_pixels_and_recovers_tight_end_marker' does not call any production code
+  unfiltered_length_uses_components_and_per_row_bit_padding (line 96) - Score: 90
+    - Test 'unfiltered_length_uses_components_and_per_row_bit_padding' does not call any production code
+  indexed_inline_palette_is_one_component_and_retains_its_binary_lookup (line 108) - Score: 90
+    - Test 'indexed_inline_palette_is_one_component_and_retains_its_binary_lookup' has a match arm with empty body, ignoring potential error cases
+    i Test 'indexed_inline_palette_is_one_component_and_retains_its_binary_lookup' has multiple assertions without diagnostic messages
+  filters_unknown_color_spaces_and_overflow_do_not_guess_raw_length (line 135) - Score: 90
+    - Test 'filters_unknown_color_spaces_and_overflow_do_not_guess_raw_length' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

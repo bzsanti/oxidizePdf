@@ -1,0 +1,117 @@
+{
+  "versions": [
+    "1.26.5",
+    "1.26.10",
+    null
+  ],
+  "cases": [
+    {
+      "code": "41",
+      "bytes": 1,
+      "value": 65,
+      "expected": "fi",
+      "mupdf": "fi\n",
+      "mupdf_warnings": "",
+      "poppler": "fi\n\f",
+      "poppler_stderr": "",
+      "poppler_exit": 0,
+      "qpdf_exit": 0
+    },
+    {
+      "code": "0041",
+      "bytes": 2,
+      "value": 65,
+      "expected": "fi",
+      "mupdf": "fi\n",
+      "mupdf_warnings": "",
+      "poppler": "fi\n\f",
+      "poppler_stderr": "",
+      "poppler_exit": 0,
+      "qpdf_exit": 0
+    },
+    {
+      "code": "000041",
+      "bytes": 3,
+      "value": 65,
+      "expected": "fi",
+      "mupdf": "fi\n",
+      "mupdf_warnings": "",
+      "poppler": "fi\n\f",
+      "poppler_stderr": "",
+      "poppler_exit": 0,
+      "qpdf_exit": 0
+    },
+    {
+      "code": "00000041",
+      "bytes": 4,
+      "value": 65,
+      "expected": "fi",
+      "mupdf": "fi\n",
+      "mupdf_warnings": "",
+      "poppler": "fi\n\f",
+      "poppler_stderr": "",
+      "poppler_exit": 0,
+      "qpdf_exit": 0
+    },
+    {
+      "code": "FFFF",
+      "bytes": 2,
+      "value": 65535,
+      "expected": "fi",
+      "mupdf": "fi\n",
+      "mupdf_warnings": "",
+      "poppler": "fi\n\f",
+      "poppler_stderr": "",
+      "poppler_exit": 0,
+      "qpdf_exit": 0
+    },
+    {
+      "code": "010000",
+      "bytes": 3,
+      "value": 65536,
+      "expected": "fi",
+      "mupdf": "fi\n",
+      "mupdf_warnings": "",
+      "poppler": "fi\n\f",
+      "poppler_stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+      "poppler_exit": 0,
+      "qpdf_exit": 0
+    },
+    {
+      "code": "FFFFFF",
+      "bytes": 3,
+      "value": 16777215,
+      "expected": "fi",
+      "mupdf": "fi\n",
+      "mupdf_warnings": "",
+      "poppler": "fi\n\f",
+      "poppler_stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+      "poppler_exit": 0,
+      "qpdf_exit": 0
+    },
+    {
+      "code": "01000000",
+      "bytes": 4,
+      "value": 16777216,
+      "expected": "fi",
+      "mupdf": "fi\n",
+      "mupdf_warnings": "",
+      "poppler": "\f",
+      "poppler_stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+      "poppler_exit": 0,
+      "qpdf_exit": 0
+    },
+    {
+      "code": "E0000001",
+      "bytes": 4,
+      "value": 3758096385,
+      "expected": "fi",
+      "mupdf": "fi\n",
+      "mupdf_warnings": "",
+      "poppler": "\f",
+      "poppler_stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+      "poppler_exit": 0,
+      "qpdf_exit": 0
+    }
+  ]
+}

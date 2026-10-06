@@ -1,0 +1,49 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_truetype_contract_test.rs             5     96
+
+--- Worst Offenders ---
+  full_truetype_decodes_composite_glyph_without_tounicode (oxidize-pdf-core/tests/text_truetype_contract_test.rs:79) - Score: 90
+    - Test 'full_truetype_decodes_composite_glyph_without_tounicode' has identical neighborhood to 'subset_truetype_decodes_composite_glyph_without_tounicode'
+    i Test 'full_truetype_decodes_composite_glyph_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  subset_truetype_decodes_composite_glyph_without_tounicode (oxidize-pdf-core/tests/text_truetype_contract_test.rs:90) - Score: 90
+    - Test 'subset_truetype_decodes_composite_glyph_without_tounicode' has identical neighborhood to 'full_truetype_decodes_composite_glyph_without_tounicode'
+    i Test 'subset_truetype_decodes_composite_glyph_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  full_and_subset_are_pinned_distinct_truetype_programs (oxidize-pdf-core/tests/text_truetype_contract_test.rs:53) - Score: 100
+    i Test 'full_and_subset_are_pinned_distinct_truetype_programs' uses .unwrap() which silently discards error information
+  full_and_subset_tounicode_override_font_encoding (oxidize-pdf-core/tests/text_truetype_contract_test.rs:101) - Score: 100
+    i Test 'full_and_subset_tounicode_override_font_encoding' asserts against a hardcoded constant instead of a computed expected value
+  full_and_subset_preserve_advance_and_explicit_space (oxidize-pdf-core/tests/text_truetype_contract_test.rs:115) - Score: 100
+    i Test 'full_and_subset_preserve_advance_and_explicit_space' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'full_and_subset_preserve_advance_and_explicit_space' has multiple assertions without diagnostic messages
+    i Test 'full_and_subset_preserve_advance_and_explicit_space' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_truetype_contract_test.rs:
+  full_and_subset_are_pinned_distinct_truetype_programs (line 53) - Score: 100
+    i Test 'full_and_subset_are_pinned_distinct_truetype_programs' uses .unwrap() which silently discards error information
+  full_truetype_decodes_composite_glyph_without_tounicode (line 79) - Score: 90
+    - Test 'full_truetype_decodes_composite_glyph_without_tounicode' has identical neighborhood to 'subset_truetype_decodes_composite_glyph_without_tounicode'
+    i Test 'full_truetype_decodes_composite_glyph_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  subset_truetype_decodes_composite_glyph_without_tounicode (line 90) - Score: 90
+    - Test 'subset_truetype_decodes_composite_glyph_without_tounicode' has identical neighborhood to 'full_truetype_decodes_composite_glyph_without_tounicode'
+    i Test 'subset_truetype_decodes_composite_glyph_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  full_and_subset_tounicode_override_font_encoding (line 101) - Score: 100
+    i Test 'full_and_subset_tounicode_override_font_encoding' asserts against a hardcoded constant instead of a computed expected value
+  full_and_subset_preserve_advance_and_explicit_space (line 115) - Score: 100
+    i Test 'full_and_subset_preserve_advance_and_explicit_space' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'full_and_subset_preserve_advance_and_explicit_space' has multiple assertions without diagnostic messages
+    i Test 'full_and_subset_preserve_advance_and_explicit_space' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

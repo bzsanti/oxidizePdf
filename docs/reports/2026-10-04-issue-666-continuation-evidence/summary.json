@@ -1,0 +1,26 @@
+{
+  "passed": 28,
+  "failed": 0,
+  "targets": 4,
+  "new_contracts": 6,
+  "prior_snapshot_files": 560,
+  "prior_snapshot_changed": [
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json"
+  ],
+  "product_changed": false,
+  "regeneration": "2/2 byte-identical",
+  "mutation_control_passed": 6,
+  "input_mutation_failures": {
+    "wrong_full_gid": 2,
+    "missing_full_table": 3
+  },
+  "truncation_probe_cases": 14,
+  "truncation_remediation": "blocked pending issue",
+  "corpus": "not repeated: product unchanged",
+  "kripteia": {
+    "rust_tests": 6,
+    "rust_score": 95,
+    "python_tests": 0,
+    "security_alerts": 0
+  }
+}

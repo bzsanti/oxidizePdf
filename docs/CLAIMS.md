@@ -8,7 +8,17 @@ below resolve under `oxidize-pdf-core/`; source and tests establish only the
 stated operation, not an entire standard, service or audited security guarantee.
 This is a bounded claims inventory, not an exhaustive codebase audit.
 
-The **5.2.0 release candidate** adds the following verified changes to that
+The **5.3.0 release candidate** adds version-aware document strings (#667),
+complete simple-font encodings (#662/#668), expanded font/Unicode/geometry
+contracts (#666), bounded lenient Type0 tracking recovery (#663), and recovery
+of missing tagged-page StructParents keys (#677). Explicit Flate recovery keeps
+its opt-in diagnostics and limits; #680 adds documentation and regressions.
+See the [5.3.0 changelog](../CHANGELOG.md) and the
+[release review](reports/2026-10-06-release-5.3.0-review.md).
+These changes do not establish new benchmark results or broader standards
+certification. Certificate-recipient encryption #642 / PR #658 remains excluded.
+
+The **5.2.0 release** adds the following verified changes to that
 historical inventory. Measurements and 5.1.5 reproductions below keep their
 original version and date; they are not new measurements of 5.2.0.
 

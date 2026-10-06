@@ -1,0 +1,36 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 4 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_embedded_font_contract_test.rs        4    100
+
+--- Worst Offenders ---
+  embedded_font_is_the_pinned_opentype_cff_program (oxidize-pdf-core/tests/text_embedded_font_contract_test.rs:40) - Score: 100
+    i Test 'embedded_font_is_the_pinned_opentype_cff_program' has multiple assertions without diagnostic messages
+    i Test 'embedded_font_is_the_pinned_opentype_cff_program' uses .unwrap() which silently discards error information
+  embedded_cff_simple_font_decodes_without_tounicode (oxidize-pdf-core/tests/text_embedded_font_contract_test.rs:59) - Score: 100
+    i Test 'embedded_cff_simple_font_decodes_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  embedded_cff_tounicode_has_precedence (oxidize-pdf-core/tests/text_embedded_font_contract_test.rs:66) - Score: 100
+    i Test 'embedded_cff_tounicode_has_precedence' asserts against a hardcoded constant instead of a computed expected value
+  embedded_cff_advance_matches_declared_font_metrics (oxidize-pdf-core/tests/text_embedded_font_contract_test.rs:73) - Score: 100
+
+--- Details ---
+oxidize-pdf-core/tests/text_embedded_font_contract_test.rs:
+  embedded_font_is_the_pinned_opentype_cff_program (line 40) - Score: 100
+    i Test 'embedded_font_is_the_pinned_opentype_cff_program' has multiple assertions without diagnostic messages
+    i Test 'embedded_font_is_the_pinned_opentype_cff_program' uses .unwrap() which silently discards error information
+  embedded_cff_simple_font_decodes_without_tounicode (line 59) - Score: 100
+    i Test 'embedded_cff_simple_font_decodes_without_tounicode' asserts against a hardcoded constant instead of a computed expected value
+  embedded_cff_tounicode_has_precedence (line 66) - Score: 100
+    i Test 'embedded_cff_tounicode_has_precedence' asserts against a hardcoded constant instead of a computed expected value
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

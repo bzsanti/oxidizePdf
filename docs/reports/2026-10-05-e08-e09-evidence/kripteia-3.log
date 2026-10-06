@@ -1,0 +1,56 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 99 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ize-pdf-core/tests/text_unicode_policy_contract_test.rs        7     99
+
+--- Worst Offenders ---
+  agl_components_suffixes_and_scalar_boundaries_follow_independent_examples (oxidize-pdf-core/tests/text_unicode_policy_contract_test.rs:44) - Score: 90
+    - Test 'agl_components_suffixes_and_scalar_boundaries_follow_independent_examples' has low assert-to-setup ratio (6%): 1 asserts vs 16 setup lines
+  differences_sequences_reach_both_consumers_without_multiplying_advances (oxidize-pdf-core/tests/text_unicode_policy_contract_test.rs:70) - Score: 100
+    i Test 'differences_sequences_reach_both_consumers_without_multiplying_advances' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'differences_sequences_reach_both_consumers_without_multiplying_advances' has multiple assertions without diagnostic messages
+    i Test 'differences_sequences_reach_both_consumers_without_multiplying_advances' uses .unwrap() which silently discards error information
+  malformed_tounicode_destinations_never_become_utf8_or_base_text (oxidize-pdf-core/tests/text_unicode_policy_contract_test.rs:94) - Score: 100
+    i Test 'malformed_tounicode_destinations_never_become_utf8_or_base_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'malformed_tounicode_destinations_never_become_utf8_or_base_text' uses .unwrap() which silently discards error information
+  valid_utf16_sequences_preserve_precedence_and_scalar_content (oxidize-pdf-core/tests/text_unicode_policy_contract_test.rs:117) - Score: 100
+    i Test 'valid_utf16_sequences_preserve_precedence_and_scalar_content' uses .unwrap() which silently discards error information
+  unknown_difference_replaces_base_in_all_simple_subtypes (oxidize-pdf-core/tests/text_unicode_policy_contract_test.rs:149) - Score: 100
+    i Test 'unknown_difference_replaces_base_in_all_simple_subtypes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unknown_difference_replaces_base_in_all_simple_subtypes' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_unicode_policy_contract_test.rs:
+  agl_components_suffixes_and_scalar_boundaries_follow_independent_examples (line 44) - Score: 90
+    - Test 'agl_components_suffixes_and_scalar_boundaries_follow_independent_examples' has low assert-to-setup ratio (6%): 1 asserts vs 16 setup lines
+  differences_sequences_reach_both_consumers_without_multiplying_advances (line 70) - Score: 100
+    i Test 'differences_sequences_reach_both_consumers_without_multiplying_advances' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'differences_sequences_reach_both_consumers_without_multiplying_advances' has multiple assertions without diagnostic messages
+    i Test 'differences_sequences_reach_both_consumers_without_multiplying_advances' uses .unwrap() which silently discards error information
+  malformed_tounicode_destinations_never_become_utf8_or_base_text (line 94) - Score: 100
+    i Test 'malformed_tounicode_destinations_never_become_utf8_or_base_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'malformed_tounicode_destinations_never_become_utf8_or_base_text' uses .unwrap() which silently discards error information
+  valid_utf16_sequences_preserve_precedence_and_scalar_content (line 117) - Score: 100
+    i Test 'valid_utf16_sequences_preserve_precedence_and_scalar_content' uses .unwrap() which silently discards error information
+  unknown_difference_replaces_base_in_all_simple_subtypes (line 149) - Score: 100
+    i Test 'unknown_difference_replaces_base_in_all_simple_subtypes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unknown_difference_replaces_base_in_all_simple_subtypes' uses .unwrap() which silently discards error information
+  incomplete_tounicode_does_not_invent_a_base_mapping (line 177) - Score: 100
+    i Test 'incomplete_tounicode_does_not_invent_a_base_mapping' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incomplete_tounicode_does_not_invent_a_base_mapping' has multiple assertions without diagnostic messages
+    i Test 'incomplete_tounicode_does_not_invent_a_base_mapping' uses .unwrap() which silently discards error information
+  zapf_components_use_font_specific_names_in_both_consumers (line 198) - Score: 100
+    i Test 'zapf_components_use_font_specific_names_in_both_consumers' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'zapf_components_use_font_specific_names_in_both_consumers' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

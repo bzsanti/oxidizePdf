@@ -1,0 +1,73 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 10 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/text/extraction_cmap.rs                     10     91
+
+--- Worst Offenders ---
+  type0_utf16be_encoding_decodes_through_dispatch (oxidize-pdf-core/src/text/extraction_cmap.rs:2460) - Score: 80
+    i Test 'type0_utf16be_encoding_decodes_through_dispatch' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'type0_utf16be_encoding_decodes_through_dispatch' uses .unwrap() which silently discards error information
+    - Test 'type0_utf16be_encoding_decodes_through_dispatch' has low assert-to-setup ratio (8%): 2 asserts vs 24 setup lines
+    - Test 'type0_utf16be_encoding_decodes_through_dispatch' does not call any production code
+  test_glyph_name_to_unicode (oxidize-pdf-core/src/text/extraction_cmap.rs:2217) - Score: 90
+    i Test 'test_glyph_name_to_unicode' has multiple assertions without diagnostic messages
+    - Test 'test_glyph_name_to_unicode' does not call any production code
+  test_decode_with_encoding_differences (oxidize-pdf-core/src/text/extraction_cmap.rs:2304) - Score: 90
+    i Test 'test_decode_with_encoding_differences' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_decode_with_encoding_differences' uses .unwrap() which silently discards error information
+    - Test 'test_decode_with_encoding_differences' has low assert-to-setup ratio (8%): 2 asserts vs 22 setup lines
+  test_decode_winansi (oxidize-pdf-core/src/text/extraction_cmap.rs:2332) - Score: 90
+    i Test 'test_decode_winansi' has multiple assertions without diagnostic messages
+    - Test 'test_decode_winansi' does not call any production code
+  test_decode_macroman (oxidize-pdf-core/src/text/extraction_cmap.rs:2340) - Score: 90
+    i Test 'test_decode_macroman' has multiple assertions without diagnostic messages
+    - Test 'test_decode_macroman' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/src/text/extraction_cmap.rs:
+  test_glyph_name_to_unicode (line 2217) - Score: 90
+    i Test 'test_glyph_name_to_unicode' has multiple assertions without diagnostic messages
+    - Test 'test_glyph_name_to_unicode' does not call any production code
+  test_decode_with_encoding_differences (line 2304) - Score: 90
+    i Test 'test_decode_with_encoding_differences' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_decode_with_encoding_differences' uses .unwrap() which silently discards error information
+    - Test 'test_decode_with_encoding_differences' has low assert-to-setup ratio (8%): 2 asserts vs 22 setup lines
+  test_decode_winansi (line 2332) - Score: 90
+    i Test 'test_decode_winansi' has multiple assertions without diagnostic messages
+    - Test 'test_decode_winansi' does not call any production code
+  test_decode_macroman (line 2340) - Score: 90
+    i Test 'test_decode_macroman' has multiple assertions without diagnostic messages
+    - Test 'test_decode_macroman' does not call any production code
+  test_font_info_creation (line 2356) - Score: 90
+    i Test 'test_font_info_creation' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_font_info_creation' does not call any production code
+  simple_font_one_byte_tounicode_under_two_byte_codespace_decodes (line 2375) - Score: 90
+    i Test 'simple_font_one_byte_tounicode_under_two_byte_codespace_decodes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'simple_font_one_byte_tounicode_under_two_byte_codespace_decodes' uses .unwrap() which silently discards error information
+    - Test 'simple_font_one_byte_tounicode_under_two_byte_codespace_decodes' has low assert-to-setup ratio (14%): 3 asserts vs 19 setup lines
+  embedded_encoding_cmap_decodes_via_cid_table (line 2412) - Score: 100
+    i Test 'embedded_encoding_cmap_decodes_via_cid_table' uses .unwrap() which silently discards error information
+  type0_utf16be_encoding_decodes_through_dispatch (line 2460) - Score: 80
+    i Test 'type0_utf16be_encoding_decodes_through_dispatch' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'type0_utf16be_encoding_decodes_through_dispatch' uses .unwrap() which silently discards error information
+    - Test 'type0_utf16be_encoding_decodes_through_dispatch' has low assert-to-setup ratio (8%): 2 asserts vs 24 setup lines
+    - Test 'type0_utf16be_encoding_decodes_through_dispatch' does not call any production code
+  explicit_bfchar_overrides_usecmap_cid_fallback (line 2490) - Score: 100
+    i Test 'explicit_bfchar_overrides_usecmap_cid_fallback' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'explicit_bfchar_overrides_usecmap_cid_fallback' uses .unwrap() which silently discards error information
+  extract_font_metrics_type3_font_matrix_scaling (line 2513) - Score: 90
+    - Test 'extract_font_metrics_type3_font_matrix_scaling' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'extract_font_metrics_type3_font_matrix_scaling' has multiple assertions without diagnostic messages
+    i Test 'extract_font_metrics_type3_font_matrix_scaling' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

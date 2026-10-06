@@ -1,0 +1,53 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ize-pdf-core/tests/text_competing_cmap_contract_test.rs        6     95
+
+--- Worst Offenders ---
+  full_unicode_wins_in_all_120_subtable_orders (oxidize-pdf-core/tests/text_competing_cmap_contract_test.rs:46) - Score: 90
+    - Test 'full_unicode_wins_in_all_120_subtable_orders' does not call any production code
+  bmp_wins_when_full_unicode_is_absent (oxidize-pdf-core/tests/text_competing_cmap_contract_test.rs:51) - Score: 90
+    - Test 'bmp_wins_when_full_unicode_is_absent' does not call any production code
+  generic_unicode_wins_when_windows_unicode_is_absent (oxidize-pdf-core/tests/text_competing_cmap_contract_test.rs:56) - Score: 90
+    - Test 'generic_unicode_wins_when_windows_unicode_is_absent' does not call any production code
+  fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority (oxidize-pdf-core/tests/text_competing_cmap_contract_test.rs:61) - Score: 100
+    i Test 'fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority' has multiple assertions without diagnostic messages
+    i Test 'fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority' uses .unwrap() which silently discards error information
+  selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables (oxidize-pdf-core/tests/text_competing_cmap_contract_test.rs:81) - Score: 100
+    i Test 'selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables' has multiple assertions without diagnostic messages
+    i Test 'selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_competing_cmap_contract_test.rs:
+  full_unicode_wins_in_all_120_subtable_orders (line 46) - Score: 90
+    - Test 'full_unicode_wins_in_all_120_subtable_orders' does not call any production code
+  bmp_wins_when_full_unicode_is_absent (line 51) - Score: 90
+    - Test 'bmp_wins_when_full_unicode_is_absent' does not call any production code
+  generic_unicode_wins_when_windows_unicode_is_absent (line 56) - Score: 90
+    - Test 'generic_unicode_wins_when_windows_unicode_is_absent' does not call any production code
+  fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority (line 61) - Score: 100
+    i Test 'fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority' has multiple assertions without diagnostic messages
+    i Test 'fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority' uses .unwrap() which silently discards error information
+  selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables (line 81) - Score: 100
+    i Test 'selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables' has multiple assertions without diagnostic messages
+    i Test 'selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables' uses .unwrap() which silently discards error information
+  competing_program_matches_independent_fonttools_tables_and_hash (line 91) - Score: 100
+    i Test 'competing_program_matches_independent_fonttools_tables_and_hash' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'competing_program_matches_independent_fonttools_tables_and_hash' has multiple assertions without diagnostic messages
+    i Test 'competing_program_matches_independent_fonttools_tables_and_hash' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

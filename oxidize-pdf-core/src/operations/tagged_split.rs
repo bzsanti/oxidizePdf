@@ -5,6 +5,9 @@
 //! from the retained associations. Only unreadable, exact-generation index-root
 //! references at offset zero are recoverable, and only on those two root edges.
 //! Other uses of the same malformed reference still fail the source graph walk.
+//! Missing page /StructParents keys are assigned after ownership traversal,
+//! avoiding existing page and OBJR keys. Present but invalid keys are rejected.
+//! The materialized projection must still pass tagged-content validation.
 //! No content stream or accessibility metadata on retained elements is discarded.
 //! External-stream MCRs and deletion combined with page cloning/import require
 //! additional ownership remapping and are explicitly rejected, not flattened.
@@ -61,7 +64,8 @@ struct Projector<'a, R: Read + Seek> {
     projection: Projection,
     visited: HashSet<Id>,
     entries: usize,
-    parents: BTreeMap<i64, BTreeMap<usize, Id>>,
+    parents: BTreeMap<Id, BTreeMap<usize, Id>>,
+    reserved_keys: HashSet<i64>,
     object_parents: BTreeMap<i64, Id>,
     key_pages: HashMap<i64, Id>,
     ids: BTreeMap<Vec<u8>, Id>,
@@ -149,37 +153,34 @@ impl<R: Read + Seek> Projector<'_, R> {
         if !(0..LIMIT as i64).contains(&mcid) {
             return Err(error("tagged split MCID exceeds supported range"));
         }
-        let key = self.pages[&page]
-            .get("StructParents")
-            .and_then(PdfObject::as_integer)
-            .filter(|k| *k >= 0)
-            .ok_or_else(|| {
+        if let Some(value) = self.pages[&page].get("StructParents") {
+            let key = value.as_integer().filter(|k| *k >= 0).ok_or_else(|| {
                 error(format!(
                     "tagged page {} {} R lacks valid /StructParents",
                     page.0, page.1
                 ))
             })?;
-        if let Some(previous) = self.key_pages.insert(key, page) {
-            if previous != page {
-                return Err(error("tagged pages share /StructParents key"));
+            if let Some(previous) = self.key_pages.insert(key, page) {
+                if previous != page {
+                    return Err(error("tagged pages share /StructParents key"));
+                }
+            }
+            if self.object_parents.contains_key(&key) {
+                return Err(error("page and object share ParentTree key"));
             }
         }
-        if !self.retained.contains(&page) {
-            return Ok(false);
-        }
-        if self.object_parents.contains_key(&key) {
-            return Err(error("page and object share ParentTree key"));
-        }
+        // Check ownership even for removed pages; filtering must not hide an
+        // ambiguous source association merely because another part keeps it.
         if self
             .parents
-            .entry(key)
+            .entry(page)
             .or_default()
             .insert(mcid as usize, owner)
             .is_some()
         {
             return Err(error("MCID has multiple structure owners"));
         }
-        Ok(true)
+        Ok(self.retained.contains(&page))
     }
     fn kid(
         &mut self,
@@ -257,10 +258,11 @@ impl<R: Read + Seek> Projector<'_, R> {
                             .and_then(PdfObject::as_integer)
                             .filter(|k| *k >= 0)
                             .ok_or_else(|| error("OBJR target lacks valid /StructParent"))?;
+                        self.reserved_keys.insert(key);
                         if !self.retained.contains(&page) {
                             return Ok(None);
                         }
-                        if self.parents.contains_key(&key)
+                        if self.key_pages.contains_key(&key)
                             || self.object_parents.insert(key, owner).is_some()
                         {
                             return Err(error("duplicate OBJR ParentTree key"));
@@ -348,6 +350,14 @@ pub(super) fn project<R: Read + Seek>(
         .ok_or_else(|| error("tagged split requires indirect /StructTreeRoot"))?;
     let mut p = Projector {
         reader,
+        reserved_keys: pages
+            .values()
+            .filter_map(|page| {
+                page.get("StructParents")
+                    .and_then(PdfObject::as_integer)
+                    .filter(|key| *key >= 0)
+            })
+            .collect(),
         pages,
         retained,
         projection: Projection::default(),
@@ -391,7 +401,33 @@ pub(super) fn project<R: Read + Seek>(
     root.insert("K".to_string(), kids.unwrap_or_else(|| array(Vec::new())));
     let mut nums = BTreeMap::new();
     let mut slots = 0usize;
-    for (&key, owners) in &p.parents {
+    let mut fresh_key = 0i64;
+    // Page identities order assignment deterministically for both planning and
+    // materialization, independent of HashMap iteration and /K encounter order.
+    for (&page, owners) in &p.parents {
+        if !p.retained.contains(&page) {
+            continue;
+        }
+        let key = match p.pages[&page].get("StructParents") {
+            Some(value) => value
+                .as_integer()
+                .ok_or_else(|| error("invalid page parent key"))?,
+            None => {
+                while p.reserved_keys.contains(&fresh_key) {
+                    fresh_key = fresh_key
+                        .checked_add(1)
+                        .ok_or_else(|| error("ParentTree key overflow"))?;
+                }
+                let key = fresh_key;
+                p.reserved_keys.insert(key);
+                let mut dictionary = p.pages[&page].clone();
+                dictionary.insert("StructParents".to_string(), PdfObject::Integer(key));
+                p.projection
+                    .replacements
+                    .insert(page, PdfObject::Dictionary(dictionary));
+                key
+            }
+        };
         slots = slots
             .checked_add(owners.keys().next_back().copied().unwrap_or(0) + 1)
             .ok_or_else(|| error("ParentTree allocation exceeds limit"))?;

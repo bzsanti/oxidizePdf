@@ -1,0 +1,29 @@
+
+running 10 tests
+test type3_charproc_names_supply_unicode_without_tounicode ... ok
+test bfrange_sequential_destination_increments_unicode ... ok
+test bfrange_array_preserves_sequences_and_surrogate_pairs ... ok
+test type3_advance_uses_font_matrix_and_declared_width ... ok
+test type3_tounicode_overrides_charproc_names ... ok
+test resolved_type3_retains_full_matrix_but_reports_horizontal_advance ... FAILED
+test type3_tj_adjustment_is_in_text_units_not_glyph_matrix_units ... ok
+test type3_nonuniform_font_matrix_combines_with_character_and_horizontal_scaling ... ok
+test type3_text_matrix_rotates_the_pen_even_when_font_matrix_does_not ... ok
+test type3_non_scalar_matrices_preserve_horizontal_text_pen_contract ... ok
+
+failures:
+
+---- resolved_type3_retains_full_matrix_but_reports_horizontal_advance stdout ----
+
+thread 'resolved_type3_retains_full_matrix_but_reports_horizontal_advance' (140) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-type3/mutations/drop_translation.rs:237:9:
+assertion `left == right` failed
+  left: [-0.001, 0.0, 0.0, 0.002, 0.0, 0.0]
+ right: [-0.001, 0.0, 0.0, 0.002, 0.1, 0.2]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    resolved_type3_retains_full_matrix_but_reports_horizontal_advance
+
+test result: FAILED. 9 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

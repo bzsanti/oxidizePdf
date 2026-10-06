@@ -1,0 +1,62 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 15 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_vertical_contract_test.rs            15     91
+
+--- Worst Offenders ---
+  identity_v_uses_default_vertical_advance (oxidize-pdf-core/tests/text_vertical_contract_test.rs:87) - Score: 80
+    - Test 'identity_v_uses_default_vertical_advance' has identical neighborhood to 'vertical_pen_follows_rotated_ctm'
+    - Test 'identity_v_uses_default_vertical_advance' does not call any production code
+  word_spacing_does_not_apply_to_two_byte_source_codes (oxidize-pdf-core/tests/text_vertical_contract_test.rs:169) - Score: 80
+    - Test 'word_spacing_does_not_apply_to_two_byte_source_codes' has identical neighborhood to 'identity_v_uses_default_vertical_advance'
+    - Test 'word_spacing_does_not_apply_to_two_byte_source_codes' does not call any production code
+  vertical_pen_follows_rotated_ctm (oxidize-pdf-core/tests/text_vertical_contract_test.rs:189) - Score: 80
+    - Test 'vertical_pen_follows_rotated_ctm' has identical neighborhood to 'identity_v_uses_default_vertical_advance'
+    - Test 'vertical_pen_follows_rotated_ctm' does not call any production code
+  embedded_wmode_one_selects_vertical_advance (oxidize-pdf-core/tests/text_vertical_contract_test.rs:91) - Score: 90
+    - Test 'embedded_wmode_one_selects_vertical_advance' does not call any production code
+  dw2_overrides_default_vertical_advance (oxidize-pdf-core/tests/text_vertical_contract_test.rs:95) - Score: 90
+    - Test 'dw2_overrides_default_vertical_advance' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_vertical_contract_test.rs:
+  identity_v_uses_default_vertical_advance (line 87) - Score: 80
+    - Test 'identity_v_uses_default_vertical_advance' has identical neighborhood to 'vertical_pen_follows_rotated_ctm'
+    - Test 'identity_v_uses_default_vertical_advance' does not call any production code
+  embedded_wmode_one_selects_vertical_advance (line 91) - Score: 90
+    - Test 'embedded_wmode_one_selects_vertical_advance' does not call any production code
+  dw2_overrides_default_vertical_advance (line 95) - Score: 90
+    - Test 'dw2_overrides_default_vertical_advance' does not call any production code
+  w2_array_overrides_dw2_for_the_selected_cid (line 104) - Score: 90
+    - Test 'w2_array_overrides_dw2_for_the_selected_cid' does not call any production code
+  w2_range_overrides_dw2_for_the_selected_cid (line 113) - Score: 90
+    - Test 'w2_range_overrides_dw2_for_the_selected_cid' does not call any production code
+  missing_w2_entry_falls_back_to_dw2 (line 122) - Score: 90
+    - Test 'missing_w2_entry_falls_back_to_dw2' does not call any production code
+  character_spacing_applies_on_the_vertical_axis (line 159) - Score: 90
+    - Test 'character_spacing_applies_on_the_vertical_axis' does not call any production code
+  word_spacing_does_not_apply_to_two_byte_source_codes (line 169) - Score: 80
+    - Test 'word_spacing_does_not_apply_to_two_byte_source_codes' has identical neighborhood to 'identity_v_uses_default_vertical_advance'
+    - Test 'word_spacing_does_not_apply_to_two_byte_source_codes' does not call any production code
+  vertical_pen_follows_rotated_ctm (line 189) - Score: 80
+    - Test 'vertical_pen_follows_rotated_ctm' has identical neighborhood to 'identity_v_uses_default_vertical_advance'
+    - Test 'vertical_pen_follows_rotated_ctm' does not call any production code
+  font_size_changes_apply_to_subsequent_vertical_advances (line 198) - Score: 90
+    - Test 'font_size_changes_apply_to_subsequent_vertical_advances' does not call any production code
+  w2_array_uses_selected_cid_at_each_position (line 207) - Score: 90
+    - Test 'w2_array_uses_selected_cid_at_each_position' does not call any production code
+  vertical_multiscalar_unicode_advances_once_per_source_code (line 217) - Score: 100
+    i Test 'vertical_multiscalar_unicode_advances_once_per_source_code' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'vertical_multiscalar_unicode_advances_once_per_source_code' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

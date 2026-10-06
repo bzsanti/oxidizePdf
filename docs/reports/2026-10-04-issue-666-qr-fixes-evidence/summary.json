@@ -1,0 +1,29 @@
+{
+  "findings_fixed": 13,
+  "first_combined_run": {
+    "passed": 7132,
+    "failed": 2,
+    "ignored": 3,
+    "targets": 31
+  },
+  "final_affected_rerun": {
+    "passed": 27,
+    "failed": 0,
+    "targets": 2
+  },
+  "final_consolidated_unique": {
+    "passed": 7134,
+    "failed": 0,
+    "ignored": 3,
+    "targets": 31
+  },
+  "python_passed": 16,
+  "mutation_controls_passed": 3,
+  "mutations_detected": 3,
+  "security_scopes": 12,
+  "security_alerts": 0,
+  "old_fixture_bytes_changed": 0,
+  "existing_files_changed": 18,
+  "new_code_fixture_files": 6,
+  "remaining_issue_666_matrix": true
+}

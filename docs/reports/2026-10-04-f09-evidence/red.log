@@ -1,0 +1,30 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.80s
+     Running tests/text_composite_font_contract_test.rs (target/debug/deps/text_composite_font_contract_test-8168be6f19c1ad07)
+
+running 7 tests
+test cff_renderer_resolves_charset_cids_to_actual_glyph_indices ... FAILED
+test six_real_programs_and_fourteen_pdfs_match_their_frozen_hashes ... ok
+test full_and_subset_truetype_support_identity_cid_to_gid_map ... ok
+test full_and_subset_truetype_support_stream_cid_to_gid_map ... ok
+test cff_fixtures_preserve_remapped_cid_text_and_pdf_widths ... ok
+test full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct ... ok
+test cff_fixtures_preserve_identity_cid_text_and_pdf_widths ... ok
+
+failures:
+
+---- cff_renderer_resolves_charset_cids_to_actual_glyph_indices stdout ----
+
+thread 'cff_renderer_resolves_charset_cids_to_actual_glyph_indices' (154) panicked at oxidize-pdf-core/tests/text_composite_font_contract_test.rs:144:21:
+assertion `left == right` failed: cff-fd0-full-identity.pdf
+  left: [None, None]
+ right: [Some(1), Some(2)]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    cff_renderer_resolves_charset_cids_to_actual_glyph_indices
+
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_composite_font_contract_test`

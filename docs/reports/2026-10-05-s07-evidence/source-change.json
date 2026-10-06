@@ -1,0 +1,10 @@
+{
+  "reference": "../2026-10-05-s06-evidence/final-hashes.json",
+  "all_product_sources_matched_before_edit": true,
+  "only_product_edit": {
+    "file": "oxidize-pdf-core/src/text/extraction.rs",
+    "before": "/// Four of the text-state fields — `char_space`, `word_space`, `text_rise` and\n/// `render_mode` — are currently written by their operators but never read by\n/// the extractor, so restoring them changes no output today and no test can\n/// guard them. They are here because they are graphics state: whoever wires\n/// them into the pen advance, the y offset or invisible-text filtering should\n/// not have to rediscover this bug.",
+    "after": "/// Character/word spacing and text rise affect the emitted geometry; render\n/// mode is retained on fragments. Restoring these fields is observable after\n/// both explicit q/Q and the implicit save around a Form XObject."
+  },
+  "sha256_after": "e2b0726e574cc0ca8f44d084a783ae1764022df9ecf24bb3e8e4aca82a9a322b"
+}

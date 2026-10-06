@@ -1,0 +1,41 @@
+
+running 6 tests
+test bmp_wins_when_full_unicode_is_absent ... ok
+test full_unicode_wins_in_all_120_subtable_orders ... FAILED
+test fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority ... ok
+test generic_unicode_wins_when_windows_unicode_is_absent ... ok
+test selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables ... FAILED
+test competing_program_matches_independent_fonttools_tables_and_hash ... FAILED
+
+failures:
+
+---- full_unicode_wins_in_all_120_subtable_orders stdout ----
+
+thread 'full_unicode_wins_in_all_120_subtable_orders' (103) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-competing-mutations/missing-full-table.rs:36:13:
+assertion `left == right` failed
+  left: (3, 1)
+ right: (3, 10)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables stdout ----
+
+thread 'selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables' (105) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-competing-mutations/missing-full-table.rs:84:5:
+assertion `left == right` failed
+  left: 1
+ right: 2
+
+---- competing_program_matches_independent_fonttools_tables_and_hash stdout ----
+
+thread 'competing_program_matches_independent_fonttools_tables_and_hash' (101) panicked at /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-competing-mutations/missing-full-table.rs:96:5:
+assertion `left == right` failed
+  left: "ae0ff8489d6b14e3a15b7aedcc7d30081088b4f91e7dc932cfe901ea5213a758"
+ right: "c5489d43d43b9453cb1ed405b3733a8e8e576be301f7e7021f91085467fb1fc7"
+
+
+failures:
+    competing_program_matches_independent_fonttools_tables_and_hash
+    full_unicode_wins_in_all_120_subtable_orders
+    selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables
+
+test result: FAILED. 3 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

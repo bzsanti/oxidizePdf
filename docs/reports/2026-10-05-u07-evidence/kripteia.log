@@ -1,0 +1,47 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_script_contract_test.rs               8     90
+
+--- Worst Offenders ---
+  western_latin_accents_currency_and_punctuation_are_exact (oxidize-pdf-core/tests/text_script_contract_test.rs:46) - Score: 90
+    - Test 'western_latin_accents_currency_and_punctuation_are_exact' does not call any production code
+  extended_latin_preserves_polish_czech_turkish_and_vietnamese (oxidize-pdf-core/tests/text_script_contract_test.rs:55) - Score: 90
+    - Test 'extended_latin_preserves_polish_czech_turkish_and_vietnamese' does not call any production code
+  greek_and_cyrillic_keep_accents_and_mixed_digits (oxidize-pdf-core/tests/text_script_contract_test.rs:67) - Score: 90
+    - Test 'greek_and_cyrillic_keep_accents_and_mixed_digits' does not call any production code
+  arabic_preserves_logical_sequence_marks_and_arabic_indic_digits (oxidize-pdf-core/tests/text_script_contract_test.rs:74) - Score: 90
+    - Test 'arabic_preserves_logical_sequence_marks_and_arabic_indic_digits' does not call any production code
+  hebrew_preserves_logical_sequence_marks_and_mixed_digits (oxidize-pdf-core/tests/text_script_contract_test.rs:78) - Score: 90
+    - Test 'hebrew_preserves_logical_sequence_marks_and_mixed_digits' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/text_script_contract_test.rs:
+  western_latin_accents_currency_and_punctuation_are_exact (line 46) - Score: 90
+    - Test 'western_latin_accents_currency_and_punctuation_are_exact' does not call any production code
+  extended_latin_preserves_polish_czech_turkish_and_vietnamese (line 55) - Score: 90
+    - Test 'extended_latin_preserves_polish_czech_turkish_and_vietnamese' does not call any production code
+  greek_and_cyrillic_keep_accents_and_mixed_digits (line 67) - Score: 90
+    - Test 'greek_and_cyrillic_keep_accents_and_mixed_digits' does not call any production code
+  arabic_preserves_logical_sequence_marks_and_arabic_indic_digits (line 74) - Score: 90
+    - Test 'arabic_preserves_logical_sequence_marks_and_arabic_indic_digits' does not call any production code
+  hebrew_preserves_logical_sequence_marks_and_mixed_digits (line 78) - Score: 90
+    - Test 'hebrew_preserves_logical_sequence_marks_and_mixed_digits' does not call any production code
+  devanagari_and_thai_preserve_combining_sequences (line 82) - Score: 90
+    - Test 'devanagari_and_thai_preserve_combining_sequences' does not call any production code
+  supplementary_variation_selectors_and_joiners_are_not_dropped (line 86) - Score: 90
+    - Test 'supplementary_variation_selectors_and_joiners_are_not_dropped' does not call any production code
+  canonically_equivalent_sequences_remain_distinct (line 96) - Score: 90
+    - Test 'canonically_equivalent_sequences_remain_distinct' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

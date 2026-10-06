@@ -1,0 +1,15 @@
+lenient: 13 operations
+SaveGraphicsState
+RestoreGraphicsState
+SaveGraphicsState
+MoveTo(0.0, -1.0)
+LineTo(2593.0, -1.0)
+LineTo(2593.0, 1728.0)
+LineTo(0.0, 1728.0)
+ClosePath
+ClipEvenOdd
+EndPath
+SaveGraphicsState
+SetTransformMatrix(2520.0, 0.0, 0.0, -12.0, 37.2, 1692.0)
+inline {"Height": Integer(50), "ColorSpace": Null, "Interpolate": Name("DeviceRGB"), "BitsPerComponent": Integer(1), "Width": Integer(10500)}, 170697517 bytes
+strict: SyntaxError { position: 170697657, message: "Unexpected '>'" }

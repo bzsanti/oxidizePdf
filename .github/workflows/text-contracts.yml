@@ -1,0 +1,50 @@
+name: Text contracts
+
+on:
+  push:
+    branches: [main, develop, develop_santi]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: Contracts (${{ matrix.os }}, ${{ matrix.rust }}, ${{ matrix.profile }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable]
+        profile: [default, minimal, spi]
+        include:
+          - {os: ubuntu-latest, rust: '1.88', profile: default}
+          - {os: ubuntu-latest, rust: '1.88', profile: minimal}
+          - {os: ubuntu-latest, rust: '1.88', profile: spi}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: text-contracts-${{ runner.os }}-${{ matrix.rust }}-${{ hashFiles('Cargo.lock') }}
+      - name: Run deterministic text contracts
+        run: python tools/text_contracts/run_fast.py --profile ${{ matrix.profile }} --output target/text-contract-results
+      - name: Preserve commands and results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: text-contracts-${{ matrix.os }}-${{ matrix.rust }}-${{ matrix.profile }}
+          path: target/text-contract-results/
+          if-no-files-found: error

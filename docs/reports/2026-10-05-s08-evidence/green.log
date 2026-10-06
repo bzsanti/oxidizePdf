@@ -1,0 +1,52 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 7.82s
+     Running tests/text_cmap_boundary_contract_test.rs (target/debug/deps/text_cmap_boundary_contract_test-6d539187c231099f)
+
+running 14 tests
+test fully_consumed_unmapped_code_is_distinct_from_truncation ... ok
+test child_notdef_char_overrides_only_its_parent_fallback_code ... ok
+test large_cidrange_offsets_do_not_alias_the_first_cid ... ok
+test inherited_notdef_range_retains_parent_cid_and_width ... ok
+test cid_maximum_is_valid_but_five_byte_pdf_codes_are_rejected_by_renderer ... ok
+test notdef_range_selects_one_cid_without_incrementing ... ok
+test mixed_one_to_four_byte_codes_keep_boundaries_and_cids ... ok
+test ordinary_child_mapping_wins_over_inherited_notdef ... ok
+test ordinary_parent_mapping_wins_over_child_notdef ... ok
+test cid_zero_notdef_keeps_source_tounicode_and_advance ... ok
+test codespace_length_uses_the_full_prefix_not_just_the_first_byte ... ok
+test later_mappings_override_earlier_entries_within_the_same_layer ... ok
+test renderer_rejects_every_partial_multibyte_tail_in_both_modes ... ok
+test out_of_range_cids_never_wrap_into_valid_glyphs ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/text_recovery_boundary_contract_test.rs (target/debug/deps/text_recovery_boundary_contract_test-7dd20d1680fef3b8)
+
+running 11 tests
+test simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace ... ok
+test tounicode_reference_chain_preserves_authoritative_mapping ... FAILED
+test complete_codes_and_empty_string_remain_valid ... ok
+test never_joins_partial_codes_across_tj_strings ... ok
+test encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping ... ok
+test identity_collection_preserves_odd_tail_including_after_notdef ... ok
+test unavailable_font_program_does_not_discard_authoritative_text_metadata ... ok
+test complete_unmapped_code_does_not_reinterpret_its_suffix ... ok
+test unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible ... ok
+test invalid_tounicode_resource_cannot_silently_restore_base_unicode ... ok
+test preserves_valid_text_and_marks_every_incomplete_tail_once ... ok
+
+failures:
+
+---- tounicode_reference_chain_preserves_authoritative_mapping stdout ----
+
+thread 'tounicode_reference_chain_preserves_authoritative_mapping' (673) panicked at oxidize-pdf-core/tests/common/text_contracts.rs:48:10:
+fixture extraction must succeed: SyntaxError { position: 0, message: "ToUnicode must be a stream" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tounicode_reference_chain_preserves_authoritative_mapping
+
+test result: FAILED. 10 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_recovery_boundary_contract_test`

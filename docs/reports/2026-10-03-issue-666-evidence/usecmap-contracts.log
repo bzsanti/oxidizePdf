@@ -1,0 +1,67 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.84s
+     Running tests/text_usecmap_contract_test.rs (target/debug/deps/text_usecmap_contract_test-d04affbc6085c30f)
+
+running 10 tests
+test encoding_inherits_parent_codespace_and_cids ... FAILED
+test child_unicode_overrides_one_code_and_inherits_the_other ... FAILED
+test child_cid_mapping_overrides_parent_width_selection ... ok
+test both_maps_follow_two_parent_levels ... FAILED
+test identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths ... FAILED
+test tounicode_inherits_parent_mapping ... FAILED
+test identity_parent_operator_preserves_two_byte_codes_and_cid_widths ... FAILED
+test explicit_cid_mapping_precedes_notdef_range ... ok
+test flat_maps_are_the_control ... ok
+test fixture_bytes_match_frozen_provenance ... ok
+
+failures:
+
+---- encoding_inherits_parent_codespace_and_cids stdout ----
+
+thread 'encoding_inherits_parent_codespace_and_cids' (129) panicked at oxidize-pdf-core/tests/text_usecmap_contract_test.rs:35:9:
+encoding-parent: expected second origin 104, got 105
+
+---- child_unicode_overrides_one_code_and_inherits_the_other stdout ----
+
+thread 'child_unicode_overrides_one_code_and_inherits_the_other' (128) panicked at oxidize-pdf-core/tests/text_usecmap_contract_test.rs:26:9:
+assertion `left == right` failed: unicode-shadow: source glyph count
+  left: 1
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- both_maps_follow_two_parent_levels stdout ----
+
+thread 'both_maps_follow_two_parent_levels' (126) panicked at oxidize-pdf-core/tests/text_usecmap_contract_test.rs:26:9:
+assertion `left == right` failed: both-chain: source glyph count
+  left: 0
+ right: 2
+
+---- identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths stdout ----
+
+thread 'identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths' (133) panicked at oxidize-pdf-core/tests/text_usecmap_contract_test.rs:35:9:
+named-dictionary: expected second origin 104, got 105
+
+---- tounicode_inherits_parent_mapping stdout ----
+
+thread 'tounicode_inherits_parent_mapping' (135) panicked at oxidize-pdf-core/tests/text_usecmap_contract_test.rs:26:9:
+assertion `left == right` failed: unicode-parent: source glyph count
+  left: 0
+ right: 2
+
+---- identity_parent_operator_preserves_two_byte_codes_and_cid_widths stdout ----
+
+thread 'identity_parent_operator_preserves_two_byte_codes_and_cid_widths' (134) panicked at oxidize-pdf-core/tests/text_usecmap_contract_test.rs:35:9:
+named-operator: expected second origin 104, got 105
+
+
+failures:
+    both_maps_follow_two_parent_levels
+    child_unicode_overrides_one_code_and_inherits_the_other
+    encoding_inherits_parent_codespace_and_cids
+    identity_parent_dictionary_preserves_two_byte_codes_and_cid_widths
+    identity_parent_operator_preserves_two_byte_codes_and_cid_widths
+    tounicode_inherits_parent_mapping
+
+test result: FAILED. 4 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_usecmap_contract_test`

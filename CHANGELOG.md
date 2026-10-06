@@ -8,6 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.3.0] - 2026-10-06
+
+### Added
+
+- Expose effective PDF version and version-aware document string decoding APIs
+  (`effective_version`, `PdfString::to_text_with_version`) (#667).
+- Extend independently checked text contracts for simple, composite and embedded
+  fonts, CJK mappings, Unicode, vertical metrics and malformed inputs (#666).
+
+### Fixed
+
+- Decode complete MacRoman, PDF Standard, WinAnsi and MacExpert tables; select
+  built-in Symbol/ZapfDingbats encodings while preserving Differences/ToUnicode
+  precedence and font widths (#662, #668).
+- Decode PDFDocEncoding document strings and recognize UTF-8 BOMs under the
+  effective PDF 2.0 version, including metadata, ActualText, outlines, form names
+  and signature text fields (#667).
+- Correct font/CMap selection, embedded font mappings, Unicode sequences and
+  text geometry across the font extraction contract matrix (#666).
+- Recover TJ tracking only in lenient mode when Type0 descendant fonts cannot
+  be resolved; preserve strict rejection and ordinary spacing otherwise (#663).
+- Rebuild absent page StructParents keys during tagged splits from unambiguous
+  structure ownership without colliding with page or annotation keys; preserve
+  content and ActualText and reject invalid ownership before publishing (#677).
+
+### Documentation
+
+- Explain opt-in Flate recovery with omission diagnostics and independent
+  stream/text limits; add page/Form recovery and allocation regressions (#680).
+
 ## [5.2.0] - 2026-09-29
 
 ### Added

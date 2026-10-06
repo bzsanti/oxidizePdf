@@ -1,0 +1,9 @@
+{
+  "changed_since_c06": [
+    "TASKS.md",
+    "oxidize-pdf-core/src/fonts/resolved.rs",
+    "oxidize-pdf-core/src/text/encoding_cmap.rs",
+    "oxidize-pdf-core/tests/text_cmap_boundary_contract_test.rs"
+  ],
+  "prior_oracles_unchanged": true
+}

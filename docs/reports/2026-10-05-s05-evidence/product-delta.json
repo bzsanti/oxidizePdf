@@ -1,0 +1,7 @@
+{
+  "reference": "../2026-10-05-s04-evidence/final-hashes.json",
+  "changed_source_files": [
+    "oxidize-pdf-core/src/text/extraction.rs"
+  ],
+  "sha256": "c11b30b9c2636254059993dff0bd649aa9ee764f2b270ef46c2f78e632182530"
+}

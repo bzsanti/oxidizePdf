@@ -1,0 +1,21 @@
+
+running 1 test
+test flat_maps_are_the_control ... FAILED
+
+failures:
+
+---- flat_maps_are_the_control stdout ----
+
+thread 'flat_maps_are_the_control' (291) panicked at usecmap.rs:35:9:
+flat: expected second origin 104, got 109
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    flat_maps_are_the_control
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized] target(s) in 0.07s
+     Running usecmap.rs (target/debug/deps/usecmap-59e8987e89e3c8bf)
+error: test failed, to rerun pass `--test usecmap`

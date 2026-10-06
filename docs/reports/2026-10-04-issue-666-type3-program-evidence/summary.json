@@ -1,0 +1,32 @@
+{
+  "passed": 7087,
+  "failed": 0,
+  "ignored": 3,
+  "targets": 32,
+  "new_contracts": 8,
+  "total_contracts": 259,
+  "contract_targets": 28,
+  "red": "6 pass,1 fail before guard",
+  "final_boundary_tests": 8,
+  "external_cases": 7,
+  "exact_external_geometry_matches": 6,
+  "external_disagreement": "fractional: expected101.255, MuPDF101.25; no tolerance/oracle changes",
+  "corpus": "not rerun; Type3Font::resolve path not used by TextExtractor",
+  "runtime_change": "src/fonts/type3.rs validates implicit Differences counter before u8 cast; #675",
+  "prior_snapshot_changed": [
+    "oxidize-pdf-core/src/fonts/type3.rs",
+    "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json"
+  ],
+  "clippy": "pass",
+  "format": "pass",
+  "kripteia_tests": {
+    "score": 99,
+    "tests": 8
+  },
+  "security_alerts": 0,
+  "external_disagreement_cause": "MuPDF pdf-type3.c passes float scaled width to pdf_add_hmtx(..., int w), font.h:106.",
+  "external_sources": {
+    "https://github.com/ArtifexSoftware/mupdf/blob/1.26.10/include/mupdf/pdf/font.h#L106": "312a29f8a537aa3a8c49b547f990103549d33d3caea4193939ee17bcc3bef345",
+    "https://github.com/ArtifexSoftware/mupdf/blob/1.26.10/source/pdf/pdf-type3.c#L161": "4a9ae179f47a828889f2ddf6c07ce852ba63afa66754ac461202385d86622c5c"
+  }
+}

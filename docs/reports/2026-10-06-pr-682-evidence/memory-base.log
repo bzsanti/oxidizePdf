@@ -1,0 +1,10 @@
+   Compiling oxidize-pdf v5.2.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-review/source/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.60s
+     Running tests/issue_680_memory_probe.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_680_memory_probe-8e2e3a774ebdfe89)
+
+running 1 test
+decoded_bytes=1048576 peak_live_requested_increment=1091968
+test recovery_peak_requested_bytes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+

@@ -1,0 +1,37 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.22s
+     Running tests/text_tj_scale_contract_test.rs (target/debug/deps/text_tj_scale_contract_test-adff38aa153acd86)
+
+running 4 tests
+test forward_tj_adjustment_scales_with_tz ... FAILED
+test backward_tj_adjustment_scales_with_tz ... FAILED
+test fixture_hashes_are_frozen ... ok
+test zero_tj_control_scales_only_source_width ... ok
+
+failures:
+
+---- forward_tj_adjustment_scales_with_tz stdout ----
+
+thread 'forward_tj_adjustment_scales_with_tz' (391) panicked at oxidize-pdf-core/tests/text_tj_scale_contract_test.rs:59:5:
+scale-50-kern--300.pdf B: expected (104,700), got (105.5,700)
+scale-50-kern--300.pdf B: expected (104,700), got (105.5,700)
+scale-200-kern--300.pdf B: expected (116,700), got (113,700)
+scale-200-kern--300.pdf B: expected (116,700), got (113,700)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- backward_tj_adjustment_scales_with_tz stdout ----
+
+thread 'backward_tj_adjustment_scales_with_tz' (389) panicked at oxidize-pdf-core/tests/text_tj_scale_contract_test.rs:59:5:
+scale-50-kern-300.pdf B: expected (101,700), got (99.5,700)
+scale-50-kern-300.pdf B: expected (101,700), got (99.5,700)
+scale-200-kern-300.pdf B: expected (104,700), got (107,700)
+scale-200-kern-300.pdf B: expected (104,700), got (107,700)
+
+
+failures:
+    backward_tj_adjustment_scales_with_tz
+    forward_tj_adjustment_scales_with_tz
+
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_tj_scale_contract_test`

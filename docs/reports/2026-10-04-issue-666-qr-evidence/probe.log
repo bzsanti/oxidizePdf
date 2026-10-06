@@ -1,0 +1,72 @@
+
+running 10 tests
+
+thread 'resolved_intrinsic_type1' (50) panicked at docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs:33:2:
+assertion `left == right` failed: pfb
+  left: [Some("A"), Some("B")]
+ right: [Some("B"), Some("A")]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'resolved_vertical_advance' (53) panicked at docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs:41:2:
+assertion `left == right` failed
+  left: 544.0
+ right: -1200.0
+
+thread 'inherited_adobe_kr_is_not_korea1' (47) panicked at docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs:61:2:
+assertion `left == right` failed: 
+  left: "쑑"
+ right: "一"
+test resolved_intrinsic_type1 ... FAILED
+test inherited_adobe_kr_is_not_korea1 ... FAILED
+test resolved_vertical_advance ... FAILED
+test resolved_flat_control ... ok
+
+thread 'resolved_encoding_parent' (48) panicked at docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs:18:2:
+assertion `left == right` failed
+  left: [None, None]
+ right: [Some(17), Some(29)]
+test resolved_encoding_parent ... 
+thread 'resolved_named_parent' (51) panicked at docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs:27:2:
+assertion `left == right` failed
+  left: 4
+ right: 2
+FAILED
+
+thread 'resolved_unicode_parent' (52) panicked at docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs:23:2:
+assertion `left == right` failed
+  left: [None, None]
+ right: [Some("A"), Some("B")]
+test resolved_named_parent ... FAILED
+test resolved_unicode_parent ... FAILED
+
+thread 'strict_public_extraction_rejects_cyclic_usecmap' (54) panicked at docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs:47:2:
+strict cyclic UseCMap: Ok([ExtractedText { text: "A", fragments: [], truncated: false }])
+test strict_public_extraction_rejects_cyclic_usecmap ... FAILED
+
+thread 'type1_procedure_is_not_executed' (55) panicked at docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs:52:2:
+assertion `left == right` failed
+  left: "AB"
+ right: "BA"
+test type1_procedure_is_not_executed ... FAILED
+
+thread 'indirect_cid_collection_matches_direct_extraction' (46) panicked at docs/reports/2026-10-04-issue-666-qr-evidence/probe.rs:66:2:
+assertion `left == right` failed
+  left: " á"
+ right: "á"
+test indirect_cid_collection_matches_direct_extraction ... FAILED
+
+failures:
+
+failures:
+    indirect_cid_collection_matches_direct_extraction
+    inherited_adobe_kr_is_not_korea1
+    resolved_encoding_parent
+    resolved_intrinsic_type1
+    resolved_named_parent
+    resolved_unicode_parent
+    resolved_vertical_advance
+    strict_public_extraction_rejects_cyclic_usecmap
+    type1_procedure_is_not_executed
+
+test result: FAILED. 1 passed; 9 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

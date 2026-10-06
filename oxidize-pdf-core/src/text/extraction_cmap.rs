@@ -6,12 +6,229 @@
 use crate::parser::document::PdfDocument;
 use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
 use crate::parser::{ParseError, ParseOptions, ParseResult};
-use crate::text::cid_to_unicode::CidCollection;
+use crate::text::cid_to_unicode::AdobeCidCollection;
 use crate::text::cmap::CMap;
-use std::borrow::Cow;
+use crate::text::pdf_simple_encodings;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::sync::OnceLock;
+
+/// Only Adobe registries may use the bundled Adobe collection mappings.
+pub(crate) fn resolve_cid_ordering<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    font: &PdfDictionary,
+) -> ParseResult<Option<String>> {
+    let Some(info) = font.get("CIDSystemInfo") else {
+        return Ok(None);
+    };
+    let info = document.resolve(info)?;
+    let Some(info) = info.as_dict() else {
+        return Err(ParseError::SyntaxError {
+            position: 0,
+            message: "CIDSystemInfo must be a dictionary".into(),
+        });
+    };
+    let string = |key: &str| -> ParseResult<Option<String>> {
+        info.get(key)
+            .map(|object| {
+                document
+                    .resolve(object)
+                    .map(|value| value.as_string().map(|s| s.to_text()))
+            })
+            .transpose()
+            .map(Option::flatten)
+    };
+    if string("Registry")?.as_deref() != Some("Adobe") {
+        return Ok(None);
+    }
+    if let Some(value) = info.get("Supplement") {
+        let value = document.resolve(value)?;
+        if !value.as_integer().is_some_and(|value| value >= 0) {
+            // Malformed explicit metadata cannot authorize Adobe Unicode.
+            // Missing Supplement retains the existing recovery policy.
+            return Ok(None);
+        }
+    }
+    string("Ordering")
+}
+
+/// A named/known Encoding CMap cannot feed another collection's Unicode table.
+/// Supplement numbers are cumulative and need not be identical (Adobe TN5099).
+/// Unannotated custom maps retain their existing recovery until collection
+/// evidence is available; explicit ToUnicode remains independently authoritative.
+pub(crate) fn compatible_cid_ordering<'a>(
+    ordering: Option<&'a str>,
+    encoding: Option<&crate::text::encoding_cmap::CidEncoding>,
+) -> Option<&'a str> {
+    let ordering = ordering?;
+    if let Some(crate::text::encoding_cmap::CidEncoding::Cmap(map)) = encoding {
+        if map.invalid_collection {
+            return None;
+        }
+        if let Some((registry, expected)) = &map.collection {
+            if registry != "Adobe" || expected != ordering {
+                return None;
+            }
+        }
+    }
+    Some(ordering)
+}
+
+fn metric_error(message: &str) -> ParseError {
+    ParseError::SyntaxError {
+        position: 0,
+        message: message.into(),
+    }
+}
+
+fn finite_metric(value: &PdfObject) -> ParseResult<f64> {
+    value
+        .as_real()
+        .filter(|value| value.is_finite())
+        .ok_or_else(|| metric_error("font metric must be a finite number"))
+}
+
+/// Optional metric dictionary entries with null values are absent (§7.3.9).
+/// Arrays are left intact: a null array element is not an omitted entry.
+pub(crate) fn without_null_metrics<'a, R: Read + Seek>(
+    dict: &'a PdfDictionary,
+    document: &PdfDocument<R>,
+) -> std::borrow::Cow<'a, PdfDictionary> {
+    let mut result = std::borrow::Cow::Borrowed(dict);
+    for key in [
+        "FirstChar",
+        "LastChar",
+        "Widths",
+        "W",
+        "DW",
+        "MissingWidth",
+        "FontDescriptor",
+    ] {
+        let absent = match dict.get(key) {
+            Some(PdfObject::Null) => true,
+            Some(value @ PdfObject::Reference(_, _)) => matches!(
+                document.resolve(value),
+                Ok(PdfObject::Null) | Err(ParseError::InvalidReference(_, _))
+            ),
+            _ => false,
+        };
+        if absent {
+            result.to_mut().0.remove(&PdfName(key.into()));
+        }
+    }
+    result
+}
+
+/// Validate simple-font byte bounds without silently wrapping malformed values.
+pub(crate) fn simple_font_bounds<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    dict: &PdfDictionary,
+) -> ParseResult<(Option<u32>, Option<u32>)> {
+    let bound = |key| {
+        dict.get(key)
+            .map(|value| {
+                document
+                    .resolve(value)?
+                    .as_integer()
+                    .and_then(|value| u8::try_from(value).ok())
+                    .map(u32::from)
+                    .ok_or_else(|| metric_error("Simple font bounds must be byte integers"))
+            })
+            .transpose()
+    };
+    let first = bound("FirstChar")?;
+    let last = bound("LastChar")?;
+    if first.zip(last).is_some_and(|(first, last)| first > last) {
+        return Err(metric_error("FirstChar exceeds LastChar"));
+    }
+    Ok((first, last))
+}
+
+/// Shared strict reader for horizontal CID metrics. Recovery belongs to the caller.
+pub(crate) fn parse_cid_widths<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    dict: &PdfDictionary,
+) -> ParseResult<CidWidths> {
+    let default = dict
+        .get("DW")
+        .map(|value| document.resolve(value))
+        .transpose()?
+        .as_ref()
+        .map(finite_metric)
+        .transpose()?
+        .unwrap_or(1000.0);
+    let entries = dict
+        .get("W")
+        .map(|value| document.resolve(value))
+        .transpose()?;
+    let Some(entries) = entries else {
+        return Ok(CidWidths {
+            widths: HashMap::new(),
+            ranges: Vec::new(),
+            default_width: default,
+            vertical: CidVerticalWidths::default(),
+        });
+    };
+    let entries = entries
+        .as_array()
+        .ok_or_else(|| metric_error("W must be an array"))?;
+    let mut explicit = HashMap::new();
+    let mut ranges = Vec::new();
+    let mut index = 0;
+    while index < entries.0.len() {
+        let first = document
+            .resolve(&entries.0[index])?
+            .as_integer()
+            .and_then(|value| u16::try_from(value).ok())
+            .map(u32::from)
+            .ok_or_else(|| metric_error("invalid first CID in W"))?;
+        let next = entries
+            .0
+            .get(index + 1)
+            .map(|value| document.resolve(value))
+            .transpose()?;
+        match next.as_ref() {
+            Some(PdfObject::Array(widths)) => {
+                if widths.0.len() > usize::from(u16::MAX) + 1 - first as usize {
+                    return Err(metric_error("W array exceeds CID 65535"));
+                }
+                for (offset, width) in widths.0.iter().enumerate() {
+                    let cid = first
+                        .checked_add(
+                            u32::try_from(offset).map_err(|_| metric_error("W range overflow"))?,
+                        )
+                        .ok_or_else(|| metric_error("W range overflow"))?;
+                    explicit.insert(cid, finite_metric(&document.resolve(width)?)?);
+                }
+                index += 2;
+            }
+            Some(last) => {
+                let last = last
+                    .as_integer()
+                    .and_then(|value| u16::try_from(value).ok())
+                    .map(u32::from)
+                    .ok_or_else(|| metric_error("invalid last CID in W"))?;
+                let width = entries
+                    .0
+                    .get(index + 2)
+                    .ok_or_else(|| metric_error("missing W range width"))?;
+                let width = finite_metric(&document.resolve(width)?)?;
+                if last < first {
+                    return Err(metric_error("reversed CID width range"));
+                }
+                ranges.push((first, last, width));
+                index += 3;
+            }
+            None => return Err(metric_error("truncated W array")),
+        }
+    }
+    Ok(CidWidths {
+        widths: explicit,
+        ranges,
+        default_width: default,
+        vertical: CidVerticalWidths::default(),
+    })
+}
 
 /// A CIDFont's `/W` + `/DW` glyph-space widths (ISO 32000-1 §9.7.4.3),
 /// indexed by **CID** — an arbitrary font-internal identifier unrelated to
@@ -29,6 +246,41 @@ pub struct CidWidths {
     /// `/DW`, the width (1/1000 em) for any CID absent from `widths`.
     /// Defaults to 1000 per spec when `/DW` is not present.
     pub default_width: f64,
+    /// Vertical pen advances from W2/DW2, independent of glyph drawing offsets.
+    pub vertical: CidVerticalWidths,
+}
+
+#[derive(Debug, Clone)]
+pub struct CidVerticalWidths {
+    pub advances: HashMap<u32, f64>,
+    pub ranges: Vec<(u32, u32, f64)>,
+    pub default_advance: f64,
+}
+
+impl Default for CidVerticalWidths {
+    fn default() -> Self {
+        Self {
+            advances: HashMap::new(),
+            ranges: Vec::new(),
+            default_advance: -1000.0,
+        }
+    }
+}
+
+impl CidVerticalWidths {
+    pub fn advance_for(&self, cid: u32) -> f64 {
+        self.advances
+            .get(&cid)
+            .copied()
+            .or_else(|| {
+                self.ranges
+                    .iter()
+                    .rev()
+                    .find(|(first, last, _)| (*first..=*last).contains(&cid))
+                    .map(|(_, _, advance)| *advance)
+            })
+            .unwrap_or(self.default_advance)
+    }
 }
 
 impl CidWidths {
@@ -167,21 +419,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             cid_encoding: None,
         };
 
-        // Extract CIDSystemInfo Ordering (for CIDFont dictionaries)
-        if let Some(cid_sys_info) = font_dict.get("CIDSystemInfo") {
-            if let PdfObject::Dictionary(cid_dict) = cid_sys_info {
-                if let Some(ordering) = cid_dict.get("Ordering") {
-                    if let PdfObject::String(s) = ordering {
-                        // PdfString is Vec<u8>, convert to String
-                        if let Ok(ordering_str) = String::from_utf8(s.0.clone()) {
-                            font_info.cid_ordering = Some(ordering_str);
-                        }
-                    } else if let PdfObject::Name(n) = ordering {
-                        font_info.cid_ordering = Some(n.0.clone());
-                    }
-                }
-            }
-        }
+        font_info.cid_ordering = resolve_cid_ordering(document, font_dict)?;
 
         // Extract encoding
         if let Some(encoding_obj) = font_dict.get("Encoding") {
@@ -215,26 +453,117 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                     }
                 }
                 PdfObject::Stream(stream) => {
-                    if let Ok(data) = stream.decode(&ParseOptions::default()) {
-                        if let Ok(enc) = crate::text::encoding_cmap::EncodingCMap::parse(&data) {
-                            font_info.cid_encoding =
-                                Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc));
-                        }
-                    }
+                    let enc = Self::parse_encoding_stream(stream, document, 0)?;
+                    font_info.cid_encoding =
+                        Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc));
                 }
                 _ => {}
             }
         }
 
-        // Extract ToUnicode CMap
-        if let Some(to_unicode_obj) = font_dict.get("ToUnicode") {
-            if let Some(stream_ref) = to_unicode_obj.as_reference() {
-                if let Ok(PdfObject::Stream(stream)) =
-                    document.get_object(stream_ref.0, stream_ref.1)
-                {
-                    font_info.to_unicode = Some(self.parse_tounicode_stream(&stream, document)?);
+        if font_info.font_type == "TrueType" && font_info.encoding.is_none() {
+            let symbolic = font_dict
+                .get("FontDescriptor")
+                .and_then(|object| document.resolve(object).ok())
+                .and_then(|object| object.as_dict().and_then(|dict| dict.get("Flags")).cloned())
+                .and_then(|object| document.resolve(&object).ok())
+                .and_then(|object| object.as_integer())
+                .is_some_and(|flags| flags & 4 != 0);
+            if symbolic {
+                // Symbolic cmap codes are glyph selectors, not Unicode and
+                // not necessarily Adobe Symbol. Use the existing intrinsic
+                // name layer to retain one replacement per unknown byte,
+                // without changing the public FontInfo struct. ToUnicode
+                // still wins; explicit Differences names remain evidence.
+                let mut names: HashMap<u8, String> =
+                    (0..=255).map(|code| (code, "uniFFFD".to_owned())).collect();
+                if let Some(differences) = font_info.differences.take() {
+                    names.extend(differences.into_iter().map(|(code, name)| {
+                        let name = if glyph_name_to_unicode_sequence(&name).is_some() {
+                            name
+                        } else {
+                            "uniFFFD".to_owned()
+                        };
+                        (code, name)
+                    }));
                 }
+                font_info.differences = Some(names);
             }
+        }
+
+        if font_info.font_type == "Type1" && font_info.encoding.is_none() {
+            if let Some(mut intrinsic) = Self::embedded_intrinsic_encoding(font_dict, document) {
+                // Unknown glyph names have no Unicode assignment; never turn
+                // them into a byte-as-Unicode assertion. Explicit Differences
+                // still override the intrinsic base, and ToUnicode wins later.
+                for name in intrinsic.values_mut() {
+                    if glyph_name_to_unicode_sequence(name).is_none() {
+                        *name = "uniFFFD".to_owned();
+                    }
+                }
+                if let Some(differences) = font_info.differences.take() {
+                    intrinsic.extend(differences);
+                }
+                font_info.differences = Some(intrinsic);
+            }
+        }
+
+        // A non-embedded standard Type1 font supplies its built-in encoding
+        // when Encoding (or BaseEncoding within a Differences dictionary) is
+        // absent. Do not guess an embedded font's intrinsic encoding by name.
+        if font_info.encoding.is_none() && font_info.font_type == "Type1" {
+            let has_embedded_program = font_dict
+                .get("FontDescriptor")
+                .and_then(|obj| document.resolve(obj).ok())
+                .is_some_and(|obj| {
+                    obj.as_dict().is_some_and(|descriptor| {
+                        ["FontFile", "FontFile2", "FontFile3"]
+                            .iter()
+                            .any(|key| descriptor.get(key).is_some())
+                    })
+                });
+            if !has_embedded_program {
+                // PDF subset prefixes contain exactly six uppercase letters.
+                let base_name = without_subset_prefix(&font_info.name);
+                font_info.encoding = match base_name {
+                    "Symbol" => Some("SymbolEncoding".to_owned()),
+                    "ZapfDingbats" => Some("ZapfDingbatsEncoding".to_owned()),
+                    _ => None,
+                };
+            }
+        }
+
+        // A declared ToUnicode remains authoritative even if it is damaged.
+        // Resolve the whole reference chain instead of inspecting one object.
+        if let Some(object) = font_dict.get("ToUnicode") {
+            let parsed = Self::resolve_tounicode(object, document);
+            font_info.to_unicode = match parsed {
+                Ok(map) => map,
+                Err(error) if document.options().strict_mode => return Err(error),
+                Err(_) => {
+                    // Preserve source-code boundaries while marking every
+                    // undecodable code. Do not re-enable a base Unicode map.
+                    let mut empty = CMap::new();
+                    if font_info.font_type == "Type0" {
+                        use crate::text::encoding_cmap::{CidEncoding, EncodingCMap};
+                        empty.codespace_ranges = match font_info.cid_encoding.as_ref() {
+                            Some(CidEncoding::Cmap(map)) => map.codespace_ranges.clone(),
+                            Some(CidEncoding::Utf16Be) => {
+                                EncodingCMap::identity(false).codespace_ranges
+                            }
+                            None if matches!(
+                                font_info.encoding.as_deref(),
+                                Some("Identity-H" | "Identity-V")
+                            ) =>
+                            {
+                                EncodingCMap::identity(false).codespace_ranges
+                            }
+                            None => Vec::new(),
+                        };
+                    }
+                    Some(empty)
+                }
+            };
         }
 
         // Extract font metrics (Widths, FirstChar, LastChar)
@@ -286,6 +615,42 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         Ok(font_info)
     }
 
+    pub(crate) fn embedded_intrinsic_encoding(
+        font: &PdfDictionary,
+        document: &PdfDocument<R>,
+    ) -> Option<HashMap<u8, String>> {
+        let descriptor = document.resolve(font.get("FontDescriptor")?).ok()?;
+        let descriptor = descriptor.as_dict()?;
+        if let Some(object) = descriptor.get("FontFile") {
+            let object = document.resolve(object).ok()?;
+            if let PdfObject::Stream(stream) = object {
+                let data = document
+                    .decode_stream_with_limit(&stream, 8 * 1024 * 1024)
+                    .ok()?;
+                let clear_length = document
+                    .resolve(stream.dict.get("Length1")?)
+                    .ok()?
+                    .as_integer()
+                    .and_then(|length| usize::try_from(length).ok())?;
+                return super::intrinsic_encoding::type1(data.get(..clear_length)?);
+            }
+        }
+        let object = document.resolve(descriptor.get("FontFile3")?).ok()?;
+        let PdfObject::Stream(stream) = object else {
+            return None;
+        };
+        let data = document
+            .decode_stream_with_limit(&stream, 8 * 1024 * 1024)
+            .ok()?;
+        match stream.dict.get("Subtype")?.as_name()?.as_str() {
+            "Type1C" => super::intrinsic_encoding::cff(&data),
+            "OpenType" => {
+                super::intrinsic_encoding::cff(super::intrinsic_encoding::opentype_cff(&data)?)
+            }
+            _ => None,
+        }
+    }
+
     /// Parse encoding differences array
     fn parse_encoding_differences(
         &self,
@@ -293,18 +658,20 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         document: &PdfDocument<R>,
     ) -> ParseResult<HashMap<u8, String>> {
         let mut diff_map = HashMap::new();
-        let mut current_code = 0u8;
+        let mut current_code = None;
 
         for item in differences {
             let resolved = document.resolve(item).ok();
             let target = resolved.as_ref().unwrap_or(item);
             match target {
                 PdfObject::Integer(code) => {
-                    current_code = *code as u8;
+                    current_code = u8::try_from(*code).ok();
                 }
                 PdfObject::Name(name) => {
-                    diff_map.insert(current_code, name.0.clone());
-                    current_code = current_code.wrapping_add(1);
+                    if let Some(code) = current_code {
+                        diff_map.insert(code, name.0.clone());
+                        current_code = code.checked_add(1);
+                    }
                 }
                 _ => {}
             }
@@ -313,36 +680,188 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         Ok(diff_map)
     }
 
-    /// Parse ToUnicode stream
-    fn parse_tounicode_stream(
-        &self,
+    /// Resolve at most sixteen stream levels. This also bounds cycles without
+    /// allocating a graph or expanding ranges into per-code entries.
+    fn cmap_error(message: String) -> ParseError {
+        ParseError::SyntaxError {
+            position: 0,
+            message,
+        }
+    }
+
+    fn cmap_depth(depth: usize) -> ParseResult<()> {
+        if depth >= 16 {
+            return Err(Self::cmap_error(
+                "UseCMap inheritance exceeds 16 stream levels (possible cycle)".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    pub(crate) fn parse_encoding_stream(
         stream: &PdfStream,
-        _document: &PdfDocument<R>,
+        document: &PdfDocument<R>,
+        depth: usize,
+    ) -> ParseResult<crate::text::encoding_cmap::EncodingCMap> {
+        use crate::text::encoding_cmap::{resolve_predefined, CidEncoding, EncodingCMap};
+        Self::cmap_depth(depth)?;
+        let mut child =
+            EncodingCMap::parse(&document.decode_stream_with_limit(stream, 8 * 1024 * 1024)?)?;
+        if let Some(info) = stream.dict.get("CIDSystemInfo") {
+            let info = document.resolve(info)?;
+            let collection = if let Some(info) = info.as_dict() {
+                let string = |name: &str| -> ParseResult<Option<String>> {
+                    info.get(name)
+                        .map(|value| {
+                            document
+                                .resolve(value)
+                                .map(|value| value.as_string().map(|s| s.to_text()))
+                        })
+                        .transpose()
+                        .map(Option::flatten)
+                };
+                let supplement = info
+                    .get("Supplement")
+                    .map(|value| document.resolve(value))
+                    .transpose()?;
+                if supplement
+                    .as_ref()
+                    .and_then(PdfObject::as_integer)
+                    .is_some_and(|n| n >= 0)
+                {
+                    string("Registry")?.zip(string("Ordering")?)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            child.declare_collection(collection);
+        }
+        if let Some(mode) = stream.dict.get("WMode").and_then(PdfObject::as_integer) {
+            child.wmode = mode.clamp(0, 1) as u8;
+            child.explicit_wmode = true;
+        }
+        let parent = stream.dict.get("UseCMap").cloned().or_else(|| {
+            child
+                .usecmap_parent
+                .as_ref()
+                .map(|name| PdfObject::Name(PdfName(name.clone())))
+        });
+        if let Some(parent) = parent {
+            let result = (|| match document.resolve(&parent)? {
+                PdfObject::Stream(stream) => {
+                    Self::parse_encoding_stream(&stream, document, depth + 1)
+                }
+                PdfObject::Name(name) => match name.0.as_str() {
+                    "Identity-H" => Ok(EncodingCMap::identity(false)),
+                    "Identity-V" => Ok(EncodingCMap::identity(true)),
+                    name => match resolve_predefined(name) {
+                        Some(CidEncoding::Cmap(map)) => Ok(map),
+                        _ => Err(Self::cmap_error(format!(
+                            "Unsupported Encoding UseCMap parent {name}"
+                        ))),
+                    },
+                },
+                _ => Err(Self::cmap_error(
+                    "UseCMap parent must be a name or stream".into(),
+                )),
+            })();
+            match result {
+                Ok(parent) => child.inherit(parent),
+                Err(error) if document.options().strict_mode => return Err(error),
+                // Recovery keeps the child's explicit mappings, never invents
+                // identity semantics for an unresolved or cyclic parent.
+                Err(_) => {}
+            }
+        }
+        Ok(child)
+    }
+
+    /// Resolve a bounded ToUnicode resource chain; cycles never lose authority.
+    pub(crate) fn resolve_tounicode(
+        object: &PdfObject,
+        document: &PdfDocument<R>,
+    ) -> ParseResult<Option<CMap>> {
+        let mut object = object.clone();
+        let mut seen = std::collections::HashSet::new();
+        while let PdfObject::Reference(number, generation) = object {
+            if seen.len() >= 16 || !seen.insert((number, generation)) {
+                return Err(Self::cmap_error(
+                    "ToUnicode reference cycle or depth limit".into(),
+                ));
+            }
+            object = match document.get_object(number, generation) {
+                Err(ParseError::InvalidReference(_, _)) => PdfObject::Null,
+                other => other?,
+            };
+        }
+        if matches!(object, PdfObject::Null) {
+            return Ok(None);
+        }
+        let stream = object
+            .as_stream()
+            .ok_or_else(|| Self::cmap_error("ToUnicode must be a stream".into()))?;
+        Self::parse_unicode_chain(stream, document, 0).map(Some)
+    }
+
+    pub(crate) fn parse_unicode_chain(
+        stream: &PdfStream,
+        document: &PdfDocument<R>,
+        depth: usize,
     ) -> ParseResult<CMap> {
-        let data = stream.decode(&ParseOptions::default())?;
-        CMap::parse(&data)
+        Self::cmap_depth(depth)?;
+        let mut child = CMap::parse(&document.decode_stream_with_limit(stream, 8 * 1024 * 1024)?)?;
+        // Named operator parents already have the established CMap fallback.
+        // A dictionary UseCMap takes precedence over that operator.
+        if let Some(parent) = stream.dict.get("UseCMap") {
+            child.inherited_predefined = None;
+            let result = (|| match document.resolve(parent)? {
+                PdfObject::Stream(stream) => {
+                    Self::parse_unicode_chain(&stream, document, depth + 1)
+                }
+                PdfObject::Name(name) => match name.0.as_str() {
+                    "Identity-H" => Ok(CMap::identity_h()),
+                    "Identity-V" => Ok(CMap::identity_v()),
+                    _ => {
+                        // A decoded PDF name is data, not PostScript source.
+                        let mut parent = CMap::new();
+                        parent.inherited_predefined = Some(name.0);
+                        Ok(parent)
+                    }
+                },
+                _ => Err(Self::cmap_error(
+                    "UseCMap parent must be a name or stream".into(),
+                )),
+            })();
+            match result {
+                Ok(parent) => child.inherit(parent),
+                Err(error) if document.options().strict_mode => return Err(error),
+                Err(_) => {}
+            }
+        }
+        Ok(child)
     }
 
     /// Extract font metrics (widths, kerning) from font dictionary
-    fn extract_font_metrics(
+    pub(crate) fn extract_font_metrics(
         &self,
         font_dict: &PdfDictionary,
         document: &PdfDocument<R>,
     ) -> ParseResult<FontMetrics> {
+        let normalized = without_null_metrics(font_dict, document);
+        let font_dict = normalized.as_ref();
         let mut metrics = FontMetrics::default();
 
-        // Extract FirstChar and LastChar
-        metrics.first_char = font_dict
-            .get("FirstChar")
-            .and_then(|obj| document.resolve(obj).ok())
-            .and_then(|obj| obj.as_integer())
-            .map(|first| first as u32);
-
-        metrics.last_char = font_dict
-            .get("LastChar")
-            .and_then(|obj| document.resolve(obj).ok())
-            .and_then(|obj| obj.as_integer())
-            .map(|last| last as u32);
+        let bounds_valid = match simple_font_bounds(document, font_dict) {
+            Ok((first, last)) => {
+                metrics.first_char = first;
+                metrics.last_char = last;
+                true
+            }
+            Err(error) if document.options().strict_mode => return Err(error),
+            Err(_) => false,
+        };
 
         // Extract FontMatrix scaling factor (relevant for Type 3 fonts).
         // Standard simple fonts have an implicit FontMatrix [0.001 0 0 0.001 0 0].
@@ -377,40 +896,65 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         // Extract Widths array
         metrics.widths = font_dict
             .get("Widths")
-            .and_then(|obj| document.resolve(obj).ok())
-            .and_then(|obj| match obj {
-                PdfObject::Array(widths_array) => {
-                    let widths = widths_array
-                        .0
-                        .iter()
-                        .map(|width_obj| {
-                            let width_val = match document.resolve(width_obj) {
-                                Ok(PdfObject::Integer(w)) => w as f64,
-                                Ok(PdfObject::Real(w)) => w,
-                                _ => 0.0,
-                            };
-                            width_val * width_scale
-                        })
-                        .collect();
-                    Some(widths)
+            .map(|obj| {
+                let obj = document.resolve(obj)?;
+                let array = obj
+                    .as_array()
+                    .ok_or_else(|| Self::cmap_error("Widths must be an array".into()))?;
+                array
+                    .0
+                    .iter()
+                    .map(|width| {
+                        let value = document
+                            .resolve(width)?
+                            .as_real()
+                            .map(|value| value * width_scale)
+                            .filter(|value| value.is_finite())
+                            .ok_or_else(|| {
+                                Self::cmap_error("Widths must contain finite numbers".into())
+                            })?;
+                        Ok(value)
+                    })
+                    .collect::<ParseResult<Vec<_>>>()
+            })
+            .transpose()
+            .or_else(|error| {
+                if document.options().strict_mode {
+                    Err(error)
+                } else {
+                    Ok(None)
                 }
-                _ => None,
-            });
+            })?;
+
+        if !bounds_valid {
+            metrics.widths = None;
+        }
 
         // Extract MissingWidth from font descriptor
         metrics.missing_width = font_dict
             .get("FontDescriptor")
             .and_then(|o| document.resolve(o).ok())
             .and_then(|o| match o {
-                PdfObject::Dictionary(d) => d.get("MissingWidth").cloned(),
+                PdfObject::Dictionary(d) => without_null_metrics(&d, document)
+                    .get("MissingWidth")
+                    .cloned(),
                 _ => None,
             })
-            .and_then(|o| document.resolve(&o).ok())
-            .and_then(|o| match o {
-                PdfObject::Integer(w) => Some(w as f64),
-                PdfObject::Real(w) => Some(w),
-                _ => None,
-            });
+            .map(|o| {
+                document
+                    .resolve(&o)?
+                    .as_real()
+                    .filter(|value| value.is_finite())
+                    .ok_or_else(|| Self::cmap_error("MissingWidth must be a finite number".into()))
+            })
+            .transpose()
+            .or_else(|error| {
+                if document.options().strict_mode {
+                    Err(error)
+                } else {
+                    Ok(None)
+                }
+            })?;
 
         // Extract CIDFont `/W` + `/DW` (ISO 32000-1 §9.7.4.3). Only present
         // on a CIDFontType0/CIDFontType2 descendant font dictionary; a
@@ -424,79 +968,104 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             });
         let dw = font_dict
             .get("DW")
-            .and_then(|o| document.resolve(o).ok())
-            .and_then(|o| o.as_real());
-        let w_array: Option<Cow<[PdfObject]>> = match font_dict.get("W") {
-            Some(obj) => match document.resolve(obj) {
-                Ok(PdfObject::Array(array)) => Some(Cow::Owned(array.0)),
-                _ => None,
-            },
-            _ => None,
-        };
-        if let Some(entries) = w_array {
-            let mut widths = HashMap::new();
-            let mut ranges = Vec::new();
-            let mut i = 0;
-            while i < entries.len() {
-                let first_cid = document
-                    .resolve(&entries[i])
+            .map(|o| {
+                document
+                    .resolve(o)?
+                    .as_real()
+                    .filter(|value| value.is_finite())
+                    .ok_or_else(|| Self::cmap_error("DW must be a finite number".into()))
+            })
+            .transpose()
+            .or_else(|error| {
+                if document.options().strict_mode {
+                    Err(error)
+                } else {
+                    Ok(None)
+                }
+            })?;
+        if is_cid_font {
+            metrics.cid_widths = Some(match parse_cid_widths(document, font_dict) {
+                Ok(widths) => widths,
+                Err(error) if document.options().strict_mode => return Err(error),
+                // A malformed W table has no certified ranges. Keep valid DW
+                // and the font's Unicode metadata for bounded lenient recovery.
+                Err(_) => CidWidths {
+                    widths: HashMap::new(),
+                    ranges: Vec::new(),
+                    default_width: dw.unwrap_or(1000.0),
+                    vertical: CidVerticalWidths::default(),
+                },
+            });
+        }
+
+        if let Some(widths) = metrics.cid_widths.as_mut().filter(|_| is_cid_font) {
+            let number = |object: &PdfObject| {
+                document
+                    .resolve(object)
                     .ok()
-                    .and_then(|o| o.as_integer());
-                let Some(first_cid) = first_cid else {
-                    break;
-                };
-                match entries.get(i + 1) {
-                    // `c [w1 w2 ...]`: consecutive widths starting at c.
-                    Some(w_list_obj) => {
-                        let resolved_w_list = document.resolve(w_list_obj).ok();
-                        if let Some(PdfObject::Array(w_list)) = resolved_w_list {
-                            if let Ok(first_cid) = u32::try_from(first_cid) {
-                                for (offset, w_obj) in w_list.0.iter().enumerate() {
-                                    let w = document.resolve(w_obj).ok().and_then(|o| o.as_real());
-                                    if let (Ok(offset), Some(w)) = (u32::try_from(offset), w) {
-                                        if let Some(cid) = first_cid
-                                            .checked_add(offset)
-                                            .filter(|cid| *cid <= u16::MAX as u32)
-                                        {
-                                            widths.insert(cid, w);
-                                        }
-                                    }
-                                }
-                            }
-                            i += 2;
-                        } else {
-                            // `cFirst cLast w`: uniform width across an inclusive CID range.
-                            let last_cid = resolved_w_list.as_ref().and_then(|o| o.as_integer());
-                            let w = entries
-                                .get(i + 2)
-                                .and_then(|o| document.resolve(o).ok())
-                                .and_then(|o| o.as_real());
-                            let (Some(last_cid), Some(w)) = (last_cid, w) else {
-                                break;
-                            };
-                            let first_cid = first_cid.max(0).min(u16::MAX as i64) as u32;
-                            let last_cid = last_cid.max(0).min(u16::MAX as i64) as u32;
-                            if last_cid >= first_cid {
-                                ranges.push((first_cid, last_cid, w));
-                            }
-                            i += 3;
-                        }
-                    }
-                    None => break,
+                    .and_then(|object| object.as_real())
+                    .filter(|value| value.is_finite())
+            };
+            if let Some(PdfObject::Array(values)) = font_dict
+                .get("DW2")
+                .and_then(|object| document.resolve(object).ok())
+            {
+                if let Some(advance) = values.0.get(1).and_then(number) {
+                    widths.vertical.default_advance = advance;
                 }
             }
-            metrics.cid_widths = Some(CidWidths {
-                widths,
-                ranges,
-                default_width: dw.unwrap_or(1000.0),
-            });
-        } else if is_cid_font {
-            // `/DW` defaults to 1000 even when both `/W` and `/DW` are absent.
-            metrics.cid_widths = Some(CidWidths {
-                widths: HashMap::new(),
-                ranges: Vec::new(),
-                default_width: dw.unwrap_or(1000.0),
-            });
+            if let Some(PdfObject::Array(values)) = font_dict
+                .get("W2")
+                .and_then(|object| document.resolve(object).ok())
+            {
+                let entries = values.0;
+                let mut index = 0;
+                while index + 1 < entries.len() {
+                    let first = document
+                        .resolve(&entries[index])
+                        .ok()
+                        .and_then(|object| object.as_integer())
+                        .and_then(|value| u16::try_from(value).ok())
+                        .map(u32::from);
+                    let Some(first) = first else {
+                        break;
+                    };
+                    let next = document.resolve(&entries[index + 1]).ok();
+                    if let Some(PdfObject::Array(values)) = next {
+                        for (offset, triple) in values.0.chunks_exact(3).enumerate() {
+                            let cid = u32::try_from(offset)
+                                .ok()
+                                .and_then(|offset| first.checked_add(offset))
+                                .filter(|cid| *cid <= u32::from(u16::MAX));
+                            if let (Some(cid), Some(advance), Some(_), Some(_)) = (
+                                cid,
+                                number(&triple[0]),
+                                number(&triple[1]),
+                                number(&triple[2]),
+                            ) {
+                                widths.vertical.advances.insert(cid, advance);
+                            }
+                        }
+                        index += 2;
+                    } else {
+                        let last = next
+                            .and_then(|object| object.as_integer())
+                            .and_then(|value| u16::try_from(value).ok())
+                            .map(u32::from);
+                        let triple = entries.get(index + 2..index + 5);
+                        if let (Some(last), Some(triple)) = (last, triple) {
+                            if let (Some(advance), Some(_), Some(_)) =
+                                (number(&triple[0]), number(&triple[1]), number(&triple[2]))
+                            {
+                                if last >= first {
+                                    widths.vertical.ranges.push((first, last, advance));
+                                }
+                            }
+                        }
+                        index += 5;
+                    }
+                }
+            }
         }
 
         // Extract kerning from TrueType fonts (if embedded)
@@ -780,6 +1349,44 @@ pub(crate) fn resolve_font_entries<R: Read + Seek>(
         .collect()
 }
 
+/// Whether a known Adobe collection intentionally decodes all source codes as .notdef.
+pub(crate) fn collection_notdef_only(text_bytes: &[u8], font_info: &FontInfo) -> bool {
+    if font_info.font_type != "Type0" || font_info.to_unicode.is_some() {
+        return false;
+    }
+    let Some(descendant) = &font_info.descendant_font else {
+        return false;
+    };
+    if descendant.to_unicode.is_some()
+        || descendant
+            .cid_ordering
+            .as_deref()
+            .or(font_info.cid_ordering.as_deref())
+            .and_then(AdobeCidCollection::from_ordering)
+            .is_none()
+    {
+        return false;
+    }
+    match &font_info.cid_encoding {
+        None => text_bytes.len() % 2 == 0 && text_bytes.iter().all(|byte| *byte == 0),
+        Some(crate::text::encoding_cmap::CidEncoding::Utf16Be) => false,
+        Some(crate::text::encoding_cmap::CidEncoding::Cmap(cmap)) => {
+            let mut position = 0;
+            while position < text_bytes.len() {
+                let len = cmap.code_len_at(text_bytes, position);
+                let Some(code) = text_bytes.get(position..position + len) else {
+                    return false;
+                };
+                if cmap.map_code_to_cid(code).or_else(|| cmap.map_notdef(code)) != Some(0) {
+                    return false;
+                }
+                position += len;
+            }
+            true
+        }
+    }
+}
+
 /// Decode text using font information — free function (no allocations).
 ///
 /// Tries ToUnicode CMap first, then CID→Unicode tables for CJK fonts,
@@ -787,7 +1394,11 @@ pub(crate) fn resolve_font_entries<R: Read + Seek>(
 pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<String> {
     // First try ToUnicode CMap if available
     if let Some(ref to_unicode) = font_info.to_unicode {
-        return decode_with_cmap(text_bytes, to_unicode);
+        let simple = matches!(
+            font_info.font_type.as_str(),
+            "Type1" | "MMType1" | "TrueType" | "Type3"
+        );
+        return decode_with_cmap(text_bytes, to_unicode, simple);
     }
 
     // For Type0 fonts, try CID→Unicode tables before falling back
@@ -804,13 +1415,15 @@ pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseRe
                 .as_deref()
                 .or(font_info.cid_ordering.as_deref());
 
+            let ordering = compatible_cid_ordering(ordering, font_info.cid_encoding.as_ref());
+
             match &font_info.cid_encoding {
                 Some(crate::text::encoding_cmap::CidEncoding::Utf16Be) => {
                     return Ok(crate::text::encoding_cmap::decode_utf16be(text_bytes));
                 }
                 Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc)) => {
-                    if let Some(coll) =
-                        ordering.and_then(crate::text::cid_to_unicode::CidCollection::from_ordering)
+                    if let Some(coll) = ordering
+                        .and_then(crate::text::cid_to_unicode::AdobeCidCollection::from_ordering)
                     {
                         return Ok(decode_via_encoding_cmap(text_bytes, enc, &coll));
                     }
@@ -825,17 +1438,40 @@ pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseRe
             // This handles fonts with Identity-H encoding and no ToUnicode CMap
             if let Some(ordering) = ordering {
                 if let Some(collection) =
-                    crate::text::cid_to_unicode::CidCollection::from_ordering(ordering)
+                    crate::text::cid_to_unicode::AdobeCidCollection::from_ordering(ordering)
                 {
                     let result = decode_with_cid_table(text_bytes, &collection);
                     // Same predicate as the ToUnicode path — one definition so
                     // the two acceptance rules cannot drift apart (#438).
-                    if decode_is_usable(&result) {
+                    // An all-.notdef string has a valid empty collection result.
+                    // Do not reinterpret its zero bytes through a simple encoding.
+                    if decode_is_usable(&result) || collection_notdef_only(text_bytes, font_info) {
                         return Ok(result);
                     }
                 }
             }
 
+            if matches!(
+                descendant.font_type.as_str(),
+                "CIDFontType0" | "CIDFontType2"
+            ) {
+                // Private CID charsets and CIDToGIDMap select glyphs, never
+                // Unicode. Preserve one unknown marker per source code rather
+                // than feeding multibyte CIDs to a simple byte encoding.
+                let mut result = String::new();
+                let mut position = 0;
+                while position < text_bytes.len() {
+                    let length = match &font_info.cid_encoding {
+                        Some(crate::text::encoding_cmap::CidEncoding::Cmap(cmap)) => {
+                            cmap.code_len_at(text_bytes, position).max(1)
+                        }
+                        _ => 2,
+                    };
+                    result.push('\u{fffd}');
+                    position += length.min(text_bytes.len() - position);
+                }
+                return Ok(result);
+            }
             // Fall through to descendant's encoding-based decoding
             return decode_text_with_font(text_bytes, descendant);
         }
@@ -850,19 +1486,22 @@ pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseRe
 fn decode_via_encoding_cmap(
     text_bytes: &[u8],
     enc: &crate::text::encoding_cmap::EncodingCMap,
-    collection: &crate::text::cid_to_unicode::CidCollection,
+    collection: &crate::text::cid_to_unicode::AdobeCidCollection,
 ) -> String {
     let mut result = String::new();
     let mut i = 0;
     while i < text_bytes.len() {
-        let len = enc
-            .code_len_at(text_bytes, i)
-            .max(1)
-            .min(text_bytes.len() - i);
+        let len = enc.code_len_at(text_bytes, i).max(1);
+        if len > text_bytes.len() - i {
+            // A partial source code is not a shorter code, even if a mapping
+            // for its prefix exists in a damaged font.
+            result.push('\u{FFFD}');
+            break;
+        }
         let code = &text_bytes[i..i + len];
         match enc.map_code_to_cid(code).or_else(|| enc.map_notdef(code)) {
-            Some(cid) => match collection.cid_to_unicode(cid) {
-                Some(ch) => result.push(ch),
+            Some(cid) => match collection.cid_to_unicode_sequence(cid) {
+                Some(ch) => result.push_str(ch),
                 None if cid > 0 => result.push('\u{FFFD}'),
                 None => {}
             },
@@ -879,30 +1518,33 @@ fn decode_via_encoding_cmap(
 /// to its Unicode code point using the specified CID collection.
 fn decode_with_cid_table(
     text_bytes: &[u8],
-    collection: &crate::text::cid_to_unicode::CidCollection,
+    collection: &crate::text::cid_to_unicode::AdobeCidCollection,
 ) -> String {
     let mut result = String::new();
     let mut i = 0;
 
     while i + 1 < text_bytes.len() {
         let cid = u16::from_be_bytes([text_bytes[i], text_bytes[i + 1]]);
-        if let Some(ch) = collection.cid_to_unicode(cid) {
-            result.push(ch);
+        if let Some(ch) = collection.cid_to_unicode_sequence(cid) {
+            result.push_str(ch);
         } else if cid > 0 {
             // Unknown CID — emit replacement character rather than losing position
             result.push('\u{FFFD}');
         }
         i += 2;
     }
+    if i < text_bytes.len() {
+        result.push('\u{FFFD}');
+    }
 
     result
 }
 
 /// Decode text using a CMap — free function (no allocations).
-fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
+fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap, simple_font: bool) -> ParseResult<String> {
     let inherited = cmap
         .inherited_ordering()
-        .and_then(CidCollection::from_ordering);
+        .and_then(AdobeCidCollection::from_ordering);
 
     let mut result = String::new();
     let mut i = 0;
@@ -932,8 +1574,8 @@ fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
             if let Some(coll) = inherited {
                 if text_bytes.len() - i >= 2 {
                     let cid = u16::from_be_bytes([text_bytes[i], text_bytes[i + 1]]);
-                    match coll.cid_to_unicode(cid) {
-                        Some(ch) => result.push(ch),
+                    match coll.cid_to_unicode_sequence(cid) {
+                        Some(ch) => result.push_str(ch),
                         None if cid > 0 => result.push('\u{FFFD}'),
                         None => {}
                     }
@@ -941,11 +1583,43 @@ fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
                     continue;
                 }
             }
-            i += 1;
+            // Keep failed decoding visible and consume the whole source code.
+            // Retrying suffix bytes can manufacture valid-looking Unicode from
+            // an unmapped multibyte code. A partial tail is one failed code.
+            // Successful explicit mappings above still tolerate the common
+            // simple-font defect of one-byte entries in a two-byte codespace.
+            let remaining = &text_bytes[i..];
+            let len = if simple_font {
+                // Simple-font source codes are bytes, even when a producer's
+                // ToUnicode incorrectly declares a two-byte codespace.
+                1
+            } else {
+                cmap.codespace_ranges
+                    .iter()
+                    .find_map(|range| {
+                        let len = range.start.len();
+                        if len == 0 || len > 4 || range.end.len() != len {
+                            return None;
+                        }
+                        let prefix_len = len.min(remaining.len());
+                        let prefix = &remaining[..prefix_len];
+                        (prefix >= &range.start[..prefix_len] && prefix <= &range.end[..prefix_len])
+                            .then_some(len)
+                    })
+                    .unwrap_or(if inherited.is_some() { 2 } else { 1 })
+            };
+            result.push('\u{FFFD}');
+            i += len.min(remaining.len());
         }
     }
 
     Ok(result)
+}
+
+fn without_subset_prefix(name: &str) -> &str {
+    name.split_once('+')
+        .filter(|(prefix, _)| prefix.len() == 6 && prefix.bytes().all(|b| b.is_ascii_uppercase()))
+        .map_or(name, |(_, name)| name)
 }
 
 /// Decode text using encoding differences and base encoding — free function.
@@ -955,10 +1629,17 @@ fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<
     for &byte in text_bytes {
         if let Some(ref differences) = font_info.differences {
             if let Some(char_name) = differences.get(&byte) {
-                if let Some(unicode) = glyph_name_to_unicode_sequence(char_name) {
+                if let Some(unicode) =
+                    glyph_name_to_unicode_sequence_in_font(char_name, Some(&font_info.name))
+                {
                     result.push_str(&unicode);
                     continue;
                 }
+                // Differences replaces the base glyph even when its name
+                // has no Unicode assignment. A Type3 CharProc is drawing
+                // evidence, not permission to resurrect the base character.
+                result.push('\u{FFFD}');
+                continue;
             }
         }
 
@@ -966,6 +1647,9 @@ fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<
             Some("WinAnsiEncoding") => decode_winansi(byte),
             Some("MacRomanEncoding") => decode_macroman(byte),
             Some("StandardEncoding") => decode_standard(byte),
+            Some("MacExpertEncoding") => pdf_simple_encodings::MAC_EXPERT[usize::from(byte)],
+            Some("SymbolEncoding") => pdf_simple_encodings::SYMBOL[usize::from(byte)],
+            Some("ZapfDingbatsEncoding") => pdf_simple_encodings::ZAPF_DINGBATS[usize::from(byte)],
             _ => byte as char,
         };
 
@@ -994,6 +1678,14 @@ pub fn glyph_name_to_unicode(name: &str) -> Option<char> {
 /// `uniXXXX...` and `uXXXX` glyph-name conventions, including `uni` names
 /// containing multiple four-digit scalar values.
 pub fn glyph_name_to_unicode_sequence(name: &str) -> Option<String> {
+    glyph_name_to_unicode_sequence_in_font(name, None)
+}
+
+pub(crate) fn glyph_name_to_unicode_sequence_in_font(
+    name: &str,
+    font_name: Option<&str>,
+) -> Option<String> {
+    let zapf = font_name.is_some_and(|name| without_subset_prefix(name) == "ZapfDingbats");
     if name.chars().count() == 1 {
         return Some(name.to_owned());
     }
@@ -1003,8 +1695,30 @@ pub fn glyph_name_to_unicode_sequence(name: &str) -> Option<String> {
         return None;
     }
 
+    let result: String = lookup_name
+        .split('_')
+        .filter_map(|component| {
+            if zapf {
+                if let Some(value) = pdf_simple_encodings::zapf_glyph(component) {
+                    return Some(value.to_string());
+                }
+            }
+            glyph_component_to_unicode(component)
+        })
+        .collect();
+    (!result.is_empty()).then_some(result)
+}
+
+fn glyph_component_to_unicode(lookup_name: &str) -> Option<String> {
+    if let Some(scalars) = adobe_glyph_list().get(lookup_name) {
+        return decode_unicode_scalars(scalars.split_whitespace());
+    }
     if let Some(hex) = lookup_name.strip_prefix("uni") {
-        if !hex.is_empty() && hex.len() % 4 == 0 && hex.bytes().all(|byte| byte.is_ascii_hexdigit())
+        if !hex.is_empty()
+            && hex.len() % 4 == 0
+            && hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'A'..=b'F').contains(&byte))
         {
             return decode_unicode_scalars(
                 hex.as_bytes()
@@ -1012,12 +1726,18 @@ pub fn glyph_name_to_unicode_sequence(name: &str) -> Option<String> {
                     .map(|chunk| std::str::from_utf8(chunk).expect("ASCII hexadecimal glyph name")),
             );
         }
+        return None;
     }
 
     if let Some(hex) = lookup_name.strip_prefix('u') {
-        if (4..=6).contains(&hex.len()) && hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        if (4..=6).contains(&hex.len())
+            && hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'A'..=b'F').contains(&byte))
+        {
             return decode_unicode_scalars(std::iter::once(hex));
         }
+        return None;
     }
 
     adobe_glyph_list()
@@ -1482,45 +2202,16 @@ fn legacy_glyph_name_to_unicode(name: &str) -> Option<char> {
     }
 }
 
-/// Decode WinAnsiEncoding
+/// Decode PDF WinAnsiEncoding, distinct from the Windows-1252 OS codec.
 fn decode_winansi(byte: u8) -> char {
-    // WinAnsiEncoding is mostly Latin-1 with some differences in 0x80-0x9F range
-    match byte {
-        0x80 => '€',
-        0x82 => '‚',
-        0x83 => 'ƒ',
-        0x84 => '„',
-        0x85 => '…',
-        0x86 => '†',
-        0x87 => '‡',
-        0x88 => 'ˆ',
-        0x89 => '‰',
-        0x8A => 'Š',
-        0x8B => '‹',
-        0x8C => 'Œ',
-        0x8E => 'Ž',
-        0x91 => '\u{2018}', // Left single quotation mark
-        0x92 => '\u{2019}', // Right single quotation mark
-        0x93 => '"',
-        0x94 => '"',
-        0x95 => '•',
-        0x96 => '–',
-        0x97 => '—',
-        0x98 => '˜',
-        0x99 => '™',
-        0x9A => 'š',
-        0x9B => '›',
-        0x9C => 'œ',
-        0x9E => 'ž',
-        0x9F => 'Ÿ',
-        _ => byte as char,
-    }
+    pdf_simple_encodings::WIN_ANSI[usize::from(byte)]
 }
 
-/// Decode MacRomanEncoding
+/// Decode PDF MacRomanEncoding (ISO 32000-1 Annex D.2, issue #662).
+/// Unlike OS Mac Roman, 0xDB is currency and undefined codes recover as U+FFFD.
 fn decode_macroman(byte: u8) -> char {
-    // MacRomanEncoding differs from Latin-1 in the 0x80-0xFF range
     match byte {
+        0x20..=0x7E => byte as char,
         0x80 => 'Ä',
         0x81 => 'Å',
         0x82 => 'Ç',
@@ -1553,16 +2244,95 @@ fn decode_macroman(byte: u8) -> char {
         0x9D => 'ù',
         0x9E => 'û',
         0x9F => 'ü',
-        // ... more mappings
-        _ => byte as char,
+        0xA0 => '†',
+        0xA1 => '°',
+        0xA2 => '¢',
+        0xA3 => '£',
+        0xA4 => '§',
+        0xA5 => '•',
+        0xA6 => '¶',
+        0xA7 => 'ß',
+        0xA8 => '®',
+        0xA9 => '©',
+        0xAA => '™',
+        0xAB => '´',
+        0xAC => '¨',
+        0xAE => 'Æ',
+        0xAF => 'Ø',
+        0xB1 => '±',
+        0xB4 => '¥',
+        0xB5 => 'µ',
+        0xBB => 'ª',
+        0xBC => 'º',
+        0xBE => 'æ',
+        0xBF => 'ø',
+        0xC0 => '¿',
+        0xC1 => '¡',
+        0xC2 => '¬',
+        0xC4 => 'ƒ',
+        0xC7 => '«',
+        0xC8 => '»',
+        0xC9 => '…',
+        0xCA => '\u{00A0}', // Non-breaking space
+        0xCB => 'À',
+        0xCC => 'Ã',
+        0xCD => 'Õ',
+        0xCE => 'Œ',
+        0xCF => 'œ',
+        0xD0 => '–',
+        0xD1 => '—',
+        0xD2 => '“',
+        0xD3 => '”',
+        0xD4 => '‘',
+        0xD5 => '’',
+        0xD6 => '÷',
+        0xD8 => 'ÿ',
+        0xD9 => 'Ÿ',
+        0xDA => '⁄',
+        0xDB => '¤',
+        0xDC => '‹',
+        0xDD => '›',
+        0xDE => 'ﬁ',
+        0xDF => 'ﬂ',
+        0xE0 => '‡',
+        0xE1 => '·',
+        0xE2 => '‚',
+        0xE3 => '„',
+        0xE4 => '‰',
+        0xE5 => 'Â',
+        0xE6 => 'Ê',
+        0xE7 => 'Á',
+        0xE8 => 'Ë',
+        0xE9 => 'È',
+        0xEA => 'Í',
+        0xEB => 'Î',
+        0xEC => 'Ï',
+        0xED => 'Ì',
+        0xEE => 'Ó',
+        0xEF => 'Ô',
+        0xF1 => 'Ò',
+        0xF2 => 'Ú',
+        0xF3 => 'Û',
+        0xF4 => 'Ù',
+        0xF5 => 'ı',
+        0xF6 => 'ˆ',
+        0xF7 => '˜',
+        0xF8 => '¯',
+        0xF9 => '˘',
+        0xFA => '˙',
+        0xFB => '˚',
+        0xFC => '¸',
+        0xFD => '˝',
+        0xFE => '˛',
+        0xFF => 'ˇ',
+        // PDF leaves these codes unassigned; preserve their position in recovery.
+        _ => '\u{FFFD}',
     }
 }
 
 /// Decode StandardEncoding
 fn decode_standard(byte: u8) -> char {
-    // StandardEncoding is similar to Latin-1 with some differences
-    // For simplicity, using Latin-1 as approximation
-    byte as char
+    pdf_simple_encodings::STANDARD[usize::from(byte)]
 }
 
 #[cfg(test)]
@@ -1698,6 +2468,14 @@ mod tests {
         assert_eq!(decode_macroman(0x41), 'A');
         assert_eq!(decode_macroman(0x80), 'Ä');
         assert_eq!(decode_macroman(0x87), 'á');
+        // Issue #662: MacRoman bytes in 0xA0..=0xFF range
+        assert_eq!(decode_macroman(0xA0), '†');
+        assert_eq!(decode_macroman(0xBB), 'ª');
+        assert_eq!(decode_macroman(0xBC), 'º');
+        assert_eq!(decode_macroman(0xDB), '¤');
+        assert_eq!(decode_macroman(0xD2), '“');
+        assert_eq!(decode_macroman(0xD3), '”');
+        assert_eq!(decode_macroman(0xE7), 'Á');
     }
 
     #[test]
@@ -1758,11 +2536,11 @@ endcmap
 
     #[test]
     fn embedded_encoding_cmap_decodes_via_cid_table() {
-        use crate::text::cid_to_unicode::CidCollection;
+        use crate::text::cid_to_unicode::AdobeCidCollection;
         use crate::text::encoding_cmap::{CidEncoding, EncodingCMap};
         // Pick a CID that is present in the GB1 collection; assert decode equals
         // exactly the GB1 table's Unicode for that CID (real content, not shape).
-        let coll = CidCollection::from_ordering("GB1").unwrap();
+        let coll = AdobeCidCollection::from_ordering("GB1").unwrap();
         // find a small CID that maps (scan upward to be robust to table contents)
         let (cid, expected) = (1u16..2000)
             .find_map(|c| coll.cid_to_unicode(c).map(|ch| (c, ch)))
@@ -1848,8 +2626,8 @@ endcmap
 1 begincodespacerange <0000> <FFFF> endcodespacerange\nendcmap",
         )
         .expect("parse without");
-        let got = decode_with_cmap(&[0x00, 0x41], &with_override).unwrap();
-        let fallback = decode_with_cmap(&[0x00, 0x41], &without).unwrap();
+        let got = decode_with_cmap(&[0x00, 0x41], &with_override, false).unwrap();
+        let fallback = decode_with_cmap(&[0x00, 0x41], &without, false).unwrap();
         assert_eq!(got, "\u{AC00}", "explicit bfchar must win");
         assert_ne!(
             got, fallback,
@@ -1947,3 +2725,11 @@ endcmap
         assert_eq!(metrics3.widths, Some(vec![250.0, 333.0]));
     }
 }
+
+#[cfg(test)]
+#[path = "usecmap_resolution_tests.rs"]
+mod usecmap_resolution_tests;
+
+#[cfg(test)]
+#[path = "vertical_metrics_tests.rs"]
+mod vertical_metrics_tests;

@@ -1,0 +1,11 @@
+
+running 6 tests
+test bmp_wins_when_full_unicode_is_absent ... ok
+test fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority ... ok
+test generic_unicode_wins_when_windows_unicode_is_absent ... ok
+test competing_program_matches_independent_fonttools_tables_and_hash ... ok
+test selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables ... ok
+test full_unicode_wins_in_all_120_subtable_orders ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

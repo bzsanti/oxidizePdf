@@ -1,0 +1,38 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 2.13s
+     Running tests/text_unicode_policy_contract_test.rs (target/debug/deps/text_unicode_policy_contract_test-e891f611c11033b0)
+
+running 7 tests
+test incomplete_tounicode_does_not_invent_a_base_mapping ... FAILED
+test agl_components_suffixes_and_scalar_boundaries_follow_independent_examples ... ok
+test zapf_components_use_font_specific_names_in_both_consumers ... FAILED
+test differences_sequences_reach_both_consumers_without_multiplying_advances ... ok
+test malformed_tounicode_destinations_never_become_utf8_or_base_text ... ok
+test valid_utf16_sequences_preserve_precedence_and_scalar_content ... ok
+test unknown_difference_replaces_base_in_all_simple_subtypes ... ok
+
+failures:
+
+---- incomplete_tounicode_does_not_invent_a_base_mapping stdout ----
+
+thread 'incomplete_tounicode_does_not_invent_a_base_mapping' (145) panicked at oxidize-pdf-core/tests/text_unicode_policy_contract_test.rs:181:5:
+assertion `left == right` failed
+  left: [Some("X"), Some("B")]
+ right: [Some("X"), None]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- zapf_components_use_font_specific_names_in_both_consumers stdout ----
+
+thread 'zapf_components_use_font_specific_names_in_both_consumers' (149) panicked at oxidize-pdf-core/tests/text_unicode_policy_contract_test.rs:193:5:
+assertion `left == right` failed
+  left: "�"
+ right: "✁✂"
+
+
+failures:
+    incomplete_tounicode_does_not_invent_a_base_mapping
+    zapf_components_use_font_specific_names_in_both_consumers
+
+test result: FAILED. 5 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_unicode_policy_contract_test`

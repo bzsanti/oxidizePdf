@@ -1,0 +1,74 @@
+[
+  {
+    "name": "control",
+    "compile_exit": 0,
+    "test_exit": 0,
+    "source_sha256": "ee3b5c729d10cb5ac3117e44db59d6a92bc211ec722ee5204eb1cf401017b527",
+    "command": [
+      "rustc",
+      "--edition=2021",
+      "--test",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/control.rs",
+      "--extern",
+      "oxidize_pdf=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/liboxidize_pdf-8d56b1627bc9922c.rlib",
+      "-L",
+      "dependency=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps",
+      "-o",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/control"
+    ]
+  },
+  {
+    "name": "notdef-cid-input",
+    "compile_exit": 0,
+    "test_exit": 101,
+    "source_sha256": "177cb06328579f2eac9a3e9fbfba9da72c4779ffa52ef4232cb395a4a8d00495",
+    "command": [
+      "rustc",
+      "--edition=2021",
+      "--test",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/notdef-cid-input.rs",
+      "--extern",
+      "oxidize_pdf=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/liboxidize_pdf-8d56b1627bc9922c.rlib",
+      "-L",
+      "dependency=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps",
+      "-o",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/notdef-cid-input"
+    ]
+  },
+  {
+    "name": "missing-parent-input",
+    "compile_exit": 0,
+    "test_exit": 101,
+    "source_sha256": "fa4a63334208e2128de2a4822c56c6ca23270e214e04eca364609b9d4e96ee73",
+    "command": [
+      "rustc",
+      "--edition=2021",
+      "--test",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/missing-parent-input.rs",
+      "--extern",
+      "oxidize_pdf=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/liboxidize_pdf-8d56b1627bc9922c.rlib",
+      "-L",
+      "dependency=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps",
+      "-o",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/missing-parent-input"
+    ]
+  },
+  {
+    "name": "complete-code-negative-control",
+    "compile_exit": 0,
+    "test_exit": 101,
+    "source_sha256": "f963412c31753c3ee022e51028ffefc12ed4a281f753f9601e2c7150a8f2225c",
+    "command": [
+      "rustc",
+      "--edition=2021",
+      "--test",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/complete-code-negative-control.rs",
+      "--extern",
+      "oxidize_pdf=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/liboxidize_pdf-8d56b1627bc9922c.rlib",
+      "-L",
+      "dependency=/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps",
+      "-o",
+      "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue666-c07-controls/complete-code-negative-control"
+    ]
+  }
+]

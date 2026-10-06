@@ -1,0 +1,73 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 94 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/issue_680_flate_stream_recovery_test.rs        7     94
+
+--- Worst Offenders ---
+  test_truncated_compressed_stream_filter (target/pr682-fix/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:60) - Score: 90
+    - Test 'test_truncated_compressed_stream_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_truncated_compressed_stream_filter' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_truncated_compressed_stream_filter' has multiple assertions without diagnostic messages
+    i Test 'test_truncated_compressed_stream_filter' uses .unwrap() which silently discards error information
+  test_extract_from_page_with_stream_recovery (target/pr682-fix/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:90) - Score: 90
+    - Test 'test_extract_from_page_with_stream_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_extract_from_page_with_stream_recovery' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extract_from_page_with_stream_recovery' has multiple assertions without diagnostic messages
+    i Test 'test_extract_from_page_with_stream_recovery' uses .unwrap() which silently discards error information
+  test_form_xobject_stream_recovery (target/pr682-fix/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:130) - Score: 90
+    - Test 'test_form_xobject_stream_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_form_xobject_stream_recovery' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_form_xobject_stream_recovery' has multiple assertions without diagnostic messages
+    i Test 'test_form_xobject_stream_recovery' uses .unwrap() which silently discards error information
+  incomplete_payload_recovers_complete_text_operators_with_a_diagnostic (target/pr682-fix/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:250) - Score: 90
+    - Test 'incomplete_payload_recovers_complete_text_operators_with_a_diagnostic' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incomplete_payload_recovers_complete_text_operators_with_a_diagnostic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incomplete_payload_recovers_complete_text_operators_with_a_diagnostic' has multiple assertions without diagnostic messages
+    i Test 'incomplete_payload_recovers_complete_text_operators_with_a_diagnostic' uses .unwrap() which silently discards error information
+  omitted_form_is_reported_even_when_page_text_survives (target/pr682-fix/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:161) - Score: 100
+    i Test 'omitted_form_is_reported_even_when_page_text_survives' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'omitted_form_is_reported_even_when_page_text_survives' uses .unwrap() which silently discards error information
+
+--- Details ---
+target/pr682-fix/oxidize-pdf-core/tests/issue_680_flate_stream_recovery_test.rs:
+  test_truncated_compressed_stream_filter (line 60) - Score: 90
+    - Test 'test_truncated_compressed_stream_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_truncated_compressed_stream_filter' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_truncated_compressed_stream_filter' has multiple assertions without diagnostic messages
+    i Test 'test_truncated_compressed_stream_filter' uses .unwrap() which silently discards error information
+  test_extract_from_page_with_stream_recovery (line 90) - Score: 90
+    - Test 'test_extract_from_page_with_stream_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_extract_from_page_with_stream_recovery' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extract_from_page_with_stream_recovery' has multiple assertions without diagnostic messages
+    i Test 'test_extract_from_page_with_stream_recovery' uses .unwrap() which silently discards error information
+  test_form_xobject_stream_recovery (line 130) - Score: 90
+    - Test 'test_form_xobject_stream_recovery' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_form_xobject_stream_recovery' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_form_xobject_stream_recovery' has multiple assertions without diagnostic messages
+    i Test 'test_form_xobject_stream_recovery' uses .unwrap() which silently discards error information
+  omitted_form_is_reported_even_when_page_text_survives (line 161) - Score: 100
+    i Test 'omitted_form_is_reported_even_when_page_text_survives' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'omitted_form_is_reported_even_when_page_text_survives' uses .unwrap() which silently discards error information
+  text_budget_does_not_limit_decoded_operators (line 188) - Score: 100
+    i Test 'text_budget_does_not_limit_decoded_operators' has multiple assertions without diagnostic messages
+    i Test 'text_budget_does_not_limit_decoded_operators' uses .unwrap() which silently discards error information
+  stream_limit_is_fatal_for_valid_and_damaged_content_and_forms (line 224) - Score: 100
+    i Test 'stream_limit_is_fatal_for_valid_and_damaged_content_and_forms' has multiple assertions without diagnostic messages
+    i Test 'stream_limit_is_fatal_for_valid_and_damaged_content_and_forms' uses .unwrap() which silently discards error information
+  incomplete_payload_recovers_complete_text_operators_with_a_diagnostic (line 250) - Score: 90
+    - Test 'incomplete_payload_recovers_complete_text_operators_with_a_diagnostic' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incomplete_payload_recovers_complete_text_operators_with_a_diagnostic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incomplete_payload_recovers_complete_text_operators_with_a_diagnostic' has multiple assertions without diagnostic messages
+    i Test 'incomplete_payload_recovers_complete_text_operators_with_a_diagnostic' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

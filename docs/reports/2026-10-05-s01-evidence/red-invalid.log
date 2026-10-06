@@ -1,0 +1,24 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.76s
+     Running tests/text_metrics_boundary_contract_test.rs (target/debug/deps/text_metrics_boundary_contract_test-3369e698de7e0c21)
+
+running 3 tests
+test invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity ... FAILED
+test cid_metrics_resolve_indirect_array_range_and_default_values ... ok
+test simple_metrics_resolve_indirect_firstchar_widths_and_missingwidth ... ok
+
+failures:
+
+---- invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity stdout ----
+
+thread 'invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity' (143) panicked at oxidize-pdf-core/tests/text_metrics_boundary_contract_test.rs:80:21:
+Type1 /Widths [null]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    invalid_metric_values_cannot_enter_either_consumer_as_zero_or_infinity
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_metrics_boundary_contract_test`

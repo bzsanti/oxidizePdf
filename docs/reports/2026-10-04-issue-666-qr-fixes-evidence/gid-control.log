@@ -1,0 +1,11 @@
+
+running 6 tests
+test six_real_programs_and_fourteen_pdfs_match_their_frozen_hashes ... ok
+test full_and_subset_truetype_keep_source_codes_cids_and_gids_distinct ... ok
+test full_and_subset_truetype_support_identity_cid_to_gid_map ... ok
+test cff_fixtures_preserve_identity_cid_text_and_pdf_widths ... ok
+test full_and_subset_truetype_support_stream_cid_to_gid_map ... ok
+test cff_fixtures_preserve_remapped_cid_text_and_pdf_widths ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

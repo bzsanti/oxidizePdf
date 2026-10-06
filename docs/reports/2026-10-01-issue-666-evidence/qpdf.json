@@ -1,0 +1,32 @@
+[
+  {
+    "file": "MacRomanEncoding.pdf",
+    "exit_code": 0,
+    "output": "checking /tmp/issue666-pdfs/MacRomanEncoding.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n"
+  },
+  {
+    "file": "StandardEncoding.pdf",
+    "exit_code": 0,
+    "output": "checking /tmp/issue666-pdfs/StandardEncoding.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n"
+  },
+  {
+    "file": "WinAnsiEncoding.pdf",
+    "exit_code": 0,
+    "output": "checking /tmp/issue666-pdfs/WinAnsiEncoding.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n"
+  },
+  {
+    "file": "damaged-descendant.pdf",
+    "exit_code": 0,
+    "output": "checking /tmp/issue666-pdfs/damaged-descendant.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n"
+  },
+  {
+    "file": "geometry.pdf",
+    "exit_code": 0,
+    "output": "checking /tmp/issue666-pdfs/geometry.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n"
+  },
+  {
+    "file": "precedence.pdf",
+    "exit_code": 0,
+    "output": "checking /tmp/issue666-pdfs/precedence.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n"
+  }
+]

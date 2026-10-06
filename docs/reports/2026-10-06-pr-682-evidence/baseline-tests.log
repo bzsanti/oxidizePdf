@@ -1,0 +1,57 @@
+   Compiling oxidize-pdf v5.2.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/pr682-review/source/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 37.52s
+     Running tests/issue_637_flate_errors_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_637_flate_errors_test-65bfd15051ee6894)
+
+running 18 tests
+test bounded_corrupt_flate_is_an_error ... ok
+test checksum_corruption_is_not_recovered_as_raw_deflate ... ok
+test filter_arrays_propagate_failure_at_the_flate_stage ... ok
+test corrupt_flate_never_becomes_empty_success ... ok
+test form_xobject_flate_failure_is_not_an_empty_successful_page ... ok
+test bounded_limit_is_distinct_from_corruption_and_never_returns_a_prefix ... ok
+test every_truncated_prefix_is_rejected_by_bounded_decoder ... ok
+test non_zlib_recovery_is_not_silently_reported_as_complete ... ok
+test complete_empty_and_nonempty_streams_preserve_exact_bytes ... ok
+test predictor_parameters_cannot_bypass_failed_decompression ... ok
+test pdf_extraction_distinguishes_valid_empty_and_nonempty_content ... ok
+test every_truncated_prefix_is_rejected_by_ordinary_decoder ... ok
+test valid_png_predictor_runs_only_after_complete_decompression ... ok
+test validated_zlib_member_keeps_existing_trailing_byte_policy ... ok
+test pdf_extraction_propagates_corrupt_or_truncated_content_errors ... ok
+test high_ratio_small_images_remain_supported ... ok
+test large_ratio_limit_is_not_swallowed_by_fallbacks ... ok
+test caller_limit_cannot_raise_the_absolute_flate_cap ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.22s
+
+     Running tests/issue_637_recovery_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_637_recovery_test-7b38e2b1b66c139f)
+
+running 16 tests
+test checksum_recovery_returns_original_bytes_and_observable_unverified_status ... ok
+test empty_form_does_not_hide_healthy_page_content_and_is_reported ... ok
+test invalid_predictors_remain_errors_after_flate_recovery ... ok
+test filter_chain_reports_the_actual_filter_index_and_applies_predictor ... ok
+test exhausted_page_stream_is_omitted_explicitly_while_good_content_survives ... ok
+test corruption_with_only_a_lost_checksum_is_not_labelled_verified ... ok
+test no_decodable_bytes_are_an_error_including_zero_length_flate ... ok
+test truncated_deflate_returns_only_the_prefix_with_incomplete_status ... ok
+test raw_deflate_is_recovered_only_through_the_explicit_api ... ok
+test omitted_content_cannot_splice_healthy_operands_into_invented_text ... ok
+test valid_bytes_and_legitimate_empty_have_no_recovery_diagnostics ... ok
+test recovered_form_text_is_kept_with_its_diagnostic ... ok
+test recovery_preserves_operands_across_adjacent_verified_streams ... ok
+test extraction_does_not_skip_streams_that_exceed_resource_limits ... ok
+test resource_limits_never_become_recovered_prefixes ... ok
+test compression_ratio_guard_cannot_be_bypassed_by_recovery ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.90s
+
+     Running tests/issue_680_flate_stream_recovery_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_680_flate_stream_recovery_test-33afc16419a3feae)
+
+running 3 tests
+test test_truncated_compressed_stream_filter ... ok
+test test_extract_from_page_with_stream_recovery ... ok
+test test_form_xobject_stream_recovery ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

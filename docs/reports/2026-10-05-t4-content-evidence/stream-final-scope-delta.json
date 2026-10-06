@@ -1,0 +1,4 @@
+[
+  "oxidize-pdf-core/src/parser/content.rs",
+  "oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs"
+]

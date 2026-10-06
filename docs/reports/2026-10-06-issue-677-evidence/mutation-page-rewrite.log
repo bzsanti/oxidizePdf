@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.25s
+     Running tests/issue_677_missing_structparents_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue677-cargo/debug/deps/issue_677_missing_structparents_test-4a0f3777a65a0a34)
+
+running 1 test
+test page_reparenting_preserves_reconstructed_keys ... FAILED
+
+failures:
+
+---- page_reparenting_preserves_reconstructed_keys stdout ----
+
+thread 'page_reparenting_preserves_reconstructed_keys' (729) panicked at oxidize-pdf-core/tests/issue_677_missing_structparents_test.rs:26:91:
+called `Result::unwrap()` on an `Err` value: PdfError(InvalidStructure("object 10 0 is rewritten more than once"))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    page_reparenting_preserves_reconstructed_keys
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_677_missing_structparents_test`

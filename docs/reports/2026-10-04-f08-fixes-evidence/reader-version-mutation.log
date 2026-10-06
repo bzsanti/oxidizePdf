@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/f08-fix-mutations/reader-version-mutation.py", line 6, in <module>
+    assert (pymupdf.VersionBind, pymupdf.VersionFitz) == ('0.0.0', '1.26.10'), 'unvalidated external reader version'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unvalidated external reader version

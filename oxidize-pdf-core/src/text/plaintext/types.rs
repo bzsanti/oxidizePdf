@@ -373,9 +373,14 @@ mod tests {
     }
 
     #[test]
-    fn test_line_break_mode_equality() {
-        assert_eq!(LineBreakMode::Auto, LineBreakMode::Auto);
-        assert_ne!(LineBreakMode::Auto, LineBreakMode::PreserveAll);
+    fn test_plain_text_result_counts_unicode_scalars_and_trailing_newline() {
+        let result = PlainTextResult::new("é😀\nfin\n".to_owned());
+        assert_eq!(result.text, "é😀\nfin\n");
+        assert_eq!(result.char_count, 7, "count scalars, not UTF-8 bytes");
+        assert_eq!(
+            result.line_count, 2,
+            "a terminal newline adds no empty line"
+        );
     }
 
     #[test]

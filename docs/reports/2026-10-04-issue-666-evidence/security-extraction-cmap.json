@@ -1,0 +1,16 @@
+{
+  "dangerous_calls": [],
+  "degraded_files": [],
+  "lua_issues": [],
+  "secrets": [],
+  "summary": {
+    "dangerous_calls": 0,
+    "degraded_files": 0,
+    "secrets": 0,
+    "taint_flows": 0,
+    "unguarded_flows": 0,
+    "unsafe_usages": 0
+  },
+  "taint_flows": [],
+  "unsafe_usages": []
+}

@@ -1,0 +1,58 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.68s
+     Running tests/text_spacing_contract_test.rs (target/debug/deps/text_spacing_contract_test-040fabcda5bb0cc2)
+
+running 25 tests
+test glyph_origins_follow_declared_widths_kerns_and_horizontal_scale ... ok
+test absent_widths_never_certify_tracking_for_standard_fonts ... ok
+test excess_advance_remains_a_word_separator ... ok
+test lenient_type0_recovery_uses_explicit_spaces_and_full_em_advances ... ok
+test a_single_transition_does_not_certify_uniform_tracking ... ok
+test explicit_character_spacing_disables_tracking_inference ... ok
+test declared_positive_widths_keep_word_separators ... ok
+test declared_zero_widths_allow_uniform_advances ... ok
+test one_source_glyph_is_not_the_same_as_one_unicode_scalar ... ok
+test explicit_word_spacing_disables_tracking_inference ... ok
+test known_zero_width_single_word_needs_no_literal_space ... ok
+test ordinary_small_kerning_does_not_add_spaces ... ok
+test partial_em_adjustments_do_not_trigger_unknown_width_recovery ... ok
+test resolved_cid_tracking_counts_source_glyphs_per_string ... ok
+test strict_mode_does_not_enable_unknown_width_recovery ... ok
+test multiple_source_glyphs_disable_simple_font_tracking ... ok
+test literal_spaces_and_adjustments_have_distinct_evidence ... ok
+test leading_and_trailing_kerns_do_not_certify_tracking ... ok
+test unresolved_type0_without_space_reaches_and_rejects_the_fallback ... ok
+test nonuniform_advances_without_a_majority_keep_ordinary_gaps ... ok
+test tracking_outlier_compares_only_excess_against_strict_threshold ... ok
+test separator_evidence_follows_unicode_not_the_source_byte ... ok
+test minimum_support_and_strict_majority_are_both_required ... ok
+test ordinary_tj_gap_threshold_is_strict_for_both_signs ... ok
+test tracking_threshold_and_backward_kern_controls ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+     Running tests/text_tj_scale_contract_test.rs (target/debug/deps/text_tj_scale_contract_test-adff38aa153acd86)
+
+running 5 tests
+test fixture_hashes_are_frozen ... ok
+test backward_tj_adjustment_scales_with_tz ... ok
+test zero_tj_control_scales_only_source_width ... ok
+test forward_tj_adjustment_scales_with_tz ... ok
+test numeric_only_and_split_tj_adjustments_preserve_the_pen ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/text_tracking_recovery_contract_test.rs (target/debug/deps/text_tracking_recovery_contract_test-62d9e1ff39e7e205)
+
+running 8 tests
+test multiple_source_glyphs_cannot_certify_per_glyph_tracking ... ok
+test a_space_inside_a_unicode_sequence_is_not_a_space_glyph ... ok
+test larger_outlier_remains_a_word_gap_during_recovery ... ok
+test resolved_descendant_without_widths_does_not_enable_recovery ... ok
+test truncated_identity_codes_cannot_certify_tracking ... ok
+test vertical_encoding_does_not_enable_horizontal_recovery ... ok
+test damaged_type0_rejects_non_em_baselines_and_explicit_spacing ... ok
+test damaged_type0_recovery_covers_full_em_tolerance_and_mode ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

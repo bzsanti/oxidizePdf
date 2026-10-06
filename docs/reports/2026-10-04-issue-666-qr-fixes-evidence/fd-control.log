@@ -1,0 +1,6 @@
+
+running 1 test
+test text::fonts::cff::dict::contract_fd_selection::real_full_and_subset_programs_select_both_font_dicts ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

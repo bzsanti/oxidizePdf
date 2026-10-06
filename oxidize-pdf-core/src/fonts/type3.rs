@@ -11,6 +11,12 @@ use std::io::{Read, Seek};
 /// Maximum decoded size accepted for one glyph program.
 pub const MAX_TYPE3_GLYPH_STREAM_SIZE: usize = 8 * 1024 * 1024;
 
+// Per-font work/retention budgets, charged for every code including aliases.
+// Byte and token budgets also bound operand payloads; operations alone do not.
+const MAX_TYPE3_FONT_DECODED_BYTES: usize = 8 * 1024 * 1024;
+const MAX_TYPE3_FONT_TOKENS: usize = 262_144;
+const MAX_TYPE3_FONT_OPERATIONS: usize = 65_536;
+
 /// A resolved Type 3 font suitable for use by a downstream renderer.
 #[derive(Debug, Clone)]
 pub struct Type3Font {
@@ -23,6 +29,8 @@ pub struct Type3Font {
     /// Resolved private resources used by glyph programs.
     pub resources: Option<PdfDictionary>,
     glyphs: BTreeMap<u8, Type3Glyph>,
+    pub(crate) names: HashMap<u8, String>,
+    pub(crate) normalized_widths: BTreeMap<u8, f64>,
 }
 
 /// One resolved Type 3 character procedure.
@@ -52,7 +60,10 @@ impl Type3Font {
     ///
     /// Returns an error for an invalid Type 3 dictionary, unsupported encoding,
     /// malformed or oversized character procedure, or an unresolved required
-    /// indirect object. Codes without a name or `CharProc` are omitted so
+    /// indirect object. Per font, character procedures may consume at most
+    /// 8 MiB decoded bytes, 262,144 tokens and 65,536 drawing operations.
+    /// Aliased procedures count once per character code because each public
+    /// glyph owns its operations. Codes without a name or `CharProc` are omitted so
     /// [`Self::glyph`] returns `None` and downstream fallback remains possible.
     pub fn resolve<R: Read + Seek>(
         font_object: &PdfObject,
@@ -87,10 +98,32 @@ impl Type3Font {
         }
 
         let encoding_object = resolve_required(document, font, "Encoding")?;
-        let names = encoding_names(&encoding_object)?;
+        let names = encoding_names(&encoding_object, |object| document.resolve(object))?;
         let charprocs_object = resolve_required(document, font, "CharProcs")?;
         let charprocs = expect_dict(&charprocs_object, "Type 3 CharProcs")?;
 
+        let width_scale = font_matrix[0] * 1000.0;
+        if !width_scale.is_finite() {
+            return Err(syntax("Type 3 normalized width scale must be finite"));
+        }
+        let mut declared_widths = BTreeMap::new();
+        let mut normalized_widths = BTreeMap::new();
+        for code in first..=last {
+            let object = document.resolve(&widths.0[(code - first) as usize])?;
+            let width = object
+                .as_real()
+                .filter(|v| v.is_finite())
+                .ok_or_else(|| syntax("Type 3 width must be finite and numeric"))?;
+            let normalized = width * width_scale;
+            if !normalized.is_finite() {
+                return Err(syntax("Type 3 normalized width must be finite"));
+            }
+            declared_widths.insert(code as u8, width);
+            normalized_widths.insert(code as u8, normalized);
+        }
+        let mut decoded_budget = MAX_TYPE3_FONT_DECODED_BYTES;
+        let mut token_budget = MAX_TYPE3_FONT_TOKENS;
+        let mut operation_budget = MAX_TYPE3_FONT_OPERATIONS;
         let mut glyphs = BTreeMap::new();
         for code in first..=last {
             let code = code as u8;
@@ -105,21 +138,26 @@ impl Type3Font {
                 .as_stream()
                 .ok_or_else(|| syntax("Type 3 CharProc must be a stream"))?;
             let data = document
-                .decode_stream_with_limit(stream, MAX_TYPE3_GLYPH_STREAM_SIZE)
+                .decode_stream_with_limit(stream, decoded_budget.min(MAX_TYPE3_GLYPH_STREAM_SIZE))
                 .map_err(|error| {
                     syntax(&format!(
-                        "failed to decode Type 3 CharProc /{name} (code {code}): {error}"
+                        "failed to decode Type 3 CharProc /{name} (code {code}) within byte budget: {error}"
                     ))
                 })?;
-            let parsed = ContentParser::parse_type3_charproc(&data).map_err(|error| {
+            decoded_budget = decoded_budget
+                .checked_sub(data.len())
+                .ok_or_else(|| syntax("Type 3 decoded byte budget exceeded"))?;
+            let parsed = ContentParser::parse_type3_charproc(
+                &data,
+                &mut token_budget,
+                &mut operation_budget,
+            )
+            .map_err(|error| {
                 syntax(&format!(
                     "invalid Type 3 CharProc /{name} (code {code}): {error}"
                 ))
             })?;
-            let width_obj = document.resolve(&widths.0[(i64::from(code) - first) as usize])?;
-            let width = width_obj
-                .as_real()
-                .ok_or_else(|| syntax("Type 3 width must be numeric"))?;
+            let width = declared_widths[&code];
             glyphs.insert(
                 code,
                 Type3Glyph {
@@ -153,6 +191,8 @@ impl Type3Font {
             font_bbox,
             resources,
             glyphs,
+            names,
+            normalized_widths,
         })
     }
 
@@ -239,20 +279,26 @@ fn number_array<const N: usize, R: Read + Seek>(
         let resolved = document.resolve(object)?;
         *target = resolved
             .as_real()
-            .ok_or_else(|| syntax(&format!("{key} must contain only numbers")))?;
+            .filter(|value| value.is_finite())
+            .ok_or_else(|| syntax(&format!("{key} must contain only finite numbers")))?;
     }
     Ok(result)
 }
 
-fn encoding_names(encoding: &PdfObject) -> ParseResult<HashMap<u8, String>> {
+fn encoding_names(
+    encoding: &PdfObject,
+    resolve: impl Fn(&PdfObject) -> ParseResult<PdfObject>,
+) -> ParseResult<HashMap<u8, String>> {
     match encoding {
         PdfObject::Name(name) => predefined_encoding(name.as_str()),
         PdfObject::Dictionary(dict) => {
-            let mut names = match dict.get("BaseEncoding").and_then(PdfObject::as_name) {
-                Some(name) => predefined_encoding(name.as_str())?,
+            let base = dict.get("BaseEncoding").map(&resolve).transpose()?;
+            let mut names = match base {
+                Some(PdfObject::Name(name)) => predefined_encoding(name.as_str())?,
+                Some(_) => return Err(syntax("Type 3 BaseEncoding must be a name")),
                 None => predefined_encoding("StandardEncoding")?,
             };
-            apply_encoding_differences(dict, &mut names)?;
+            apply_encoding_differences(dict, &mut names, &resolve)?;
             Ok(names)
         }
         _ => Err(syntax("Type 3 Encoding must be a name or dictionary")),
@@ -262,12 +308,18 @@ fn encoding_names(encoding: &PdfObject) -> ParseResult<HashMap<u8, String>> {
 fn apply_encoding_differences(
     encoding: &PdfDictionary,
     result: &mut HashMap<u8, String>,
+    resolve: &impl Fn(&PdfObject) -> ParseResult<PdfObject>,
 ) -> ParseResult<()> {
-    let Some(differences) = encoding.get("Differences").and_then(PdfObject::as_array) else {
+    let Some(object) = encoding.get("Differences") else {
         return Ok(());
     };
+    let object = resolve(object)?;
+    let differences = object
+        .as_array()
+        .ok_or_else(|| syntax("Type 3 Differences must be an array"))?;
     let mut code: Option<i64> = None;
     for object in &differences.0 {
+        let object = resolve(object)?;
         if let Some(value) = object.as_integer() {
             if !(0..=255).contains(&value) {
                 return Err(syntax("Encoding Differences code is outside 0..=255"));
@@ -276,6 +328,11 @@ fn apply_encoding_differences(
         } else if let Some(name) = object.as_name() {
             let value =
                 code.ok_or_else(|| syntax("Encoding Differences name has no starting code"))?;
+            // The implicit counter also needs validation: a name after code
+            // 255 must not wrap to byte zero when narrowed to u8 (#675).
+            if !(0..=255).contains(&value) {
+                return Err(syntax("Encoding Differences code is outside 0..=255"));
+            }
             result.insert(value as u8, name.0.clone());
             code = value.checked_add(1);
         } else {
@@ -774,8 +831,10 @@ mod tests {
 
     #[test]
     fn named_standard_encoding_maps_ascii_glyph_names() {
-        let names = encoding_names(&PdfObject::Name(PdfName("StandardEncoding".into())))
-            .expect("known encoding");
+        let names = encoding_names(&PdfObject::Name(PdfName("StandardEncoding".into())), |o| {
+            Ok(o.clone())
+        })
+        .expect("known encoding");
         assert_eq!(names.get(&65).map(String::as_str), Some("A"));
         assert_eq!(names.get(&48).map(String::as_str), Some("zero"));
     }
@@ -824,7 +883,8 @@ mod tests {
                 PdfObject::Name(PdfName("OpaqueA".into())),
             ])),
         );
-        let names = encoding_names(&PdfObject::Dictionary(encoding)).expect("valid encoding");
+        let names = encoding_names(&PdfObject::Dictionary(encoding), |o| Ok(o.clone()))
+            .expect("valid encoding");
         assert_eq!(names.get(&65).map(String::as_str), Some("OpaqueA"));
         assert_eq!(names.get(&66).map(String::as_str), Some("B"));
     }

@@ -1,0 +1,43 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 11.18s
+     Running tests/issue_476_carriage_return_policy_test.rs (target/debug/deps/issue_476_carriage_return_policy_test-f87dc9182e6bc4b8)
+
+running 4 tests
+test extraction_can_replace_carriage_returns_with_spaces ... FAILED
+test extraction_can_remove_carriage_returns ... FAILED
+test extraction_removes_standalone_cr_and_normalizes_crlf_by_default ... FAILED
+test cmap_decoding_applies_the_selected_carriage_return_policy ... ok
+
+failures:
+
+---- extraction_can_replace_carriage_returns_with_spaces stdout ----
+
+thread 'extraction_can_replace_carriage_returns_with_spaces' (360) panicked at oxidize-pdf-core/tests/issue_476_carriage_return_policy_test.rs:104:5:
+assertion `left == right` failed
+  left: "rating-aa�a-exp��next"
+ right: "rating-aa a-exp\nnext"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- extraction_can_remove_carriage_returns stdout ----
+
+thread 'extraction_can_remove_carriage_returns' (359) panicked at oxidize-pdf-core/tests/issue_476_carriage_return_policy_test.rs:96:5:
+assertion `left == right` failed
+  left: "rating-aa�a-exp��next"
+ right: "rating-aaa-exp\nnext"
+
+---- extraction_removes_standalone_cr_and_normalizes_crlf_by_default stdout ----
+
+thread 'extraction_removes_standalone_cr_and_normalizes_crlf_by_default' (361) panicked at oxidize-pdf-core/tests/issue_476_carriage_return_policy_test.rs:43:5:
+assertion `left == right` failed
+  left: "rating-aa�a-exp��next"
+ right: "rating-aaa-exp\nnext"
+
+
+failures:
+    extraction_can_remove_carriage_returns
+    extraction_can_replace_carriage_returns_with_spaces
+    extraction_removes_standalone_cr_and_normalizes_crlf_by_default
+
+test result: FAILED. 1 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_476_carriage_return_policy_test`

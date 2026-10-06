@@ -1,0 +1,51 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.62s
+     Running tests/text_type1_intrinsic_contract_test.rs (target/debug/deps/text_type1_intrinsic_contract_test-05b76f25adf8696c)
+
+running 10 tests
+test pfb_records_are_removed_from_pdf_fontfile_payloads ... ok
+test all_program_and_pdf_bytes_match_the_independent_provenance ... ok
+test differences_glyph_width_advances_the_text_pen ... ok
+test explicit_encoding_glyph_width_advances_the_text_pen ... ok
+test explicit_pdf_encoding_overrides_the_embedded_encoding ... ok
+test intrinsic_glyph_width_advances_the_text_pen ... ok
+test differences_without_base_inherits_unmodified_codes_from_the_program ... FAILED
+test absent_pdf_encoding_uses_the_embedded_program_encoding ... FAILED
+test tounicode_does_not_change_glyph_advances ... ok
+test tounicode_overrides_pdf_differences_and_intrinsic_encoding ... ok
+
+failures:
+
+---- differences_without_base_inherits_unmodified_codes_from_the_program stdout ----
+
+thread 'differences_without_base_inherits_unmodified_codes_from_the_program' (121) panicked at oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:71:5:
+pfb-full strict: expected "AA", got "AB"
+pfb-full lenient: expected "AA", got "AB"
+pfb-subset strict: expected "AA", got "AB"
+pfb-subset lenient: expected "AA", got "AB"
+cff-full strict: expected "AA", got "AB"
+cff-full lenient: expected "AA", got "AB"
+cff-subset strict: expected "AA", got "AB"
+cff-subset lenient: expected "AA", got "AB"
+
+---- absent_pdf_encoding_uses_the_embedded_program_encoding stdout ----
+
+thread 'absent_pdf_encoding_uses_the_embedded_program_encoding' (118) panicked at oxidize-pdf-core/tests/text_type1_intrinsic_contract_test.rs:71:5:
+pfb-full strict: expected "BA", got "AB"
+pfb-full lenient: expected "BA", got "AB"
+pfb-subset strict: expected "BA", got "AB"
+pfb-subset lenient: expected "BA", got "AB"
+cff-full strict: expected "BA", got "AB"
+cff-full lenient: expected "BA", got "AB"
+cff-subset strict: expected "BA", got "AB"
+cff-subset lenient: expected "BA", got "AB"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    absent_pdf_encoding_uses_the_embedded_program_encoding
+    differences_without_base_inherits_unmodified_codes_from_the_program
+
+test result: FAILED. 8 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_type1_intrinsic_contract_test`

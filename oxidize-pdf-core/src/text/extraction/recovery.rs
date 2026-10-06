@@ -47,6 +47,40 @@ impl TextExtractor {
     /// Extract one page with explicit Flate recovery and a decoded content/Form cap.
     /// Resource-limit and predictor errors remain errors. Inspect diagnostics even
     /// when the text is nonempty: recovery does not certify integrity/completeness.
+    ///
+    /// `max_stream_bytes` limits decoded bytes per content stream or Form, including
+    /// PDF operators. It is independent of [`ExtractionOptions::max_extracted_bytes`],
+    /// which limits emitted text. This explicit API works with strict or lenient
+    /// parser options; lenient parsing alone does not enable Flate recovery in
+    /// [`Self::extract_from_page`]. Missing checksums are reported as unverified,
+    /// truncated payloads as incomplete, and undecodable streams as omitted.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use oxidize_pdf::parser::{ParseOptions, PdfReader};
+    /// use oxidize_pdf::text::TextExtractor;
+    /// use std::fs::File;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let reader = PdfReader::new_with_options(
+    ///     File::open("document.pdf")?, ParseOptions::lenient(),
+    /// )?;
+    /// let document = reader.into_document();
+    /// let mut extractor = TextExtractor::new();
+    /// for page in 0..document.page_count()? {
+    ///     let recovered = extractor.extract_from_page_with_recovery(
+    ///         &document, page, 8 * 1024 * 1024,
+    ///     )?;
+    ///     // Keep diagnostics alongside the text: recovery may have omitted content.
+    ///     for diagnostic in &recovered.diagnostics {
+    ///         eprintln!("Page {}: {:?}", recovered.page_index + 1, diagnostic);
+    ///     }
+    ///     println!("{}", recovered.text.text);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn extract_from_page_with_recovery<R: Read + Seek>(
         &mut self,
         document: &PdfDocument<R>,

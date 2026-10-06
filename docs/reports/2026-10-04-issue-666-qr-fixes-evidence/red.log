@@ -1,0 +1,113 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.23s
+     Running tests/text_qr_regression_contract_test.rs (target/debug/deps/text_qr_regression_contract_test-afa95a00ec074ab8)
+
+running 12 tests
+test resolved_intrinsic_cff ... FAILED
+test inherited_adobe_kr_operator ... FAILED
+test inherited_adobe_kr_dictionary ... FAILED
+test resolved_encoding_parent ... FAILED
+test resolved_named_parent ... FAILED
+test resolved_vertical_advance ... FAILED
+test resolved_intrinsic_type1 ... FAILED
+test resolved_flat_control ... ok
+test resolved_unicode_parent ... FAILED
+test strict_public_extraction_rejects_cyclic_usecmap ... FAILED
+test type1_procedure_is_not_executed ... FAILED
+test indirect_cid_collection_matches_direct_extraction ... FAILED
+
+failures:
+
+---- resolved_intrinsic_cff stdout ----
+
+thread 'resolved_intrinsic_cff' (144) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:34:2:
+assertion `left == right` failed: cff
+  left: [Some("A"), Some("B")]
+ right: [Some("B"), Some("A")]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- inherited_adobe_kr_operator stdout ----
+
+thread 'inherited_adobe_kr_operator' (141) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:63:2:
+assertion `left == right` failed: 
+  left: "쑑"
+ right: "一"
+
+---- inherited_adobe_kr_dictionary stdout ----
+
+thread 'inherited_adobe_kr_dictionary' (140) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:63:2:
+assertion `left == right` failed: /UseCMap /Adobe-KR-UCS2
+  left: "쑑"
+ right: "一"
+
+---- resolved_encoding_parent stdout ----
+
+thread 'resolved_encoding_parent' (142) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:18:2:
+assertion `left == right` failed
+  left: [None, None]
+ right: [Some(17), Some(29)]
+
+---- resolved_named_parent stdout ----
+
+thread 'resolved_named_parent' (146) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:27:2:
+assertion `left == right` failed
+  left: 4
+ right: 2
+
+---- resolved_vertical_advance stdout ----
+
+thread 'resolved_vertical_advance' (148) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:41:2:
+assertion `left == right` failed
+  left: 544.0
+ right: -1200.0
+
+---- resolved_intrinsic_type1 stdout ----
+
+thread 'resolved_intrinsic_type1' (145) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:34:2:
+assertion `left == right` failed: pfb
+  left: [Some("A"), Some("B")]
+ right: [Some("B"), Some("A")]
+
+---- resolved_unicode_parent stdout ----
+
+thread 'resolved_unicode_parent' (147) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:23:2:
+assertion `left == right` failed
+  left: [None, None]
+ right: [Some("A"), Some("B")]
+
+---- strict_public_extraction_rejects_cyclic_usecmap stdout ----
+
+thread 'strict_public_extraction_rejects_cyclic_usecmap' (149) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:47:2:
+strict cyclic UseCMap: Ok([ExtractedText { text: "A", fragments: [], truncated: false }])
+
+---- type1_procedure_is_not_executed stdout ----
+
+thread 'type1_procedure_is_not_executed' (150) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:52:2:
+assertion `left == right` failed
+  left: "AB"
+ right: "BA"
+
+---- indirect_cid_collection_matches_direct_extraction stdout ----
+
+thread 'indirect_cid_collection_matches_direct_extraction' (139) panicked at oxidize-pdf-core/tests/text_qr_regression_contract_test.rs:67:2:
+assertion `left == right` failed
+  left: " á"
+ right: "á"
+
+
+failures:
+    indirect_cid_collection_matches_direct_extraction
+    inherited_adobe_kr_dictionary
+    inherited_adobe_kr_operator
+    resolved_encoding_parent
+    resolved_intrinsic_cff
+    resolved_intrinsic_type1
+    resolved_named_parent
+    resolved_unicode_parent
+    resolved_vertical_advance
+    strict_public_extraction_rejects_cyclic_usecmap
+    type1_procedure_is_not_executed
+
+test result: FAILED. 1 passed; 11 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_qr_regression_contract_test`

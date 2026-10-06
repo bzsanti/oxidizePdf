@@ -1,0 +1,1524 @@
+U.S. DEPARTMENT OF THE INTERIOR
+U.S. GEOLOGICAL SURVEY
+
+EARTHQUAKE SUMMARY MAP XXX
+
+M6.6 Honshu, Japan Earthquake of 23 October 2004
+Epicentral Area
+145°
+
+ch
+r
+
+40°
+
+Yellow
+Sea
+
+SEA OF JAPAN
+
+RELATIVE PLATE MOTIONS
+
+TOKYO
+
+KOREA
+
+P A C I F I C
+P L A T E
+
+PACIFIC
+OCEAN
+
+Bo
+
+n
+h
+c
+n
+e
+130°
+
+140°
+
+135°
+
+300
+
+Tono
+
+MIZUSAWA
+FUKURA
+
+TSURUOKA
+
+Narugo
+Obanazawa
+
+1964
+
+NIIGATA
+KAMEDA
+
+Generalized Seismic Hazard
+
+NOZAWA
+
+IZUMOZAKI
+
+Seismic Hazard
+
+140°
+
+I
+A
+R
+U
+
+S
+
+S
+
+TsunogawaFUNATSU Washiba-Kumonotaira
+
+0.4 - 0.8
+
+P L A T E
+
+FURUKAWA
+
+0.8 - 1.6
+
+SAPPORO
+
+TAKAYAWA
+
+36°
+137°
+
+3.2 - 6.4
+
+P L A T E
+40°
+
+DETA ILED MA
+
+Continental Convergent
+
+SEA OF JAPAN
+
+TOKYO
+
+Oceanic Convergent
+Oceanic Spreading
+
+slan
+Izu I
+
+SHIKOKU
+
+s
+d
+n
+
+uk
+
+PACIFIC
+OCEAN
+
+I
+
+P L A T E
+
+125°
+
+145°
+140°
+
+135°
+
+SCALE 1:15,000,000
+Albers Equal-Area Projection
+
+Subduction
+
+Seismic hazard is expressed as peak
+ground acceleration (PGA) on firm rock,
+25°
+in meters/sec², expected to be exceeded
+in a 50-yr period with a probability of
+10 percent.
+
+nds
+
+PHILIPPINE
+SEA
+
+130°
+
+30°
+
+Vertical Exaggeration 3X
+DATA SOURCES
+
+Volcano
+
+Isla
+
+Ry
+
+Oceanic RL Transform
+
+nin
+
+P H I L I P P I N E
+
+Oceanic LL Transform
+
+P L A T E
+
+Bo
+
+25°
+
+yu
+
+P A C I F I C
+
+ds
+
+EAST
+CHINA
+SEA
+
+a
+sl
+
+EARTHQUAKES AND SEISMIC HAZARD
+USGS, National Earthquake Information Center
+NOAA, National Geophysical Data Center
+IASPEI, Centennial Catalog (1900 - 1999)
+Handbook of Seismology and Earthquake Engineering
+Global Seismic Hazard Assessment Program
+PLATE TECTONICS
+Bird, P., 2003, An updated digital model of plate boundaries:
+Geochem. Geophys. Geosyst., v. 4, no. 3, pp. 1027 - 1080.
+BASE MAP
+NIMA and ESRI, Digital Chart of the World
+USGS, EROS Data Center
+NEWS SOURCES
+
+Kilometers
+0 50 100
+
+200
+
+300
+
+1908
+
+400
+
+Associated Press
+Reuters.Com
+
+1938
+
+I
+A
+S
+
+140°
+
+135°
+
+Kilometers
+0 50 100
+
+200
+
+300
+
+400
+
+23 October 2004
+
+Aftershocks
+
+1938
+ONAHAMA
+UEDA
+
+Higashidate
+
+NantaiTakahara
+
+MAEBASHI
+TAKASAKI
+
+Ishikawa
+
+Highway
+
+1938
+
+OYAMA SHIMODATE
+
+ISEZAKI
+
+Nakaminato
+
+Kasama
+MITO
+
+100 km
+
+100 km
+
+200 km
+
+200 km
+
+300 km
+
+300 km
+
+400 km
+
+400 km
+
+500 km
+
+500 km
+
+Major Road
+
+1965
+
+KUROGO
+KOGA
+
+Ishioka
+
+Connector
+
+Railroad
+
+1982
+
+Volcano
+
+HOKOTA
+
+600 km
+1200 km 1100 km 1000 km 900 km 800 km 700 km 600 km 500 km 400 km 300 km 200 km 100 km
+
+1924
+140°
+
+1921
+
+100
+
+A2
+
+36°
+143°
+
+1923
+142°
+
+141°
+
+1200 km 1100 km 1000 km 900 km 800 km 700 km 600 km 500 km 400 km 300 km 200 km 100 km
+0 km
+
+EXPLANATION
+150
+
+Kilometers
+200
+
+The islands of Japan lie on a ring of seismically active plate boundaries that surround the Pacific Ocean
+known as the Ring of Fire. Earthquakes throughout Japan are caused by the relative motion of several
+major and minor tectonic plates, including the Pacific plate, the Philippine Sea plate, the Okhotsk plate,
+and the Amur plate. Earthquakes result from slippage on the interface between the plates and on faults
+at some distance from the plates' boundaries. The 23 October 2004 earthquake had a thrust fault mechanism and occurred within the Okhotsk plate, about 350 km west of the Japan Trench, where the Pacific
+plate subducts beneath the over-riding Okhotsk plate. Within the past 30 years, there have been several
+significant earthquakes in the vicinity of this earthquake, including a June 1964 magnitude 7.4 earthquake
+(about 125 km to the north) that killed 36 people and an April 1995 magnitude 5.4 shock (about 90 km to
+the north) that injured at at least 39 people. During the 20th century, Japan suffered nine devastating
+earthquakes that killed more than 1000 people each. These include the 1923 magnitude 7.9 earthquake
+that triggered the great Tokyo fire and killed 143,000 people and the more recent 1995 magnitude 6.9
+Kobe earthquake that killed 5,500 people.
+
+MAJOR EARTHQUAKES 1900 - 1999
+EPICENTRAL AREA
+YR
+
+MO DY
+
+1900 5 11
+1901 6 15
+1905 7 6
+1908 1 15
+1914 3 14
+1915 3 8
+1915 11 1
+1915 11 1
+1921 12 8
+1923 6 1
+1924 8 14
+1927 8 5
+1928 5 27
+1933 6 18
+1936 11 2
+1937 7 26
+1938 5 23
+1938 11 5
+1938 11 5
+1938 11 6
+1938 11 6
+1938 11 13
+1939 5 1
+1959 1 22
+1962 4 12
+1964 6 16
+1965 9 17
+1968 6 12
+1978 6 12
+1981 1 18
+1982 7 23
+1989 11 1
+2003 10 31
+
+600 km
+0 km
+
+Azuma
+
+Hamatsuga
+
+SCALE 1:1,500,000
+Albers Equal-Area Projection
+50
+
+0 km
+0 km
+
+Freeway
+
+TOCHIGI
+
+KONOSU
+MATSUYAMA
+
+25
+
+A1'
+
+KARASUYAMA
+
+KIRYU
+
+139°
+
+Depth Profiles
+
+1200 km 1100 km 1000 km 900 km 800 km 700 km 600 km 500 km 400 km 300 km 200 km 100 km
+0 km
+
+Populated Place
+
+KUJI
+
+HONJO
+KUMAGAYA
+
+Urban Area
+
+1938
+
+Shibukawa
+
+Akagi
+
+A1
+
+SENDAI
+
+1938
+
+Isohara
+
+DAIGO
+
+Nikko
+Imaichi
+
+37°
+
+1938
+
+DISCUSSION
+
+Continental RL Transform
+
+35°
+
+25°
+
+145°
+
+Main Shock
+
+HITACHI
+
+Perspective View
+
+Continental LL Transform
+
+PHILIPPINE
+SEA
+
+EXPLANATION
+1905
+
+Continental Rift
+
+HONSHU
+
+P L A T E
+
+SCALE 1:15,000,000
+Albers Equal-Area Projection
+
+UTSUNMIYA
+
+Tateshina
+
+0
+
+yu
+
+1959
+
+TAIRA
+
+Otawara
+
+Plate Boundary
+
+P
+
+R
+
+k
+yu
+
+I
+
+130°
+
+NAMIE
+
+Nasu
+
+ASHIO
+
+Numata
+
+Aidara
+
+138°
+
+25°
+
+Subduction
+
+Ishikawa
+
+Nikko-Shirane
+Omanago Group
+
+Tomioka
+
+P H I L I P P I N E
+
+a
+sl
+
+Volcano
+
+Shirakawa
+
+Hiuchi
+
+OKAYO
+SUWA
+
+Norikura
+
+Oceanic LL Transform
+
+Haramachi
+
+Kuroiso
+
+TAKANO
+
+Yake-dake
+
+6.4 - 9.4
+
+40°
+
+KOREA
+
+30°
+
+1927
+
+Nihommatsu
+
+30°
+
+TAJIMA
+
+TOKAMCHI
+
+MATSUMOTO
+
+1.6 - 3.2
+
+A M U R
+
+KYUSHU
+
+Oceanic Spreading
+
+38°
+1915
+
+Odaira
+
+Haruna
+KARUIZAWA
+Asama
+
+PACIFIC
+OCEAN
+
+Oceanic Convergent
+
+1962
+
+Kammata
+
+Hinoemata
+
+UEDA
+
+30°
+
+EAST
+CHINA
+SEA
+
+Continental RL Transform
+
+Oceanic RL Transform
+
+KAWAGETA
+Adatara
+WAKAMATSU
+
+Shiga
+NAGANOHARA
+MATSUSHIRO
+Kusatsu-Shirane
+
+0.2 - 0.4
+
+O K H O T S K
+
+HOKKAIDO
+
+Omachi
+
+Higashi-inolani
+
+0.0 - 0.2 m/sec²
+45°
+
+SOUTH
+
+1915
+
+1933
+
+1978
+
+KORIYAMA
+
+NAGANOSUZAKA
+
+P A C I F I C
+
+125°
+
+Bandai Azuma
+
+Numazawa
+
+TOYAMA
+
+SHIKOKU
+KYUSHU
+
+Continental LL Transform
+
+FUKUSAIMA
+
+Liyama
+
+Tate-yama
+145°
+
+SEA OF
+OKHOTSK
+
+35°
+
+1937
+1936
+
+Gosen
+
+Teradomari
+Kamo
+SANJO
+
+Myoko
+
+35°
+
+A1'
+
+Plate Boundary
+
+NAKUMURA
+
+Yuzawa
+
+TAKAOKA
+
+23 October 2004
+
+125°
+
+SEOUL
+
+WATANOHA
+ISHINOMAKI
+
+Kaita
+
+NIITSU
+
+MITSUYA
+
+Niigata-Yake-yama
+
+TOKYO
+
+SOUTH
+KOREA
+
+Continental Rift
+
+SENDAI
+Ishinomaki
+WATARI
+Wan
+
+Zao
+
+YONEZAWA
+
+Itoigawa
+
+UOZU
+
+Main Shock
+
+Yellow
+Sea
+
+Nagai
+
+SHIBATA
+
+KASHIWAZAKI
+
+TOMARI
+
+35°
+
+A2'
+
+HONSHU
+
+Continental Convergent
+
+SENDAI
+
+YAMAGATA
+
+NAOETSU
+
+UNAMI
+
+J A P A N
+
+1981
+
+NAGAOKA
+
+EXPLANATION
+
+KOREA
+
+Takaki
+
+Sagae
+TENDO
+
+Murakami
+
+TAKADA
+
+6.00 - 6.49
+
+7.50 - 8.00
+
+1900
+
+YOSHIOKA
+
+38°
+
+MATSUNAMI
+
+SEOUL
+
+Yellow
+Sea
+
+6.50 - 6.99
+
+FURUKAWA
+WAKUYA
+
+Wakikawa
+
+SHIMO-SEKI
+Oguni
+
+HONSHU
+
+39°
+1901
+
+MAP
+
+P L A T E
+
+IWAEYAMA
+
+MAKI
+
+5.50 - 5.99
+
+DETA ILED
+
+A3'
+
+A1KOREA
+SEA OF JAPAN
+
+PYONGYANG
+
+7.00 - 7.49
+
+MINATO
+
+Ryotsu
+
+37°
+
+PYONGYANG
+
+Kurikoma
+Shinjo
+
+Sado
+
+400
+
+NORTH
+
+KESENNUMA
+
+SHIOGAMA
+
+Toyama
+Wan
+
+C H I N A
+
+SURISAWA
+ICHINOSEKI
+
+SAKATA
+
+KOIDE
+
+45°
+
+1915
+
+Chokai
+
+Awa Shima
+
+Otani
+
+135°
+
+INNAI
+
+J A P A N
+
+5.00 - 5.49
+
+PACIFIC
+OCEAN
+
+Ofunata
+
+40°
+
+A2
+NORTH
+
+Magnitude Classes
+
+KAMAISHI
+Shirahama
+
+YASHIMA
+
+Ojiya
+
+130°
+
+40°
+
+300 - 700
+
+Yokote
+
+Tobi Shima
+
+A M U R
+P L A T E
+
+70 - 299
+
+HANAMAKI
+
+Hijiori
+
+Kilometers
+200
+
+Omagari
+
+SEA OF JAPAN
+
+SCALE 1:15,000,000
+Albers Equal-Area Projection
+
+0 50 100
+
+YAMADA
+
+A3
+
+0 - 69 km
+
+1968
+
+nds
+
+145°
+
+Akasawa
+
+1914
+Honjo
+
+Depth Classes
+
+Isla
+
+125°
+
+HIZUME
+
+P L A T E
+
+SAPPORO
+
+MIYAKO
+
+KARLWANO
+
+45°
+
+O K H O T S K
+
+HOKKAIDO
+
+23 October 2004
+
+Wainai
+
+SHIZUKUISHIMORIOKA
+
+Akita-Komaga-take
+
+CHIDA
+
+Main Shock
+
+Iwate
+
+AKITA
+
+C H I N A
+
+nin
+
+h
+
+nds
+
+PHILIPPINE
+SEA
+
+1928
+
+45°
+
+Bo
+
+r
+
+Isla
+
+uk
+
+yu
+
+T
+
+Trenc
+
+nin
+
+nin
+
+Bo
+
+Ry
+
+P L A T E
+
+e
+
+yu
+
+dg
+
+R
+
+k
+yu
+
+Ri
+
+ds
+
+u
+P H I L I P P I N E
+
+1939
+
+OMOTO
+
+nds
+
+ds
+
+sh
+
+25°
+
+I
+
+a
+sl
+
+The components of the vector perpendicular and parallel to the plate margin
+approximate
+convergent/divergent and
+30°
+transverse direction of motion between
+the plates, respectively. As viewed from
+the fixed plate, an inward directed component suggests convergence at and
+near the plate boundary that may be expressed as crustal folding, uplift, thrust
+faulting, or plate subduction. Similarly,
+an outward directed component suggests plate
+divergence such as would
+25°
+be expected at a zone of crustal spreading. Transcurrent or transform faulting
+would be expected when the predominant vector component is parallel to the
+plate margin.
+
+ch
+
+30°
+
+Hon
+
+EAST
+CHINA
+SEA
+
+n
+Izu Tre
+
+KYUSHU
+
+slan
+Izu I
+
+South
+
+SHIKOKU
+
+39°
+
+KADO
+
+Tamagawa Hachimantai
+
+EXPLANATION
+
+1989
+
+KAWAGUCHI
+
+SEA OF
+OKHOTSK
+
+sla
+Izu I
+
+The relative motion of adjacent tectonic
+plates is depicted on the map by short
+vectors located at selected points on the
+plate boundary. In this presentation, one
+plate (the fixed reference plate) is assum35°
+ed to be rigid. The vector therefore represents the direction of the moving plate
+relative to the reference plate. The rate
+of relative motion is labelled next to the
+vector.
+
+83 mm/yr
+
+Ja
+
+HONSHU
+
+SOUTH
+
+35°
+
+P
+
+pa
+
+SEOUL
+
+DETA ILED MA
+
+J A P A N
+
+KOREA
+
+n T
+rench
+
+40°
+
+PYONGYANG
+
+Kanpu
+MONZEN
+Megata
+
+A strong earthquake located near the western coast of northern Honshu
+shook parts of northern Japan, particularly Niigata Prefecture, where it
+caused at least 25 deaths, several thousand injuries, and significant
+damage to buildings and infrastructure. The deaths occurred principally
+in the epicentral area near Ojiya, Nagaoke, and Tokamachi. Some estimates cited over 2,800 homes destroyed and more than 1,000 buildings
+damaged. Water, sewage, gas, and electrical power systems were seriously disrupted throughout the region and many towns were cut off by
+damage to highways and railway tracks. The earthquake occurred only
+days after the passage of Typhoon Tokage; strong shaking on rainsoaked hillsides resulted in numerous mudslides and rockfalls . Two cars on
+the East Japan Railways bullet train traveling from Tokyo to Niigata derailed in the epicentral area. Press accounts reported that tall buildings
+swayed in Tokyo approximately 190 km to the south. Felt in Chiba, Fukushima, Gumma, Kanagawa, Miyagi, Saitama, and Tokyo Prefectures.
+
+P L A T E
+
+NORTH
+
+HITOCHI
+
+23 October 2004 08:56:01 UTC
+37.229° N., 138.773° E.
+Depth 16 km
+Magnitude Mw = 6.6 (HRV)
+
+en
+
+Ku
+
+A M U R
+
+T
+ri l
+
+141°
+
+Akita-Yake-yama
+
+145°
+
+140°
+
+135°
+
+s
+
+S
+R
+U
+
+P L A T E
+
+SAPPORO
+
+140°
+
+NEAR WEST COAST OF HONSHU, JAPAN
+
+O K H O T S K
+
+HOKKAIDO
+
+139°
+
+130°
+
+143°
+40°
+
+142°
+
+d
+
+I
+A
+
+45°
+
+S
+
+C H I N A
+
+138°
+
+R
+U
+
+137°
+40°
+
+SEA OF
+OKHOTSK
+45°
+
+Seismicity 1900 - 2002
+
+125°
+
+140°
+
+135°
+
+n
+
+130°
+
+S
+
+Tectonic Setting
+
+125°
+
+Depth Classes
+
+LAT
+
+LON
+
+DEPTH
+
+MAG
+
+38.700
+39.000
+37.400
+37.300
+39.500
+39.000
+38.300
+38.000
+36.000
+36.000
+36.133
+37.873
+39.813
+38.280
+38.337
+38.396
+36.458
+37.108
+37.009
+37.287
+36.867
+36.727
+39.839
+37.560
+38.073
+38.434
+36.336
+39.501
+38.224
+38.708
+36.307
+39.923
+37.829
+
+141.100
+143.000
+141.800
+141.800
+140.400
+142.000
+142.900
+143.000
+140.200
+142.000
+141.892
+142.191
+142.999
+142.510
+142.151
+142.170
+141.755
+142.081
+142.045
+142.283
+142.625
+142.360
+139.969
+142.483
+142.741
+139.226
+141.327
+142.893
+142.009
+142.788
+141.763
+142.757
+142.634
+
+5.0
+35.0
+35.0
+35.0
+5.0
+0.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+35.0
+24.5
+13.1
+43.5
+31.2
+53.3
+47.3
+27.4
+29.0
+10.0
+
+7.0
+7.0
+7.1
+7.3
+7.0
+7.0
+7.5
+7.0
+7.0
+7.1
+7.0
+7.1
+7.1
+7.2
+7.1
+7.1
+7.7
+7.8
+7.9
+7.7
+7.0
+7.0
+7.0
+7.2
+7.2
+7.5
+7.1
+7.1
+7.7
+7.0
+7.0
+7.4
+7.5
+
+0 - 69 km
+70 - 299
+300 - 600
+
+A2'
+
+0 km
+0 km
+
+100 km
+
+100 km
+
+200 km
+
+200 km
+
+300 km
+
+300 km
+
+400 km
+
+400 km
+
+500 km
+
+500 km
+
+Magnitude Classes
+5.0 - 5.9
+6.0 - 6.9
+7.0 - 7.9
+
+Volcano
+600 km
+1200 km 1100 km 1000 km 900 km 800 km 700 km 600 km 500 km 400 km 300 km 200 km 100 km
+
+A3
+1200 km 1100 km 1000 km 900 km 800 km 700 km 600 km 500 km 400 km 300 km 200 km 100 km
+0 km
+
+600 km
+0 km
+
+A3'
+
+0 km
+0 km
+
+100 km
+
+100 km
+
+200 km
+
+200 km
+
+300 km
+
+300 km
+
+400 km
+
+400 km
+
+500 km
+
+500 km
+
+600 km
+1200 km 1100 km 1000 km 900 km 800 km 700 km 600 km 500 km 400 km 300 km 200 km 100 km
+
+600 km
+0 km
+
+DISCLAIMER
+Base map data, such as place names and political
+boundaries, are the best available but may not be
+current or may contain inaccuracies and therefore
+should not be regarded as having official significance.
+
+Map prepared by U.S. Geological Survey
+National Earthquake Information Center
+26 October 2003
+Map not approved for release by Director USGS
+
+

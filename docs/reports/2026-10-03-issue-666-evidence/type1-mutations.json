@@ -1,0 +1,55 @@
+{
+  "scope": "Input mutation discrimination, not product mutation coverage",
+  "original_test_sha256": "28b8a932a6f3390b172f168132ecee1dfa5eb8c546cbff99bb12b5be9bb9576e",
+  "original_unchanged": true,
+  "runs": [
+    {
+      "mutation": "shown-code",
+      "mutated": false,
+      "test": "explicit_pdf_encoding_overrides_the_embedded_encoding",
+      "exit_code": 0,
+      "assertion_verified": null,
+      "log": "mutation-shown-code-control.log"
+    },
+    {
+      "mutation": "shown-code",
+      "mutated": true,
+      "test": "explicit_pdf_encoding_overrides_the_embedded_encoding",
+      "exit_code": 101,
+      "assertion_verified": "expected \"AB\", got \"BB\"",
+      "log": "mutation-shown-code-red.log"
+    },
+    {
+      "mutation": "unicode",
+      "mutated": false,
+      "test": "tounicode_overrides_pdf_differences_and_intrinsic_encoding",
+      "exit_code": 0,
+      "assertion_verified": null,
+      "log": "mutation-unicode-control.log"
+    },
+    {
+      "mutation": "unicode",
+      "mutated": true,
+      "test": "tounicode_overrides_pdf_differences_and_intrinsic_encoding",
+      "exit_code": 101,
+      "assertion_verified": "expected \"XY\", got \"ZY\"",
+      "log": "mutation-unicode-red.log"
+    },
+    {
+      "mutation": "advance",
+      "mutated": false,
+      "test": "explicit_encoding_glyph_width_advances_the_text_pen",
+      "exit_code": 0,
+      "assertion_verified": null,
+      "log": "mutation-advance-control.log"
+    },
+    {
+      "mutation": "advance",
+      "mutated": true,
+      "test": "explicit_encoding_glyph_width_advances_the_text_pen",
+      "exit_code": 101,
+      "assertion_verified": "expected (104,700), actual (109,700)",
+      "log": "mutation-advance-red.log"
+    }
+  ]
+}

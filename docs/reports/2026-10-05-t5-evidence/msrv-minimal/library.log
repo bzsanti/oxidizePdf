@@ -1,0 +1,8 @@
+    Blocking waiting for file lock on build directory
+   Compiling num-traits v0.2.19
+   Compiling simd-adler32 v0.3.9
+   Compiling miniz_oxide v0.8.9
+   Compiling chrono v0.4.45
+   Compiling flate2 v1.1.9
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `dev` profile [unoptimized] target(s) in 1m 15s

@@ -284,6 +284,15 @@ pub(crate) fn parse_fd_select(
                 });
             }
 
+            if n_ranges == 0
+                || read_u16(cff, offset + 3)? != 0
+                || usize::from(read_u16(cff, offset + 3 + n_ranges * 3)?) != num_glyphs
+            {
+                return Err(ParseError::SyntaxError {
+                    position: offset,
+                    message: "invalid FDSelect coverage or sentinel".into(),
+                });
+            }
             let mut result = vec![0u8; num_glyphs];
 
             for i in 0..n_ranges {
@@ -299,12 +308,13 @@ pub(crate) fn parse_fd_select(
                     read_u16(cff, offset + 3 + n_ranges * 3)? as usize
                 };
 
-                let end_gid = end_gid.min(num_glyphs);
-                for gid in first_gid..end_gid {
-                    if gid < result.len() {
-                        result[gid] = fd_idx;
-                    }
+                if first_gid >= end_gid || end_gid > num_glyphs {
+                    return Err(ParseError::SyntaxError {
+                        position: range_base,
+                        message: "invalid FDSelect range".into(),
+                    });
                 }
+                result[first_gid..end_gid].fill(fd_idx);
             }
 
             Ok(result)
@@ -435,3 +445,40 @@ pub(crate) fn strip_private_subrs_op(private_dict: &mut Vec<u8>) {
 }
 
 // =============================================================================
+
+#[cfg(test)]
+mod contract_fd_selection {
+    use super::*;
+    use crate::text::fonts::cff::index::parse_cff_index;
+
+    #[test]
+    fn real_full_and_subset_programs_select_both_font_dicts() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/text_contracts/composite");
+        for format in [0, 3] {
+            for subset in [false, true] {
+                let variant = if subset { "subset" } else { "full" };
+                let bytes =
+                    std::fs::read(root.join(format!("cff-fd{format}-{variant}.cff"))).unwrap();
+                let name = parse_cff_index(&bytes, usize::from(bytes[2])).unwrap();
+                let top = parse_cff_index(&bytes, name.end_offset()).unwrap();
+                let offsets = parse_top_dict(top.get_item(0, &bytes).unwrap());
+                let charstrings =
+                    parse_cff_index(&bytes, offsets.charstrings_offset.unwrap() as usize).unwrap();
+                let fd_offset = offsets.fd_select_offset.unwrap() as usize;
+                assert_eq!(bytes[fd_offset], format);
+                let selected = parse_fd_select(&bytes, fd_offset, charstrings.count()).unwrap();
+                let expected: &[u8] = if subset { &[0, 0, 1] } else { &[0, 0, 1, 1] };
+                assert_eq!(selected, expected, "format {format}, {variant}");
+                let array =
+                    parse_cff_index(&bytes, offsets.fd_array_offset.unwrap() as usize).unwrap();
+                assert_eq!(array.count(), 2);
+                assert_ne!(
+                    array.get_item(selected[1] as usize, &bytes),
+                    array.get_item(selected[2] as usize, &bytes),
+                    "the selected font dictionaries must differ"
+                );
+            }
+        }
+    }
+}

@@ -1,0 +1,1526 @@
+{
+  "schema_version": 1,
+  "versions": {
+    "pymupdf": "1.26.5",
+    "mupdf": "1.26.10",
+    "poppler": "24.02.0",
+    "qpdf": "11.9.0"
+  },
+  "environment_errors": [],
+  "accepted": true,
+  "cases": [
+    {
+      "id": "boundary-41",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-41.pdf",
+      "expected_text": "fi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "fi\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-41.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "25b65a9e1b97a1786fd066da532ca8da2616419593f93c6f5d9de7e0be829b20"
+    },
+    {
+      "id": "boundary-0041",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-0041.pdf",
+      "expected_text": "fi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "fi\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-0041.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "3be48c0d834c77d8f72111db685a1b7be1a694c4ba6fee6c0e1abca2a1077319"
+    },
+    {
+      "id": "boundary-000041",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-000041.pdf",
+      "expected_text": "fi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "fi\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-000041.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "e9e0f425c4250ca15a376f7dff7038a19d5f2cafe0f06f87bc726aecfa1fc213"
+    },
+    {
+      "id": "boundary-00000041",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-00000041.pdf",
+      "expected_text": "fi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "fi\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-00000041.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "0cbd7b2e40c236c6a29b0dd726d6ad7b865748e1ae8dc5f219415ae65d619359"
+    },
+    {
+      "id": "boundary-FFFF",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-FFFF.pdf",
+      "expected_text": "fi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "fi\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-FFFF.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "682d13d243698abc9ceea382fb66aa26e472548e6dd24d473d5fed151c52a77c"
+    },
+    {
+      "id": "boundary-010000",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-010000.pdf",
+      "expected_text": "fi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "known_limitation",
+          "exit_code": 0,
+          "stdout": "fi\n\f",
+          "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+          "known_limit_reason": "Poppler 24.02.0 warns above 0xFFFF and discards ToUnicode mappings above 0xFFFFFF; independently confirmed by MuPDF and nine boundary cases. See docs/reports/2026-10-01-issue-666-poppler-discrepancy.md."
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-010000.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "78a7628556129fd9c1f9a1b2bab0704189fcd22303aa28bcea8359595180d35c"
+    },
+    {
+      "id": "boundary-FFFFFF",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-FFFFFF.pdf",
+      "expected_text": "fi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "known_limitation",
+          "exit_code": 0,
+          "stdout": "fi\n\f",
+          "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+          "known_limit_reason": "Poppler 24.02.0 warns above 0xFFFF and discards ToUnicode mappings above 0xFFFFFF; independently confirmed by MuPDF and nine boundary cases. See docs/reports/2026-10-01-issue-666-poppler-discrepancy.md."
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-FFFFFF.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "a83d845e3112a9c2128dcd352c849af0bc4d27b37113c2ba82742e7087a5fb75"
+    },
+    {
+      "id": "boundary-01000000",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-01000000.pdf",
+      "expected_text": "fi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "known_limitation",
+          "exit_code": 0,
+          "stdout": "\f",
+          "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+          "known_limit_reason": "Poppler 24.02.0 warns above 0xFFFF and discards ToUnicode mappings above 0xFFFFFF; independently confirmed by MuPDF and nine boundary cases. See docs/reports/2026-10-01-issue-666-poppler-discrepancy.md."
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-01000000.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "e64c56c7870672aeca6a928126cb427df8856148d9083431fb1030ead916b9a1"
+    },
+    {
+      "id": "boundary-E0000001",
+      "path": "docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-E0000001.pdf",
+      "expected_text": "fi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "fi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "known_limitation",
+          "exit_code": 0,
+          "stdout": "\f",
+          "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+          "known_limit_reason": "Poppler 24.02.0 warns above 0xFFFF and discards ToUnicode mappings above 0xFFFFFF; independently confirmed by MuPDF and nine boundary cases. See docs/reports/2026-10-01-issue-666-poppler-discrepancy.md."
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-poppler-evidence/boundaries/code-E0000001.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "e51138e28ce6fac58223d0cb82e7dfebc2bee0f3c83c711b92a72cca22e61655"
+    },
+    {
+      "id": "cidchar",
+      "path": "docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-cidchar.pdf",
+      "expected_text": "ABéfi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "ABéfi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "known_limitation",
+          "exit_code": 0,
+          "stdout": "ABé\n\f",
+          "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\nSyntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+          "known_limit_reason": "Poppler 24.02.0 warns above 0xFFFF and discards ToUnicode mappings above 0xFFFFFF; independently confirmed by MuPDF and nine boundary cases. See docs/reports/2026-10-01-issue-666-poppler-discrepancy.md."
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-cidchar.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "d7bfdb723755b7d27fb2087aa77f5ec6b544938f2935be1d3693e0f0f1123bcf"
+    },
+    {
+      "id": "cidrange",
+      "path": "docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-cidrange.pdf",
+      "expected_text": "ABéfi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "ABéfi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "known_limitation",
+          "exit_code": 0,
+          "stdout": "ABé\n\f",
+          "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\nSyntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+          "known_limit_reason": "Poppler 24.02.0 warns above 0xFFFF and discards ToUnicode mappings above 0xFFFFFF; independently confirmed by MuPDF and nine boundary cases. See docs/reports/2026-10-01-issue-666-poppler-discrepancy.md."
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-cidrange.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "723c48a0bc41e10995486b82d6818831447011366a09f21290967687fd40abd7"
+    },
+    {
+      "id": "identity",
+      "path": "docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-identity.pdf",
+      "expected_text": "ABéfi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "ABéfi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "ABéfi\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-identity.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "6f52ea984a611fda676372ec5cebfd4a9733ed15794ea83d9134aa805c104740"
+    },
+    {
+      "id": "swapped",
+      "path": "docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-swapped.pdf",
+      "expected_text": "ABéfi",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "ABéfi\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "known_limitation",
+          "exit_code": 0,
+          "stdout": "ABé\n\f",
+          "stderr": "Syntax Warning: Invalid entry in bfchar block in ToUnicode CMap\nSyntax Warning: Invalid entry in bfchar block in ToUnicode CMap\n",
+          "known_limit_reason": "Poppler 24.02.0 warns above 0xFFFF and discards ToUnicode mappings above 0xFFFFFF; independently confirmed by MuPDF and nine boundary cases. See docs/reports/2026-10-01-issue-666-poppler-discrepancy.md."
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-swapped.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "74ed8c4dc33b355353385fb680071deb0051bfdbbf5d9d54a0e6262e41ad08a7"
+    },
+    {
+      "id": "expert",
+      "path": "docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-expert.pdf",
+      "expected_text": ",.ﬁ",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            ",.ﬁ\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "known_limitation",
+          "exit_code": 0,
+          "stdout": ",.fi\n\f",
+          "stderr": "",
+          "known_limit_reason": "Poppler decomposes the fi ligature; exact expected U+FB01 is independently mapped by pinned Adobe AGL and confirmed by MuPDF."
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step5-evidence/issue666-step5-expert.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "aefa49c5073706599bf556dc1a996efe73e6597cda4f7f55a87362e3ea78a86b"
+    },
+    {
+      "id": "vertical-default",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-default.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  100.79998779296875
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.05999755859375,
+                  110.79998779296875
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  100.8
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.06,
+                  110.8
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-default.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "57ec000a7e11899090960a76035478fff3adf714d2e6f6691ee16c64aff33557"
+    },
+    {
+      "id": "vertical-embedded",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-embedded.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  100.79998779296875
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.05999755859375,
+                  110.79998779296875
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  100.8
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.06,
+                  110.8
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-embedded.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "25be3acf4551016614b4f586b9d62f6eb8822bc23f56c657b5530e6b2e65e6c3"
+    },
+    {
+      "id": "vertical-dw2",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-dw2.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  101.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.05999755859375,
+                  114.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  101.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.06,
+                  114.0
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-dw2.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "5736bd0a504beea4b64d716f70ee19370e23bbaadb6c065b0d0d3655ddfb0244"
+    },
+    {
+      "id": "vertical-array",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-array.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  100.79998779296875
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.05999755859375,
+                  113.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  100.8
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.06,
+                  113.0
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-array.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "a5b29f4497e3acdd22bcc5f363e700ae3921a0c13c7652ac66138d2a259e07ba"
+    },
+    {
+      "id": "vertical-range",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-range.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  100.79998779296875
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.27999877929688,
+                  112.79998779296875
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  100.8
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.28,
+                  112.8
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-range.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "567e9effffa15d5b8db0b7e8f129c939d4ad73d6d389c697aeae8f1884db9635"
+    },
+    {
+      "id": "vertical-fallback",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-fallback.pdf",
+      "expected_text": "A\nB\nA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\nA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  100.79998779296875
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.05999755859375,
+                  113.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  125.79998779296875
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  100.8
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.06,
+                  113.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  125.8
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\nA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-fallback.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "dc06a3d912a95a3f100cdc3d8edc8c5a3b3ae45a31f5a6423d4552ed9b64a992"
+    },
+    {
+      "id": "vertical-tj-positive",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-tj-positive.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  100.79998779296875
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.05999755859375,
+                  113.79998779296875
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  100.8
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.06,
+                  113.8
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-tj-positive.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "d3faa6fb9d96d9de1a10f0284aedcdd28a1a3a9458b2f7dd25ab3e256354b562"
+    },
+    {
+      "id": "vertical-tj-negative",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-tj-negative.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  100.79998779296875
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.05999755859375,
+                  107.79998779296875
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  100.8
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.06,
+                  107.8
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-tj-negative.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "074ae0b60e412f55310040a8e5500059e50caaa3cbe19280dc6ca6db5a6f4c95"
+    },
+    {
+      "id": "vertical-char-spacing",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-char-spacing.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  97.27999877929688,
+                  100.79998779296875
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.05999755859375,
+                  108.79998779296875
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  97.28,
+                  100.8
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  97.06,
+                  108.8
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-char-spacing.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "2424bddc38d93a5242e58dccb855efaf4a3a06b297c7256c419a8e166bc2463e"
+    },
+    {
+      "id": "vertical-scale-50",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-scale-50.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-scale-50.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "34931aceed06f27b987f6fcac02cab07322b959265bbff8a55e1209ce3d629e3"
+    },
+    {
+      "id": "vertical-scale-200",
+      "path": "docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-scale-200.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": null,
+            "expected": null,
+            "match": null,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step6-evidence/issue666-step6-scale-200.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "a24e7d762feebd72e4551eee1e0943d231ff62e149d66fe488adbf09eb627959"
+    },
+    {
+      "id": "cid-cff-identity",
+      "path": "docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-identity.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-identity.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "a5f168c879a0b05ec1bcf5719bb549de0ac933473e207a5768b1cd5c83818959"
+    },
+    {
+      "id": "cid-cff-equivalent",
+      "path": "docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-equivalent.pdf",
+      "expected_text": "AB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "AB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  104,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "AB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-equivalent.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "758ac8a23fbef9d2ca8b3a89fd52914f4a98f9eb48d52d2e62f4f871e912fdcd"
+    },
+    {
+      "id": "cid-cff-remapped",
+      "path": "docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-remapped.pdf",
+      "expected_text": "BA",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "BA\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "B",
+                "origin": [
+                  100.0,
+                  92.0
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107.0,
+                  92.0
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "B",
+                "origin": [
+                  100,
+                  92
+                ]
+              },
+              {
+                "text": "A",
+                "origin": [
+                  107,
+                  92
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "BA\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-remapped.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "2f1d0c783fbef40e1dfd717aea553847299380047fc226d5be77ace62e4174a1"
+    },
+    {
+      "id": "cid-cff-vertical",
+      "path": "docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-vertical.pdf",
+      "expected_text": "A\nB",
+      "status": "accepted",
+      "readers": [
+        {
+          "reader": "mupdf",
+          "pages": [
+            "A\nB\n"
+          ],
+          "warnings": "",
+          "geometry": {
+            "actual": [
+              {
+                "text": "A",
+                "origin": [
+                  98.0,
+                  100.79998779296875
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  96.5,
+                  112.79998779296875
+                ]
+              }
+            ],
+            "expected": [
+              {
+                "text": "A",
+                "origin": [
+                  98,
+                  100.8
+                ]
+              },
+              {
+                "text": "B",
+                "origin": [
+                  96.5,
+                  112.8
+                ]
+              }
+            ],
+            "match": true,
+            "tolerance_points": 0.001
+          },
+          "status": "match"
+        },
+        {
+          "reader": "poppler",
+          "status": "match",
+          "exit_code": 0,
+          "stdout": "A\nB\n\f",
+          "stderr": "",
+          "known_limit_reason": null
+        },
+        {
+          "reader": "qpdf",
+          "status": "structure_ok",
+          "exit_code": 0,
+          "stdout": "checking /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/docs/reports/2026-10-01-issue-666-step7-evidence/issue666-step7-vertical.pdf\nPDF Version: 1.4\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+          "stderr": ""
+        }
+      ],
+      "sha256": "2503abf866ed8eb364421ce9d838dce007d95a6f423084dad499982256509778"
+    }
+  ],
+  "summary": {
+    "match": 50,
+    "known_limitation": 8,
+    "mismatch": 0,
+    "error": 0,
+    "structure_ok": 29
+  }
+}

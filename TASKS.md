@@ -1,13 +1,135 @@
-## Preparación del release 5.2.0 — 2026-09-29
+## Release 5.3.0 — 2026-10-06
 
-- Issue: #659 — release: prepare oxidize-pdf 5.2.0 — https://github.com/bzsanti/oxidizePdf/issues/659
-- Estado: `[-]` preparación en curso. Prioridad P1. Responsable Codex.
-- Autorización: usuario solicita iniciar release tras CI #658 y selecciona 5.2.0.
-- Base: develop 48d8b8f; historial main/v5.1.5 se conserva mediante merge.
-- Criterio de cierre de preparación: versiones/notas coherentes, validación proporcional y PR de promoción a main revisable.
-- Última validación: workspace 9934 pasan/0 fallos/71 omitidas; firmas 43 pasan/0 fallos/3 omitidas; Clippy, empaquetado y compilación de ejemplos pasan. Runtime RAG omitido por falta de corpus. #658 permanece borrador por RSA y se excluye del release.
-- Siguiente acción: publicar PR a main y verificar su CI. Tag/publicación requieren CI verde y merge verificado conforme al proceso.
-- Restricciones: preservar WIP original; sin #642, sin PAdES y sin cambios a métricas/baselines.
+- Issue: #684 — release: publish 5.3.0 and reconcile release history — https://github.com/bzsanti/oxidizePdf/issues/684
+- Estado: activa, candidato preparado y validado localmente. Prioridad P1. Responsable Codex.
+- Base: develop 36ef67e3444dc37d5426e8c3951dec427efc836c; main/v5.2.0 9ab7ac6530d6e064d48a3b274568af1b6d901462. Trabajo aislado en target/release530; cambios locales anteriores preservados.
+- Criterio de cierre: historial de releases conservado, versión/documentación 5.3.0 coherentes, producto idéntico a develop, QR y validación del paquete aprobados, PR de release integrado en main, tag/GitHub/crates.io verificados y metadatos sincronizados a develop por PR.
+
+| Requisito | Estado / evidencia | Bloqueante y siguiente acción |
+|---|---|---|
+| Historial y versiones coherentes | Demostrado: 5.3.0 coherente e historial anterior preservado | Ningún bloqueo local |
+| Producto revisado conservado | Demostrado: identidad exacta con develop y lock salvo versión propia | #642/#658 y #661 excluidos |
+| Validación de candidato y QR | Demostrado: 10.389 PASS/0 FAIL/71 ignorados, Clippy, paquete signatures y Kripteia | CI remota pendiente |
+| Publicación y sincronización | Pendiente | CI/merge de release a main, tag, registros y PR hacia develop |
+
+- Última validación: suite completa exit0, Clippy y paquete con signatures aprobados; QR cerrado para el delta. Evidencia: docs/reports/2026-10-06-release-5.3.0-review.md y directorio contiguo. Siguiente acción: commit con hook original, PR de release a main y CI.
+
+## Integración autorizada de PRs verdes — 2026-10-06
+
+- Issue: #680 — TextExtractor::extract_from_page fails with StreamDecodeError("FlateDecode incomplete or truncated zlib stream") on truncated streams — https://github.com/bzsanti/oxidizePdf/issues/680
+- Issue: #677 — Tagged split rejects missing page StructParents keys in 5.2.0 (#621) — https://github.com/bzsanti/oxidizePdf/issues/677
+- Estado: integración solicitada completada. PR #683 y PR #682 MERGED en develop, cada uno con 29 SUCCESS/2 SKIPPED y ningún check pendiente al fusionar. Prioridad P1. Responsable Codex.
+- #683: HEAD3cdf880, merge 091d4abf7b2686e22c36427b1759b3ec11484193, 2026-10-06T13:51:20Z.
+- #682: HEADaa19e39f19d80bf6d23770a378a31c45c04fdf44, merge 36ef67e3444dc37d5426e8c3951dec427efc836c, 2026-10-06T15:05:08Z.
+- Conflicto secuencial resuelto: al fusionar #683, #682 entró en conflicto únicamente en TASKS.md. Conservados ambos bloques e historial; diez fuentes relevantes idénticas a las revisadas. 69 contratos combinados y hook original aprobados (formato/Clippy/build y biblioteca6.801 PASS/0 FAIL/3 ignorados). Nueva CI esperada hasta concluir Windows; merge protegido por HEAD exacto, sin bypass.
+- Última validación: GitHub confirma ambos merges y solo #658 abierto/borrador, base develop. #658 conserva aceptación de seguridad RSA pendiente y queda excluido de esta integración aunque sus checks automáticos estén aprobados. No se cambió main ni se realizó release o cierre administrativo de issues.
+- Criterio de cierre de esta orden: cumplido. Evidencia: docs/reports/2026-10-06-pr-682-evidence/integration.json, after683-tests.log, after683-commit.log y final-ci-watch.log. La CI posterior al merge es una ejecución separada; no se atribuye aquí su resultado.
+- Siguiente acción exacta: ninguna fusión pendiente entre los PR autorizados y listos. #661 conserva implementación pendiente; #658 depende de aceptación de seguridad. Checkout raíz y cambios preexistentes preservados.
+
+## Base de integración de #682 — 2026-10-06
+
+- Issue: #680 — TextExtractor::extract_from_page fails with StreamDecodeError("FlateDecode incomplete or truncated zlib stream") on truncated streams — https://github.com/bzsanti/oxidizePdf/issues/680
+- Estado: base remota cambiada a develop por instrucción del usuario; conflictos documentales resueltos localmente, validación/publicación de la conciliación pendientes. Prioridad P1. Responsable Codex.
+- Regla permanente: todo PR de trabajo apunta a develop; main recibe únicamente merges de nuevas releases.
+- Alcance: preservar autoría e historial del PR; conservar ambas aclaraciones rustdoc (recuperación explícita y geometría), seguimiento de develop y pruebas ya revisadas. Excluidos del diff los cambios de versiones/documentación de releases heredados de main.
+- Criterio de cierre: diff contra develop limitado a #680, contratos focales aprobados, hook original y rama publicada sin conflictos. No merge del PR, release ni cierre de issue.
+- Siguiente acción: validar y publicar la conciliación; los checks anteriores sobre main no acreditan el nuevo HEAD/base.
+- Validación de conciliación: 42/42 contratos focales pasan; las cuatro fuentes Rust del PR coinciden byte a byte con el snapshot develop ya revisado y probado. Código ejecutable y manifiestos iguales a develop; solo docs/tests/evidencia de #680 en el diff. Se reutilizan QR y ambos análisis de seguridad/calidad vigentes. Hook original y publicación pendientes.
+
+## Corrección de PR #682 — 2026-10-06
+
+- Issue: #680 — TextExtractor::extract_from_page fails with StreamDecodeError("FlateDecode incomplete or truncated zlib stream") on truncated streams — https://github.com/bzsanti/oxidizePdf/issues/680
+- Estado: cinco hallazgos corregidos y revisión local completada; publicación/CI pendientes. Prioridad P1. Responsable Codex. Usuario solicita corregir los hallazgos del PR.
+- Decisión: retirar el builder que ocultaba diagnósticos y el buffer adicional; documentar y probar la API existente extract_from_page_with_recovery. Código ejecutable idéntico a develop tras conciliar la base; tests y docs son el alcance final. Autoría e historia de los dos commits originales conservadas.
+- Criterio de cierre local: diagnósticos observables, límites independientes, un buffer expandido, documentación coherente y regresiones discriminantes; demostrado en pruebas focalizadas y revisión calidad/seguridad.
+- Validación: 42/42 en base main y 42/42 sobre develop; Clippy/formato y ejemplo rustdoc pasan. RED de memoria 2.140.544 bytes; GREEN 1.091.968 para salida 1 MiB. Mutaciones: borrar diagnósticos provoca cinco fallos; confundir límites provoca un fallo. Seis alcances Kripteia/Security, allocator de tests auditado. Evidencia y revisión: docs/reports/2026-10-06-pr-682-review.md y directorio contiguo.
+- Siguiente acción: publicar corrección aditiva en #682 y comprobar CI del nuevo HEAD. No merge, release ni cierre de #680. #677/#661 no iniciadas; #662/#663 siguen reservadas a oshtivi.
+- Restricciones: preservar cambios locales anteriores; recuperación explícita no implica integridad/completitud. Primera ejecución con caché compartida descartada; validación final en targets exclusivos.
+
+## Recuperación segura de tagged split — #677 — 2026-10-06
+
+- Issue: #677 — Tagged split rejects missing page StructParents keys in 5.2.0 (#621) — https://github.com/bzsanti/oxidizePdf/issues/677
+- Estado: implementación, QR y validación local terminados; publicación pendiente, issue OPEN. Prioridad P1. Responsable Codex.
+- Base: develop 9c3f4b57969dd69fc9efa128495a8b0a7c7f4f74; checkout aislado target/issue677-fix. Retomada la secuencia tras entregar las correcciones de #682; #661 continúa pendiente.
+- Criterio de cierre: reconstruir únicamente claves ausentes desde propietarios MCID inequívocos; preservar contenido, ActualText, referencias y permisos; salidas 3/3/6 correctas y fallos sin publicación parcial; regresiones discriminantes y revisión de calidad/seguridad.
+- Bloqueantes delimitados: asignación determinista sin colisiones con páginas/OBJR; conservar las claves reparadas al reescribir páginas; verificar rechazo de ambigüedad/contenido inconsistente y atomicidad.
+- Última validación: inspección confirma rechazo en associate_mcid y segunda escritura de diccionario de página en reorder; pruebas nuevas pendientes.
+- Siguiente acción: fixture compartido con ActualText, demostrar RED, implementar y validar los contratos de salida y rechazo.
+- Avance validado: RED inicial 3 PASS/6 FAIL (cuatro casos de recuperación rechazados y dos guardas ocultas); GREEN final 63 PASS/1 ignorado preexistente en siete suites. Trece contratos #677 incluyen ActualText, propietarios exactos, MCR/inherencia, colisiones, permisos y conservación de destinos existentes.
+- Revisión en curso: tres mutaciones detectadas por fallo funcional (colisiones, doble escritura, validación de tags); control restaurado13/13. Seis análisis Kripteia y Security ejecutados sin alertas de seguridad; pendientes validación de workspace y cierre del informe. La escritura duplicada detectada con páginas anidadas se corrigió componiendo las modificaciones antes de escribir.
+- Siguiente acción: completar validación obligatoria, informe QR y preparar PR contra develop; sin merge/release ni cierre de issue.
+
+- Suite completa terminada: 10.380 PASS/0 FAIL/71 ignorados preexistentes, 412 resúmenes, --workspace --features internal-testing --no-fail-fast. Fuentes coinciden con hashes revisados; qpdf acepta tres salidas y Poppler conserva texto/orden frente a fuente. Informe: docs/reports/2026-10-06-issue-677-review.md.
+- Clippy all-targets con internal-testing y -D warnings aprobado. Se prepara commit con hook original completo y PR contra develop; no se da por aprobada CI remota todavía.
+
+## T5 — Integración y mantenimiento (terminada)
+
+- Issue: #666 — test(text): build normative encoding and glyph-spacing contract batteries — https://github.com/bzsanti/oxidizePdf/issues/666
+- Estado: implementación, QR y aceptación CI completados; seis hallazgos corregidos y revalidados. Prioridad P1. Responsable Codex.
+- Criterio de cierre: cumplido; baterías deterministas conectadas a CI, perfiles default/minimal (`compression`)/SPI, MSRV 1.88, Linux/Windows/macOS y corpus manual/programado demostrados. Merge/release excluidos del alcance por la issue.
+- Última validación: código a2562e2; CI 29 SUCCESS/0 FAILURE y dos jobs programados omitidos en PR. Matriz nativa 12/12: 403 PASS en 40 targets default/minimal, 417 en 41 SPI, cero fallos/ignorados/vacíos; 34 checks Python. Suite local completa: 10.367 PASS/0 FAIL/71 ignorados preexistentes. Corpus manual 37382367497 SUCCESS, incluidos T2/T3, fusión/orden y contenido; 1.802 PDFs, 6.934 páginas comparadas. Las 6.892 páginas con PDF/hash común al snapshot local tienen métricas idénticas. Informe: docs/reports/2026-10-05-t5-review.md.
+- Siguiente acción: revisión de mantenimiento e integración del PR #681; no quedan fases de implementación, hallazgos QR ni validaciones obligatorias de #666 pendientes. La issue permanece abierta hasta su integración; merge/release no ejecutados.
+- Procesos actuales: ninguno pendiente de aceptación. La evidencia final identifica el commit de código validado; el cierre documental no modifica producto, tests, oráculos ni workflows.
+- Restricciones: preservar WIP, oráculos y baselines; no comparar agregados de poblaciones distintas como si fueran iguales. Corregir regresiones inmediatamente bajo #666.
+
+### Criterios de aceptación de T5
+
+| Requisito y fuente | Estado y evidencia | Siguiente acción |
+| --- | --- | --- |
+| Suite rápida portable, issue666/T5 | Demostrado: runner con 40/41 targets efectivos, cero ignorados/vacíos | Conservar evidencia |
+| Default/minimal/SPI y MSRV 1.88, plan T5 | Demostrado: matriz nativa run37382295498, 12/12 | Ninguna corrección pendiente |
+| Linux/Windows/macOS, plan T5 | Demostrado: tres perfiles por plataforma y CI general SUCCESS | Ninguna verificación pendiente |
+| Corpus pesado manual/programado, issue666/T5 | Demostrado: run37382367497 SUCCESS; mismo job para nightly | Ejecución periódica ya configurada |
+| QR y hallazgos resueltos, usuario | Demostrado: fases anteriores y T5 cerradas, seis hallazgos T5 revalidados | Ningún bloqueante pendiente |
+| Entrega versionada, aceptación issue666 | Demostrado: PR681 y evidencia publicada; merge/release excluidos | Revisión e integración por mantenimiento |
+
+## T4 — Discriminación y corpus (terminada localmente)
+
+- Issue: #666 — test(text): build normative encoding and glyph-spacing contract batteries — https://github.com/bzsanti/oxidizePdf/issues/666
+- Estado: implementación y QR pasados, ocho hallazgos corregidos y revalidados. Prioridad P1. Responsable Codex.
+- Criterio de cierre: cumplido; mutaciones discriminantes, población congelada y métricas separadas con errores/exclusiones visibles.
+- Última validación: 7.453 PASS/0 FAIL/3 ignoradas en62 targets; tres gates históricos pasan. Medidor13/13, nueve mutaciones de producto, cinco del parser y seis del medidor discriminan. Corpus1.802 PDFs,6.937 páginas comparables; hashes intactos. Clippy, formato, Kripteia/Security y trazabilidad pasan. Informe: docs/reports/2026-10-05-t4-review.md.
+- Correcciones de producto: NUL como whitespace; longitud/padding y parámetros tipados de imágenes inline; regresión incremental de whitespace virtual resuelta. Tres páginas reales recuperan texto. Los440 reemplazos Type3 del PDF diagnosticado corresponden a nombres C0…C255 sin ToUnicode, conforme a política.
+- Siguiente acción exacta: T5 completada según el registro superior; conservar evidencia T4. Ningún proceso T4 pendiente.
+- Restricciones: preservar WIP y baselines; no afirmar igualdad con Poppler ni interpretar exclusiones como mejora. Sin merge/release autorizados. #666 sigue abierta.
+
+## #668 sobre develop integrado — 2026-10-01
+
+- Issue: #668 — fix(text): decode normative simple-font encodings and built-in Symbol/Zapf — https://github.com/bzsanti/oxidizePdf/issues/668
+- Estado: `[-]` TDD activo. Prioridad P1. Responsable Codex.
+- Alcance: cinco codificaciones simples; conservar intacta la función MacRoman de Omer y el tracking integrado. Rama fix/issue-668-simple-encodings desde develop 4a2c38a, independiente de #669.
+- Criterio de cierre: tablas y selección/precedencias correctas, recuperación visible, métricas conservadas, RED/GREEN, mutaciones discriminantes, QR y corpus/CI.
+- Última validación: issue OPEN confirmada; #669 en CI sin fallos reportados al iniciar.
+- TDD: RED 13 PASS/14 FAIL en 27 contratos. Adaptadas cinco tablas y selección/precedencias; función decode_macroman comparada byte a byte con HEAD, sin cambios. GREEN y consumidores en ejecución.
+- Validación: 27 contratos + 46 regresiones pasan; tres mutaciones detectadas y restauración 28/28; biblioteca 6776/0/3; mínimo 27/27 y SPI 41/41; QR 97/90 tests, Security sin alertas. Corpus 72/72, pero orden compara 1054 PDFs frente a 1058 en base: diagnóstico por documento en curso antes de publicar.
+- Diagnóstico resuelto con TDD: recuperación personalizada Type3/intrínseca conservada; dos RED por aserción y 29 contratos + 46 regresiones GREEN. MuPDF 1.26.10 confirma los cuatro Type3. QR actualizado 97/92 tests, Security sin alertas; biblioteca 6776/0/3, mínimo 29 y SPI 43 pasan.
+- Corpus final 72/72: recuperados 1058 comparados, 594837 palabras, orden plano 110427 (0.185642), reading-order 94887 (0.159518), transposiciones iguales a base; fusiones 278/211815. Sin cambios de umbrales. Detalle de 16 PDFs y avisos MuPDF en corpus-diagnosis.json.
+- Publicación: cbd579660c708f95fe20273c73442bc481d252ba en origin/fix/issue-668-simple-encodings; PR #670 abierto en borrador contra develop, https://github.com/bzsanti/oxidizePdf/pull/670. Hook completo aprobado.
+- CI #670: Ubuntu falla en tres pruebas #476 que trataban bytes WinAnsi indefinidos como CR/LF. Reproducido localmente (1 PASS/3 FAIL). Fixture actualizado con ToUnicode explícito, aserciones previas conservadas; añadidos NormalizeLineEnding y control WinAnsi sin mapeo. Seis pruebas pasan; integración completa de targets versionados en curso.
+- Validación del fixture: 6/6 pruebas CR, 29/29 contratos, 220 doctests (24 omitidos), Clippy/formato y QR 93/6 tests sin alertas de seguridad. Batería ampliada terminada: 375 targets de integración + biblioteca, 9766 PASS/0 FAIL/47 omitidas; exit 0. Evidencia integration-final.json e integration.log.gz.
+- Corrección publicada en #670: a8b595ecafc5988038361a567808053815570aa8; hook completo aprobado.
+- Integración de base: develop 8c0c803 (#669) incorporado; conflictos limitados a CHANGELOG/TASKS, conservadas ambas entradas y ambas implementaciones sin cambios Rust manuales.
+- Validación conjunta: 65/65 contratos pasan; archivos Rust entrantes idénticos a develop y archivos de codificación idénticos al HEAD revisado de #670.
+- Siguiente acción: publicar el merge de develop y fusionar #670 cuando su nueva CI esté aprobada.
+- Restricciones: sin /tmp ni worktrees; no cambiar codecs del sistema operativo, oráculos, umbrales ni solución MacRoman de #664.
+
+
+## #667 sobre develop integrado — 2026-10-01
+
+- Issue: #667 — fix(parser): decode PDF document strings with PDFDocEncoding and version-scoped UTF-8 — https://github.com/bzsanti/oxidizePdf/issues/667
+- Estado: `[x]` implementada, validada e integrada en develop mediante PR #669. Prioridad P1. Responsable Codex.
+- Alcance: adaptar el parche #667 previamente revisado a develop 4a2c38a, preservando las soluciones integradas de Omer; PDFDocEncoding, UTF-16 y UTF-8 PDF 2.0 en consumidores documentales.
+- Criterio de cierre: 30 contratos documentales pasan; regresiones de #664/#665 y consumidores conservadas; revisión de calidad/seguridad y validación de configuraciones/corpus/CI proporcionada.
+- Última validación: GitHub confirma #667 OPEN; implementación alternativa anterior separada, no trasladar #668 ni reemplazos de MacRoman/tracking.
+- Última ejecución TDD en el repositorio actual: PDFDocEncoding RED 6 PASS/6 FAIL; PDF 2.0 RED de compilación por APIs ausentes. Parche aislado de #667 aplicado sin conflictos sobre 4a2c38a; GREEN y regresiones de #664/#665 en ejecución. Evidencia: docs/reports/2026-10-01-issue-667-develop-evidence/.
+- Validación final local: 30 contratos y 50 regresiones pasan; biblioteca 6776/0/3; compression mínima 30/30; SPI+semantic 44/44; corpus diferencial 72/72, métricas idénticas a la base (278/211815 fusiones, orden plano 0.185653 y reading-order 0.159528), umbrales intactos. Clippy completo/formato/diff-check pasan; Kripteia 94/340 tests/10 archivos, Security sin alertas.
+- Publicación: PR #669 abierto en borrador contra develop, https://github.com/bzsanti/oxidizePdf/pull/669; implementación 2217f6d.
+- CI: Windows falló por transformación LF→CRLF del TSV; 16 checks pasaron y dos se omitieron por workflow. Reproducido con checkout-index y core.autocrlf=true: hash exacto del fallo. Añadido *.tsv text eol=lf; mismo checkout conserva el hash normativo y cero CRLF. Evidencia: docs/reports/2026-10-01-issue-667-windows-checkout.json.
+- Validación de corrección: 30/30 contratos documentales pasan; no cambian código Rust ni valores del oráculo.
+- Corrección publicada: aa06f27069cfe79473129284729dae7112cd0db8 en #669; hook completo aprobado (formato, Clippy, build y biblioteca 6776/0/3).
+- Integración: issue #667 CLOSED como completed; PR #669 MERGED, commit 8c0c80321f236a139e783722d8a337251a7ceaf2; HEAD aa06f27 validado con 17 SUCCESS y dos jobs programados SKIPPED. Linux, Windows y macOS aprobados.
+- Siguiente acción: continuar #668/#670 y el resto de #666; este bloque no completa el plan general.
+- Restricciones: no usar /tmp ni worktrees. Restos locales obsoletos de #637 eliminados por instrucción del usuario, sin stash nuevo. Conservar tablas/oráculos; ninguna recalibración del corpus ni cierre de #666 por este bloque.
 
 ## Resolución #641 y desarrollo #642 — 2026-09-29
 
@@ -270,18 +392,6 @@
   QR completado antes de PR; Kripteia 94/100 en 117 tests, security sin hallazgos.
 - Siguiente acción: registrar QR sobre fuente final, crear PR y validar CI
   multiplataforma antes de integrar. Sin publicación de release bajo esta tarea.
-## Release 5.1.5 para #627 — 2026-09-26
-
-- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
-- Estado: `[-]` preparación en curso. Prioridad: P1. Responsable: Codex.
-- #631 integrado en develop f9132e16 con CI completa verde sobre b8ae9af9.
-- Criterio de cierre: PR de promoción main con CI verde, etiqueta y publicación
-  GitHub/crates.io confirmadas; después binding fijado a la release del registro.
-- Base: develop integrado + main v5.1.4; conflicto de TASKS resuelto conservando
-  ambas entradas. Changelog 5.1.4 preservado; versión 5.1.5 y proveedor publicado.
-- Siguiente acción: validar paquete y QR, crear PR de release, verificar CI antes
-  de integrar y publicar exclusivamente mediante GitHub Actions.
-- No cerrar #627 hasta pin y validación final de Python. Cambios ajenos preservados.
 
 ## Integración y cierre de #627 — 2026-09-26
 
@@ -398,42 +508,6 @@
   integrar, publicar core y fijar esa versión en Python antes de cerrar #627.
   La CI multiplataforma está añadida, todavía no ejecutada remotamente.
   No se afirma cumplimiento de wheels ya publicados ni cierre de la issue.
-## Avisos de dependencias retiradas durante release 5.1.4
-
-- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P2.
-- Responsable: mantenimiento (`bzsanti`), responsable de crear/vincular issue.
-- Issue: pendiente; las issues abiertas consultadas no cubren estos avisos.
-- Última validación: `cargo package --locked --offline` avisa de chacha20 0.10.0
-  y spin 0.9.8 retirados del registro. Ambas entradas ya estaban en develop;
-  la release no cambia el grafo de dependencias. No se infiere vulnerabilidad.
-- Dependencia externa y desbloqueo: issue específica confirmada OPEN.
-- Criterio de cierre: investigar motivo de retirada y resolver/validar el
-  seguimiento de dependencias con evidencia reproducible.
-- Siguiente acción: mantenimiento crea/vincula issue antes de corregir.
-- Restricciones: no actualizar dependencias ni recalibrar métricas bajo esta
-  entrada sin issue; no confundir con la eliminación de C de #627.
-
-
-## Release 5.1.4 — 2026-09-25
-
-- Issue: #629 — release: publish oxidize-pdf 5.1.4 maintenance fixes — https://github.com/bzsanti/oxidizePdf/issues/629
-- Estado: `[-]` preparación y validación en curso. Prioridad: P1.
-- Responsable: Codex / bzsanti. Publicación autorizada por el usuario.
-- Alcance: develop `410358d`, fixes #609/#610/#613/#615–#619 y contrato #620.
-- Última validación: #629 OPEN, última GitHub Release y registro crates.io 5.1.3;
-  #620 integrado por #628. Copia independiente: `/tmp/oxidize-release-5.1.4`.
-- Criterio de cierre: gates locales y CI verdes, PR fusionado en main,
-  etiqueta sobre merge validado, workflow exitoso, GitHub Release y crates.io.
-- Validación local final: workspace 9.801 pasan (73 ignorados), Clippy all-targets,
-  formato, contrato Python 33/Rust 6 y compilación del paquete pasan. QR cerrado
-  antes del PR; Kripteia Rust 94/100 y Security inspeccionado. Corpus oficial:
-  evidencia integrada previa, no nueva ejecución. Informes de release en docs/reports.
-- Siguiente acción: publicar rama y PR a main, esperar CI verde y fusionar;
-  etiquetar el merge validado y verificar workflow, GitHub Release y crates.io.
-- Restricciones: preservar cambios locales y baselines; #627 permanece pendiente
-  y obligatoria. Esta versión conserva C en signatures/bindings por autorización
-  explícita de publicar antes de #627. No corregir hallazgos ajenos sin issue.
-
 
 ## Issue #620 — contrato de serialización OmniDocBench
 
@@ -899,3 +973,92 @@
 - Siguiente acción: mantenimiento crea/vincula issue antes de corregir.
 - Restricciones: no corregir bajo #627 ni afirmar que un grafo sin C implica
   compilación correcta. La matriz mínima de producto incluye compression.
+
+## PR #664 follow-up — 2026-10-01
+
+- Issue: #662 — bug(text): decode_macroman in extraction_cmap.rs is incomplete for bytes 0xA0..=0xFF — https://github.com/bzsanti/oxidizePdf/issues/662
+- Status: local implementation validated; remote CI/integration pending. Priority P1. Owner: Codex / maintenance.
+- Original contribution: Omer Shtivi, 70f28714e2ef7115c0f0898d47a3af6cae3de953; retained unchanged as parent history.
+- Scope: Preserve the original match table; correct PDF currency and undefined codes, extend independent public-API coverage.
+- Validation: 6 focused tests; 6776 library tests pass, 3 pre-existing ignored; Clippy and formatting pass. Independent RED recorded against the original PR; quality/security review complete within this diff.
+- Closure: focused contracts, review and CI approved, integration verified; do not close the issue on local validation alone.
+- Next action: append this commit to the existing PR branch without rewriting its history; check remote CI before integration.
+- Constraints: no changes from #667/#668 or the general #666 implementation; no merge/release in this follow-up.
+
+## PR #665 follow-up — 2026-10-01
+
+- Issue: #663 — enhancement(text): fallback heuristic for TJ tracking inference in lenient mode when DescendantFonts cannot be resolved — https://github.com/bzsanti/oxidizePdf/issues/663
+- Status: local implementation validated; remote CI/integration pending. Priority P1. Owner: Codex / maintenance.
+- Original contribution: Omer Shtivi, c7031f7645d947de03264485c8e38c4452feebe3; retained unchanged as parent history.
+- Scope: Preserve GlyphZeroWidthStatus and the original inference flow; restrict unknown-metric recovery by mode, font type, descendant, source code and ToUnicode evidence.
+- Validation: 40 focused tests; 6776 library tests pass, 3 pre-existing ignored; Clippy and formatting pass. Independent RED recorded against the original PR; quality/security review complete within this diff.
+- Closure: focused contracts, review and CI approved, integration verified; do not close the issue on local validation alone.
+- Next action: append this commit to the existing PR branch without rewriting its history; check remote CI before integration.
+- Constraints: no changes from #667/#668 or the general #666 implementation; no merge/release in this follow-up.
+
+## Historial de preparación de releases conservado desde main
+
+Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 figura al inicio.
+
+## Preparación del release 5.2.0 — 2026-09-29
+
+- Issue: #659 — release: prepare oxidize-pdf 5.2.0 — https://github.com/bzsanti/oxidizePdf/issues/659
+- Estado: `[-]` preparación en curso. Prioridad P1. Responsable Codex.
+- Autorización: usuario solicita iniciar release tras CI #658 y selecciona 5.2.0.
+- Base: develop 48d8b8f; historial main/v5.1.5 se conserva mediante merge.
+- Criterio de cierre de preparación: versiones/notas coherentes, validación proporcional y PR de promoción a main revisable.
+- Última validación: workspace 9934 pasan/0 fallos/71 omitidas; firmas 43 pasan/0 fallos/3 omitidas; Clippy, empaquetado y compilación de ejemplos pasan. Runtime RAG omitido por falta de corpus. #658 permanece borrador por RSA y se excluye del release.
+- Siguiente acción: publicar PR a main y verificar su CI. Tag/publicación requieren CI verde y merge verificado conforme al proceso.
+- Restricciones: preservar WIP original; sin #642, sin PAdES y sin cambios a métricas/baselines.
+
+
+## Release 5.1.5 para #627 — 2026-09-26
+
+- Issue: #627 — fix(architecture): enforce the mandatory no-C dependency requirement across signature verification and bindings — https://github.com/bzsanti/oxidizePdf/issues/627
+- Estado: `[-]` preparación en curso. Prioridad: P1. Responsable: Codex.
+- #631 integrado en develop f9132e16 con CI completa verde sobre b8ae9af9.
+- Criterio de cierre: PR de promoción main con CI verde, etiqueta y publicación
+  GitHub/crates.io confirmadas; después binding fijado a la release del registro.
+- Base: develop integrado + main v5.1.4; conflicto de TASKS resuelto conservando
+  ambas entradas. Changelog 5.1.4 preservado; versión 5.1.5 y proveedor publicado.
+- Siguiente acción: validar paquete y QR, crear PR de release, verificar CI antes
+  de integrar y publicar exclusivamente mediante GitHub Actions.
+- No cerrar #627 hasta pin y validación final de Python. Cambios ajenos preservados.
+
+
+## Avisos de dependencias retiradas durante release 5.1.4
+
+- Estado: `[!]` bloqueada; falta issue abierta aplicable. Prioridad: P2.
+- Responsable: mantenimiento (`bzsanti`), responsable de crear/vincular issue.
+- Issue: pendiente; las issues abiertas consultadas no cubren estos avisos.
+- Última validación: `cargo package --locked --offline` avisa de chacha20 0.10.0
+  y spin 0.9.8 retirados del registro. Ambas entradas ya estaban en develop;
+  la release no cambia el grafo de dependencias. No se infiere vulnerabilidad.
+- Dependencia externa y desbloqueo: issue específica confirmada OPEN.
+- Criterio de cierre: investigar motivo de retirada y resolver/validar el
+  seguimiento de dependencias con evidencia reproducible.
+- Siguiente acción: mantenimiento crea/vincula issue antes de corregir.
+- Restricciones: no actualizar dependencias ni recalibrar métricas bajo esta
+  entrada sin issue; no confundir con la eliminación de C de #627.
+
+
+
+## Release 5.1.4 — 2026-09-25
+
+- Issue: #629 — release: publish oxidize-pdf 5.1.4 maintenance fixes — https://github.com/bzsanti/oxidizePdf/issues/629
+- Estado: `[-]` preparación y validación en curso. Prioridad: P1.
+- Responsable: Codex / bzsanti. Publicación autorizada por el usuario.
+- Alcance: develop `410358d`, fixes #609/#610/#613/#615–#619 y contrato #620.
+- Última validación: #629 OPEN, última GitHub Release y registro crates.io 5.1.3;
+  #620 integrado por #628. Copia independiente: `/tmp/oxidize-release-5.1.4`.
+- Criterio de cierre: gates locales y CI verdes, PR fusionado en main,
+  etiqueta sobre merge validado, workflow exitoso, GitHub Release y crates.io.
+- Validación local final: workspace 9.801 pasan (73 ignorados), Clippy all-targets,
+  formato, contrato Python 33/Rust 6 y compilación del paquete pasan. QR cerrado
+  antes del PR; Kripteia Rust 94/100 y Security inspeccionado. Corpus oficial:
+  evidencia integrada previa, no nueva ejecución. Informes de release en docs/reports.
+- Siguiente acción: publicar rama y PR a main, esperar CI verde y fusionar;
+  etiquetar el merge validado y verificar workflow, GitHub Release y crates.io.
+- Restricciones: preservar cambios locales y baselines; #627 permanece pendiente
+  y obligatoria. Esta versión conserva C en signatures/bindings por autorización
+  explícita de publicar antes de #627. No corregir hallazgos ajenos sin issue.

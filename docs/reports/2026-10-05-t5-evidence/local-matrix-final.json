@@ -1,0 +1,45 @@
+{
+  "default-final": {
+    "targets": 39,
+    "passed": 396,
+    "failed": 0,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "minimal": {
+    "targets": 39,
+    "passed": 396,
+    "failed": 0,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "spi": {
+    "targets": 40,
+    "passed": 410,
+    "failed": 0,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "msrv-default": {
+    "targets": 39,
+    "passed": 396,
+    "failed": 0,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "msrv-minimal": {
+    "targets": 39,
+    "passed": 396,
+    "failed": 0,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "msrv-spi": {
+    "targets": 40,
+    "passed": 410,
+    "failed": 0,
+    "ignored": 0,
+    "final_execution_guard_passes": true
+  },
+  "t4_product_and_contract_hashes_unchanged": true
+}

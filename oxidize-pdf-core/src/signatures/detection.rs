@@ -64,9 +64,15 @@ pub fn detect_signature_fields<R: Read + Seek>(
         None => return Ok(signatures),
     };
 
+    let version = reader
+        .effective_version()
+        .map_err(|e| SignatureError::ParseError {
+            message: e.to_string(),
+        })?;
+
     // Recursively search for signature fields
     for field_obj in fields {
-        collect_signature_fields(reader, &field_obj, &mut signatures)?;
+        collect_signature_fields(reader, &field_obj, &mut signatures, &version)?;
     }
 
     Ok(signatures)
@@ -77,6 +83,7 @@ fn collect_signature_fields<R: Read + Seek>(
     reader: &mut PdfReader<R>,
     field_obj: &PdfObject,
     signatures: &mut Vec<SignatureField>,
+    version: &crate::parser::header::PdfVersion,
 ) -> SignatureResult<()> {
     let field_dict = match resolve_to_dict(reader, field_obj)? {
         Some(d) => d,
@@ -85,7 +92,7 @@ fn collect_signature_fields<R: Read + Seek>(
 
     // Check if this is a signature field (/FT /Sig)
     if is_signature_field(&field_dict) {
-        if let Some(sig) = extract_signature_field(reader, &field_dict)? {
+        if let Some(sig) = extract_signature_field(reader, &field_dict, version)? {
             signatures.push(sig);
         }
     }
@@ -94,7 +101,7 @@ fn collect_signature_fields<R: Read + Seek>(
     if let Some(kids_obj) = field_dict.get("Kids") {
         let kids = resolve_to_array(reader, kids_obj)?;
         for kid in kids {
-            collect_signature_fields(reader, &kid, signatures)?;
+            collect_signature_fields(reader, &kid, signatures, version)?;
         }
     }
 
@@ -114,6 +121,7 @@ fn is_signature_field(dict: &PdfDictionary) -> bool {
 fn extract_signature_field<R: Read + Seek>(
     reader: &mut PdfReader<R>,
     field_dict: &PdfDictionary,
+    version: &crate::parser::header::PdfVersion,
 ) -> SignatureResult<Option<SignatureField>> {
     // Get the signature value dictionary (/V entry)
     let sig_dict = match field_dict.get("V") {
@@ -173,7 +181,7 @@ fn extract_signature_field<R: Read + Seek>(
 
     // Extract optional field name from parent field dict
     if let Some(PdfObject::String(name)) = field_dict.get("T") {
-        sig.name = Some(name.to_text());
+        sig.name = Some(name.to_text_with_version(version));
     }
 
     // Extract optional /SubFilter
@@ -183,17 +191,17 @@ fn extract_signature_field<R: Read + Seek>(
 
     // Extract optional /Reason
     if let Some(PdfObject::String(reason)) = sig_dict.get("Reason") {
-        sig.reason = Some(reason.to_text());
+        sig.reason = Some(reason.to_text_with_version(version));
     }
 
     // Extract optional /Location
     if let Some(PdfObject::String(loc)) = sig_dict.get("Location") {
-        sig.location = Some(loc.to_text());
+        sig.location = Some(loc.to_text_with_version(version));
     }
 
     // Extract optional /ContactInfo
     if let Some(PdfObject::String(contact)) = sig_dict.get("ContactInfo") {
-        sig.contact_info = Some(contact.to_text());
+        sig.contact_info = Some(contact.to_text_with_version(version));
     }
 
     // Extract optional /M (signing time)

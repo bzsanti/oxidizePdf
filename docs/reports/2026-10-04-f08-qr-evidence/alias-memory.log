@@ -1,0 +1,3 @@
+aliases=1 input_bytes=13080 operations=2048 allocated_operation_capacity_bytes=163840 distinct_buffers=1
+aliases=32 input_bytes=13298 operations=65536 allocated_operation_capacity_bytes=5242880 distinct_buffers=32
+aliases=128 input_bytes=13971 operations=262144 allocated_operation_capacity_bytes=20971520 distinct_buffers=128

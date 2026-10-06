@@ -1,0 +1,2 @@
+# Validation only; never a product or Rust-test dependency.
+PyMuPDF==1.26.5

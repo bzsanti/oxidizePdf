@@ -1,0 +1,21 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 3.76s
+     Running tests/text_recovery_boundary_contract_test.rs (target/debug/deps/text_recovery_boundary_contract_test-7dd20d1680fef3b8)
+
+running 13 tests
+test simple_font_recovery_does_not_swallow_next_byte_with_sloppy_codespace ... ok
+test tounicode_reference_chain_preserves_authoritative_mapping ... ok
+test complete_codes_and_empty_string_remain_valid ... ok
+test encoding_cmap_truncated_code_cannot_alias_a_shorter_mapping ... ok
+test never_joins_partial_codes_across_tj_strings ... ok
+test identity_collection_preserves_odd_tail_including_after_notdef ... ok
+test complete_unmapped_code_does_not_reinterpret_its_suffix ... ok
+test unusable_tounicode_stream_keeps_encoding_cmap_source_boundaries ... ok
+test unavailable_font_program_does_not_discard_authoritative_text_metadata ... ok
+test unicode_recovery_for_unvendored_cmap_keeps_an_odd_byte_visible ... ok
+test tounicode_reference_depth_and_cycles_have_explicit_mode_policy ... ok
+test invalid_tounicode_resource_cannot_silently_restore_base_unicode ... ok
+test preserves_valid_text_and_marks_every_incomplete_tail_once ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+

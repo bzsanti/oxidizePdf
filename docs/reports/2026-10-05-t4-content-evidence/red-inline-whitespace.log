@@ -1,0 +1,24 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.15s
+     Running tests/text_inline_image_boundary_contract_test.rs (target/debug/deps/text_inline_image_boundary_contract_test-8b3a1b0fe4ec0e52)
+
+running 1 test
+test pdf_whitespace_delimits_inline_image_without_swallowing_following_text ... FAILED
+
+failures:
+
+---- pdf_whitespace_delimits_inline_image_without_swallowing_following_text stdout ----
+
+thread 'pdf_whitespace_delimits_inline_image_without_swallowing_following_text' (116) panicked at oxidize-pdf-core/tests/text_inline_image_boundary_contract_test.rs:21:63:
+assertion `left == right` failed: separator=0, position=0
+  left: []
+ right: [127]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    pdf_whitespace_delimits_inline_image_without_swallowing_following_text
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_inline_image_boundary_contract_test`

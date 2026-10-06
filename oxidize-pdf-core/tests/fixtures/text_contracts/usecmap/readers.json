@@ -1,0 +1,259 @@
+{
+  "schema_version": 1,
+  "issue": 666,
+  "cases": [
+    {
+      "id": "usecmap-flat",
+      "path": "flat.pdf",
+      "sha256": "eb71b5cfdb5552ff438acc9c5a5a5d7309173f07a10d67002bf7b1218d4adfed",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-encoding-parent",
+      "path": "encoding-parent.pdf",
+      "sha256": "8e22cefe6e6aee45fdad5ab8c0163ec85298eb21cd797ba4cd80a03cb1fd721a",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-encoding-shadow",
+      "path": "encoding-shadow.pdf",
+      "sha256": "16d911503a6621ee90c11e7ff76255ff9d09d72190a4f09e611aa7c1e5e87cf0",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            107,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-unicode-parent",
+      "path": "unicode-parent.pdf",
+      "sha256": "f1d16bd0cdd62de181b419f277f5c4da6a47e2e73ecdfce23d8d667bc32dde03",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-unicode-shadow",
+      "path": "unicode-shadow.pdf",
+      "sha256": "5c455143f6a41566fa6500f68d5331909952c15138907c284681d6a9c6ccbd75",
+      "expected_text": "XB",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "X",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-both-chain",
+      "path": "both-chain.pdf",
+      "sha256": "e0cce687c630aa1ec8ea5966113ef1d3a992f20770a24f9ee3837691716471e3",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-named-operator",
+      "path": "named-operator.pdf",
+      "sha256": "dbcbab07699910a79c4ecb55ffba6e6f7dc64f7171b8794fc1ea610efd4636d4",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-named-dictionary",
+      "path": "named-dictionary.pdf",
+      "sha256": "1a531064bb69fbe4683210d55dff8be9529687aff1b2059a5755647d35084673",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-notdef-char",
+      "path": "notdef-char.pdf",
+      "sha256": "f63317e1005762c59688c749003d7759567f6db822f57e0ed9d9d3d08428dd59",
+      "expected_text": "�B",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "�",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-notdef-range",
+      "path": "notdef-range.pdf",
+      "sha256": "22bd30db936a26e7af5b17dec099955fd71bebd70f854ef8fcb50942d6a42c2c",
+      "expected_text": "�B",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "�",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            105,
+            92
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usecmap-notdef-explicit-wins",
+      "path": "notdef-explicit-wins.pdf",
+      "sha256": "a3981aac1f2dd8b8740711e7a4e62c74f1253081fe9760db5ea522cc5b2c46f0",
+      "expected_text": "AB",
+      "expectation_source": "ISO 32000-1 9.7.5/Table 120 UseCMap inheritance; child overrides parent. Explicit source-code ToUnicode and W: CID0=500, CID17=400, CID29=700. notdef ranges use one CID, not incrementing CIDs.",
+      "expected_trace_origins": [
+        {
+          "text": "A",
+          "origin": [
+            100,
+            92
+          ]
+        },
+        {
+          "text": "B",
+          "origin": [
+            104,
+            92
+          ]
+        }
+      ]
+    }
+  ]
+}

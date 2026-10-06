@@ -1,0 +1,45 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_cid_cff_contract_test.rs              6     95
+
+--- Worst Offenders ---
+  cid_cff_widths_use_cids_not_charstring_indices (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:115) - Score: 90
+    - Test 'cid_cff_widths_use_cids_not_charstring_indices' does not call any production code
+  remapped_cid_cff_widths_follow_encoding_cids (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:125) - Score: 90
+    - Test 'remapped_cid_cff_widths_follow_encoding_cids' does not call any production code
+  cid_cff_vertical_advance_uses_w2 (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:135) - Score: 90
+    - Test 'cid_cff_vertical_advance_uses_w2' does not call any production code
+  cid_keyed_cff_matches_its_independently_generated_program (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:42) - Score: 100
+    i Test 'cid_keyed_cff_matches_its_independently_generated_program' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_keyed_cff_matches_its_independently_generated_program' uses .unwrap() which silently discards error information
+  identity_h_cid_cff_preserves_explicit_unicode (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:58) - Score: 100
+    i Test 'identity_h_cid_cff_preserves_explicit_unicode' asserts against a hardcoded constant instead of a computed expected value
+
+--- Details ---
+oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:
+  cid_keyed_cff_matches_its_independently_generated_program (line 42) - Score: 100
+    i Test 'cid_keyed_cff_matches_its_independently_generated_program' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_keyed_cff_matches_its_independently_generated_program' uses .unwrap() which silently discards error information
+  identity_h_cid_cff_preserves_explicit_unicode (line 58) - Score: 100
+    i Test 'identity_h_cid_cff_preserves_explicit_unicode' asserts against a hardcoded constant instead of a computed expected value
+  embedded_encoding_remaps_codes_before_selecting_cff_cids (line 69) - Score: 100
+    i Test 'embedded_encoding_remaps_codes_before_selecting_cff_cids' asserts against a hardcoded constant instead of a computed expected value
+  cid_cff_widths_use_cids_not_charstring_indices (line 115) - Score: 90
+    - Test 'cid_cff_widths_use_cids_not_charstring_indices' does not call any production code
+  remapped_cid_cff_widths_follow_encoding_cids (line 125) - Score: 90
+    - Test 'remapped_cid_cff_widths_follow_encoding_cids' does not call any production code
+  cid_cff_vertical_advance_uses_w2 (line 135) - Score: 90
+    - Test 'cid_cff_vertical_advance_uses_w2' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

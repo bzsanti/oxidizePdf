@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/tools/generate_adobe_pdf_cid_tables.py", line 129, in <module>
+    generate(args.root, args.output)
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/tools/generate_adobe_pdf_cid_tables.py", line 90, in generate
+    verify_sources(root)
+  File "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/tools/generate_adobe_pdf_cid_tables.py", line 86, in verify_sources
+    raise ValueError(f'source hash mismatch: {relative}')
+ValueError: source hash mismatch: pdf2unicode/Adobe-GB1-UCS2

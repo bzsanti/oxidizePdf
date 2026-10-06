@@ -1,0 +1,50 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 99 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...core/tests/text_type3_program_boundary_contract_test.rs        8     99
+
+--- Worst Offenders ---
+  malformed_charprocs_fail_with_context_in_both_parser_modes (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:95) - Score: 90
+    - Test 'malformed_charprocs_fail_with_context_in_both_parser_modes' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  consistent_d0_and_d1_preserve_metrics_and_program_operations (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:43) - Score: 100
+    i Test 'consistent_d0_and_d1_preserve_metrics_and_program_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'consistent_d0_and_d1_preserve_metrics_and_program_operations' has multiple assertions without diagnostic messages
+    i Test 'consistent_d0_and_d1_preserve_metrics_and_program_operations' uses .unwrap() which silently discards error information
+  inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:63) - Score: 100
+    i Test 'inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance' has multiple assertions without diagnostic messages
+    i Test 'inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance' uses .unwrap() which silently discards error information
+  zero_negative_and_fractional_declared_widths_are_not_replaced_by_defaults (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:77) - Score: 100
+    i Test 'zero_negative_and_fractional_declared_widths_are_not_replaced_by_defaults' uses .unwrap() which silently discards error information
+  valid_text_metadata_survives_unrenderable_charproc (oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:119) - Score: 100
+
+--- Details ---
+oxidize-pdf-core/tests/text_type3_program_boundary_contract_test.rs:
+  consistent_d0_and_d1_preserve_metrics_and_program_operations (line 43) - Score: 100
+    i Test 'consistent_d0_and_d1_preserve_metrics_and_program_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'consistent_d0_and_d1_preserve_metrics_and_program_operations' has multiple assertions without diagnostic messages
+    i Test 'consistent_d0_and_d1_preserve_metrics_and_program_operations' uses .unwrap() which silently discards error information
+  inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance (line 63) - Score: 100
+    i Test 'inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance' has multiple assertions without diagnostic messages
+    i Test 'inconsistent_procedure_width_is_observable_but_does_not_replace_declared_advance' uses .unwrap() which silently discards error information
+  zero_negative_and_fractional_declared_widths_are_not_replaced_by_defaults (line 77) - Score: 100
+    i Test 'zero_negative_and_fractional_declared_widths_are_not_replaced_by_defaults' uses .unwrap() which silently discards error information
+  malformed_charprocs_fail_with_context_in_both_parser_modes (line 95) - Score: 90
+    - Test 'malformed_charprocs_fail_with_context_in_both_parser_modes' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  type3_differences_counter_cannot_wrap_after_byte_255 (line 140) - Score: 100
+    i Test 'type3_differences_counter_cannot_wrap_after_byte_255' uses .unwrap() which silently discards error information
+  type3_differences_accepts_byte_255_and_explicit_counter_resets (line 157) - Score: 100
+    i Test 'type3_differences_accepts_byte_255_and_explicit_counter_resets' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

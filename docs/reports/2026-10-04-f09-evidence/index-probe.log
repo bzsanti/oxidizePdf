@@ -1,0 +1,7 @@
+
+thread 'main' (35) panicked at docs/reports/2026-10-04-f09-evidence/../../../target/f09-index-before.rs:103:20:
+attempt to subtract with overflow
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+data=[0, 1, 1, 0, 0] before=Err(Any { .. }) fixed_rejects=true
+data=[0, 2, 1, 1, 3, 2, 1, 2] before=Ok(true) fixed_rejects=true
+data=[0, 1, 4, 0, 0, 0, 1, 255, 255, 255, 255] before=Ok(true) fixed_rejects=true

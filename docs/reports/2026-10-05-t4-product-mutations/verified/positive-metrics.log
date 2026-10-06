@@ -1,0 +1,45 @@
+   Compiling oxidize-pdf v5.1.3 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-harness-validated/core)
+    Finished `test` profile [unoptimized] target(s) in 11.02s
+     Running tests/text_spacing_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/t4-product-build/debug/deps/text_spacing_contract_test-d2f8de657aaf0009)
+
+running 1 test
+test declared_positive_widths_keep_word_separators ... FAILED
+
+failures:
+
+---- declared_positive_widths_keep_word_separators stdout ----
+
+thread 'declared_positive_widths_keep_word_separators' (1307) panicked at core/tests/text_spacing_contract_test.rs:32:5:
+font=Helvetica mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Helvetica mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Helvetica-Bold mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Helvetica-Bold mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Helvetica-Oblique mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Helvetica-Oblique mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Helvetica-BoldOblique mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Helvetica-BoldOblique mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Times-Roman mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Times-Roman mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Times-Bold mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Times-Bold mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Times-Italic mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Times-Italic mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Times-BoldItalic mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Times-BoldItalic mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Courier mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Courier mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Courier-Bold mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Courier-Bold mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Courier-Oblique mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Courier-Oblique mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Courier-BoldOblique mode=strict widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+font=Courier-BoldOblique mode=lenient widths=Some(500.0) setup="" array="(I)-1000(a)-1000(I)-1000( )": expected "I a I", got "IaI "
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    declared_positive_widths_keep_word_separators
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 24 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `--test text_spacing_contract_test`

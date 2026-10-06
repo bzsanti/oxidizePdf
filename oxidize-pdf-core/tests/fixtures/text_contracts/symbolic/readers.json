@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "issue": 666,
+  "cases": [
+    {
+      "id": "symbol-full-unicode",
+      "path": "symbol-full-unicode.pdf",
+      "sha256": "7ef30552bf44cccab8b15ee023054547614ca4a6315611b68a5be3fc59c8f21a",
+      "expected_text": "fi\ud83d\ude00",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "symbol-subset-unicode",
+      "path": "symbol-subset-unicode.pdf",
+      "sha256": "ad323322cf5c75af770604a5de63c6247f19ec0f551bb82c7433c0a97a0175dd",
+      "expected_text": "fi\ud83d\ude00",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "mac-full-unicode",
+      "path": "mac-full-unicode.pdf",
+      "sha256": "8a31139d8c59f24aefac2825bbbe8500ed56156d83fce729f4093b5386ce9308",
+      "expected_text": "fi\ud83d\ude00",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "mac-subset-unicode",
+      "path": "mac-subset-unicode.pdf",
+      "sha256": "a41175d8f79057b6279bbda85e2205b34104648fbf2dff486b545d56a3a3ab18",
+      "expected_text": "fi\ud83d\ude00",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "unicode-full-winansi",
+      "path": "unicode-full-winansi.pdf",
+      "sha256": "bb7b07e426ba84f2e4da836a66b1073b9f6c8e8404aa652a8c73fc225b61c7e4",
+      "expected_text": "AB",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "unicode-full-unicode",
+      "path": "unicode-full-unicode.pdf",
+      "sha256": "bf11ef352f841efdbaae0c08efe4f9d8fe3d45da9b765e166480af3a0dce752f",
+      "expected_text": "fi\ud83d\ude00",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "unicode-subset-winansi",
+      "path": "unicode-subset-winansi.pdf",
+      "sha256": "6e57de988d2621e8a3d77198128eabc585b351882a29ad9733fb713f1efbbbf7",
+      "expected_text": "AB",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "unicode-subset-unicode",
+      "path": "unicode-subset-unicode.pdf",
+      "sha256": "1661a655cda9a1502518bee0a0bdfa950c52a42bff3b0e7a1249dbd3bd893fb9",
+      "expected_text": "fi\ud83d\ude00",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "ucs4-full-winansi",
+      "path": "ucs4-full-winansi.pdf",
+      "sha256": "bb2cf053d2fb7b38565a474ed7fd23eec26dcb701550f56ff9c20d40db500f1f",
+      "expected_text": "AB",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "ucs4-full-unicode",
+      "path": "ucs4-full-unicode.pdf",
+      "sha256": "54ead15b7e07c4bde821ad6fdd61bd6cc42a65499c772b1b4b1553717f489aca",
+      "expected_text": "fi\ud83d\ude00",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "ucs4-subset-winansi",
+      "path": "ucs4-subset-winansi.pdf",
+      "sha256": "23bbbf7bc4794b261184a6b70f099d8dc16d5afbff37669e3fdd8002510c2854",
+      "expected_text": "AB",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    },
+    {
+      "id": "ucs4-subset-unicode",
+      "path": "ucs4-subset-unicode.pdf",
+      "sha256": "1a79a90bdd8614f79ae273f727fafa5a4f62954f72aa17fe8a899f02f23def62",
+      "expected_text": "fi\ud83d\ude00",
+      "expectation_source": "Explicit ToUnicode UTF-16BE fi/surrogate pair, or WinAnsi for nonsymbolic TrueType. Original program and declared PDF Widths; not a symbolic-code-to-Unicode assumption."
+    }
+  ]
+}

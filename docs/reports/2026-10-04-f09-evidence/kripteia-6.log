@@ -1,0 +1,54 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 9 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/text_cid_cff_contract_test.rs              9     97
+
+--- Worst Offenders ---
+  cid_cff_widths_use_cids_not_charstring_indices (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:119) - Score: 90
+    - Test 'cid_cff_widths_use_cids_not_charstring_indices' does not call any production code
+  remapped_cid_cff_widths_follow_encoding_cids (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:129) - Score: 90
+    - Test 'remapped_cid_cff_widths_follow_encoding_cids' does not call any production code
+  cid_cff_vertical_advance_uses_w2 (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:139) - Score: 90
+    - Test 'cid_cff_vertical_advance_uses_w2' does not call any production code
+  cid_keyed_cff_matches_its_independently_generated_program (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:46) - Score: 100
+    i Test 'cid_keyed_cff_matches_its_independently_generated_program' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_keyed_cff_matches_its_independently_generated_program' uses .unwrap() which silently discards error information
+  identity_h_cid_cff_preserves_explicit_unicode (oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:62) - Score: 100
+    i Test 'identity_h_cid_cff_preserves_explicit_unicode' asserts against a hardcoded constant instead of a computed expected value
+
+--- Details ---
+oxidize-pdf-core/tests/text_cid_cff_contract_test.rs:
+  cid_keyed_cff_matches_its_independently_generated_program (line 46) - Score: 100
+    i Test 'cid_keyed_cff_matches_its_independently_generated_program' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_keyed_cff_matches_its_independently_generated_program' uses .unwrap() which silently discards error information
+  identity_h_cid_cff_preserves_explicit_unicode (line 62) - Score: 100
+    i Test 'identity_h_cid_cff_preserves_explicit_unicode' asserts against a hardcoded constant instead of a computed expected value
+  embedded_encoding_remaps_codes_before_selecting_cff_cids (line 73) - Score: 100
+    i Test 'embedded_encoding_remaps_codes_before_selecting_cff_cids' asserts against a hardcoded constant instead of a computed expected value
+  cid_cff_widths_use_cids_not_charstring_indices (line 119) - Score: 90
+    - Test 'cid_cff_widths_use_cids_not_charstring_indices' does not call any production code
+  remapped_cid_cff_widths_follow_encoding_cids (line 129) - Score: 90
+    - Test 'remapped_cid_cff_widths_follow_encoding_cids' does not call any production code
+  cid_cff_vertical_advance_uses_w2 (line 139) - Score: 90
+    - Test 'cid_cff_vertical_advance_uses_w2' does not call any production code
+  cff_renderer_keeps_cid_gid_unicode_and_vertical_advance_separate (line 150) - Score: 100
+    i Test 'cff_renderer_keeps_cid_gid_unicode_and_vertical_advance_separate' uses .unwrap() which silently discards error information
+  private_cid_cff_without_tounicode_does_not_turn_cids_or_bytes_into_text (line 185) - Score: 100
+    i Test 'private_cid_cff_without_tounicode_does_not_turn_cids_or_bytes_into_text' has multiple assertions without diagnostic messages
+    i Test 'private_cid_cff_without_tounicode_does_not_turn_cids_or_bytes_into_text' uses .unwrap() which silently discards error information
+  invalid_cff_program_is_rejected_without_discarding_explicit_text_metadata (line 231) - Score: 100
+    i Test 'invalid_cff_program_is_rejected_without_discarding_explicit_text_metadata' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'invalid_cff_program_is_rejected_without_discarding_explicit_text_metadata' has multiple assertions without diagnostic messages
+    i Test 'invalid_cff_program_is_rejected_without_discarding_explicit_text_metadata' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

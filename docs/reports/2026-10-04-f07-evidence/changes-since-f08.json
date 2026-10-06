@@ -1,0 +1,6 @@
+[
+  "oxidize-pdf-core/src/fonts/resolved.rs",
+  "oxidize-pdf-core/src/text/extraction_cmap.rs",
+  "oxidize-pdf-core/tests/fixtures/text_contracts/coverage.json",
+  "oxidize-pdf-core/tests/text_symbolic_truetype_contract_test.rs"
+]
