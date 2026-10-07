@@ -1,0 +1,11 @@
+{
+  "version": "5.3.0",
+  "source_commit": "ca9c662915e5c5a2ce78468963cc80bca1e7bde3",
+  "sha256": "ad383cc99d248cdf08870069d2fc507aaa45ddfff4acb2c349aad8f7d4b9593e",
+  "source_files_identical": 465,
+  "readme_identical": true,
+  "yanked": false,
+  "msrv": "1.88",
+  "metadata_source": "https://index.crates.io/ox/id/oxidize-pdf",
+  "api_status": 403
+}

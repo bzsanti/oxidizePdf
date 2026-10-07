@@ -248,7 +248,6 @@ fn test_large_document_memory_efficiency() -> Result<()> {
 
     // Verify file size is reasonable with compression
     let file_size = fs::metadata(&large_path).unwrap().len();
-    assert!(file_size > 20000); // Should be substantial
     assert!(file_size < 10_000_000); // But not excessive (under 10MB)
 
     // Test in-memory generation efficiency
@@ -258,6 +257,36 @@ fn test_large_document_memory_efficiency() -> Result<()> {
 
     assert!(!pdf_bytes.is_empty());
     assert!(memory_duration.as_secs() < 10);
+
+    // Small compressed output is valid: #661 shares repeated font resources.
+    // Prove that every page and content line survived both output APIs instead
+    // of requiring redundant bytes as a proxy for a complete document.
+    for bytes in [fs::read(&large_path).unwrap(), pdf_bytes] {
+        let parsed = oxidize_pdf::parser::PdfDocument::new(
+            oxidize_pdf::parser::PdfReader::new(Cursor::new(bytes)).unwrap(),
+        );
+        assert_eq!(parsed.page_count().unwrap(), page_count);
+        for page_num in 1..=page_count {
+            let extracted = parsed.extract_text_from_page(page_num - 1).unwrap();
+            let mut expected = vec![format!("Large Document - Page {page_num}/{page_count}")];
+            for section in 1..=5 {
+                expected.push(format!("Section {section} on page {page_num}"));
+                for line in 1..=8 {
+                    expected.push(format!("Content line {line} of section {section}"));
+                }
+            }
+            assert_eq!(
+                extracted
+                    .text
+                    .lines()
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<_>>(),
+                expected,
+                "page {page_num} lost or changed content",
+            );
+        }
+    }
 
     println!("Large document test completed:");
     println!("  Pages: {page_count}");

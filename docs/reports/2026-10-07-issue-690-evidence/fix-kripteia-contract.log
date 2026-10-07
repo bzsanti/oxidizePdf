@@ -1,0 +1,67 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 9 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...pdf-core/tests/text_tagged_preparation_contract_test.rs        9     97
+
+--- Worst Offenders ---
+  nested_tagged_tree_with_authoritative_metadata_splits_3_3_6 (target/issue690-review/oxidize-pdf-core/tests/text_tagged_preparation_contract_test.rs:68) - Score: 90
+    - Helper 'verify_split' starts a resource and is invoked by 3 tests
+  supplied_metadata_prepares_nested_source_without_rewriting_it (target/issue690-review/oxidize-pdf-core/tests/text_tagged_preparation_contract_test.rs:129) - Score: 90
+    - Helper 'verify_split' starts a resource and is invoked by 3 tests
+    i Test 'supplied_metadata_prepares_nested_source_without_rewriting_it' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'supplied_metadata_prepares_nested_source_without_rewriting_it' has multiple assertions without diagnostic messages
+    i Test 'supplied_metadata_prepares_nested_source_without_rewriting_it' uses .unwrap() which silently discards error information
+  complete_matrix_preserves_nested_shape_actualtext_and_sparse_mcids (target/issue690-review/oxidize-pdf-core/tests/text_tagged_preparation_contract_test.rs:232) - Score: 90
+    - Helper 'verify_split' starts a resource and is invoked by 3 tests
+    i Test 'complete_matrix_preserves_nested_shape_actualtext_and_sparse_mcids' has multiple assertions without diagnostic messages
+    i Test 'complete_matrix_preserves_nested_shape_actualtext_and_sparse_mcids' uses .unwrap() which silently discards error information
+  preflight_reports_language_and_both_figures_together (target/issue690-review/oxidize-pdf-core/tests/text_tagged_preparation_contract_test.rs:95) - Score: 100
+    i Test 'preflight_reports_language_and_both_figures_together' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'preflight_reports_language_and_both_figures_together' has multiple assertions without diagnostic messages
+    i Test 'preflight_reports_language_and_both_figures_together' uses .unwrap() which silently discards error information
+  incomplete_metadata_never_produces_prepared_bytes (target/issue690-review/oxidize-pdf-core/tests/text_tagged_preparation_contract_test.rs:193) - Score: 100
+    i Test 'incomplete_metadata_never_produces_prepared_bytes' has multiple assertions without diagnostic messages
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/tests/text_tagged_preparation_contract_test.rs:
+  nested_tagged_tree_with_authoritative_metadata_splits_3_3_6 (line 68) - Score: 90
+    - Helper 'verify_split' starts a resource and is invoked by 3 tests
+  preflight_reports_language_and_both_figures_together (line 95) - Score: 100
+    i Test 'preflight_reports_language_and_both_figures_together' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'preflight_reports_language_and_both_figures_together' has multiple assertions without diagnostic messages
+    i Test 'preflight_reports_language_and_both_figures_together' uses .unwrap() which silently discards error information
+  supplied_metadata_prepares_nested_source_without_rewriting_it (line 129) - Score: 90
+    - Helper 'verify_split' starts a resource and is invoked by 3 tests
+    i Test 'supplied_metadata_prepares_nested_source_without_rewriting_it' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'supplied_metadata_prepares_nested_source_without_rewriting_it' has multiple assertions without diagnostic messages
+    i Test 'supplied_metadata_prepares_nested_source_without_rewriting_it' uses .unwrap() which silently discards error information
+  incomplete_metadata_never_produces_prepared_bytes (line 193) - Score: 100
+    i Test 'incomplete_metadata_never_produces_prepared_bytes' has multiple assertions without diagnostic messages
+  split_rejects_all_source_metadata_before_publishing_any_part (line 204) - Score: 100
+    i Test 'split_rejects_all_source_metadata_before_publishing_any_part' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'split_rejects_all_source_metadata_before_publishing_any_part' has multiple assertions without diagnostic messages
+    i Test 'split_rejects_all_source_metadata_before_publishing_any_part' uses .unwrap() which silently discards error information
+  complete_matrix_preserves_nested_shape_actualtext_and_sparse_mcids (line 232) - Score: 90
+    - Helper 'verify_split' starts a resource and is invoked by 3 tests
+    i Test 'complete_matrix_preserves_nested_shape_actualtext_and_sparse_mcids' has multiple assertions without diagnostic messages
+    i Test 'complete_matrix_preserves_nested_shape_actualtext_and_sparse_mcids' uses .unwrap() which silently discards error information
+  unknown_blank_or_overwriting_metadata_is_rejected (line 282) - Score: 100
+    i Test 'unknown_blank_or_overwriting_metadata_is_rejected' has multiple assertions without diagnostic messages
+  genuine_deleted_page_references_are_not_hidden_by_pages_type (line 301) - Score: 100
+    i Test 'genuine_deleted_page_references_are_not_hidden_by_pages_type' has multiple assertions without diagnostic messages
+    i Test 'genuine_deleted_page_references_are_not_hidden_by_pages_type' uses .unwrap() which silently discards error information
+  corrupt_parent_count_and_generation_remain_rejected (line 330) - Score: 100
+    i Test 'corrupt_parent_count_and_generation_remain_rejected' has multiple assertions without diagnostic messages
+    i Test 'corrupt_parent_count_and_generation_remain_rejected' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

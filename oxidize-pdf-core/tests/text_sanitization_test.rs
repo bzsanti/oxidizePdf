@@ -6,7 +6,8 @@
 //! These tests follow TDD methodology - written BEFORE implementation.
 
 use oxidize_pdf::text::extraction::{
-    sanitize_extracted_text, sanitize_extracted_text_with_policy, CarriageReturnHandling,
+    sanitize_extracted_text, sanitize_extracted_text_with_options,
+    sanitize_extracted_text_with_policy, CarriageReturnHandling,
 };
 
 #[test]
@@ -79,6 +80,35 @@ fn test_unicode_separators_reset_space_collapsing() {
     assert_eq!(
         sanitize_extracted_text("before \u{2028}  after\u{2029}  end"),
         "before \n after\n end",
+    );
+}
+
+#[test]
+fn test_non_breaking_spaces_with_normalization_option() {
+    let input = "Phone:\u{00a0}+34\u{00a0}91\u{00a0}8063000";
+    // 1. By default, raw non-breaking spaces are preserved
+    assert_eq!(sanitize_extracted_text(input), input);
+
+    // 2. When normalize_non_breaking_spaces is true, non-breaking spaces normalize to standard space
+    assert_eq!(
+        sanitize_extracted_text_with_options(input, CarriageReturnHandling::default(), true),
+        "Phone: +34 91 8063000",
+    );
+    assert_eq!(
+        sanitize_extracted_text_with_options(
+            "Narrow:\u{202f}100\u{202f}km",
+            CarriageReturnHandling::default(),
+            true
+        ),
+        "Narrow: 100 km",
+    );
+    assert_eq!(
+        sanitize_extracted_text_with_options(
+            "Mixed \u{00a0}  \u{202f} space",
+            CarriageReturnHandling::default(),
+            true
+        ),
+        "Mixed space",
     );
 }
 

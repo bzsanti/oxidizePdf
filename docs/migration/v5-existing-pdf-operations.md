@@ -93,3 +93,66 @@ loss is visible in the report. Encryption has its own semantic category and
 encrypted inputs currently fail during planning
 because neither engine accepts credentials through this API; the error names
 the selected encryption disposition.
+
+
+## Preparing tagged PDFs with missing author metadata
+
+For preserving splits, `plan_split_pdf` and `split_pdf` now preflight the entire
+source before processing any part. A missing language or description anywhere
+in the source prevents publication; selecting a different first range does not
+hide the remaining requirements.
+
+Use `writer::IncrementalTaggedPdfEditor::new(&source_bytes).preflight()` to
+inspect all residual findings together. This recovers only unambiguous derived
+indexes and missing page keys in a private in-memory view. It preserves page
+hierarchy, content identities, descriptions and ActualText. Malformed references,
+ambiguous ownership, unsupported external-stream MCRs and forbidden edits remain
+errors. This is bounded tagged validation, not PDF/UA certification.
+
+Use the same editor for the subsequent revision:
+
+```rust,ignore
+use oxidize_pdf::writer::{IncrementalTaggedPdfEditor, TaggedPdfMutation};
+use oxidize_pdf::parser::objects::{PdfObject, PdfString};
+
+let editor = IncrementalTaggedPdfEditor::new(&source_bytes)
+    .with_recovered_indexes()?
+    .with_document_language(&author_supplied_language)?;
+let changes = [TaggedPdfMutation::SetElementAttribute {
+    element: figure_from_preflight,
+    key: "Alt".into(),
+    value: Some(PdfObject::String(author_supplied_pdf_string)),
+}];
+let preparation_objects = editor.preparation_objects();
+let plan = editor.plan(&changes)?;
+let result = editor.apply(&changes)?;
+```
+
+Supply one attribute mutation for **each** missing description. Use PDF string
+encoding (UTF-16BE with BOM for arbitrary Unicode), as with other editor
+attributes. Omit `with_document_language` when the source already has a language.
+No author value is inferred. Blank/unknown descriptions or overwriting existing
+descriptions in preparation mode are rejected. Existing ordinary editor edits
+retain their previous behavior.
+
+The builder prepares an in-memory baseline without publishing bytes. Its exact
+object inventory is `preparation_objects()`; `plan.changed_objects` describes
+subsequent mutations relative to that baseline. Both must be shown when reviewing
+the complete change. `result.plan` matches `plan`, and the existing
+`validation_before`/`validation_after` fields describe the mutation stage.
+The public mutation/report enums remain unchanged, preserving exhaustive matches
+and existing struct construction in consumers.
+
+After either preparation builder is used, `apply` requires full validation even
+for an empty mutation list. If findings remain, it returns an error with those
+findings and **no prepared bytes**. Successful `result.pdf_bytes` includes the
+preparation and mutation revisions with the original source as an exact prefix.
+Store it in a separate file and use that file with the ordinary preserving split
+API. The editor performs no filesystem writes; keep the original file unchanged.
+
+Studio/callers must bind author values to the exact snapshot used for preflight.
+All split parts materialize and validate before publication; normal rename
+failures roll back prior parts. This does not promise crash-atomic multi-file
+publication or recovery when the filesystem also refuses rollback writes.
+#690 remains open until Studio and the published package pass original-input
+acceptance. Synthetic descriptions must never become defaults for real documents.

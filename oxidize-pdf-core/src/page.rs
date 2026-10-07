@@ -1788,6 +1788,7 @@ impl Page {
         self.content = content;
     }
 
+    #[cfg(test)]
     pub(crate) fn generate_content(&mut self) -> Result<Vec<u8>> {
         // Generate content with no page info (used for simple pages without headers/footers)
         self.generate_content_with_page_info(None, None, None)
@@ -1802,6 +1803,29 @@ impl Page {
         page_number: Option<usize>,
         total_pages: Option<usize>,
         custom_values: Option<&HashMap<String, String>>,
+    ) -> Result<Vec<u8>> {
+        self.generate_content_with_resources(
+            page_number,
+            total_pages,
+            custom_values,
+            &self.preserved_font_rewrite_map,
+        )
+    }
+
+    /// Generate without cloning the page or changing its preserved-resource map.
+    pub(crate) fn generate_content_with_font_map(
+        &self,
+        font_map: &HashMap<String, String>,
+    ) -> Result<Vec<u8>> {
+        self.generate_content_with_resources(None, None, None, font_map)
+    }
+
+    fn generate_content_with_resources(
+        &self,
+        page_number: Option<usize>,
+        total_pages: Option<usize>,
+        custom_values: Option<&HashMap<String, String>>,
+        font_map: &HashMap<String, String>,
     ) -> Result<Vec<u8>> {
         let mut final_content = Vec::new();
 
@@ -1827,25 +1851,22 @@ impl Page {
         // the most recent switch), so the relative order of the two
         // appends below is irrelevant.
         crate::graphics::ops::serialize_ops(&mut final_content, &self.page_ops);
-        let gfx_tail = self.graphics_context.generate_operations()?;
-        final_content.extend_from_slice(&gfx_tail);
-        let text_tail = self.text_context.generate_operations()?;
-        final_content.extend_from_slice(&text_tail);
+        crate::graphics::ops::serialize_ops(&mut final_content, self.graphics_context.ops_slice());
+        crate::graphics::ops::serialize_ops(&mut final_content, self.text_context.ops_slice());
 
         // Add preserved original content. Issue #395: rewrite only the font
         // references the writer disambiguated (collision-only). When no font
         // collided, `preserved_font_rewrite_map` is empty and the preserved
         // content is emitted verbatim — the common case (incl. all-non-base-14
         // inputs like `testi.pdf`), which avoids ever touching the stream.
-        let content_to_add = if self.preserved_font_rewrite_map.is_empty()
-            || self.content.is_empty()
-        {
-            self.content.clone()
+        if font_map.is_empty() || self.content.is_empty() {
+            final_content.extend_from_slice(&self.content);
         } else {
-            crate::writer::rewrite_font_references(&self.content, &self.preserved_font_rewrite_map)
-        };
-
-        final_content.extend_from_slice(&content_to_add);
+            final_content.extend_from_slice(&crate::writer::rewrite_font_references(
+                &self.content,
+                font_map,
+            ));
+        }
 
         // Render footer if present
         if let Some(footer) = &self.footer {
@@ -1947,14 +1968,25 @@ impl Page {
     /// graphics-context `draw_text`). Both builtin and custom fonts
     /// appear as keys; the writer filters to the registered custom
     /// fonts at subsetting time (builtin fonts don't need subsetting).
+    pub(crate) fn merge_used_characters_into(&self, target: &mut HashMap<String, HashSet<char>>) {
+        for (name, chars) in self
+            .graphics_context
+            .get_used_characters_by_font()
+            .iter()
+            .chain(self.text_context.get_used_characters_by_font())
+        {
+            if let Some(existing) = target.get_mut(name) {
+                existing.extend(chars);
+            } else {
+                target.insert(name.clone(), chars.clone());
+            }
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn get_used_characters_by_font(&self) -> HashMap<String, HashSet<char>> {
-        let mut merged: HashMap<String, HashSet<char>> = HashMap::new();
-        for (name, chars) in self.graphics_context.get_used_characters_by_font() {
-            merged.entry(name.clone()).or_default().extend(chars);
-        }
-        for (name, chars) in self.text_context.get_used_characters_by_font() {
-            merged.entry(name.clone()).or_default().extend(chars);
-        }
+        let mut merged = HashMap::new();
+        self.merge_used_characters_into(&mut merged);
         merged
     }
 

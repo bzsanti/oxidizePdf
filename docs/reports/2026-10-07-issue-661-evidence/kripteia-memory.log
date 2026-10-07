@@ -1,0 +1,65 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/memory_optimization_integration.rs         7     96
+
+--- Worst Offenders ---
+  test_large_document_memory_efficiency (oxidize-pdf-core/tests/memory_optimization_integration.rs:179) - Score: 90
+    - Test 'test_large_document_memory_efficiency' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_large_document_memory_efficiency' has multiple assertions without diagnostic messages
+    i Test 'test_large_document_memory_efficiency' uses .unwrap() which silently discards error information
+  test_memory_statistics_tracking (oxidize-pdf-core/tests/memory_optimization_integration.rs:419) - Score: 90
+    - Test 'test_memory_statistics_tracking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_memory_statistics_tracking' has multiple assertions without diagnostic messages
+    i Test 'test_memory_statistics_tracking' uses .unwrap() which silently discards error information
+  test_batch_processing_memory_efficiency (oxidize-pdf-core/tests/memory_optimization_integration.rs:487) - Score: 90
+    - Test 'test_batch_processing_memory_efficiency' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_batch_processing_memory_efficiency' has multiple assertions without diagnostic messages
+    i Test 'test_batch_processing_memory_efficiency' uses .unwrap() which silently discards error information
+  test_memory_optimized_document_creation (oxidize-pdf-core/tests/memory_optimization_integration.rs:19) - Score: 100
+    i Test 'test_memory_optimized_document_creation' has multiple assertions without diagnostic messages
+    i Test 'test_memory_optimized_document_creation' uses .unwrap() which silently discards error information
+  test_optimized_reader_memory_workflows (oxidize-pdf-core/tests/memory_optimization_integration.rs:80) - Score: 100
+    i Test 'test_optimized_reader_memory_workflows' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_optimized_reader_memory_workflows' has multiple assertions without diagnostic messages
+    i Test 'test_optimized_reader_memory_workflows' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/memory_optimization_integration.rs:
+  test_memory_optimized_document_creation (line 19) - Score: 100
+    i Test 'test_memory_optimized_document_creation' has multiple assertions without diagnostic messages
+    i Test 'test_memory_optimized_document_creation' uses .unwrap() which silently discards error information
+  test_optimized_reader_memory_workflows (line 80) - Score: 100
+    i Test 'test_optimized_reader_memory_workflows' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_optimized_reader_memory_workflows' has multiple assertions without diagnostic messages
+    i Test 'test_optimized_reader_memory_workflows' uses .unwrap() which silently discards error information
+  test_memory_manager_integration (line 135) - Score: 100
+    i Test 'test_memory_manager_integration' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_memory_manager_integration' has multiple assertions without diagnostic messages
+  test_large_document_memory_efficiency (line 179) - Score: 90
+    - Test 'test_large_document_memory_efficiency' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_large_document_memory_efficiency' has multiple assertions without diagnostic messages
+    i Test 'test_large_document_memory_efficiency' uses .unwrap() which silently discards error information
+  test_content_type_memory_optimization (line 302) - Score: 100
+    i Test 'test_content_type_memory_optimization' has multiple assertions without diagnostic messages
+    i Test 'test_content_type_memory_optimization' uses .unwrap() which silently discards error information
+  test_memory_statistics_tracking (line 419) - Score: 90
+    - Test 'test_memory_statistics_tracking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_memory_statistics_tracking' has multiple assertions without diagnostic messages
+    i Test 'test_memory_statistics_tracking' uses .unwrap() which silently discards error information
+  test_batch_processing_memory_efficiency (line 487) - Score: 90
+    - Test 'test_batch_processing_memory_efficiency' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_batch_processing_memory_efficiency' has multiple assertions without diagnostic messages
+    i Test 'test_batch_processing_memory_efficiency' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -317,6 +317,95 @@ pub fn mutate_pdf_pages_lossless<P: AsRef<Path>, Q: AsRef<Path>>(
     Ok(report)
 }
 
+/// Recover only derived tagged indexes/page keys, keeping the original page tree.
+/// The temporary revision may still lack author metadata and stays internal.
+pub(crate) fn recover_tagged_structure(base: &[u8]) -> Result<Vec<u8>, PdfError> {
+    recover_tagged_structure_with_inventory(base).map(|(bytes, _)| bytes)
+}
+
+pub(crate) fn recover_tagged_structure_with_inventory(
+    base: &[u8],
+) -> Result<(Vec<u8>, Vec<(u32, u16)>), PdfError> {
+    let mut reader = PdfReader::new(Cursor::new(base))?;
+    if reader.is_encrypted() {
+        return Err(PdfError::PermissionDenied(
+            "tagged preparation does not support encrypted PDFs".to_string(),
+        ));
+    }
+    let catalog = reader.catalog()?.clone();
+    ensure_modification_allowed(
+        &mut reader,
+        &catalog,
+        IncrementalModification::TaggedStructure,
+    )?;
+    let page_root = catalog
+        .get("Pages")
+        .and_then(PdfObject::as_reference)
+        .ok_or_else(|| invalid_lossless("catalog /Pages must be indirect"))?;
+    let structure_root = catalog
+        .get("StructTreeRoot")
+        .and_then(PdfObject::as_reference)
+        .ok_or_else(|| invalid_lossless("tagged preparation requires indirect /StructTreeRoot"))?;
+    let original_root = object_dictionary(&mut reader, structure_root, "structure root")?;
+    let index_ids: HashSet<_> = ["ParentTree", "IDTree"]
+        .iter()
+        .filter_map(|key| original_root.get(key).and_then(PdfObject::as_reference))
+        .collect();
+    let mut pages = Vec::new();
+    walk_page_tree(
+        &mut reader,
+        page_root,
+        None,
+        HashMap::new(),
+        &mut HashSet::new(),
+        &mut pages,
+        0,
+    )?;
+    let page_ids: HashSet<_> = pages.iter().map(|page| page.reference).collect();
+    let projection = super::tagged_split::recover(
+        &mut reader,
+        &catalog,
+        pages
+            .into_iter()
+            .map(|page| (page.reference, page.dictionary))
+            .collect(),
+    )?;
+    // Exact root-edge exemptions only: aliases of an absent index elsewhere
+    // must still fail, as must unrelated reachable malformed references.
+    reachable_from_catalog(&mut reader, &catalog, &projection.recovered)?;
+    let mut update = IncrementalUpdate::from_base(base)?;
+    let mut changed: Vec<_> = projection.replacements.keys().copied().collect();
+    if let Some(xref) = update.pending_xref_stream_id() {
+        changed.push(xref);
+    }
+    changed.sort_unstable();
+    for (id, replacement) in projection.replacements {
+        if !index_ids.contains(&id) {
+            let mut before = object_dictionary(&mut reader, id, "recovery source")?;
+            let mut after = replacement
+                .as_dict()
+                .cloned()
+                .ok_or_else(|| invalid_lossless("recovery replacement must be dictionary"))?;
+            let allowed: &[&str] = if id == structure_root {
+                &["ParentTree", "IDTree", "ParentTreeNextKey"]
+            } else if page_ids.contains(&id) {
+                &["StructParents"]
+            } else {
+                &[]
+            };
+            before.0.retain(|key, _| !allowed.contains(&key.0.as_str()));
+            after.0.retain(|key, _| !allowed.contains(&key.0.as_str()));
+            if before != after {
+                return Err(invalid_lossless(
+                    "tagged preparation would alter authoritative structure/content",
+                ));
+            }
+        }
+        update.replace(id, replacement)?;
+    }
+    Ok((update.finish()?, changed))
+}
+
 fn mutate_pdf_bytes_lossless(
     base: &[u8],
     batch: &PageMutationBatch,
@@ -432,7 +521,7 @@ fn mutate_pdf_bytes_lossless(
     ensure_catalog_does_not_reference_deleted_pages(
         &mut reader,
         &catalog,
-        root_reference,
+        &visited,
         &deleted_refs,
         &projection.replacements,
     )?;
@@ -440,7 +529,7 @@ fn mutate_pdf_bytes_lossless(
         &mut reader,
         &source_pages,
         &retained,
-        root_reference,
+        &visited,
         &deleted_refs,
         &projection.replacements,
     )?;
@@ -1316,7 +1405,7 @@ fn prospective_source_references<R: Read + Seek>(
 fn ensure_catalog_does_not_reference_deleted_pages<R: Read + Seek>(
     reader: &mut PdfReader<R>,
     catalog: &PdfDictionary,
-    page_root: (u32, u16),
+    page_tree: &HashSet<(u32, u16)>,
     deleted: &HashSet<(u32, u16)>,
     overrides: &HashMap<(u32, u16), PdfObject>,
 ) -> Result<(), PdfError> {
@@ -1339,15 +1428,32 @@ fn ensure_catalog_does_not_reference_deleted_pages<R: Read + Seek>(
                         "cannot delete page {number} {generation} R because a catalog-level structure references it"
                     )));
                 }
-                if id == page_root || !visited.insert(id) {
+                if !visited.insert(id) {
                     continue;
                 }
-                pending.push(
-                    super::tagged_split::read_object(reader, (number, generation), overrides)
-                        .map_err(|error| {
-                            invalid_lossless(format!("inspect catalog references: {error}"))
-                        })?,
-                );
+                let object =
+                    super::tagged_split::read_object(reader, id, overrides).map_err(|error| {
+                        invalid_lossless(format!("inspect catalog references: {error}"))
+                    })?;
+                // Only identities validated by walk_page_tree may omit their
+                // hierarchy edges. Other entries remain semantic references.
+                if page_tree.contains(&id) {
+                    let dictionary = object.as_dict().ok_or_else(|| {
+                        invalid_lossless("validated page-tree node is not a dictionary")
+                    })?;
+                    pending.extend(
+                        dictionary
+                            .0
+                            .iter()
+                            .filter(|(key, _)| {
+                                key.0 != "Parent"
+                                    && !(dictionary.get_type() == Some("Pages") && key.0 == "Kids")
+                            })
+                            .map(|(_, value)| value.clone()),
+                    );
+                } else {
+                    pending.push(object);
+                }
             }
             PdfObject::Array(array) => pending.extend(array.0),
             PdfObject::Dictionary(dictionary) => pending.extend(dictionary.0.into_values()),
@@ -1362,7 +1468,7 @@ fn ensure_retained_pages_do_not_reference_deleted_pages<R: Read + Seek>(
     reader: &mut PdfReader<R>,
     pages: &[LosslessPage],
     retained: &HashSet<usize>,
-    page_root: (u32, u16),
+    page_tree: &HashSet<(u32, u16)>,
     deleted: &HashSet<(u32, u16)>,
     overrides: &HashMap<(u32, u16), PdfObject>,
 ) -> Result<(), PdfError> {
@@ -1391,15 +1497,32 @@ fn ensure_retained_pages_do_not_reference_deleted_pages<R: Read + Seek>(
                         "cannot delete page {number} {generation} R because a retained page structure references it"
                     )));
                 }
-                if id == page_root || !visited.insert(id) {
+                if !visited.insert(id) {
                     continue;
                 }
-                pending.push(
-                    super::tagged_split::read_object(reader, (number, generation), overrides)
-                        .map_err(|error| {
-                            invalid_lossless(format!("inspect retained page references: {error}"))
-                        })?,
-                );
+                let object =
+                    super::tagged_split::read_object(reader, id, overrides).map_err(|error| {
+                        invalid_lossless(format!("inspect retained page references: {error}"))
+                    })?;
+                // Only identities validated by walk_page_tree may omit their
+                // hierarchy edges. Other entries remain semantic references.
+                if page_tree.contains(&id) {
+                    let dictionary = object.as_dict().ok_or_else(|| {
+                        invalid_lossless("validated page-tree node is not a dictionary")
+                    })?;
+                    pending.extend(
+                        dictionary
+                            .0
+                            .iter()
+                            .filter(|(key, _)| {
+                                key.0 != "Parent"
+                                    && !(dictionary.get_type() == Some("Pages") && key.0 == "Kids")
+                            })
+                            .map(|(_, value)| value.clone()),
+                    );
+                } else {
+                    pending.push(object);
+                }
             }
             PdfObject::Array(array) => pending.extend(array.0),
             PdfObject::Dictionary(dictionary) => pending.extend(dictionary.0.into_values()),

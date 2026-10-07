@@ -1,0 +1,52 @@
+{
+  "qpdf": [
+    {
+      "pdf": "prepared",
+      "exit": 3,
+      "output": "checking target/issue690-external/prepared.pdf\nPDF Version: 1.3\nFile is not encrypted\nFile is not linearized\nWARNING: target/issue690-external/prepared.pdf (object 9 0): object has offset 0\nWARNING: target/issue690-external/prepared.pdf (object 26 0): object has offset 0\nWARNING: target/issue690-external/prepared.pdf (object 27 0): object has offset 0\nWARNING: target/issue690-external/prepared.pdf (object 28 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+    },
+    {
+      "pdf": "part0",
+      "exit": 3,
+      "output": "checking target/issue690-external/part0.pdf\nPDF Version: 1.3\nFile is not encrypted\nFile is not linearized\nWARNING: target/issue690-external/part0.pdf (object 9 0): object has offset 0\nWARNING: target/issue690-external/part0.pdf (object 26 0): object has offset 0\nWARNING: target/issue690-external/part0.pdf (object 27 0): object has offset 0\nWARNING: target/issue690-external/part0.pdf (object 28 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+    },
+    {
+      "pdf": "part1",
+      "exit": 3,
+      "output": "checking target/issue690-external/part1.pdf\nPDF Version: 1.3\nFile is not encrypted\nFile is not linearized\nWARNING: target/issue690-external/part1.pdf (object 9 0): object has offset 0\nWARNING: target/issue690-external/part1.pdf (object 26 0): object has offset 0\nWARNING: target/issue690-external/part1.pdf (object 27 0): object has offset 0\nWARNING: target/issue690-external/part1.pdf (object 28 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+    },
+    {
+      "pdf": "part2",
+      "exit": 3,
+      "output": "checking target/issue690-external/part2.pdf\nPDF Version: 1.3\nFile is not encrypted\nFile is not linearized\nWARNING: target/issue690-external/part2.pdf (object 9 0): object has offset 0\nWARNING: target/issue690-external/part2.pdf (object 26 0): object has offset 0\nWARNING: target/issue690-external/part2.pdf (object 27 0): object has offset 0\nWARNING: target/issue690-external/part2.pdf (object 28 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+    }
+  ],
+  "text_pages_equal": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "raster_pages_equal": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ]
+}

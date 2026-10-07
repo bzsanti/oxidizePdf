@@ -1,0 +1,392 @@
+[
+  {
+    "allocations": {
+      "calls": 6320,
+      "requested_bytes": 4711120
+    },
+    "bytes": 5015,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": {
+      "calls": 34840,
+      "requested_bytes": 43907200
+    },
+    "bytes": 9483,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": {
+      "calls": 318510,
+      "requested_bytes": 431140900
+    },
+    "bytes": 53903,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": {
+      "calls": 6170,
+      "requested_bytes": 1205130
+    },
+    "bytes": 6799,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": {
+      "calls": 33350,
+      "requested_bytes": 9215770
+    },
+    "bytes": 27315,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": {
+      "calls": 303530,
+      "requested_bytes": 84967110
+    },
+    "bytes": 232380,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": {
+      "calls": 6060,
+      "requested_bytes": 4696260
+    },
+    "bytes": 5015,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "tracking"
+  },
+  {
+    "allocations": {
+      "calls": 32420,
+      "requested_bytes": 43813360
+    },
+    "bytes": 9483,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "tracking"
+  },
+  {
+    "allocations": {
+      "calls": 294490,
+      "requested_bytes": 430289260
+    },
+    "bytes": 53903,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "tracking"
+  },
+  {
+    "allocations": {
+      "calls": 5910,
+      "requested_bytes": 1190270
+    },
+    "bytes": 6799,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "tracking"
+  },
+  {
+    "allocations": {
+      "calls": 30930,
+      "requested_bytes": 9121930
+    },
+    "bytes": 27315,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "tracking"
+  },
+  {
+    "allocations": {
+      "calls": 279510,
+      "requested_bytes": 84115470
+    },
+    "bytes": 232380,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "tracking"
+  },
+  {
+    "allocations": {
+      "calls": 5520,
+      "requested_bytes": 4577580
+    },
+    "bytes": 5015,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "copies"
+  },
+  {
+    "allocations": {
+      "calls": 27020,
+      "requested_bytes": 42626470
+    },
+    "bytes": 9483,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "copies"
+  },
+  {
+    "allocations": {
+      "calls": 240490,
+      "requested_bytes": 418422020
+    },
+    "bytes": 53903,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "copies"
+  },
+  {
+    "allocations": {
+      "calls": 5390,
+      "requested_bytes": 1053720
+    },
+    "bytes": 6799,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "copies"
+  },
+  {
+    "allocations": {
+      "calls": 25730,
+      "requested_bytes": 7756430
+    },
+    "bytes": 27315,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "copies"
+  },
+  {
+    "allocations": {
+      "calls": 227510,
+      "requested_bytes": 70460470
+    },
+    "bytes": 232380,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "copies"
+  },
+  {
+    "allocations": {
+      "calls": 5290,
+      "requested_bytes": 4575140
+    },
+    "bytes": 5015,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "formatting"
+  },
+  {
+    "allocations": {
+      "calls": 25440,
+      "requested_bytes": 42609520
+    },
+    "bytes": 9483,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "formatting"
+  },
+  {
+    "allocations": {
+      "calls": 225410,
+      "requested_bytes": 418258370
+    },
+    "bytes": 53903,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "formatting"
+  },
+  {
+    "allocations": {
+      "calls": 5160,
+      "requested_bytes": 1051280
+    },
+    "bytes": 6799,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "formatting"
+  },
+  {
+    "allocations": {
+      "calls": 24150,
+      "requested_bytes": 7739480
+    },
+    "bytes": 27315,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "formatting"
+  },
+  {
+    "allocations": {
+      "calls": 212430,
+      "requested_bytes": 70296820
+    },
+    "bytes": 232380,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "formatting"
+  },
+  {
+    "allocations": {
+      "calls": 5300,
+      "requested_bytes": 4575220
+    },
+    "bytes": 5015,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "compression"
+  },
+  {
+    "allocations": {
+      "calls": 24820,
+      "requested_bytes": 10921140
+    },
+    "bytes": 9483,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "compression"
+  },
+  {
+    "allocations": {
+      "calls": 218490,
+      "requested_bytes": 69685390
+    },
+    "bytes": 53903,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "default",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "compression"
+  },
+  {
+    "allocations": {
+      "calls": 5160,
+      "requested_bytes": 1051280
+    },
+    "bytes": 6799,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 1,
+    "serialization_ns": 0,
+    "variant": "compression"
+  },
+  {
+    "allocations": {
+      "calls": 24150,
+      "requested_bytes": 7739480
+    },
+    "bytes": 27315,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 10,
+    "serialization_ns": 0,
+    "variant": "compression"
+  },
+  {
+    "allocations": {
+      "calls": 212430,
+      "requested_bytes": 70296820
+    },
+    "bytes": 232380,
+    "construction_ns": 0,
+    "documents": 10,
+    "mode": "raw",
+    "pages": 100,
+    "serialization_ns": 0,
+    "variant": "compression"
+  }
+]

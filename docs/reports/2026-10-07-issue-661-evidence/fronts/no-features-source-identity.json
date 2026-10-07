@@ -1,0 +1,7 @@
+{
+  "src/compression.rs": "51d32171e4218d308e4173d7e79d58d3689fc5e9aa4874562aeadf79073fe179",
+  "src/graphics/pdf_image.rs": "7426af9b9bdf8a43c54cbafb79f0d2c31336bcb6474792c76262de10358fbc5e",
+  "src/graphics/png_decoder.rs": "2d94597e68b912631ddeaf33ae44d45e0d1b57fdabab202d55bee9ed77a17d9f",
+  "src/operations/extract_images.rs": "76d891a8f74e605053233d6f4eb1f8377d0610dc06b987f5e9074bc36de53932",
+  "src/operations/page_analysis.rs": "a1e29ea3600a23120ccd15e04845e6921d10e1a525a5ec04e77c2b9ff8409153"
+}

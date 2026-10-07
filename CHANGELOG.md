@@ -8,6 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.4.0] - 2026-10-07
+
+### Added
+
+- Extend `IncrementalTaggedPdfEditor` with preflight, unambiguous derived-index
+  recovery, explicit document language and a preparation object inventory.
+  Author metadata uses the existing editor mutations; preparation validates the
+  complete result before returning bytes (#690, #692).
+
+### Fixed
+
+- Normalize non-breaking spaces in ordinary extracted text while preserving
+  opt-in ActualText behavior (#687, #688).
+- Split nested tagged page trees without treating their hierarchy links as
+  deleted semantic references. Report all missing author metadata before output,
+  preserve empty structure groups during recovery, and restore existing outputs
+  when split publication fails (#690, #691, #692).
+
+### Performance
+
+- Share page font resources within generated multipage documents and preallocate
+  font dictionaries, reducing repeated allocation and serialization. Preserve Raw
+  font names, custom-font precedence and imported-page resource isolation (#661).
+- Reduce character-usage aggregation, page/stream copies and numeric formatting
+  allocations; reuse page compression state conservatively for longer multipage
+  content, preserving compression defaults and independently decodable streams.
+  Workload-specific measurements and empty-page tradeoffs are recorded in #661.
+
 ## [5.3.0] - 2026-10-06
 
 ### Added

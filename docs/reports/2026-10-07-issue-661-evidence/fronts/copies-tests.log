@@ -1,0 +1,68 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue661-writer/oxidize-pdf-core)
+warning: method `generate_operations` is never used
+   --> oxidize-pdf-core/src/graphics/mod.rs:802:19
+    |
+195 | impl GraphicsContext {
+    | -------------------- method in this implementation
+...
+802 |     pub(crate) fn generate_operations(&self) -> Result<Vec<u8>> {
+    |                   ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `oxidize-pdf` (lib) generated 1 warning
+    Finished `test` profile [unoptimized] target(s) in 19.98s
+     Running tests/issue_395_font_collision_test.rs (target/issue661-writer/target/debug/deps/issue_395_font_collision_test-ed21cfa44d2353dc)
+
+running 3 tests
+test base14_key_collision_cross_line_content ... ok
+test non_base14_key_cross_line_content_not_corrupted ... ok
+test base14_key_collision_simple_content ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_616_imported_footer_test.rs (target/issue661-writer/target/debug/deps/issue_616_imported_footer_test-a57cb29510371129)
+
+running 3 tests
+test footer_after_comment_without_final_eol ... ok
+test footer_after_terminated_content ... ok
+test footer_after_operator_without_final_eol ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/issue_661_writer_resources_test.rs (target/issue661-writer/target/debug/deps/issue_661_writer_resources_test-bf3e4b9ece4ccdea)
+
+running 6 tests
+test standard_resources_are_written_once_and_raw_variants_survive ... ok
+test imported_shared_resources_remain_local_while_new_pages_share ... ok
+test shared_cjk_font_preserves_characters_from_every_page ... ok
+test shared_custom_font_named_like_a_standard_font_keeps_its_glyphs ... ok
+test late_custom_registration_keeps_usage_from_both_contexts_and_pages ... ok
+test shared_resources_survive_repeated_saves_and_added_custom_page ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.14s
+
+     Running tests/painter_model_ordering.rs (target/issue661-writer/target/debug/deps/painter_model_ordering-c8ee5e27d50cd9f9)
+
+running 7 tests
+test interleaved_gfx_text_gfx_preserves_call_order ... ok
+test pure_text_only_does_not_regress ... ok
+test nan_font_size_sanitised_at_emission_via_text_context ... ok
+test text_then_graphics_preserves_call_order ... ok
+test add_text_flow_between_gfx_preserves_call_order ... ok
+test add_text_flow_then_page_text_preserves_call_order ... ok
+test pure_graphics_only_does_not_regress ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/per_font_char_tracking_test.rs (target/issue661-writer/target/debug/deps/per_font_char_tracking_test-acd979855e645bd9)
+
+running 6 tests
+test both_fonts_present_when_both_used ... ok
+test rich_text_with_custom_font_embeds_font ... ok
+test header_only_custom_font_embeds_font ... ok
+test unused_latin_font_absent_when_cjk_used ... ok
+test text_flow_with_custom_font_embeds_font ... ok
+test unused_font_is_absent_from_resources ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.29s

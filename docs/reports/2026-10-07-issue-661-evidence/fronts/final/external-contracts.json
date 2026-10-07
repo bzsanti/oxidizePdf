@@ -1,0 +1,113 @@
+{
+  "contracts": [
+    {
+      "file": "cjk-legacy.pdf",
+      "exact_text": [
+        "\u4e2d\u6587",
+        "\u6d4b\u8bd5"
+      ],
+      "sha256": "5f9dbf278397552739ab6adf61d953206be877e7153b3e91a8222c6f10a30f63"
+    },
+    {
+      "file": "cjk-modern.pdf",
+      "exact_text": [
+        "\u4e2d\u6587",
+        "\u6d4b\u8bd5"
+      ],
+      "sha256": "9a9cf52c9680059fa744707eb5db3ef37a70c5ab4eb39ae3ecd74e25c8ef70e0"
+    },
+    {
+      "file": "collision-legacy.pdf",
+      "exact_text": [
+        "Alpha",
+        "Omega"
+      ],
+      "sha256": "bf04e343ff5b0c35fee2fcea304b7184505806f2773552168bb90caa212bb2fd"
+    },
+    {
+      "file": "collision-modern.pdf",
+      "exact_text": [
+        "Alpha",
+        "Omega"
+      ],
+      "sha256": "47a4af44680b24310d7bc8849e1106e3e78e52ea853ac896d9f408d996068783"
+    },
+    {
+      "file": "custom-legacy.pdf",
+      "exact_text": [
+        "Alpha",
+        "Omega"
+      ],
+      "sha256": "409437fb0bacfaf9ae751178bf5c2da9885bdedab9eb9cd811c084d1fb18a798"
+    },
+    {
+      "file": "custom-modern.pdf",
+      "exact_text": [
+        "Alpha",
+        "Omega"
+      ],
+      "sha256": "66e0cfe80517cb0258ed2c520c9b1249fe54e6af9f23d04d373234287c3e080d"
+    },
+    {
+      "file": "raw-legacy.pdf",
+      "exact_text": [
+        "Sample0",
+        "Sample1",
+        "Sample2",
+        "Sample3",
+        "Sample4",
+        "Sample5",
+        "Sample6",
+        "Sample7",
+        "Sample8",
+        "Sample9",
+        "Sample10",
+        "Sample11",
+        "Sample0",
+        "Sample1",
+        "Sample2",
+        "Sample3",
+        "Sample4",
+        "Sample5",
+        "Sample6",
+        "Sample7",
+        "Sample8",
+        "Sample9",
+        "Sample10",
+        "Sample11"
+      ],
+      "sha256": "41a48a96207a313919a5eced77599d0e2f34c6f6ebd7f3bdf558b1cbff9afcc1"
+    },
+    {
+      "file": "raw-modern.pdf",
+      "exact_text": [
+        "Sample0",
+        "Sample1",
+        "Sample2",
+        "Sample3",
+        "Sample4",
+        "Sample5",
+        "Sample6",
+        "Sample7",
+        "Sample8",
+        "Sample9",
+        "Sample10",
+        "Sample11",
+        "Sample0",
+        "Sample1",
+        "Sample2",
+        "Sample3",
+        "Sample4",
+        "Sample5",
+        "Sample6",
+        "Sample7",
+        "Sample8",
+        "Sample9",
+        "Sample10",
+        "Sample11"
+      ],
+      "sha256": "e4581e39aa1a04fcc44e4cadb817f69fe7b2e3849e91c5a761507de2cb7a1379"
+    }
+  ],
+  "identical_raster_pairs": 6
+}

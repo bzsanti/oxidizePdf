@@ -1,3 +1,80 @@
+## Release 5.4.0
+
+- Issue: #693 — release: prepare and publish 5.4.0 — https://github.com/bzsanti/oxidizePdf/issues/693
+- Estado: paquete 5.4.0 validado; PR de release/CI pendientes. Prioridad P1. Responsable: Codex.
+- Cierre: versión/changelog coherentes, paquete validado, PR de release integrado en main con CI aprobado, tag y publicación GitHub/crates.io verificados, sincronización en develop.
+- Última validación: base develop `90c16c0`, PR #692 integrado con 29 checks aprobados y 2 omitidos; producto con 10.419 tests aprobados y QR completo.
+- Siguiente acción: abrir el PR de release hacia main; comprobar CI antes de integrar, etiquetar y publicar.
+- Restricción: #690 permanece abierta por aceptación en Studio y avisos qpdf heredados; #658 queda fuera de la release.
+
+## Consolidar preparación en el editor incremental — #690
+
+- Issue: #690 — fix(operations): complete nested tagged split and preflight for the #621/#677 input — https://github.com/bzsanti/oxidizePdf/issues/690
+- Estado: corrección integrada en develop mediante #692 (`90c16c0`); CI29 aprobados/2 omitidos. Prioridad P1. Responsable: Codex.
+- Cierre: retirar las APIs específicas no publicadas y reutilizar el editor, sus mutaciones y validación sin perder los contratos demostrados de #690.
+- Última validación: corrección:10.419 PASS/0 FAIL, Clippy y QR; consumidor compatible y original3/3/6 con12/12 textos/píxeles idénticos. [Evidencia](docs/reports/2026-10-07-issue-690-review.md).
+- Siguiente acción: verificar aceptación en Studio con el paquete publicado por #693.
+- Pendiente de aceptación: Studio/API publicada y avisos xref heredados. Corrección integrada; aceptación externa pendiente.
+
+## Continuación autorizada de los cuatro frentes — #661 — 2026-10-07
+
+- Issue: #661 — perf(writer): implement measured CPU and allocation improvements from generation profiling — https://github.com/bzsanti/oxidizePdf/issues/661
+- Estado: cuatro frentes implementados y QR completado; publicación/CI de continuación e integración pendientes. Issue confirmada OPEN; alcance autorizado explícitamente por el usuario. Prioridad P1. Responsable Codex.
+- Control: commit 5621e4cb25690c7618981edc03deb15883e4dbc9 del PR #689, base develop. Históricos y WIP raíz preservados.
+- Criterio de cierre: evaluar los cuatro frentes con implementaciones independientes, conservar únicamente mejoras medidas sin regresiones de contratos, documentar costes/limitaciones, QR calidad/seguridad y CI antes de integración.
+
+| Frente de #661 | Estado | Criterio y siguiente acción |
+| --- | --- | --- |
+| Registro de caracteres | Demostrado:242 llamadas/doc evitadas | Eliminar agregaciones/copias evitables sin perder uso por fuente ni registros custom con nombres estándar; medir contra control y probar subsetting/CJK/reutilización |
+| Copias de páginas y streams | Demostrado:540 llamadas/doc adicionales evitadas | Prestar contenido y mover buffers sin alterar orden de pintado, colisiones, headers/footers, metadatos ni saves repetidos |
+| Formateo | Demostrado:158 llamadas/doc adicionales evitadas; bytes preservados | Evitar temporales conservando exactamente precisión, redondeo, escapes, nombres y orden determinista; comparar bytes y mediciones |
+| Compresión | Demostrado con política conservadora; penalización pequeña en vacío documentada | Evaluar reutilización de estado/buffers con datos vacíos, texto, fuentes e imágenes; mantener nivel/backend/default y dependencia Rust; justificar con tiempo/tamaño/asignaciones |
+
+- Última validación: suite conjunta inicial10.397 PASS/0 FAIL/71 ignorados; tras ajustar compresión, finales1 prueba encoder+14 recursos/memoria PASS y Clippy all-targets/internal-testing -D warnings PASS. QR manual y ambas herramientas Kripteia pasan;42 PDFs representativos externos qpdf/texto/raster sin avisos. Paquete1422 fuentes/tests idénticos. La suite completa inicial no se atribuye a una segunda ejecución local final.
+- Medición final respecto del primer PR5621e4cb: facturas1/10/100 páginas comprimidas −5,2%/−48,3%/−13,2% tiempo; sin comprimir −8,9%/−12,5%/−12,1%.10 páginas:3484→2481 alloc/realloc y4.390.720→1.092.106 bytes solicitados, PDF9483 bytes intacto. No son RSS ni garantías universales.
+- Compresión incondicional descartada por regresiones en páginas cortas/imagen. Final: solo multipágina y streams de al menos2048 bytes, reset diferido hasta siguiente uso. Se conserva penalización observada en vacío frente a formatting:1 página+3,45µs/+2,37%;10 páginas+13,94µs/+1,28% con intervalo pareado que incluye cero en10 páginas. Limitación no bloqueante de los contratos PDF, destino #661/informe; no afirmar mejora universal ni ocultar la primera cohorte.
+- Evidencia: docs/reports/2026-10-07-issue-661-review.md y evidencia/fronts, incluidos controles, parches por incremento, muestras e incertidumbre. Históricos intactos, WIP raíz preservado. CI primera versión29 SUCCESS/2 SKIPPED; no valida todavía esta continuación.
+- Siguiente acción exacta: publicar continuación del PR #689 contra develop, comprobar CI sobre su nuevo HEAD y preparar integración. #661 permanece OPEN. CFF pequeño y build sin features quedan registrados por separado sin corrección ni issue inventada.
+
+## Reanudación del rendimiento del writer — #661 — 2026-10-07
+
+- Issue: #661 — perf(writer): implement measured CPU and allocation improvements from generation profiling — https://github.com/bzsanti/oxidizePdf/issues/661
+- Estado: implementación local y revisión completadas; CI/integración pendientes; OPEN y lista de issues comprobadas en GitHub. Prioridad P1. Responsable Codex.
+- Base: develop `9dcf8188a906132991e14946eec228efe98ada01`, checkout aislado `target/issue661-writer`, rama `perf/issue-661-writer`. Checkout raíz y WIP anterior preservados.
+- Criterio de cierre: mejoras implementadas e integradas con medición comparable de tiempos/asignaciones, contratos PDF preservados, validación externa, QR calidad/seguridad y CI aprobados; históricos intactos.
+- Última validación: release 5.3.0 publicada, workflow 37527011742 SUCCESS. Paquete verificado contra índice oficial: no retirado, checksum correcto, commit ca9c662, 465 fuentes y README idénticos, MSRV 1.88 y sin recipient-encryption. API crates.io devuelve403; índice y archivo oficiales accesibles. Evidencia: docs/reports/2026-10-07-issue-661-evidence/baseline-registry.json.
+
+| Requisito y fuente | Estado y evidencia | Bloqueante / siguiente acción |
+| --- | --- | --- |
+| Base reproducible, #661 | Demostrado: develop y paquete 5.3.0 verificados | Fijar consumidor/lock y control inalterado |
+| Reducir CPU/asignaciones, #661 | Demostrado: preasignación y recursos compartidos; producto medido identificado por SHA256 | Conservar tracking por compatibilidad con registros custom del mismo nombre |
+| Preservar contratos, #661 | Demostrado: Raw/custom/CJK, colisiones, importación y reutilización; qpdf/Poppler y raster | Evidencia en informe 2026-10-07-issue-661-review.md |
+| Mejora medida, #661 | Demostrado:192 muestras;10 páginas −10,6% tiempo comprimido/−21,8% sin comprimir;4816→3484 alloc/realloc | No afirmar mejora concluyente en1 página ni confundir bytes acumulados con RSS |
+| Revisión e integración, #661/AGENTS | Pendiente | Regresiones, QR calidad/seguridad y CI antes de integración en develop |
+
+- Última validación de implementación:113 writer tests y37 contratos pasan; suite completa10.393 PASS/1 FAIL/71 ignorados, único fallo por mínimo de20KB ahora sustituido por25 páginas y46 líneas/página exactas. Final12/12 en ambos targets afectados; Clippy completo/final, formato, QR Kripteia/Security y28 PDFs externos pasan. Sin corpus externo en el checkout aislado; no atribuir una ejecución nueva T0–T6/OmniDocBench. Producto y dependencias permanecen idénticos al candidato medido.
+- Dos hallazgos de tests corregidos (fixtures fuera del crate y proxy de tamaño); embedding CFF pequeño preexistente registrado aparte y sin corrección. Informe y evidencia: docs/reports/2026-10-07-issue-661-review.md y directorio contiguo.
+- Siguiente acción exacta: paquete extraído5/5 validado; publicar PR contra develop y validar CI antes de integración. Mantener #661 OPEN hasta demostrar integración.
+
+## Hallazgo separado durante #661 — compilación sin ninguna feature
+
+- Issue: pendiente; lista abierta confirmada sin issue aplicable. Estado: bloqueado para corrección por falta de issue específica. Prioridad P2. Responsable de crear/vincular: mantenimiento/bzsanti.
+- Evidencia: `--no-default-features` falla con18 errores de flate2 ausente tanto en control5621e4cb como en candidato; cinco módulos causales son idénticos byte a byte. Logs e identidad en evidencia fronts/no-features-*. No lo introduce la reutilización del encoder.
+- Dependencia externa y desbloqueo: crear/vincular issue aplicable confirmada OPEN. Criterio de cierre: definir/validar el contrato sin features y corregir los imports/features bajo esa issue.
+- Siguiente acción exacta: mantenimiento debe crear/vincular la issue; no modificar dependencias, features ni esos módulos bajo este hallazgo antes de ello.
+- No bloquea #661: el perfil mínimo soportado por la CI usa `--no-default-features --features compression` (tools/text_contracts/run_fast.py); sus13 contratos focales pasan, al igual que los caminos runtime con compress=false. No afirmar validación de un build sin compression.
+
+## Hallazgo separado durante #661 — OpenType/CFF pequeño sin subsetting
+
+- Issue: pendiente; la lista abierta consultada no contiene una issue aplicable al embedding de programas CFF pequeños. #661 optimiza recursos, no cambia este camino de incrustación.
+- Estado: bloqueado para corrección por falta de issue específica. Prioridad P2. Responsable de crear/vincular: mantenimiento/bzsanti.
+- Evidencia: fixture OTF de3328 bytes, Poppler avisa `Mismatch between font type and embedded font file` tanto en candidato como en control retenido de release5.3.0; Unicode extraído idéntico. `write_font_with_unicode_support` no cambia en #661. Artefactos: docs/reports/2026-10-07-issue-661-evidence/small-cff-probe/.
+- Criterio de cierre: programa completo/subconjunto y Subtype coherentes, sin avisos externos en OTF/CFF pequeño/grande y regresiones discriminantes.
+- Dependencia externa: issue dedicada creada o vinculada por mantenimiento; desbloqueo: issue aplicable confirmada OPEN.
+- Siguiente acción exacta: crear/vincular issue y reproducir los límites/fallbacks del embedding antes de corregir. Restricción: no corregir ni recalibrar métricas bajo esta entrada sin issue.
+- No bloquea el cambio de recursos: defecto presente en control y candidato, código causal intacto; las salidas finales del alcance de subsetting pasan la validación externa sin avisos.
+
+
 ## Release 5.3.0 — 2026-10-06
 
 - Issue: #684 — release: publish 5.3.0 and reconcile release history — https://github.com/bzsanti/oxidizePdf/issues/684

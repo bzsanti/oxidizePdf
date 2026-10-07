@@ -1,0 +1,164 @@
+[
+  {
+    "variant": "control",
+    "mode": "default",
+    "pages": 1,
+    "bytes": 5015,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "812a25edf41d399459852b3aecc6229f14990c49f2e28175d58cd00b5b462c4d"
+  },
+  {
+    "variant": "control",
+    "mode": "default",
+    "pages": 10,
+    "bytes": 9483,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "278fc21b26b5d3dee1fe98a70aa8fcf89731b72df45515196a0a765b5b861ff5"
+  },
+  {
+    "variant": "control",
+    "mode": "default",
+    "pages": 100,
+    "bytes": 53903,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "bcf8db967d2cbef230d7cdf30c901261bd52caaad6aa1e3ddd1f1b09f4423b95"
+  },
+  {
+    "variant": "control",
+    "mode": "raw",
+    "pages": 1,
+    "bytes": 6799,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "efb4d52748752708b2b04d87fe82ebafe336a0c3fc40d91581867be94c9e28b6"
+  },
+  {
+    "variant": "control",
+    "mode": "raw",
+    "pages": 10,
+    "bytes": 27315,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "bcd27e9791ce537dcbcb3258d9f022bb60099f259251c277780ca559aa66497a"
+  },
+  {
+    "variant": "control",
+    "mode": "raw",
+    "pages": 100,
+    "bytes": 232380,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "cf257e0937cf27a88a1180679f40bfe17a2a0a00aa59d1ab5a2fc4989c1b2379"
+  },
+  {
+    "variant": "formatting",
+    "mode": "default",
+    "pages": 1,
+    "bytes": 5015,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "1d410a5c2fc15a3f52a0bf616be1b286de959cb75974b2db00bf1f36c8042fe2"
+  },
+  {
+    "variant": "formatting",
+    "mode": "default",
+    "pages": 10,
+    "bytes": 9483,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "4dc9d577e32c4a662bb7e37064611b545daa7fd14121087e45b47254e5d2a926"
+  },
+  {
+    "variant": "formatting",
+    "mode": "default",
+    "pages": 100,
+    "bytes": 53903,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "3c5c94c4ce7b25fad24623c0daac5bb8f64301aeb20bc471148b112bd3f25ee4"
+  },
+  {
+    "variant": "formatting",
+    "mode": "raw",
+    "pages": 1,
+    "bytes": 6799,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "ea75de866004cf9bcbdb81846dfcca6d5d715759e884a28c6ac8f2811b7c858f"
+  },
+  {
+    "variant": "formatting",
+    "mode": "raw",
+    "pages": 10,
+    "bytes": 27315,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "a1baf244c6c54779092e2da46cd8bf2d6d25b1b9ee348809b1a360b2226b435f"
+  },
+  {
+    "variant": "formatting",
+    "mode": "raw",
+    "pages": 100,
+    "bytes": 232380,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "002a1045ec141841a5b4f492bf5c7cd40e1b219f7eac5d100335e47c3bcacbf3"
+  },
+  {
+    "variant": "compression",
+    "mode": "default",
+    "pages": 1,
+    "bytes": 5015,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "cda5c1a90f2ae26fc75f962eeb34a8fe3e8360a97b90b603cfdae887eb986e3b"
+  },
+  {
+    "variant": "compression",
+    "mode": "default",
+    "pages": 10,
+    "bytes": 9483,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "d58e1cebd6ac3ddfe9517eba0aa08229bbaa4517cfe362f9615b8b36f79d2e3e"
+  },
+  {
+    "variant": "compression",
+    "mode": "default",
+    "pages": 100,
+    "bytes": 53903,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "1f7a2c3afc1d6de8317dae7ea6901cde2cac608d7880c3e38f3dd66a1e924b8c"
+  },
+  {
+    "variant": "compression",
+    "mode": "raw",
+    "pages": 1,
+    "bytes": 6799,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "1bbaf6cb98f69935033b60d9e15e8a60c0a0b183bb02007634e751d533f8a17f"
+  },
+  {
+    "variant": "compression",
+    "mode": "raw",
+    "pages": 10,
+    "bytes": 27315,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "f2628c0d822dcc414d41614e93bb9613bfb36d676892160a71b3228961238a97"
+  },
+  {
+    "variant": "compression",
+    "mode": "raw",
+    "pages": 100,
+    "bytes": 232380,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "7b1782ac1b45139a3d43209181ee7cf55b5cf44fa87849373ab35f8cc44698ce"
+  }
+]

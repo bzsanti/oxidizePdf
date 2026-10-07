@@ -1,0 +1,56 @@
+[
+  {
+    "mode": "default",
+    "pages": 1,
+    "raster_page": 1,
+    "width_or_height": 1000,
+    "gray": true,
+    "identical": true,
+    "sha256": "3fa6fce2cc5df7b85a5fc2ecfc76990534e1cfab4a73d9c5cacd7682c1fbd653"
+  },
+  {
+    "mode": "default",
+    "pages": 10,
+    "raster_page": 1,
+    "width_or_height": 1000,
+    "gray": true,
+    "identical": true,
+    "sha256": "7a0b6fafa382f3b7e38e87ae95fdf36a4a7eaaabc235424e197190c787d15936"
+  },
+  {
+    "mode": "default",
+    "pages": 100,
+    "raster_page": 1,
+    "width_or_height": 1000,
+    "gray": true,
+    "identical": true,
+    "sha256": "d93e402b591422d668cfbf5298e06be76309681564244b2940fe8d0ab162c783"
+  },
+  {
+    "mode": "raw",
+    "pages": 1,
+    "raster_page": 1,
+    "width_or_height": 1000,
+    "gray": true,
+    "identical": true,
+    "sha256": "3fa6fce2cc5df7b85a5fc2ecfc76990534e1cfab4a73d9c5cacd7682c1fbd653"
+  },
+  {
+    "mode": "raw",
+    "pages": 10,
+    "raster_page": 1,
+    "width_or_height": 1000,
+    "gray": true,
+    "identical": true,
+    "sha256": "7a0b6fafa382f3b7e38e87ae95fdf36a4a7eaaabc235424e197190c787d15936"
+  },
+  {
+    "mode": "raw",
+    "pages": 100,
+    "raster_page": 1,
+    "width_or_height": 1000,
+    "gray": true,
+    "identical": true,
+    "sha256": "d93e402b591422d668cfbf5298e06be76309681564244b2940fe8d0ab162c783"
+  }
+]

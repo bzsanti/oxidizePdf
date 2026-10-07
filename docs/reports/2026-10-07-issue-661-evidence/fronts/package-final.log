@@ -1,0 +1,4 @@
+   Packaging oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue661-writer/oxidize-pdf-core)
+warning: package `chacha20 v0.10.0` in Cargo.lock is yanked in registry `crates-io`, consider updating to a version that is not yanked
+warning: package `spin v0.9.8` in Cargo.lock is yanked in registry `crates-io`, consider updating to a version that is not yanked
+    Packaged 1600 files, 26.3MiB (7.2MiB compressed)

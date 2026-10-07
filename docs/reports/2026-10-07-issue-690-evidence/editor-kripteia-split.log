@@ -1,0 +1,52 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...xidize-pdf-core/src/operations/semantic_preservation.rs        6     97
+
+--- Worst Offenders ---
+  inventories_digital_signatures_separately_from_forms (target/issue690-review/oxidize-pdf-core/src/operations/semantic_preservation.rs:1558) - Score: 90
+    i Test 'inventories_digital_signatures_separately_from_forms' uses .unwrap() which silently discards error information
+    - Test 'inventories_digital_signatures_separately_from_forms' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly (target/issue690-review/oxidize-pdf-core/src/operations/semantic_preservation.rs:1645) - Score: 90
+    i Test 'all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly' has multiple assertions without diagnostic messages
+    i Test 'all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly' uses .unwrap() which silently discards error information
+    - Test 'all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly' does not call any production code
+  split_publication_rolls_back_each_failure_position (target/issue690-review/oxidize-pdf-core/src/operations/semantic_preservation.rs:1456) - Score: 100
+    i Test 'split_publication_rolls_back_each_failure_position' uses .unwrap() which silently discards error information
+  split_publication_replaces_the_complete_successful_set (target/issue690-review/oxidize-pdf-core/src/operations/semantic_preservation.rs:1499) - Score: 100
+    i Test 'split_publication_replaces_the_complete_successful_set' uses .unwrap() which silently discards error information
+  empty_annotations_array_is_not_reported_as_document_semantics (target/issue690-review/oxidize-pdf-core/src/operations/semantic_preservation.rs:1578) - Score: 100
+    i Test 'empty_annotations_array_is_not_reported_as_document_semantics' uses .unwrap() which silently discards error information
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/src/operations/semantic_preservation.rs:
+  split_publication_rolls_back_each_failure_position (line 1456) - Score: 100
+    i Test 'split_publication_rolls_back_each_failure_position' uses .unwrap() which silently discards error information
+  split_publication_replaces_the_complete_successful_set (line 1499) - Score: 100
+    i Test 'split_publication_replaces_the_complete_successful_set' uses .unwrap() which silently discards error information
+  inventories_digital_signatures_separately_from_forms (line 1558) - Score: 90
+    i Test 'inventories_digital_signatures_separately_from_forms' uses .unwrap() which silently discards error information
+    - Test 'inventories_digital_signatures_separately_from_forms' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  empty_annotations_array_is_not_reported_as_document_semantics (line 1578) - Score: 100
+    i Test 'empty_annotations_array_is_not_reported_as_document_semantics' uses .unwrap() which silently discards error information
+  inventories_every_required_catalog_structure_with_explicit_dispositions (line 1599) - Score: 100
+    i Test 'inventories_every_required_catalog_structure_with_explicit_dispositions' has multiple assertions without diagnostic messages
+    i Test 'inventories_every_required_catalog_structure_with_explicit_dispositions' uses .unwrap() which silently discards error information
+  all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly (line 1645) - Score: 90
+    i Test 'all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly' has multiple assertions without diagnostic messages
+    i Test 'all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly' uses .unwrap() which silently discards error information
+    - Test 'all_page_selection_preserves_annotations_forms_links_and_catalog_bytes_exactly' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

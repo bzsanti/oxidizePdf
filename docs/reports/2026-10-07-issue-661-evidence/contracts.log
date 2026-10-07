@@ -1,0 +1,90 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue661-writer/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 4.10s
+     Running tests/incremental_overlay_tests.rs (target/debug/deps/incremental_overlay_tests-bfbcb97bd0ca81d4)
+
+running 5 tests
+test test_overlay_multi_page ... ignored
+test test_overlay_preserves_original_text ... ignored
+test test_overlay_with_graphics ... ignored
+test test_overlay_maintains_incremental_structure ... ok
+test test_overlay_file_size_reasonable ... ok
+
+test result: ok. 2 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.76s
+
+     Running tests/inline_font_resources_test.rs (target/debug/deps/inline_font_resources_test-167c7ee6dbafcaca)
+
+running 5 tests
+test plain_text_extractor_resolves_an_indirect_font_subdictionary ... ok
+test plain_text_extractor_reads_tounicode_from_an_inline_font_dictionary ... ok
+test text_extractor_reads_tounicode_from_an_inline_font_dictionary ... ok
+test text_extractor_reads_inline_font_behind_an_indirect_font_subdictionary ... ok
+test a_document_written_by_this_library_stays_readable_to_this_library ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.36s
+
+     Running tests/issue_302_indirect_font_dict_test.rs (target/debug/deps/issue_302_indirect_font_dict_test-9fd2bf0c9430d126)
+
+running 1 test
+test indirect_font_dictionary_is_resolved_and_loaded ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_392_unicode_keyed_cyrillic_test.rs (target/debug/deps/issue_392_unicode_keyed_cyrillic_test-da967572ae176f8b)
+
+running 3 tests
+test font_missing_glyphs_matches_renderability ... ok
+test unicode_keyed_font_emits_type0_not_single_byte ... ok
+test unicode_keyed_font_roundtrips_cyrillic ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/issue_639_build_identification_test.rs (target/debug/deps/issue_639_build_identification_test-ae58e86f529510e6)
+
+running 15 tests
+test fingerprint_reports_effective_writer_configuration ... ok
+test incremental_rejects_incompatible_writer_config_before_output ... ok
+test exhausted_object_numbers_reject_without_output ... ok
+test incremental_replacement_is_explicit_and_uses_document_policy ... ok
+test incremental_writers_do_not_add_info_when_source_has_none ... ok
+test modern_incremental_editor_preserves_info_without_injecting_identification ... ok
+test policy_can_be_changed_between_writes_and_producer_is_independent ... ok
+test overlays_preserve_binary_metadata_geometry_annotations_and_destinations ... ok
+test repeated_updates_preserve_info_and_handle_eof_without_newline ... ok
+test incremental_writers_preserve_the_source_info_by_default ... ok
+test issue_654_encrypted_inputs_are_rejected_before_any_output ... ok
+test independent_metadata_survives_all_incremental_apis ... ok
+test issue_653_retains_leaf_pages_resources_and_parent_links ... ok
+test disabled_omits_all_three_fields_and_preserves_unrelated_metadata ... ok
+test default_and_explicit_enabled_emit_identification_in_all_output_apis ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.32s
+
+     Running tests/issue_661_writer_resources_test.rs (target/debug/deps/issue_661_writer_resources_test-f8fb3db83df4e3e9)
+
+running 5 tests
+test standard_resources_are_written_once_and_raw_variants_survive ... ok
+test imported_shared_resources_remain_local_while_new_pages_share ... ok
+test shared_custom_font_named_like_a_standard_font_keeps_its_glyphs ... ok
+test shared_cjk_font_preserves_characters_from_every_page ... ok
+test shared_resources_survive_repeated_saves_and_added_custom_page ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.10s
+
+     Running tests/overlay_font_preservation_test.rs (target/debug/deps/overlay_font_preservation_test-6d21b56153687649)
+
+running 1 test
+test test_overlay_preserves_embedded_fonts ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/per_font_char_tracking_test.rs (target/debug/deps/per_font_char_tracking_test-2f50ae660e8a4492)
+
+running 6 tests
+test header_only_custom_font_embeds_font ... ok
+test both_fonts_present_when_both_used ... ok
+test unused_latin_font_absent_when_cjk_used ... ok
+test rich_text_with_custom_font_embeds_font ... ok
+test text_flow_with_custom_font_embeds_font ... ok
+test unused_font_is_absent_from_resources ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.87s
