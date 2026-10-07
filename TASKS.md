@@ -1,11 +1,11 @@
-## Normalización de espacios — PR #688
+## Resolver división de PDF etiquetado — #690
 
-- Issue: #687 — `TextExtractor`: Normalize Unicode non-breaking space (`U+00A0`) to standard space (`U+0020`) in extracted text — https://github.com/bzsanti/oxidizePdf/issues/687
-- Estado: en validación. Prioridad P1. Responsable: Codex.
-- Cierre: normalización opt-in en texto y fragmentos, incluidos ActualText inline/estructura, conservando defaults y límites; regresiones ejecutadas por la matriz de contratos del CI.
-- Última validación: nuevas regresiones reproducen el defecto y pasan con la corrección; controles MacRoman y ActualText existentes aprobados.
-- Siguiente acción: verificar CI del HEAD corregido antes de integrar en develop.
-
+- Issue: #690 — fix(operations): complete nested tagged split and preflight for the #621/#677 input — https://github.com/bzsanti/oxidizePdf/issues/690
+- Estado: fix implementado con TDD; PR/CI y aceptación publicada pendientes. Prioridad P1. Responsable: Codex.
+- Cierre: preflight completo y preparación explícita del original; split 3/3/6 en Studio/API publicada, texto/píxeles/tags y origen conservados, rollback y CI aprobados.
+- Última validación: 10.417 PASS/0 FAIL; Clippy y consumidor público pasan. Original: split3/3/6 y12/12 textos/píxeles idénticos, origen intacto. [Evidencia](docs/reports/2026-10-07-issue-690-review.md).
+- Siguiente acción: publicar PR a develop y comprobar CI; después verificar Studio con versión publicada.
+- Pendiente de aceptación: Studio con candidato publicado; aclarar los avisos qpdf heredados de cuatro entradas xref inválidas no alcanzables. El original y los valores autorizados ya están disponibles; no cerrar #690 con evidencia exclusivamente sintética.
 
 ## Continuación autorizada de los cuatro frentes — #661 — 2026-10-07
 

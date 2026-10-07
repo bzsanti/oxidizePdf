@@ -93,3 +93,44 @@ loss is visible in the report. Encryption has its own semantic category and
 encrypted inputs currently fail during planning
 because neither engine accepts credentials through this API; the error names
 the selected encryption disposition.
+
+
+## Preparing tagged PDFs with missing author metadata
+
+For preserving splits, `plan_split_pdf` and `split_pdf` now preflight the entire
+source before processing any part. A missing language or description anywhere
+in the source prevents publication; selecting a different first range does not
+hide the remaining requirements.
+
+Use `operations::existing_document::preflight_tagged_pdf(&source_bytes)` to get
+all residual findings together. It recovers only unambiguous derived indexes
+and missing page keys in a private in-memory revision, preserving the page tree,
+page/content identities, existing descriptions and ActualText. Findings carry
+original structure-element identities. Malformed references, ambiguous MCID
+ownership, unsupported external-stream MCRs and forbidden edits remain errors.
+This is bounded tagged-PDF validation, not PDF/UA certification.
+
+After the author supplies the required values, call
+`prepare_tagged_pdf(&source_bytes, &TaggedPdfMetadata { language, alternate_text })`.
+`language` is an explicit `Option<String>`; `alternate_text` is a `BTreeMap` from
+`TaggedPdfObjectRef` to the author's description. Blank/unknown requests and
+requests to overwrite existing nonempty metadata are rejected. No language or
+description is inferred. If anything still fails validation, the function
+returns an error containing the remaining findings and **no prepared bytes**.
+
+Successful preparation returns `PreparedTaggedPdf { pdf_bytes, validation }`.
+The bytes contain separate incremental recovery/metadata revisions and retain
+the original source as an exact prefix. The API performs no filesystem writes.
+Store them in a **different** prepared file, then pass that file to the ordinary
+preserving split API. Keep the original file and do not use it as an output path.
+Studio/callers should bind user-supplied values to the same source-byte snapshot
+used for preflight and show the full findings before requesting those values.
+No input flattening or rewriting is required. All output parts must materialize
+and validate before publication; a normal rename failure rolls back earlier
+parts. This does not promise crash-atomic multi-file publication or recovery
+from a filesystem that also refuses rollback writes.
+
+For the #690 case, acceptance still requires running this two-stage workflow
+against the original private document with authoritative metadata in Studio
+and against the exact candidate package. Synthetic test values are not authority
+for that document and must never be inserted as defaults.

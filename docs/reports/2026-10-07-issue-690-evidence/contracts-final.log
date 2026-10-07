@@ -1,0 +1,77 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 11.83s
+     Running tests/issue_539_semantic_preservation_test.rs (target/issue661-writer/target/debug/deps/issue_539_semantic_preservation_test-fda7d84985f6cfa8)
+
+running 14 tests
+test empty_split_is_rejected_consistently_by_plan_and_execution ... ok
+test merge_and_extract_reject_input_aliases_for_both_engines ... ok
+test reconstructive_failures_do_not_replace_existing_outputs ... ok
+test merge_rejects_secondary_catalog_semantics_before_writing ... ok
+test merge_policy_explicitly_controls_each_secondary_structure ... ok
+test extraction_honors_requested_order_and_duplicates ... ok
+test split_rejects_duplicate_and_input_alias_paths_before_writing ... ok
+test sparse_extraction_is_planned_and_keeps_the_source_prefix ... ok
+test reconstructive_metadata_policy_matches_the_report_and_output ... ok
+test reconstructive_policy_is_explicit_and_reports_discarded_semantics ... ok
+test split_plans_every_output_before_atomic_publication ... ok
+test merge_preserves_base_and_imports_self_contained_pages ... ok
+test reconstructive_extract_and_split_preserve_selected_content_and_order ... ok
+test split_stages_every_destination_before_replacing_any_output ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/issue_621_tagged_split_test.rs (target/issue661-writer/target/debug/deps/issue_621_tagged_split_test-73c375956f777dbd)
+
+running 14 tests
+test missing_index_with_wrong_generation_is_not_repaired ... ok
+test certified_source_is_rejected_before_attempting_tag_repair ... ok
+test corrupt_nonzero_index_is_not_silently_rebuilt ... ok
+test broken_structure_parent_is_rejected ... ok
+test cyclic_structure_fails_without_output ... ok
+test unrelated_missing_reference_identifies_object_and_publishes_nothing ... ok
+test missing_marked_content_is_not_declared_accessible ... ok
+test zero_offset_index_alias_in_metadata_is_not_exempted ... ok
+test invalid_later_part_does_not_publish_earlier_parts ... ok
+test tagged_annotation_parent_mapping_is_retained_only_in_its_part ... ok
+test sparse_parent_tree_allocation_is_bounded ... ok
+test missing_zero_offset_parent_and_id_indexes_are_reconstructed ... ok
+test explicit_mcr_and_inherited_page_associations_survive_split ... ok
+test valid_tagged_twelve_page_split_preserves_each_part ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests/issue_677_missing_structparents_test.rs (target/issue661-writer/target/debug/deps/issue_677_missing_structparents_test-80deb2f2142d571a)
+
+running 13 tests
+test certificate_permissions_still_precede_missing_key_repair ... ok
+test distinct_structure_owners_for_one_mcid_are_rejected ... ok
+test ambiguous_owners_on_later_page_publish_no_parts ... ok
+test ambiguous_existing_keys_are_not_renumbered ... ok
+test missing_effective_page_is_not_guessed ... ok
+test duplicate_content_mcid_is_not_repaired ... ok
+test missing_content_on_later_page_publishes_no_parts ... ok
+test invalid_explicit_keys_are_not_treated_as_missing ... ok
+test explicit_mcr_and_inherited_page_recover_missing_keys ... ok
+test fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys ... ok
+test missing_keys_with_existing_indexes_preserve_reordered_pages ... ok
+test missing_keys_and_indexes_preserve_content_actualtext_and_three_parts ... ok
+test page_reparenting_preserves_reconstructed_keys ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+     Running tests/text_tagged_preparation_contract_test.rs (target/issue661-writer/target/debug/deps/text_tagged_preparation_contract_test-ba9e9c7579def78d)
+
+running 9 tests
+test split_rejects_all_source_metadata_before_publishing_any_part ... ok
+test preflight_reports_language_and_both_figures_together ... ok
+test corrupt_parent_count_and_generation_remain_rejected ... ok
+test genuine_deleted_page_references_are_not_hidden_by_pages_type ... ok
+test incomplete_metadata_never_produces_prepared_bytes ... ok
+test unknown_blank_or_overwriting_metadata_is_rejected ... ok
+test nested_tagged_tree_with_authoritative_metadata_splits_3_3_6 ... ok
+test supplied_metadata_prepares_nested_source_without_rewriting_it ... ok
+test complete_matrix_preserves_nested_shape_actualtext_and_sparse_mcids has been running for over 60 seconds
+test complete_matrix_preserves_nested_shape_actualtext_and_sparse_mcids ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 71.86s
+

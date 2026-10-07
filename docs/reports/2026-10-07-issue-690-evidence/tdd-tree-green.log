@@ -1,0 +1,48 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 8.81s
+     Running tests/issue_621_tagged_split_test.rs (target/issue661-writer/target/debug/deps/issue_621_tagged_split_test-73c375956f777dbd)
+
+running 14 tests
+test certified_source_is_rejected_before_attempting_tag_repair ... ok
+test missing_index_with_wrong_generation_is_not_repaired ... ok
+test cyclic_structure_fails_without_output ... ok
+test corrupt_nonzero_index_is_not_silently_rebuilt ... ok
+test broken_structure_parent_is_rejected ... ok
+test unrelated_missing_reference_identifies_object_and_publishes_nothing ... ok
+test missing_marked_content_is_not_declared_accessible ... ok
+test invalid_later_part_does_not_publish_earlier_parts ... ok
+test zero_offset_index_alias_in_metadata_is_not_exempted ... ok
+test sparse_parent_tree_allocation_is_bounded ... ok
+test tagged_annotation_parent_mapping_is_retained_only_in_its_part ... ok
+test missing_zero_offset_parent_and_id_indexes_are_reconstructed ... ok
+test explicit_mcr_and_inherited_page_associations_survive_split ... ok
+test valid_tagged_twelve_page_split_preserves_each_part ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/issue_677_missing_structparents_test.rs (target/issue661-writer/target/debug/deps/issue_677_missing_structparents_test-80deb2f2142d571a)
+
+running 13 tests
+test certificate_permissions_still_precede_missing_key_repair ... ok
+test ambiguous_existing_keys_are_not_renumbered ... ok
+test distinct_structure_owners_for_one_mcid_are_rejected ... ok
+test ambiguous_owners_on_later_page_publish_no_parts ... ok
+test missing_effective_page_is_not_guessed ... ok
+test invalid_explicit_keys_are_not_treated_as_missing ... ok
+test duplicate_content_mcid_is_not_repaired ... ok
+test missing_content_on_later_page_publishes_no_parts ... ok
+test missing_keys_with_existing_indexes_preserve_reordered_pages ... ok
+test fresh_keys_do_not_collide_with_existing_page_or_later_objr_keys ... ok
+test explicit_mcr_and_inherited_page_recover_missing_keys ... ok
+test page_reparenting_preserves_reconstructed_keys ... ok
+test missing_keys_and_indexes_preserve_content_actualtext_and_three_parts ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/issue_690_tagged_preparation_test.rs (target/issue661-writer/target/debug/deps/issue_690_tagged_preparation_test-72e1038ba393b444)
+
+running 1 test
+test nested_tagged_tree_with_authoritative_metadata_splits_3_3_6 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.64s
+

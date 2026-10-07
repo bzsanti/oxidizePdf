@@ -1,0 +1,40 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 10.90s
+     Running tests/issue_690_tagged_preparation_test.rs (target/issue661-writer/target/debug/deps/issue_690_tagged_preparation_test-72e1038ba393b444)
+
+running 5 tests
+test incomplete_metadata_never_produces_prepared_bytes ... ok
+test supplied_metadata_prepares_nested_source_without_rewriting_it ... FAILED
+test preflight_reports_language_and_both_figures_together ... FAILED
+test split_rejects_all_source_metadata_before_publishing_any_part ... FAILED
+test nested_tagged_tree_with_authoritative_metadata_splits_3_3_6 ... ok
+
+failures:
+
+---- supplied_metadata_prepares_nested_source_without_rewriting_it stdout ----
+
+thread 'supplied_metadata_prepares_nested_source_without_rewriting_it' (393) panicked at oxidize-pdf-core/tests/issue_690_tagged_preparation_test.rs:70:70:
+explicit values complete the original nested source: InvalidStructure("tagged preparation not implemented")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- preflight_reports_language_and_both_figures_together stdout ----
+
+thread 'preflight_reports_language_and_both_figures_together' (391) panicked at oxidize-pdf-core/tests/issue_690_tagged_preparation_test.rs:58:47:
+recover only unambiguous derived indexes: ParseError("Syntax error at position 0: in-use reference 6 0 R has zero storage offset; object is absent")
+
+---- split_rejects_all_source_metadata_before_publishing_any_part stdout ----
+
+thread 'split_rejects_all_source_metadata_before_publishing_any_part' (392) panicked at oxidize-pdf-core/tests/issue_690_tagged_preparation_test.rs:103:5:
+assertion `left == right` failed: PDF error: Invalid PDF structure: projected tagged structure is invalid: [TaggedPdfFinding { severity: Error, code: MissingDocumentLanguage, path: "/Catalog/Lang", message: "tagged document catalog has no non-empty Lang entry", object: Some(TaggedPdfObjectRef { object_number: 3, generation: 0 }) }]
+  left: 0
+ right: 2
+
+
+failures:
+    preflight_reports_language_and_both_figures_together
+    split_rejects_all_source_metadata_before_publishing_any_part
+    supplied_metadata_prepares_nested_source_without_rewriting_it
+
+test result: FAILED. 2 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.66s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_690_tagged_preparation_test`
