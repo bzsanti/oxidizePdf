@@ -1,0 +1,24 @@
+{
+  "files_identical_to_candidate": 413,
+  "packaged_regressions_passed": 5,
+  "package_source_includes_no_external_test_pdfs": true,
+  "test_package_setup": "independent enclosing workspace with unchanged extracted crate manifest/lock; test source timestamp refreshed after archive replacement to invalidate Cargo mtime cache",
+  "fixture_regenerated_identically": true,
+  "fixture_sha256": "1113ddc22a9526854d95d1942ee6adc5767436049583f3b9b5edf9ef1552666b",
+  "workspace_initial": {
+    "passed": 10393,
+    "failed": 1,
+    "ignored": 71
+  },
+  "final_affected_targets": {
+    "passed": 12,
+    "failed": 0,
+    "ignored": 0
+  },
+  "workspace_validation": "all unchanged results reused; obsolete minimum size failure corrected and both affected targets rerun; no claim of a second full suite",
+  "product_sha256": "c5891acaf337a54ed2a8b89aaf3547ac683c732d14b66913436911b40a8db8e6",
+  "ci": "pending",
+  "integration": "pending",
+  "package_sha256": "fa4e8e680403268295db968848c343e8883c4b7f38e2340afb63166a2b6d51a1",
+  "archive_members_verified": 470
+}

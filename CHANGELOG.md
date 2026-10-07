@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Performance
+
+- Share page font resources within generated multipage documents and preallocate
+  font dictionaries, reducing repeated allocation and serialization. Preserve Raw
+  font names, custom-font precedence and imported-page resource isolation (#661).
+
 ## [5.3.0] - 2026-10-06
 
 ### Added

@@ -1,0 +1,9 @@
+{
+  "command": "cargo test --locked --offline --workspace --features internal-testing --no-fail-fast",
+  "summaries": 415,
+  "passed": 10393,
+  "failed": 1,
+  "ignored": 71,
+  "failure": "memory_optimization_integration::test_large_document_memory_efficiency: obsolete minimum output byte size >20000; actual19971",
+  "external_corpus_present": false
+}

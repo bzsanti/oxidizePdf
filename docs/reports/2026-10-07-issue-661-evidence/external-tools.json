@@ -1,0 +1,14 @@
+{
+  "qpdf": {
+    "exit_code": 0,
+    "version": "qpdf version 11.9.0\nRun qpdf --copyright to see copyright and license information."
+  },
+  "pdftotext": {
+    "exit_code": 0,
+    "version": "pdftotext version 24.02.0\nCopyright 2005-2024 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC"
+  },
+  "pdftoppm": {
+    "exit_code": 0,
+    "version": "pdftoppm version 24.02.0\nCopyright 2005-2024 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC"
+  }
+}

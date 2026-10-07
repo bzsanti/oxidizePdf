@@ -1,3 +1,34 @@
+## Reanudación del rendimiento del writer — #661 — 2026-10-07
+
+- Issue: #661 — perf(writer): implement measured CPU and allocation improvements from generation profiling — https://github.com/bzsanti/oxidizePdf/issues/661
+- Estado: implementación local y revisión completadas; CI/integración pendientes; OPEN y lista de issues comprobadas en GitHub. Prioridad P1. Responsable Codex.
+- Base: develop `9dcf8188a906132991e14946eec228efe98ada01`, checkout aislado `target/issue661-writer`, rama `perf/issue-661-writer`. Checkout raíz y WIP anterior preservados.
+- Criterio de cierre: mejoras implementadas e integradas con medición comparable de tiempos/asignaciones, contratos PDF preservados, validación externa, QR calidad/seguridad y CI aprobados; históricos intactos.
+- Última validación: release 5.3.0 publicada, workflow 37527011742 SUCCESS. Paquete verificado contra índice oficial: no retirado, checksum correcto, commit ca9c662, 465 fuentes y README idénticos, MSRV 1.88 y sin recipient-encryption. API crates.io devuelve403; índice y archivo oficiales accesibles. Evidencia: docs/reports/2026-10-07-issue-661-evidence/baseline-registry.json.
+
+| Requisito y fuente | Estado y evidencia | Bloqueante / siguiente acción |
+| --- | --- | --- |
+| Base reproducible, #661 | Demostrado: develop y paquete 5.3.0 verificados | Fijar consumidor/lock y control inalterado |
+| Reducir CPU/asignaciones, #661 | Demostrado: preasignación y recursos compartidos; producto medido identificado por SHA256 | Conservar tracking por compatibilidad con registros custom del mismo nombre |
+| Preservar contratos, #661 | Demostrado: Raw/custom/CJK, colisiones, importación y reutilización; qpdf/Poppler y raster | Evidencia en informe 2026-10-07-issue-661-review.md |
+| Mejora medida, #661 | Demostrado:192 muestras;10 páginas −10,6% tiempo comprimido/−21,8% sin comprimir;4816→3484 alloc/realloc | No afirmar mejora concluyente en1 página ni confundir bytes acumulados con RSS |
+| Revisión e integración, #661/AGENTS | Pendiente | Regresiones, QR calidad/seguridad y CI antes de integración en develop |
+
+- Última validación de implementación:113 writer tests y37 contratos pasan; suite completa10.393 PASS/1 FAIL/71 ignorados, único fallo por mínimo de20KB ahora sustituido por25 páginas y46 líneas/página exactas. Final12/12 en ambos targets afectados; Clippy completo/final, formato, QR Kripteia/Security y28 PDFs externos pasan. Sin corpus externo en el checkout aislado; no atribuir una ejecución nueva T0–T6/OmniDocBench. Producto y dependencias permanecen idénticos al candidato medido.
+- Dos hallazgos de tests corregidos (fixtures fuera del crate y proxy de tamaño); embedding CFF pequeño preexistente registrado aparte y sin corrección. Informe y evidencia: docs/reports/2026-10-07-issue-661-review.md y directorio contiguo.
+- Siguiente acción exacta: paquete extraído5/5 validado; publicar PR contra develop y validar CI antes de integración. Mantener #661 OPEN hasta demostrar integración.
+
+## Hallazgo separado durante #661 — OpenType/CFF pequeño sin subsetting
+
+- Issue: pendiente; la lista abierta consultada no contiene una issue aplicable al embedding de programas CFF pequeños. #661 optimiza recursos, no cambia este camino de incrustación.
+- Estado: bloqueado para corrección por falta de issue específica. Prioridad P2. Responsable de crear/vincular: mantenimiento/bzsanti.
+- Evidencia: fixture OTF de3328 bytes, Poppler avisa `Mismatch between font type and embedded font file` tanto en candidato como en control retenido de release5.3.0; Unicode extraído idéntico. `write_font_with_unicode_support` no cambia en #661. Artefactos: docs/reports/2026-10-07-issue-661-evidence/small-cff-probe/.
+- Criterio de cierre: programa completo/subconjunto y Subtype coherentes, sin avisos externos en OTF/CFF pequeño/grande y regresiones discriminantes.
+- Dependencia externa: issue dedicada creada o vinculada por mantenimiento; desbloqueo: issue aplicable confirmada OPEN.
+- Siguiente acción exacta: crear/vincular issue y reproducir los límites/fallbacks del embedding antes de corregir. Restricción: no corregir ni recalibrar métricas bajo esta entrada sin issue.
+- No bloquea el cambio de recursos: defecto presente en control y candidato, código causal intacto; las salidas finales del alcance de subsetting pasan la validación externa sin avisos.
+
+
 ## Release 5.3.0 — 2026-10-06
 
 - Issue: #684 — release: publish 5.3.0 and reconcile release history — https://github.com/bzsanti/oxidizePdf/issues/684

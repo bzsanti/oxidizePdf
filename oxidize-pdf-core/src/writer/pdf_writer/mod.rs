@@ -2319,6 +2319,26 @@ impl<W: Write> PdfWriter<W> {
         self.write_pages_preserving_metadata(document, font_refs, &[])
     }
 
+    /// Keep every reserved standard name available to untyped Raw operators.
+    /// Custom/CID registrations retain precedence over the injected Type1 stubs.
+    fn page_font_resources(font_refs: &HashMap<String, ObjectId>) -> Dictionary {
+        let mut fonts = Dictionary::with_capacity(
+            crate::writer::INJECTED_BASE_FONT_KEYS.len() + font_refs.len(),
+        );
+        for name in crate::writer::INJECTED_BASE_FONT_KEYS {
+            let mut font = Dictionary::with_capacity(4);
+            font.set("Type", Object::Name("Font".to_string()));
+            font.set("Subtype", Object::Name("Type1".to_string()));
+            font.set("BaseFont", Object::Name(name.to_string()));
+            font.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+            fonts.set(name, Object::Dictionary(font));
+        }
+        for (name, id) in font_refs {
+            fonts.set(name, Object::Reference(*id));
+        }
+        fonts
+    }
+
     fn write_pages_preserving_metadata(
         &mut self,
         document: &Document,
@@ -2362,6 +2382,23 @@ impl<W: Write> PdfWriter<W> {
             .map(Self::struct_parent_keys)
             .unwrap_or_default();
 
+        // Share only when at least two pages can reuse the dictionary unchanged.
+        // Keep this state local to this write: object IDs belong to one output.
+        let shared_font_resources = if document
+            .pages
+            .iter()
+            .filter(|page| page.get_preserved_resources().is_none())
+            .take(2)
+            .count()
+            == 2
+        {
+            let id = self.allocate_object_id()?;
+            self.write_object(id, Object::Dictionary(Self::page_font_resources(font_refs)))?;
+            Some(id)
+        } else {
+            None
+        };
+
         // Write individual pages with font references
         for (i, page) in document.pages.iter().enumerate() {
             let page_id = page_ids[i];
@@ -2379,6 +2416,7 @@ impl<W: Write> PdfWriter<W> {
                 page,
                 struct_parent_keys.get(&i).copied(),
                 font_refs,
+                shared_font_resources,
                 &preserved_font_map,
                 originals.get(i).map(|(_, dict)| dict),
             )?;
@@ -2406,6 +2444,7 @@ impl<W: Write> PdfWriter<W> {
         page: &crate::page::Page,
         struct_parent_key: Option<i64>,
         font_refs: &HashMap<String, ObjectId>,
+        shared_font_resources: Option<ObjectId>,
         preserved_font_map: &HashMap<String, String>,
         original: Option<&Dictionary>,
     ) -> Result<()> {
@@ -2452,120 +2491,13 @@ impl<W: Write> PdfWriter<W> {
             Dictionary::new()
         };
 
-        // Add font resources
-        let mut font_dict = Dictionary::new();
-
-        // Add ALL standard PDF fonts (Type1) with WinAnsiEncoding
-        // This fixes the text rendering issue in dashboards where HelveticaBold was missing
-
-        // Helvetica family
-        let mut helvetica_dict = Dictionary::new();
-        helvetica_dict.set("Type", Object::Name("Font".to_string()));
-        helvetica_dict.set("Subtype", Object::Name("Type1".to_string()));
-        helvetica_dict.set("BaseFont", Object::Name("Helvetica".to_string()));
-        helvetica_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Helvetica", Object::Dictionary(helvetica_dict));
-
-        let mut helvetica_bold_dict = Dictionary::new();
-        helvetica_bold_dict.set("Type", Object::Name("Font".to_string()));
-        helvetica_bold_dict.set("Subtype", Object::Name("Type1".to_string()));
-        helvetica_bold_dict.set("BaseFont", Object::Name("Helvetica-Bold".to_string()));
-        helvetica_bold_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Helvetica-Bold", Object::Dictionary(helvetica_bold_dict));
-
-        let mut helvetica_oblique_dict = Dictionary::new();
-        helvetica_oblique_dict.set("Type", Object::Name("Font".to_string()));
-        helvetica_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
-        helvetica_oblique_dict.set("BaseFont", Object::Name("Helvetica-Oblique".to_string()));
-        helvetica_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set(
-            "Helvetica-Oblique",
-            Object::Dictionary(helvetica_oblique_dict),
-        );
-
-        let mut helvetica_bold_oblique_dict = Dictionary::new();
-        helvetica_bold_oblique_dict.set("Type", Object::Name("Font".to_string()));
-        helvetica_bold_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
-        helvetica_bold_oblique_dict.set(
-            "BaseFont",
-            Object::Name("Helvetica-BoldOblique".to_string()),
-        );
-        helvetica_bold_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set(
-            "Helvetica-BoldOblique",
-            Object::Dictionary(helvetica_bold_oblique_dict),
-        );
-
-        // Times family
-        let mut times_dict = Dictionary::new();
-        times_dict.set("Type", Object::Name("Font".to_string()));
-        times_dict.set("Subtype", Object::Name("Type1".to_string()));
-        times_dict.set("BaseFont", Object::Name("Times-Roman".to_string()));
-        times_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Times-Roman", Object::Dictionary(times_dict));
-
-        let mut times_bold_dict = Dictionary::new();
-        times_bold_dict.set("Type", Object::Name("Font".to_string()));
-        times_bold_dict.set("Subtype", Object::Name("Type1".to_string()));
-        times_bold_dict.set("BaseFont", Object::Name("Times-Bold".to_string()));
-        times_bold_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Times-Bold", Object::Dictionary(times_bold_dict));
-
-        let mut times_italic_dict = Dictionary::new();
-        times_italic_dict.set("Type", Object::Name("Font".to_string()));
-        times_italic_dict.set("Subtype", Object::Name("Type1".to_string()));
-        times_italic_dict.set("BaseFont", Object::Name("Times-Italic".to_string()));
-        times_italic_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Times-Italic", Object::Dictionary(times_italic_dict));
-
-        let mut times_bold_italic_dict = Dictionary::new();
-        times_bold_italic_dict.set("Type", Object::Name("Font".to_string()));
-        times_bold_italic_dict.set("Subtype", Object::Name("Type1".to_string()));
-        times_bold_italic_dict.set("BaseFont", Object::Name("Times-BoldItalic".to_string()));
-        times_bold_italic_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set(
-            "Times-BoldItalic",
-            Object::Dictionary(times_bold_italic_dict),
-        );
-
-        // Courier family
-        let mut courier_dict = Dictionary::new();
-        courier_dict.set("Type", Object::Name("Font".to_string()));
-        courier_dict.set("Subtype", Object::Name("Type1".to_string()));
-        courier_dict.set("BaseFont", Object::Name("Courier".to_string()));
-        courier_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Courier", Object::Dictionary(courier_dict));
-
-        let mut courier_bold_dict = Dictionary::new();
-        courier_bold_dict.set("Type", Object::Name("Font".to_string()));
-        courier_bold_dict.set("Subtype", Object::Name("Type1".to_string()));
-        courier_bold_dict.set("BaseFont", Object::Name("Courier-Bold".to_string()));
-        courier_bold_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Courier-Bold", Object::Dictionary(courier_bold_dict));
-
-        let mut courier_oblique_dict = Dictionary::new();
-        courier_oblique_dict.set("Type", Object::Name("Font".to_string()));
-        courier_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
-        courier_oblique_dict.set("BaseFont", Object::Name("Courier-Oblique".to_string()));
-        courier_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Courier-Oblique", Object::Dictionary(courier_oblique_dict));
-
-        let mut courier_bold_oblique_dict = Dictionary::new();
-        courier_bold_oblique_dict.set("Type", Object::Name("Font".to_string()));
-        courier_bold_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
-        courier_bold_oblique_dict.set("BaseFont", Object::Name("Courier-BoldOblique".to_string()));
-        courier_bold_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set(
-            "Courier-BoldOblique",
-            Object::Dictionary(courier_bold_oblique_dict),
-        );
-
-        // Add custom fonts (Type0 fonts for Unicode support)
-        for (font_name, font_id) in font_refs {
-            font_dict.set(font_name, Object::Reference(*font_id));
-        }
-
-        resources.set("Font", Object::Dictionary(font_dict));
+        // Imported resources need a private dictionary for collision-aware merging.
+        // Ordinary pages can reference the immutable document-wide dictionary.
+        let fonts = match shared_font_resources {
+            Some(id) if page.get_preserved_resources().is_none() => Object::Reference(id),
+            _ => Object::Dictionary(Self::page_font_resources(font_refs)),
+        };
+        resources.set("Font", fonts);
 
         // Add images and Form XObjects as XObjects
         let has_images = !page.images().is_empty();

@@ -1,0 +1,24 @@
+[
+  {
+    "variant": "candidate",
+    "pdf": "docs/reports/2026-10-07-issue-661-evidence/small-cff-probe/cjk-legacy.pdf",
+    "sha256": "9da2d98aa34cc387ea4d3868f4644c7d8e8a3b17c2252706775af458a2a10c08",
+    "returncode": 0,
+    "stdout": "中文\n\n\f测试\n\n\f",
+    "stderr": "Syntax Warning: Mismatch between font type and embedded font file\nSyntax Warning: Mismatch between font type and embedded font file\n"
+  },
+  {
+    "variant": "release530-control",
+    "pdf": "target/issue661-probe/small-control-pdfs/cjk-legacy.pdf",
+    "sha256": "e146034e96654140a93c22a79d529c3d50a6cb1075de4b87921b35ffc407765c",
+    "returncode": 0,
+    "stdout": "中文\n\n\f测试\n\n\f",
+    "stderr": "Syntax Warning: Mismatch between font type and embedded font file\nSyntax Warning: Mismatch between font type and embedded font file\n"
+  },
+  {
+    "control_rlib": "target/release530-cargo/debug/deps/liboxidize_pdf-24ac23993aa11c69.rlib",
+    "control_rlib_sha256": "4362cbf43519f98907f9f9a4c1255674cad649b94d1d44a8dd1ecae229e6765d",
+    "source_scope": "write_font_with_unicode_support unchanged by #661; whole OTF branch below100000 bytes emits CIDFontType0C for OTTO wrapper",
+    "scope": "pre-existing; no corrective change under #661"
+  }
+]

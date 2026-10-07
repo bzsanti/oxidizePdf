@@ -1,0 +1,126 @@
+[
+  {
+    "file": "cjk-legacy.pdf",
+    "qpdf": "pass",
+    "pages": 2,
+    "poppler_exact_lines": [
+      "\u4e2d\u6587",
+      "\u6d4b\u8bd5"
+    ],
+    "sha256": "0edbf18e091f8c49ae7a274f2c3774c3550241eed015bdfb3bf268fc56c0f4f8"
+  },
+  {
+    "file": "cjk-modern.pdf",
+    "qpdf": "pass",
+    "pages": 2,
+    "poppler_exact_lines": [
+      "\u4e2d\u6587",
+      "\u6d4b\u8bd5"
+    ],
+    "sha256": "399fc0e6dc85703d4f1b33695b7d086af47cb0d3c1ce146563d78c4ae2c3f417"
+  },
+  {
+    "file": "collision-legacy.pdf",
+    "qpdf": "pass",
+    "pages": 2,
+    "poppler_exact_lines": [
+      "Alpha",
+      "Omega"
+    ],
+    "sha256": "201a3e72956dbffbe49a81e521c86c217c037e0baf3a40b45b478506fef859be"
+  },
+  {
+    "file": "collision-modern.pdf",
+    "qpdf": "pass",
+    "pages": 2,
+    "poppler_exact_lines": [
+      "Alpha",
+      "Omega"
+    ],
+    "sha256": "1e9848dffa26f13fd9e607ab157dea1a049dd18c7072fcea54d437e2830ea2de"
+  },
+  {
+    "file": "custom-legacy.pdf",
+    "qpdf": "pass",
+    "pages": 2,
+    "poppler_exact_lines": [
+      "Alpha",
+      "Omega"
+    ],
+    "sha256": "78e93b8ef0bc7a6467c8d8016340e412d1e3d34461dcbb6a534edec4616416ca"
+  },
+  {
+    "file": "custom-modern.pdf",
+    "qpdf": "pass",
+    "pages": 2,
+    "poppler_exact_lines": [
+      "Alpha",
+      "Omega"
+    ],
+    "sha256": "52ebcee302aa70bbc8b4093e1ee63428280fb064cefade23b23755a42c4e9c13"
+  },
+  {
+    "file": "raw-legacy.pdf",
+    "qpdf": "pass",
+    "pages": 2,
+    "poppler_exact_lines": [
+      "Sample0",
+      "Sample1",
+      "Sample2",
+      "Sample3",
+      "Sample4",
+      "Sample5",
+      "Sample6",
+      "Sample7",
+      "Sample8",
+      "Sample9",
+      "Sample10",
+      "Sample11",
+      "Sample0",
+      "Sample1",
+      "Sample2",
+      "Sample3",
+      "Sample4",
+      "Sample5",
+      "Sample6",
+      "Sample7",
+      "Sample8",
+      "Sample9",
+      "Sample10",
+      "Sample11"
+    ],
+    "sha256": "4bd7e3c0a85a6e1743ab16150b6014f7d4836365d0442ddd6f4f623bae7f8cf3"
+  },
+  {
+    "file": "raw-modern.pdf",
+    "qpdf": "pass",
+    "pages": 2,
+    "poppler_exact_lines": [
+      "Sample0",
+      "Sample1",
+      "Sample2",
+      "Sample3",
+      "Sample4",
+      "Sample5",
+      "Sample6",
+      "Sample7",
+      "Sample8",
+      "Sample9",
+      "Sample10",
+      "Sample11",
+      "Sample0",
+      "Sample1",
+      "Sample2",
+      "Sample3",
+      "Sample4",
+      "Sample5",
+      "Sample6",
+      "Sample7",
+      "Sample8",
+      "Sample9",
+      "Sample10",
+      "Sample11"
+    ],
+    "sha256": "2c94f852130561d46479e2c10d21defd8bbb4b933d1b4ccfaef9406e0f3e9374"
+  }
+]
