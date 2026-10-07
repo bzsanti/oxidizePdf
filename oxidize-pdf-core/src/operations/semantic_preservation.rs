@@ -684,6 +684,7 @@ fn plan_split_pdf_preserving(
         return Err(OperationError::NoPagesToProcess);
     }
     let base = read_snapshot(input)?;
+    super::tagged_preparation::ensure_tagged_source_ready(&base)?;
     let mut reader = PdfReader::new(Cursor::new(&base))
         .map_err(|error| OperationError::ParseError(error.to_string()))?;
     let page_count = reader
@@ -755,6 +756,7 @@ fn split_pdf_preserving(
         }
     }
     let base = read_snapshot(input)?;
+    super::tagged_preparation::ensure_tagged_source_ready(&base)?;
     let mut reader = PdfReader::new(Cursor::new(&base))
         .map_err(|error| OperationError::ParseError(error.to_string()))?;
     let page_count = reader
@@ -789,11 +791,28 @@ fn split_pdf_preserving(
         materialized.push(bytes);
     }
     ensure_snapshot_unchanged(input, &base)?;
-    let mut staged = outputs
+    let staged = outputs
         .iter()
         .zip(&materialized)
         .map(|(path, bytes)| stage_output(path, bytes))
         .collect::<OperationResult<Vec<_>>>()?;
+    publish_staged_outputs(staged, outputs, |temporary, path| {
+        temporary
+            .persist(path)
+            .map(|_| ())
+            .map_err(|error| error.error)
+    })?;
+    Ok(reports)
+}
+
+// Private publication boundary: all PDF work has succeeded before this runs.
+// Passing the atomic rename operation explicitly lets tests inject filesystem
+// failures at every output position without timing races or platform ACL tricks.
+fn publish_staged_outputs(
+    mut staged: Vec<tempfile::NamedTempFile>,
+    outputs: &[PathBuf],
+    mut publish: impl FnMut(tempfile::NamedTempFile, &Path) -> std::io::Result<()>,
+) -> OperationResult<()> {
     let backups = outputs
         .iter()
         .map(|path| {
@@ -806,7 +825,7 @@ fn split_pdf_preserving(
         .collect::<Result<Vec<_>, _>>()?;
     for index in 0..staged.len() {
         let temporary = staged.remove(0);
-        if let Err(error) = temporary.persist(&outputs[index]) {
+        if let Err(error) = publish(temporary, &outputs[index]) {
             for rollback in 0..index {
                 match &backups[rollback] {
                     Some(bytes) => {
@@ -819,10 +838,10 @@ fn split_pdf_preserving(
                     }
                 }
             }
-            return Err(OperationError::Io(error.error));
+            return Err(OperationError::Io(error));
         }
     }
-    Ok(reports)
+    Ok(())
 }
 
 /// Plan a deterministic lossless merge without writing output.
@@ -1433,6 +1452,72 @@ pub fn merge_pdfs_lossless(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn split_publication_rolls_back_each_failure_position() {
+        for existing in [false, true] {
+            for failure in 0..3 {
+                let directory = tempfile::tempdir().unwrap();
+                let outputs: Vec<_> = (0..3)
+                    .map(|i| directory.path().join(format!("part{i}.pdf")))
+                    .collect();
+                if existing {
+                    for path in &outputs {
+                        std::fs::write(path, b"sentinel").unwrap();
+                    }
+                }
+                let staged = outputs
+                    .iter()
+                    .map(|p| super::stage_output(p, b"new PDF").unwrap())
+                    .collect();
+                let mut calls = 0;
+                let result = super::publish_staged_outputs(staged, &outputs, |temporary, path| {
+                    let index = calls;
+                    calls += 1;
+                    if index == failure {
+                        return Err(std::io::Error::other("injected publication failure"));
+                    }
+                    temporary.persist(path).map(|_| ()).map_err(|e| e.error)
+                });
+                assert!(result.is_err());
+                assert_eq!(
+                    calls,
+                    failure + 1,
+                    "exercise the actual publication boundary"
+                );
+                for path in &outputs {
+                    if existing {
+                        assert_eq!(std::fs::read(path).unwrap(), b"sentinel");
+                    } else {
+                        assert!(!path.exists(), "no partial output remains");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn split_publication_replaces_the_complete_successful_set() {
+        let directory = tempfile::tempdir().unwrap();
+        let outputs: Vec<_> = (0..3)
+            .map(|i| directory.path().join(format!("part{i}.pdf")))
+            .collect();
+        for path in &outputs {
+            std::fs::write(path, b"old").unwrap();
+        }
+        let staged = outputs
+            .iter()
+            .enumerate()
+            .map(|(i, p)| super::stage_output(p, format!("part{i}").as_bytes()).unwrap())
+            .collect();
+        super::publish_staged_outputs(staged, &outputs, |temporary, path| {
+            temporary.persist(path).map(|_| ()).map_err(|e| e.error)
+        })
+        .unwrap();
+        for (i, path) in outputs.iter().enumerate() {
+            assert_eq!(std::fs::read(path).unwrap(), format!("part{i}").as_bytes());
+        }
+    }
+
     use super::*;
 
     fn semantic_fixture() -> Vec<u8> {

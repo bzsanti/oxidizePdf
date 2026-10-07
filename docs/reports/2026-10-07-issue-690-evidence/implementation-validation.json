@@ -1,0 +1,36 @@
+{
+  "base": "8a265a4583fcaeac434e436d71e2193f8cbbdc11",
+  "full_suite": {
+    "passed": 10417,
+    "failed": 0,
+    "ignored": 71,
+    "summaries": 417
+  },
+  "clippy": "PASS workspace all-targets internal-testing -D warnings",
+  "consumer": "PASS default + ocr-tesseract + signatures, local path candidate",
+  "original": {
+    "preflight_findings": 3,
+    "split_pages": [
+      3,
+      3,
+      6
+    ],
+    "engine_text_pages_identical": 12,
+    "poppler_text_pages_identical": 12,
+    "raster_pages_identical_72dpi": 12,
+    "source_unchanged": true,
+    "prefixes_preserved": true,
+    "qpdf_exit": 3,
+    "remaining_zero_offset_unreachable_objects": [
+      6,
+      8,
+      10,
+      22
+    ]
+  },
+  "pending": [
+    "CI",
+    "published engine + Studio acceptance",
+    "qpdf inherited warnings acceptance"
+  ]
+}

@@ -61,6 +61,7 @@ struct Projector<'a, R: Read + Seek> {
     reader: &'a mut PdfReader<R>,
     pages: HashMap<Id, PdfDictionary>,
     retained: &'a HashSet<Id>,
+    preserve_shape: bool,
     projection: Projection,
     visited: HashSet<Id>,
     entries: usize,
@@ -191,7 +192,7 @@ impl<R: Read + Seek> Projector<'_, R> {
     ) -> Result<Option<PdfObject>, PdfError> {
         self.budget(depth)?;
         match value {
-            PdfObject::Null => Ok(None),
+            PdfObject::Null => Ok(self.preserve_shape.then(|| value.clone())),
             PdfObject::Integer(mcid) => Ok(self
                 .associate_mcid(inherited, *mcid, owner)?
                 .then(|| value.clone())),
@@ -202,7 +203,7 @@ impl<R: Read + Seek> Projector<'_, R> {
                         kept.push(item);
                     }
                 }
-                Ok((!kept.is_empty()).then(|| array(kept)))
+                Ok((self.preserve_shape || !kept.is_empty()).then(|| array(kept)))
             }
             PdfObject::Reference(n, g) => {
                 let id = (*n, *g);
@@ -342,6 +343,27 @@ pub(super) fn project<R: Read + Seek>(
     pages: HashMap<Id, PdfDictionary>,
     retained: &HashSet<Id>,
 ) -> Result<Projection, PdfError> {
+    project_impl(reader, catalog, pages, retained, false)
+}
+
+// Recovery keeps every source page and authoritative /K shape, including empty
+// groups. Pruning belongs only to a projection that deletes pages.
+pub(super) fn recover<R: Read + Seek>(
+    reader: &mut PdfReader<R>,
+    catalog: &PdfDictionary,
+    pages: HashMap<Id, PdfDictionary>,
+) -> Result<Projection, PdfError> {
+    let retained = pages.keys().copied().collect();
+    project_impl(reader, catalog, pages, &retained, true)
+}
+
+fn project_impl<R: Read + Seek>(
+    reader: &mut PdfReader<R>,
+    catalog: &PdfDictionary,
+    pages: HashMap<Id, PdfDictionary>,
+    retained: &HashSet<Id>,
+    preserve_shape: bool,
+) -> Result<Projection, PdfError> {
     let Some(root_value) = catalog.get("StructTreeRoot").cloned() else {
         return Ok(Projection::default());
     };
@@ -360,6 +382,7 @@ pub(super) fn project<R: Read + Seek>(
             .collect(),
         pages,
         retained,
+        preserve_shape,
         projection: Projection::default(),
         visited: HashSet::from([root_id]),
         entries: 0,
@@ -398,7 +421,11 @@ pub(super) fn project<R: Read + Seek>(
         Some(k) => p.kid(k, root_id, None, 0)?,
         None => None,
     };
-    root.insert("K".to_string(), kids.unwrap_or_else(|| array(Vec::new())));
+    if let Some(kids) = kids {
+        root.insert("K".to_string(), kids);
+    } else if !preserve_shape {
+        root.insert("K".to_string(), array(Vec::new()));
+    }
     let mut nums = BTreeMap::new();
     let mut slots = 0usize;
     let mut fresh_key = 0i64;

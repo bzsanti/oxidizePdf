@@ -16,6 +16,7 @@ mod semantic_preservation;
 pub mod semantic_redactor;
 pub mod source_highlighter;
 pub mod split;
+mod tagged_preparation;
 mod tagged_split;
 
 pub use chunk_page_mapper::ChunkPageMapper;
@@ -70,6 +71,9 @@ pub mod existing_document {
         InputSemanticReport, InputSemanticRole, PreserveBasePolicy, ReconstructMetadataPolicy,
         ReconstructPolicy, SecondaryStructurePolicy, SemanticPreservationReport,
         StructureDisposition, StructureSemanticReport,
+    };
+    pub use super::tagged_preparation::{
+        preflight_tagged_pdf, prepare_tagged_pdf, PreparedTaggedPdf, TaggedPdfMetadata,
     };
 }
 

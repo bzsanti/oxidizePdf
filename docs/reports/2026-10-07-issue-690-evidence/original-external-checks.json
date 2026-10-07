@@ -1,0 +1,53 @@
+{
+  "qpdf": [
+    {
+      "pdf": "prepared",
+      "exit": 3,
+      "output": "checking target/issue690-original/prepared.pdf\nPDF Version: 1.3\nFile is not encrypted\nFile is not linearized\nWARNING: target/issue690-original/prepared.pdf (object 6 0): object has offset 0\nWARNING: target/issue690-original/prepared.pdf (object 8 0): object has offset 0\nWARNING: target/issue690-original/prepared.pdf (object 10 0): object has offset 0\nWARNING: target/issue690-original/prepared.pdf (object 22 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+    },
+    {
+      "pdf": "part0",
+      "exit": 3,
+      "output": "checking target/issue690-original/part0.pdf\nPDF Version: 1.3\nFile is not encrypted\nFile is not linearized\nWARNING: target/issue690-original/part0.pdf (object 6 0): object has offset 0\nWARNING: target/issue690-original/part0.pdf (object 8 0): object has offset 0\nWARNING: target/issue690-original/part0.pdf (object 10 0): object has offset 0\nWARNING: target/issue690-original/part0.pdf (object 22 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+    },
+    {
+      "pdf": "part1",
+      "exit": 3,
+      "output": "checking target/issue690-original/part1.pdf\nPDF Version: 1.3\nFile is not encrypted\nFile is not linearized\nWARNING: target/issue690-original/part1.pdf (object 6 0): object has offset 0\nWARNING: target/issue690-original/part1.pdf (object 8 0): object has offset 0\nWARNING: target/issue690-original/part1.pdf (object 10 0): object has offset 0\nWARNING: target/issue690-original/part1.pdf (object 22 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+    },
+    {
+      "pdf": "part2",
+      "exit": 3,
+      "output": "checking target/issue690-original/part2.pdf\nPDF Version: 1.3\nFile is not encrypted\nFile is not linearized\nWARNING: target/issue690-original/part2.pdf (object 6 0): object has offset 0\nWARNING: target/issue690-original/part2.pdf (object 8 0): object has offset 0\nWARNING: target/issue690-original/part2.pdf (object 10 0): object has offset 0\nWARNING: target/issue690-original/part2.pdf (object 22 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+    }
+  ],
+  "text_pages_equal": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "raster_pages_equal": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "source_sha256": "c29cf7eb1ffe83de7e1e3f9c95441f14d49304cfeea540de72bb4e6f55b67ff5"
+}
