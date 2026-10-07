@@ -1,0 +1,9 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue661-writer/oxidize-pdf-core)
+error[E0063]: missing field `page_compressor` in initializer of `pdf_writer::PdfWriter<BufWriter<std::fs::File>>`
+    --> oxidize-pdf-core/src/writer/pdf_writer/mod.rs:3009:12
+     |
+3009 |         Ok(Self {
+     |            ^^^^ missing `page_compressor`
+
+For more information about this error, try `rustc --explain E0063`.
+error: could not compile `oxidize-pdf` (lib test) due to 1 previous error

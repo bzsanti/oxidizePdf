@@ -1,0 +1,12 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue661-writer/oxidize-pdf-core)
+   Compiling writer-perf-probe v0.1.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue661-probe)
+warning: unused import: `BuildIdentification`
+ --> src/bin/extended.rs:2:38
+  |
+2 | use oxidize_pdf::{Document,Page,Font,BuildIdentification};
+  |                                      ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `writer-perf-probe` (bin "extended") generated 1 warning (run `cargo fix --bin "extended" -p writer-perf-probe` to apply 1 suggestion)
+    Finished `release` profile [optimized + debuginfo] target(s) in 2m 29s

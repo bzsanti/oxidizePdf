@@ -227,3 +227,79 @@ fn shared_cjk_font_preserves_characters_from_every_page() {
         );
     }
 }
+
+#[test]
+fn late_custom_registration_keeps_usage_from_both_contexts_and_pages() {
+    let mut doc = Document::new();
+    for (text, graphic) in [("Alpha", "Beta"), ("Gamma", "Delta")] {
+        let mut page = Page::a4();
+        page.text()
+            .set_font(Font::Custom("Helvetica".into()), 12.0)
+            .at(50.0, 700.0)
+            .write(text)
+            .unwrap();
+        page.graphics()
+            .set_font(Font::Custom("Helvetica".into()), 12.0)
+            .draw_text(graphic, 50.0, 650.0)
+            .unwrap();
+        doc.add_page(page);
+    }
+    // Registration may occur after usage was accumulated. Filtering during
+    // add_page would silently discard all four strings' glyphs.
+    doc.add_font_from_bytes(
+        "Helvetica",
+        include_bytes!("fixtures/text_contracts/fonts/SourceSans3-Regular.ttf").to_vec(),
+    )
+    .unwrap();
+    for config in [WriterConfig::legacy(), WriterConfig::modern()] {
+        let bytes = doc.to_bytes_with_config(config).unwrap();
+        let parsed = PdfDocument::new(PdfReader::new(Cursor::new(bytes)).unwrap());
+        for (index, expected) in [["Alpha", "Beta"], ["Gamma", "Delta"]].iter().enumerate() {
+            let text = parsed.extract_text_from_page(index as u32).unwrap().text;
+            assert_eq!(
+                text.lines()
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<_>>(),
+                expected
+            );
+        }
+    }
+}
+
+#[test]
+fn mixed_short_and_long_streams_remain_independent_across_repeated_saves() {
+    for lengths in [vec![0, 4096, 0], vec![2047, 2048, 2049, 0, 8192]] {
+        let mut doc = Document::new();
+        for (index, length) in lengths.iter().enumerate() {
+            let mut page = Page::a4();
+            page.graphics()
+                .add_command(&format!("%{}\n", "x".repeat(*length)));
+            page.text()
+                .set_font(Font::Helvetica, 12.0)
+                .at(50.0, 700.0)
+                .write(&format!("Independent page {}", index + 1))
+                .unwrap();
+            doc.add_page(page);
+        }
+        for config in [
+            WriterConfig::legacy(),
+            WriterConfig::modern(),
+            WriterConfig::legacy(),
+        ] {
+            let bytes = doc.to_bytes_with_config(config).unwrap();
+            let parsed = PdfDocument::new(PdfReader::new(Cursor::new(bytes)).unwrap());
+            assert_eq!(parsed.page_count().unwrap() as usize, lengths.len());
+            for index in 0..lengths.len() {
+                assert_eq!(
+                    parsed
+                        .extract_text_from_page(index as u32)
+                        .unwrap()
+                        .text
+                        .trim(),
+                    format!("Independent page {}", index + 1)
+                );
+            }
+        }
+    }
+}

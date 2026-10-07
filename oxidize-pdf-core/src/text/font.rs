@@ -169,22 +169,27 @@ impl Font {
 
     /// Get the PDF name for this font
     pub fn pdf_name(&self) -> String {
+        self.pdf_name_ref().to_owned()
+    }
+
+    /// Borrow the PDF name without allocating for character-usage lookups.
+    pub(crate) fn pdf_name_ref(&self) -> &str {
         match self {
-            Font::Helvetica => "Helvetica".to_string(),
-            Font::HelveticaBold => "Helvetica-Bold".to_string(),
-            Font::HelveticaOblique => "Helvetica-Oblique".to_string(),
-            Font::HelveticaBoldOblique => "Helvetica-BoldOblique".to_string(),
-            Font::TimesRoman => "Times-Roman".to_string(),
-            Font::TimesBold => "Times-Bold".to_string(),
-            Font::TimesItalic => "Times-Italic".to_string(),
-            Font::TimesBoldItalic => "Times-BoldItalic".to_string(),
-            Font::Courier => "Courier".to_string(),
-            Font::CourierBold => "Courier-Bold".to_string(),
-            Font::CourierOblique => "Courier-Oblique".to_string(),
-            Font::CourierBoldOblique => "Courier-BoldOblique".to_string(),
-            Font::Symbol => "Symbol".to_string(),
-            Font::ZapfDingbats => "ZapfDingbats".to_string(),
-            Font::Custom(name) => name.clone(),
+            Font::Helvetica => "Helvetica",
+            Font::HelveticaBold => "Helvetica-Bold",
+            Font::HelveticaOblique => "Helvetica-Oblique",
+            Font::HelveticaBoldOblique => "Helvetica-BoldOblique",
+            Font::TimesRoman => "Times-Roman",
+            Font::TimesBold => "Times-Bold",
+            Font::TimesItalic => "Times-Italic",
+            Font::TimesBoldItalic => "Times-BoldItalic",
+            Font::Courier => "Courier",
+            Font::CourierBold => "Courier-Bold",
+            Font::CourierOblique => "Courier-Oblique",
+            Font::CourierBoldOblique => "Courier-BoldOblique",
+            Font::Symbol => "Symbol",
+            Font::ZapfDingbats => "ZapfDingbats",
+            Font::Custom(name) => name,
         }
     }
 

@@ -1,3 +1,23 @@
+## Continuación autorizada de los cuatro frentes — #661 — 2026-10-07
+
+- Issue: #661 — perf(writer): implement measured CPU and allocation improvements from generation profiling — https://github.com/bzsanti/oxidizePdf/issues/661
+- Estado: cuatro frentes implementados y QR completado; publicación/CI de continuación e integración pendientes. Issue confirmada OPEN; alcance autorizado explícitamente por el usuario. Prioridad P1. Responsable Codex.
+- Control: commit 5621e4cb25690c7618981edc03deb15883e4dbc9 del PR #689, base develop. Históricos y WIP raíz preservados.
+- Criterio de cierre: evaluar los cuatro frentes con implementaciones independientes, conservar únicamente mejoras medidas sin regresiones de contratos, documentar costes/limitaciones, QR calidad/seguridad y CI antes de integración.
+
+| Frente de #661 | Estado | Criterio y siguiente acción |
+| --- | --- | --- |
+| Registro de caracteres | Demostrado:242 llamadas/doc evitadas | Eliminar agregaciones/copias evitables sin perder uso por fuente ni registros custom con nombres estándar; medir contra control y probar subsetting/CJK/reutilización |
+| Copias de páginas y streams | Demostrado:540 llamadas/doc adicionales evitadas | Prestar contenido y mover buffers sin alterar orden de pintado, colisiones, headers/footers, metadatos ni saves repetidos |
+| Formateo | Demostrado:158 llamadas/doc adicionales evitadas; bytes preservados | Evitar temporales conservando exactamente precisión, redondeo, escapes, nombres y orden determinista; comparar bytes y mediciones |
+| Compresión | Demostrado con política conservadora; penalización pequeña en vacío documentada | Evaluar reutilización de estado/buffers con datos vacíos, texto, fuentes e imágenes; mantener nivel/backend/default y dependencia Rust; justificar con tiempo/tamaño/asignaciones |
+
+- Última validación: suite conjunta inicial10.397 PASS/0 FAIL/71 ignorados; tras ajustar compresión, finales1 prueba encoder+14 recursos/memoria PASS y Clippy all-targets/internal-testing -D warnings PASS. QR manual y ambas herramientas Kripteia pasan;42 PDFs representativos externos qpdf/texto/raster sin avisos. Paquete1422 fuentes/tests idénticos. La suite completa inicial no se atribuye a una segunda ejecución local final.
+- Medición final respecto del primer PR5621e4cb: facturas1/10/100 páginas comprimidas −5,2%/−48,3%/−13,2% tiempo; sin comprimir −8,9%/−12,5%/−12,1%.10 páginas:3484→2481 alloc/realloc y4.390.720→1.092.106 bytes solicitados, PDF9483 bytes intacto. No son RSS ni garantías universales.
+- Compresión incondicional descartada por regresiones en páginas cortas/imagen. Final: solo multipágina y streams de al menos2048 bytes, reset diferido hasta siguiente uso. Se conserva penalización observada en vacío frente a formatting:1 página+3,45µs/+2,37%;10 páginas+13,94µs/+1,28% con intervalo pareado que incluye cero en10 páginas. Limitación no bloqueante de los contratos PDF, destino #661/informe; no afirmar mejora universal ni ocultar la primera cohorte.
+- Evidencia: docs/reports/2026-10-07-issue-661-review.md y evidencia/fronts, incluidos controles, parches por incremento, muestras e incertidumbre. Históricos intactos, WIP raíz preservado. CI primera versión29 SUCCESS/2 SKIPPED; no valida todavía esta continuación.
+- Siguiente acción exacta: publicar continuación del PR #689 contra develop, comprobar CI sobre su nuevo HEAD y preparar integración. #661 permanece OPEN. CFF pequeño y build sin features quedan registrados por separado sin corrección ni issue inventada.
+
 ## Reanudación del rendimiento del writer — #661 — 2026-10-07
 
 - Issue: #661 — perf(writer): implement measured CPU and allocation improvements from generation profiling — https://github.com/bzsanti/oxidizePdf/issues/661
@@ -17,6 +37,14 @@
 - Última validación de implementación:113 writer tests y37 contratos pasan; suite completa10.393 PASS/1 FAIL/71 ignorados, único fallo por mínimo de20KB ahora sustituido por25 páginas y46 líneas/página exactas. Final12/12 en ambos targets afectados; Clippy completo/final, formato, QR Kripteia/Security y28 PDFs externos pasan. Sin corpus externo en el checkout aislado; no atribuir una ejecución nueva T0–T6/OmniDocBench. Producto y dependencias permanecen idénticos al candidato medido.
 - Dos hallazgos de tests corregidos (fixtures fuera del crate y proxy de tamaño); embedding CFF pequeño preexistente registrado aparte y sin corrección. Informe y evidencia: docs/reports/2026-10-07-issue-661-review.md y directorio contiguo.
 - Siguiente acción exacta: paquete extraído5/5 validado; publicar PR contra develop y validar CI antes de integración. Mantener #661 OPEN hasta demostrar integración.
+
+## Hallazgo separado durante #661 — compilación sin ninguna feature
+
+- Issue: pendiente; lista abierta confirmada sin issue aplicable. Estado: bloqueado para corrección por falta de issue específica. Prioridad P2. Responsable de crear/vincular: mantenimiento/bzsanti.
+- Evidencia: `--no-default-features` falla con18 errores de flate2 ausente tanto en control5621e4cb como en candidato; cinco módulos causales son idénticos byte a byte. Logs e identidad en evidencia fronts/no-features-*. No lo introduce la reutilización del encoder.
+- Dependencia externa y desbloqueo: crear/vincular issue aplicable confirmada OPEN. Criterio de cierre: definir/validar el contrato sin features y corregir los imports/features bajo esa issue.
+- Siguiente acción exacta: mantenimiento debe crear/vincular la issue; no modificar dependencias, features ni esos módulos bajo este hallazgo antes de ello.
+- No bloquea #661: el perfil mínimo soportado por la CI usa `--no-default-features --features compression` (tools/text_contracts/run_fast.py); sus13 contratos focales pasan, al igual que los caminos runtime con compress=false. No afirmar validación de un build sin compression.
 
 ## Hallazgo separado durante #661 — OpenType/CFF pequeño sin subsetting
 

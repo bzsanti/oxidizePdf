@@ -138,6 +138,9 @@ pub struct PdfWriter<W: Write> {
     page_ids: Vec<ObjectId>,       // page IDs for form field references
     // Configuration
     config: WriterConfig,
+    // Lazily allocated and scoped to this writer; no global compressor cache.
+    #[cfg(feature = "compression")]
+    page_compressor: Option<flate2::write::ZlibEncoder<Vec<u8>>>,
     // Characters used in document, bucketed by font name (issue #204).
     // The writer uses this to subset each custom font with only its
     // own characters — a single global set caused unused fonts to be
@@ -205,6 +208,8 @@ impl<W: Write> PdfWriter<W> {
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
             config,
+            #[cfg(feature = "compression")]
+            page_compressor: None,
             document_used_chars_by_font: std::collections::HashMap::new(),
             buffered_objects: HashMap::new(),
             compressed_object_map: HashMap::new(),
@@ -225,9 +230,7 @@ impl<W: Write> PdfWriter<W> {
         }
 
         // Store used characters for font subsetting
-        if !document.used_characters_by_font.is_empty() {
-            self.document_used_chars_by_font = document.used_characters_by_font.clone();
-        }
+        self.capture_custom_font_usage(document);
 
         self.write_header()?;
 
@@ -512,7 +515,7 @@ impl<W: Write> PdfWriter<W> {
         self.prev_xref_offset = Some(prev_xref);
         // A source file need not end with whitespace after %%EOF.
         self.write_bytes(b"\n")?;
-        self.document_used_chars_by_font = document.used_characters_by_font.clone();
+        self.capture_custom_font_usage(document);
         let fonts = self.write_fonts(document)?;
         self.write_pages_preserving_metadata(
             document,
@@ -914,11 +917,9 @@ impl<W: Write> PdfWriter<W> {
         page: &crate::page::Page,
         preserved_font_map: &HashMap<String, String>,
     ) -> Result<()> {
-        let mut page_copy = page.clone();
-        // Issue #395: drive the preserved-content font rewrite from the same
-        // collision-only map used for the resource-dict rename.
-        page_copy.preserved_font_rewrite_map = preserved_font_map.clone();
-        let content = page_copy.generate_content()?;
+        // Use the same collision-only map as the resource dictionary without
+        // modifying or cloning the caller's page (including its fonts/images).
+        let content = page.generate_content_with_font_map(preserved_font_map)?;
 
         // Create stream with compression if enabled
         #[cfg(feature = "compression")]
@@ -927,13 +928,19 @@ impl<W: Write> PdfWriter<W> {
             let mut stream = Stream::new(content);
             // Only compress if config allows it
             if self.config.compress_streams {
-                stream.compress_flate()?;
+                // Resetting compressor history has a fixed cost: measurements
+                // regress for short/image-only streams and one-page documents.
+                // Retain the fresh-encoder path for those cases; reuse only for
+                // multipage documents with at least 2 KiB of page operators.
+                if self.page_ids.len() > 1 && stream.data().len() >= 2048 {
+                    stream.compress_flate_with_encoder(&mut self.page_compressor)?;
+                } else {
+                    stream.compress_flate()?;
+                }
             }
 
-            self.write_object(
-                content_id,
-                Object::Stream(stream.dictionary().clone(), stream.data().to_vec()),
-            )?;
+            let (dictionary, data) = stream.into_parts();
+            self.write_object(content_id, Object::Stream(dictionary, data))?;
         }
 
         #[cfg(not(feature = "compression"))]
@@ -1318,6 +1325,17 @@ impl<W: Write> PdfWriter<W> {
 
         self.write_object(info_id, Object::Dictionary(info_dict))?;
         Ok(())
+    }
+
+    /// Only registered custom fonts consume these sets at serialization time.
+    /// Keep all names in Document: fonts may be registered after pages are added.
+    fn capture_custom_font_usage(&mut self, document: &Document) {
+        self.document_used_chars_by_font = document
+            .used_characters_by_font
+            .iter()
+            .filter(|(name, _)| document.has_custom_font(name))
+            .map(|(name, chars)| (name.clone(), chars.clone()))
+            .collect();
     }
 
     fn write_fonts(&mut self, document: &Document) -> Result<HashMap<String, ObjectId>> {
@@ -3007,6 +3025,8 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
             config: WriterConfig::default(),
+            #[cfg(feature = "compression")]
+            page_compressor: None,
             document_used_chars_by_font: std::collections::HashMap::new(),
             buffered_objects: HashMap::new(),
             compressed_object_map: HashMap::new(),
@@ -3408,8 +3428,7 @@ impl<W: Write> PdfWriter<W> {
         self.xref_positions.insert(id, self.current_position);
 
         // Pre-format header to count exact bytes once
-        let header = format!("{} {} obj\n", id.number(), id.generation());
-        self.write_bytes(header.as_bytes())?;
+        self.write_formatted(format_args!("{} {} obj\n", id.number(), id.generation()))?;
 
         self.write_object_value(&object)?;
 
@@ -3421,13 +3440,8 @@ impl<W: Write> PdfWriter<W> {
         match object {
             Object::Null => self.write_bytes(b"null")?,
             Object::Boolean(b) => self.write_bytes(if *b { b"true" } else { b"false" })?,
-            Object::Integer(i) => self.write_bytes(i.to_string().as_bytes())?,
-            Object::Real(f) => self.write_bytes(
-                format!("{f:.6}")
-                    .trim_end_matches('0')
-                    .trim_end_matches('.')
-                    .as_bytes(),
-            )?,
+            Object::Integer(i) => self.write_formatted(format_args!("{i}"))?,
+            Object::Real(f) => self.write_bytes(format_real(*f, &mut [0; 384])?)?,
             Object::String(s) => {
                 // ISO 32000-1 §7.3.4.2: inside a literal string, the
                 // characters `\`, `(` and `)` MUST be escaped (as `\\`,
@@ -3445,7 +3459,7 @@ impl<W: Write> PdfWriter<W> {
                 // Write as PDF hex string <AABB...> for byte-perfect binary data
                 self.write_bytes(b"<")?;
                 for byte in bytes {
-                    self.write_bytes(format!("{byte:02X}").as_bytes())?;
+                    self.write_bytes(&hex_byte(*byte))?;
                 }
                 self.write_bytes(b">")?;
             }
@@ -3494,8 +3508,7 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(b"\nendstream")?;
             }
             Object::Reference(id) => {
-                let ref_str = format!("{} {} R", id.number(), id.generation());
-                self.write_bytes(ref_str.as_bytes())?;
+                self.write_formatted(format_args!("{} {} R", id.number(), id.generation()))?;
             }
         }
         Ok(())
@@ -3506,13 +3519,8 @@ impl<W: Write> PdfWriter<W> {
         match object {
             Object::Null => buffer.extend_from_slice(b"null"),
             Object::Boolean(b) => buffer.extend_from_slice(if *b { b"true" } else { b"false" }),
-            Object::Integer(i) => buffer.extend_from_slice(i.to_string().as_bytes()),
-            Object::Real(f) => buffer.extend_from_slice(
-                format!("{f:.6}")
-                    .trim_end_matches('0')
-                    .trim_end_matches('.')
-                    .as_bytes(),
-            ),
+            Object::Integer(i) => write!(buffer, "{i}")?,
+            Object::Real(f) => buffer.extend_from_slice(format_real(*f, &mut [0; 384])?),
             Object::String(s) => {
                 // Same escape rules as the streaming `write_object_value`
                 // path — see ISO 32000-1 §7.3.4.2.
@@ -3523,7 +3531,7 @@ impl<W: Write> PdfWriter<W> {
             Object::ByteString(bytes) => {
                 buffer.push(b'<');
                 for byte in bytes {
-                    buffer.extend_from_slice(format!("{byte:02X}").as_bytes());
+                    buffer.extend_from_slice(&hex_byte(*byte));
                 }
                 buffer.push(b'>');
             }
@@ -3563,8 +3571,7 @@ impl<W: Write> PdfWriter<W> {
                 ));
             }
             Object::Reference(id) => {
-                let ref_str = format!("{} {} R", id.number(), id.generation());
-                buffer.extend_from_slice(ref_str.as_bytes());
+                write!(buffer, "{} {} R", id.number(), id.generation())?;
             }
         }
         Ok(())
@@ -3908,6 +3915,16 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
+    /// Stack storage suffices for the bounded integers and references at these
+    /// call sites. Position accounting still goes through write_bytes.
+    fn write_formatted(&mut self, args: std::fmt::Arguments<'_>) -> Result<()> {
+        let mut storage = [0; 64];
+        let mut cursor = std::io::Cursor::new(storage.as_mut_slice());
+        cursor.write_fmt(args)?;
+        let len = cursor.position() as usize;
+        self.write_bytes(&storage[..len])
+    }
+
     fn write_bytes(&mut self, data: &[u8]) -> Result<()> {
         self.writer.write_all(data)?;
         self.current_position += data.len() as u64;
@@ -4076,6 +4093,27 @@ fn format_pdf_date(date: DateTime<Utc>) -> String {
 
     // For UTC, the offset is always +00'00
     format!("{formatted}+00'00")
+}
+
+/// Preserve Rust's fixed-six-decimal formatting and historical trimming,
+/// including negative zero and non-finite values. Even f64::MAX needs fewer
+/// than 384 bytes with sign, decimal point and six fractional digits.
+fn format_real(value: f64, storage: &mut [u8; 384]) -> Result<&[u8]> {
+    let mut cursor = std::io::Cursor::new(storage.as_mut_slice());
+    write!(cursor, "{value:.6}")?;
+    let mut len = cursor.position() as usize;
+    while len > 0 && storage[len - 1] == b'0' {
+        len -= 1;
+    }
+    if len > 0 && storage[len - 1] == b'.' {
+        len -= 1;
+    }
+    Ok(&storage[..len])
+}
+
+fn hex_byte(value: u8) -> [u8; 2] {
+    const DIGITS: &[u8; 16] = b"0123456789ABCDEF";
+    [DIGITS[(value >> 4) as usize], DIGITS[(value & 15) as usize]]
 }
 
 #[cfg(test)]

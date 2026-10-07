@@ -799,6 +799,7 @@ impl GraphicsContext {
             .push(ops::Op::SetFillColor(self.current_color));
     }
 
+    #[cfg(test)]
     pub(crate) fn generate_operations(&self) -> Result<Vec<u8>> {
         let mut buf = Vec::new();
         ops::serialize_ops(&mut buf, &self.operations);
@@ -947,8 +948,8 @@ impl GraphicsContext {
     /// For standard fonts, text is encoded as literal PDF strings.
     pub fn show_text(&mut self, text: &str) -> Result<&mut Self> {
         // Track used characters for font subsetting, bucketed by font name
-        // (issue #204). Builtin fonts skip tracking — subsetting only
-        // applies to custom Type0/CID fonts.
+        // (issue #204). Builtin names are retained as well because a
+        // custom Type0/CID font can be registered under the same name.
         self.record_used_chars(text);
 
         if self.is_custom_font {
@@ -1605,11 +1606,13 @@ impl GraphicsContext {
     /// the writer but keeps the merged [`Self::get_used_characters`]
     /// accessor lossless for diagnostic callers.
     fn record_used_chars(&mut self, text: &str) {
-        let bucket = self.current_font_name.as_deref().unwrap_or("").to_string();
-        self.used_characters_by_font
-            .entry(bucket)
-            .or_default()
-            .extend(text.chars());
+        let bucket = self.current_font_name.as_deref().unwrap_or("");
+        if let Some(chars) = self.used_characters_by_font.get_mut(bucket) {
+            chars.extend(text.chars());
+        } else {
+            self.used_characters_by_font
+                .insert(bucket.to_owned(), text.chars().collect());
+        }
     }
 
     /// Get the characters used in this graphics context, merged across

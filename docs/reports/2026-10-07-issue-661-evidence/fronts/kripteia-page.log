@@ -1,0 +1,275 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 82 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+target/issue661-writer/oxidize-pdf-core/src/page.rs              82     96
+
+--- Worst Offenders ---
+  test_text_flow (target/issue661-writer/oxidize-pdf-core/src/page.rs:2229) - Score: 75
+    - Test 'test_text_flow' executes production code without asserting on its behaviour
+  test_text_flow_creation (target/issue661-writer/oxidize-pdf-core/src/page.rs:3307) - Score: 75
+    - Test 'test_text_flow_creation' executes production code without asserting on its behaviour
+  test_layout_manager_centering (target/issue661-writer/oxidize-pdf-core/src/page.rs:4023) - Score: 80
+    - Test 'test_layout_manager_centering' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_layout_manager_centering' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_page_a4 (target/issue661-writer/oxidize-pdf-core/src/page.rs:2159) - Score: 90
+    - Test 'test_page_a4' has identical neighborhood to 'test_a4_page_dimensions'
+    i Test 'test_page_a4' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_a4' has multiple assertions without diagnostic messages
+  test_page_letter (target/issue661-writer/oxidize-pdf-core/src/page.rs:2166) - Score: 90
+    - Test 'test_page_letter' has identical neighborhood to 'test_letter_page_dimensions'
+    i Test 'test_page_letter' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_letter' has multiple assertions without diagnostic messages
+
+--- Details ---
+target/issue661-writer/oxidize-pdf-core/src/page.rs:
+  test_page_new (line 2148) - Score: 100
+    i Test 'test_page_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_new' has multiple assertions without diagnostic messages
+  test_page_a4 (line 2159) - Score: 90
+    - Test 'test_page_a4' has identical neighborhood to 'test_a4_page_dimensions'
+    i Test 'test_page_a4' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_a4' has multiple assertions without diagnostic messages
+  test_page_letter (line 2166) - Score: 90
+    - Test 'test_page_letter' has identical neighborhood to 'test_letter_page_dimensions'
+    i Test 'test_page_letter' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_letter' has multiple assertions without diagnostic messages
+  test_set_margins (line 2173) - Score: 90
+    - Test 'test_set_margins' has identical neighborhood to 'test_set_margins'
+    i Test 'test_set_margins' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_margins' has multiple assertions without diagnostic messages
+  test_content_dimensions (line 2184) - Score: 100
+    i Test 'test_content_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_dimensions' has multiple assertions without diagnostic messages
+  test_content_area (line 2193) - Score: 100
+    i Test 'test_content_area' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_area' has multiple assertions without diagnostic messages
+  test_graphics_context (line 2205) - Score: 90
+    - Test 'test_graphics_context' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_text_context (line 2217) - Score: 100
+    i Test 'test_text_context' uses .unwrap() which silently discards error information
+  test_text_flow (line 2229) - Score: 75
+    - Test 'test_text_flow' executes production code without asserting on its behaviour
+  test_add_text_flow (line 2239) - Score: 100
+    i Test 'test_add_text_flow' uses .unwrap() which silently discards error information
+  test_add_image (line 2253) - Score: 100
+    i Test 'test_add_image' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_add_image' has multiple assertions without diagnostic messages
+    i Test 'test_add_image' uses .unwrap() which silently discards error information
+  test_draw_image (line 2274) - Score: 90
+    i Test 'test_draw_image' uses .unwrap() which silently discards error information
+    - Test 'test_draw_image' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  test_generate_content (line 2302) - Score: 90
+    i Test 'test_generate_content' uses .unwrap() which silently discards error information
+    - Test 'test_generate_content' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  test_margins_default (line 2323) - Score: 90
+    i Test 'test_margins_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_margins_default' has multiple assertions without diagnostic messages
+    - Test 'test_margins_default' does not call any production code
+  test_page_clone (line 2332) - Score: 100
+    i Test 'test_page_clone' has multiple assertions without diagnostic messages
+    i Test 'test_page_clone' uses .unwrap() which silently discards error information
+  test_header_footer_basic (line 2357) - Score: 100
+    i Test 'test_header_footer_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_header_footer_basic' has multiple assertions without diagnostic messages
+  test_header_footer_with_page_numbers (line 2375) - Score: 100
+    i Test 'test_header_footer_with_page_numbers' has multiple assertions without diagnostic messages
+    i Test 'test_header_footer_with_page_numbers' uses .unwrap() which silently discards error information
+  test_page_content_with_headers_footers (line 2395) - Score: 90
+    i Test 'test_page_content_with_headers_footers' has multiple assertions without diagnostic messages
+    i Test 'test_page_content_with_headers_footers' uses .unwrap() which silently discards error information
+    - Test 'test_page_content_with_headers_footers' has low assert-to-setup ratio (16%): 4 asserts vs 21 setup lines
+  test_no_headers_footers (line 2432) - Score: 100
+    i Test 'test_no_headers_footers' has multiple assertions without diagnostic messages
+    i Test 'test_no_headers_footers' uses .unwrap() which silently discards error information
+  test_header_footer_custom_values (line 2447) - Score: 90
+    i Test 'test_header_footer_custom_values' uses .unwrap() which silently discards error information
+    - Test 'test_header_footer_custom_values' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+  test_page_document_integration (line 2476) - Score: 100
+    i Test 'test_page_document_integration' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_document_integration' has multiple assertions without diagnostic messages
+    i Test 'test_page_document_integration' uses .unwrap() which silently discards error information
+  test_page_writer_integration (line 2512) - Score: 100
+    i Test 'test_page_writer_integration' has multiple assertions without diagnostic messages
+    i Test 'test_page_writer_integration' uses .unwrap() which silently discards error information
+  test_page_margins_integration (line 2567) - Score: 100
+    i Test 'test_page_margins_integration' has multiple assertions without diagnostic messages
+    i Test 'test_page_margins_integration' uses .unwrap() which silently discards error information
+  test_page_image_integration (line 2624) - Score: 100
+    i Test 'test_page_image_integration' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_image_integration' has multiple assertions without diagnostic messages
+    i Test 'test_page_image_integration' uses .unwrap() which silently discards error information
+  test_page_text_flow_integration (line 2698) - Score: 100
+    i Test 'test_page_text_flow_integration' has multiple assertions without diagnostic messages
+    i Test 'test_page_text_flow_integration' uses .unwrap() which silently discards error information
+  test_page_complex_content_integration (line 2746) - Score: 90
+    - Test 'test_page_complex_content_integration' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_page_complex_content_integration' has multiple assertions without diagnostic messages
+    i Test 'test_page_complex_content_integration' uses .unwrap() which silently discards error information
+  test_page_content_generation_performance (line 2844) - Score: 100
+    i Test 'test_page_content_generation_performance' has multiple assertions without diagnostic messages
+    i Test 'test_page_content_generation_performance' uses .unwrap() which silently discards error information
+  test_page_error_handling (line 2880) - Score: 100
+    i Test 'test_page_error_handling' has multiple assertions without diagnostic messages
+    i Test 'test_page_error_handling' uses .unwrap() which silently discards error information
+  test_page_memory_management (line 2903) - Score: 100
+    i Test 'test_page_memory_management' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_memory_management' has multiple assertions without diagnostic messages
+    i Test 'test_page_memory_management' uses .unwrap() which silently discards error information
+  test_page_standard_sizes (line 2931) - Score: 100
+    i Test 'test_page_standard_sizes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_standard_sizes' has multiple assertions without diagnostic messages
+  test_header_footer_document_integration (line 2955) - Score: 100
+    i Test 'test_header_footer_document_integration' has multiple assertions without diagnostic messages
+    i Test 'test_header_footer_document_integration' uses .unwrap() which silently discards error information
+  test_header_footer_alignment_integration (line 3014) - Score: 100
+    i Test 'test_header_footer_alignment_integration' uses .unwrap() which silently discards error information
+  test_header_footer_date_time_integration (line 3048) - Score: 100
+    i Test 'test_header_footer_date_time_integration' has multiple assertions without diagnostic messages
+    i Test 'test_header_footer_date_time_integration' uses .unwrap() which silently discards error information
+  test_new_page_dimensions (line 3131) - Score: 100
+    i Test 'test_new_page_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_new_page_dimensions' has multiple assertions without diagnostic messages
+  test_a4_page_dimensions (line 3138) - Score: 90
+    - Test 'test_a4_page_dimensions' has identical neighborhood to 'test_page_a4'
+    i Test 'test_a4_page_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_a4_page_dimensions' has multiple assertions without diagnostic messages
+  test_letter_page_dimensions (line 3145) - Score: 90
+    - Test 'test_letter_page_dimensions' has identical neighborhood to 'test_page_letter'
+    i Test 'test_letter_page_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_letter_page_dimensions' has multiple assertions without diagnostic messages
+  test_legal_page_dimensions (line 3152) - Score: 100
+    i Test 'test_legal_page_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_legal_page_dimensions' has multiple assertions without diagnostic messages
+  test_default_margins (line 3161) - Score: 100
+    i Test 'test_default_margins' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_default_margins' has multiple assertions without diagnostic messages
+  test_set_margins (line 3171) - Score: 90
+    - Test 'test_set_margins' has identical neighborhood to 'test_set_margins'
+    i Test 'test_set_margins' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_margins' has multiple assertions without diagnostic messages
+  test_content_width (line 3183) - Score: 100
+    i Test 'test_content_width' asserts against a hardcoded constant instead of a computed expected value
+  test_content_height (line 3190) - Score: 100
+    i Test 'test_content_height' asserts against a hardcoded constant instead of a computed expected value
+  test_content_area (line 3197) - Score: 100
+    i Test 'test_content_area' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_area' has multiple assertions without diagnostic messages
+  test_graphics_context_access (line 3211) - Score: 90
+    - Test 'test_graphics_context_access' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_graphics_operations_chain (line 3225) - Score: 100
+    i Test 'test_graphics_operations_chain' has multiple assertions without diagnostic messages
+  test_text_context_access (line 3241) - Score: 90
+    - Test 'test_text_context_access' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  test_get_used_characters_from_text_context (line 3255) - Score: 100
+    i Test 'test_get_used_characters_from_text_context' has multiple assertions without diagnostic messages
+    i Test 'test_get_used_characters_from_text_context' uses .unwrap() which silently discards error information
+  test_get_used_characters_combines_both_contexts (line 3271) - Score: 100
+    i Test 'test_get_used_characters_combines_both_contexts' has multiple assertions without diagnostic messages
+    i Test 'test_get_used_characters_combines_both_contexts' uses .unwrap() which silently discards error information
+  test_get_used_characters_cjk_via_text_context (line 3291) - Score: 100
+    i Test 'test_get_used_characters_cjk_via_text_context' has multiple assertions without diagnostic messages
+    i Test 'test_get_used_characters_cjk_via_text_context' uses .unwrap() which silently discards error information
+  test_text_flow_creation (line 3307) - Score: 75
+    - Test 'test_text_flow_creation' executes production code without asserting on its behaviour
+  test_add_image (line 3320) - Score: 90
+    i Test 'test_add_image' uses .unwrap() which silently discards error information
+    - Test 'test_add_image' has low assert-to-setup ratio (11%): 2 asserts vs 17 setup lines
+  test_draw_image_simple (line 3346) - Score: 100
+    i Test 'test_draw_image_simple' uses .unwrap() which silently discards error information
+  test_add_annotation (line 3366) - Score: 90
+    i Test 'test_add_annotation' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_add_annotation' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  test_annotations_mut (line 3379) - Score: 90
+    i Test 'test_annotations_mut' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_annotations_mut' has low assert-to-setup ratio (5%): 1 asserts vs 21 setup lines
+  test_add_form_widget (line 3407) - Score: 100
+    i Test 'test_add_form_widget' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_add_form_widget' has multiple assertions without diagnostic messages
+  test_set_header (line 3426) - Score: 100
+    i Test 'test_set_header' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_header' has multiple assertions without diagnostic messages
+  test_set_footer (line 3441) - Score: 100
+    i Test 'test_set_footer' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_footer' has multiple assertions without diagnostic messages
+  test_header_footer_rendering (line 3456) - Score: 100
+    i Test 'test_header_footer_rendering' has multiple assertions without diagnostic messages
+    i Test 'test_header_footer_rendering' uses .unwrap() which silently discards error information
+  test_add_table (line 3476) - Score: 100
+    i Test 'test_add_table' uses .unwrap() which silently discards error information
+  test_generate_operations_empty (line 3497) - Score: 90
+    - Test 'test_generate_operations_empty' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_generate_operations_with_graphics (line 3507) - Score: 100
+    i Test 'test_generate_operations_with_graphics' has multiple assertions without diagnostic messages
+    i Test 'test_generate_operations_with_graphics' uses .unwrap() which silently discards error information
+  test_generate_operations_with_text (line 3523) - Score: 100
+    i Test 'test_generate_operations_with_text' has multiple assertions without diagnostic messages
+    i Test 'test_generate_operations_with_text' uses .unwrap() which silently discards error information
+  test_negative_margins (line 3545) - Score: 100
+    i Test 'test_negative_margins' has multiple assertions without diagnostic messages
+  test_zero_dimensions (line 3556) - Score: 100
+    i Test 'test_zero_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_zero_dimensions' has multiple assertions without diagnostic messages
+  test_huge_dimensions (line 3568) - Score: 100
+    i Test 'test_huge_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_huge_dimensions' has multiple assertions without diagnostic messages
+  test_draw_nonexistent_image (line 3575) - Score: 90
+    - Test 'test_draw_nonexistent_image' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_clone_page (line 3586) - Score: 100
+    i Test 'test_clone_page' has multiple assertions without diagnostic messages
+  test_page_from_parsed_basic (line 3599) - Score: 100
+    i Test 'test_page_from_parsed_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_from_parsed_basic' has multiple assertions without diagnostic messages
+    i Test 'test_page_from_parsed_basic' uses .unwrap() which silently discards error information
+  test_page_from_parsed_with_rotation (line 3624) - Score: 100
+    i Test 'test_page_from_parsed_with_rotation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_from_parsed_with_rotation' has multiple assertions without diagnostic messages
+    i Test 'test_page_from_parsed_with_rotation' uses .unwrap() which silently discards error information
+  test_page_from_parsed_with_cropbox (line 3653) - Score: 90
+    i Test 'test_page_from_parsed_with_cropbox' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_from_parsed_with_cropbox' has multiple assertions without diagnostic messages
+    i Test 'test_page_from_parsed_with_cropbox' uses .unwrap() which silently discards error information
+    - Test 'test_page_from_parsed_with_cropbox' has low assert-to-setup ratio (17%): 3 asserts vs 15 setup lines
+  test_page_from_parsed_small_mediabox (line 3677) - Score: 90
+    i Test 'test_page_from_parsed_small_mediabox' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_from_parsed_small_mediabox' has multiple assertions without diagnostic messages
+    i Test 'test_page_from_parsed_small_mediabox' uses .unwrap() which silently discards error information
+    - Test 'test_page_from_parsed_small_mediabox' has low assert-to-setup ratio (17%): 3 asserts vs 15 setup lines
+  test_page_from_parsed_non_zero_origin (line 3700) - Score: 90
+    i Test 'test_page_from_parsed_non_zero_origin' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_from_parsed_non_zero_origin' has multiple assertions without diagnostic messages
+    i Test 'test_page_from_parsed_non_zero_origin' uses .unwrap() which silently discards error information
+    - Test 'test_page_from_parsed_non_zero_origin' has low assert-to-setup ratio (17%): 3 asserts vs 15 setup lines
+  test_page_rotation (line 3724) - Score: 100
+    i Test 'test_page_rotation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_rotation' has multiple assertions without diagnostic messages
+  test_effective_dimensions (line 3755) - Score: 100
+    i Test 'test_effective_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_effective_dimensions' has multiple assertions without diagnostic messages
+  test_rotation_in_pdf_dict (line 3779) - Score: 100
+    i Test 'test_rotation_in_pdf_dict' has multiple assertions without diagnostic messages
+  test_layout_manager_pdf_standard (line 3955) - Score: 90
+    - Test 'test_layout_manager_pdf_standard' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_layout_manager_pdf_standard' has multiple assertions without diagnostic messages
+    i Test 'test_layout_manager_pdf_standard' uses .unwrap() which silently discards error information
+  test_layout_manager_screen_space (line 3976) - Score: 90
+    - Test 'test_layout_manager_screen_space' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_layout_manager_screen_space' has multiple assertions without diagnostic messages
+    i Test 'test_layout_manager_screen_space' uses .unwrap() which silently discards error information
+  test_layout_manager_overflow (line 3996) - Score: 90
+    - Test 'test_layout_manager_overflow' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_layout_manager_overflow' has multiple assertions without diagnostic messages
+  test_layout_manager_centering (line 4023) - Score: 80
+    - Test 'test_layout_manager_centering' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_layout_manager_centering' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

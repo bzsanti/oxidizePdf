@@ -1,0 +1,5 @@
+{
+  "sha256": "eeeed4ffafba24d5517283d3cafc2f72903364f22c4a4847f730b217f8b8d887",
+  "src_and_test_files_identical": 1422,
+  "package_tests": "workspace tests cover current source; no new extracted-package execution claimed"
+}

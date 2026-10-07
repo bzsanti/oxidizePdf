@@ -1,0 +1,68 @@
+[
+  {
+    "mode": "cjk",
+    "pages": 1,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 5.181660523017434,
+    "bootstrap_95pct": [
+      1.760081927167767,
+      10.95563391000013
+    ]
+  },
+  {
+    "mode": "cjk",
+    "pages": 10,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 2.8127478142089712,
+    "bootstrap_95pct": [
+      -5.706335339244205,
+      18.680354902185854
+    ]
+  },
+  {
+    "mode": "empty",
+    "pages": 1,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": -20.777977422829697,
+    "bootstrap_95pct": [
+      -25.78813545553631,
+      -5.918953466952304
+    ]
+  },
+  {
+    "mode": "empty",
+    "pages": 10,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 66.45752927674658,
+    "bootstrap_95pct": [
+      57.92210402303557,
+      69.07833042867347
+    ]
+  },
+  {
+    "mode": "image",
+    "pages": 1,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 1.4903949021907004,
+    "bootstrap_95pct": [
+      -5.067407308035865,
+      19.964366124155
+    ]
+  },
+  {
+    "mode": "image",
+    "pages": 10,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": -74.06950329565674,
+    "bootstrap_95pct": [
+      -96.90724176329687,
+      -30.98198256403458
+    ]
+  }
+]

@@ -1,0 +1,181 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 99 | Tests: 55 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+target/issue661-writer/oxidize-pdf-core/src/document.rs          55     99
+
+--- Worst Offenders ---
+  test_document_default (target/issue661-writer/oxidize-pdf-core/src/document.rs:1573) - Score: 90
+    - Test 'test_document_default' does not call any production code
+  test_document_writer_error_handling (target/issue661-writer/oxidize-pdf-core/src/document.rs:1848) - Score: 90
+    - Test 'test_document_writer_error_handling' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_update_modification_date (target/issue661-writer/oxidize-pdf-core/src/document.rs:2166) - Score: 90
+    - Test 'test_update_modification_date' waits with a fixed sleep
+    i Test 'test_update_modification_date' has multiple assertions without diagnostic messages
+  test_document_save_updates_modification_date (target/issue661-writer/oxidize-pdf-core/src/document.rs:2183) - Score: 90
+    - Test 'test_document_save_updates_modification_date' waits with a fixed sleep
+    i Test 'test_document_save_updates_modification_date' uses .unwrap() which silently discards error information
+  test_document_compression_config_inheritance (target/issue661-writer/oxidize-pdf-core/src/document.rs:2348) - Score: 90
+    i Test 'test_document_compression_config_inheritance' has multiple assertions without diagnostic messages
+    i Test 'test_document_compression_config_inheritance' uses .unwrap() which silently discards error information
+    - Test 'test_document_compression_config_inheritance' has low assert-to-setup ratio (15%): 3 asserts vs 17 setup lines
+
+--- Details ---
+target/issue661-writer/oxidize-pdf-core/src/document.rs:
+  test_document_new (line 1556) - Score: 100
+    i Test 'test_document_new' has multiple assertions without diagnostic messages
+  test_document_default (line 1573) - Score: 90
+    - Test 'test_document_default' does not call any production code
+  test_add_page (line 1579) - Score: 100
+    i Test 'test_add_page' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_add_page' has multiple assertions without diagnostic messages
+  test_set_title (line 1592) - Score: 100
+    i Test 'test_set_title' has multiple assertions without diagnostic messages
+  test_set_author (line 1604) - Score: 100
+    i Test 'test_set_author' has multiple assertions without diagnostic messages
+  test_set_subject (line 1613) - Score: 100
+    i Test 'test_set_subject' has multiple assertions without diagnostic messages
+  test_set_keywords (line 1622) - Score: 100
+    i Test 'test_set_keywords' has multiple assertions without diagnostic messages
+  test_metadata_default (line 1631) - Score: 100
+    i Test 'test_metadata_default' has multiple assertions without diagnostic messages
+  test_write_to_buffer (line 1646) - Score: 100
+    i Test 'test_write_to_buffer' has multiple assertions without diagnostic messages
+  test_document_with_multiple_pages (line 1660) - Score: 100
+    i Test 'test_document_with_multiple_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_document_with_multiple_pages' has multiple assertions without diagnostic messages
+  test_empty_document_write (line 1677) - Score: 100
+    i Test 'test_empty_document_write' has multiple assertions without diagnostic messages
+  test_document_writer_roundtrip (line 1697) - Score: 100
+    i Test 'test_document_writer_roundtrip' has multiple assertions without diagnostic messages
+    i Test 'test_document_writer_roundtrip' uses .unwrap() which silently discards error information
+  test_document_with_complex_content (line 1734) - Score: 100
+    i Test 'test_document_with_complex_content' has multiple assertions without diagnostic messages
+    i Test 'test_document_with_complex_content' uses .unwrap() which silently discards error information
+  test_document_multiple_pages_integration (line 1773) - Score: 100
+    i Test 'test_document_multiple_pages_integration' has multiple assertions without diagnostic messages
+    i Test 'test_document_multiple_pages_integration' uses .unwrap() which silently discards error information
+  test_document_metadata_persistence (line 1822) - Score: 100
+    i Test 'test_document_metadata_persistence' has multiple assertions without diagnostic messages
+    i Test 'test_document_metadata_persistence' uses .unwrap() which silently discards error information
+  test_document_writer_error_handling (line 1848) - Score: 90
+    - Test 'test_document_writer_error_handling' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_document_page_integration (line 1858) - Score: 100
+    i Test 'test_document_page_integration' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_document_page_integration' has multiple assertions without diagnostic messages
+    i Test 'test_document_page_integration' uses .unwrap() which silently discards error information
+  test_document_content_generation (line 1890) - Score: 100
+    i Test 'test_document_content_generation' has multiple assertions without diagnostic messages
+    i Test 'test_document_content_generation' uses .unwrap() which silently discards error information
+  test_document_buffer_vs_file_write (line 1922) - Score: 100
+    i Test 'test_document_buffer_vs_file_write' has multiple assertions without diagnostic messages
+    i Test 'test_document_buffer_vs_file_write' uses .unwrap() which silently discards error information
+  test_document_large_content_handling (line 1956) - Score: 100
+    i Test 'test_document_large_content_handling' has multiple assertions without diagnostic messages
+    i Test 'test_document_large_content_handling' uses .unwrap() which silently discards error information
+  test_document_incremental_building (line 1987) - Score: 100
+    i Test 'test_document_incremental_building' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_document_incremental_building' has multiple assertions without diagnostic messages
+    i Test 'test_document_incremental_building' uses .unwrap() which silently discards error information
+  test_document_concurrent_page_operations (line 2046) - Score: 100
+    i Test 'test_document_concurrent_page_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_document_concurrent_page_operations' has multiple assertions without diagnostic messages
+    i Test 'test_document_concurrent_page_operations' uses .unwrap() which silently discards error information
+  test_document_memory_efficiency (line 2079) - Score: 100
+    i Test 'test_document_memory_efficiency' has multiple assertions without diagnostic messages
+    i Test 'test_document_memory_efficiency' uses .unwrap() which silently discards error information
+  test_document_creator_producer (line 2105) - Score: 100
+    i Test 'test_document_creator_producer' has multiple assertions without diagnostic messages
+  test_document_dates (line 2129) - Score: 100
+    i Test 'test_document_dates' has multiple assertions without diagnostic messages
+    i Test 'test_document_dates' uses .unwrap() which silently discards error information
+  test_document_dates_local (line 2150) - Score: 100
+    i Test 'test_document_dates_local' has multiple assertions without diagnostic messages
+    i Test 'test_document_dates_local' uses .unwrap() which silently discards error information
+  test_update_modification_date (line 2166) - Score: 90
+    - Test 'test_update_modification_date' waits with a fixed sleep
+    i Test 'test_update_modification_date' has multiple assertions without diagnostic messages
+  test_document_save_updates_modification_date (line 2183) - Score: 90
+    - Test 'test_document_save_updates_modification_date' waits with a fixed sleep
+    i Test 'test_document_save_updates_modification_date' uses .unwrap() which silently discards error information
+  test_document_metadata_complete (line 2202) - Score: 100
+    i Test 'test_document_metadata_complete' has multiple assertions without diagnostic messages
+  test_document_to_bytes (line 2240) - Score: 100
+    i Test 'test_document_to_bytes' has multiple assertions without diagnostic messages
+    i Test 'test_document_to_bytes' uses .unwrap() which silently discards error information
+  test_document_to_bytes_with_config (line 2266) - Score: 100
+    i Test 'test_document_to_bytes_with_config' has multiple assertions without diagnostic messages
+    i Test 'test_document_to_bytes_with_config' uses .unwrap() which silently discards error information
+  test_to_bytes_vs_save_equivalence (line 2294) - Score: 100
+    i Test 'test_to_bytes_vs_save_equivalence' has multiple assertions without diagnostic messages
+    i Test 'test_to_bytes_vs_save_equivalence' uses .unwrap() which silently discards error information
+  test_document_set_compress (line 2322) - Score: 100
+    i Test 'test_document_set_compress' has multiple assertions without diagnostic messages
+    i Test 'test_document_set_compress' uses .unwrap() which silently discards error information
+  test_document_compression_config_inheritance (line 2348) - Score: 90
+    i Test 'test_document_compression_config_inheritance' has multiple assertions without diagnostic messages
+    i Test 'test_document_compression_config_inheritance' uses .unwrap() which silently discards error information
+    - Test 'test_document_compression_config_inheritance' has low assert-to-setup ratio (15%): 3 asserts vs 17 setup lines
+  test_document_metadata_all_fields (line 2374) - Score: 100
+    i Test 'test_document_metadata_all_fields' has multiple assertions without diagnostic messages
+  test_document_add_pages (line 2403) - Score: 100
+    i Test 'test_document_add_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_document_add_pages' has multiple assertions without diagnostic messages
+  test_document_default_font_encoding (line 2429) - Score: 100
+    i Test 'test_document_default_font_encoding' has multiple assertions without diagnostic messages
+  test_document_compression_setting (line 2451) - Score: 100
+    i Test 'test_document_compression_setting' has multiple assertions without diagnostic messages
+  test_document_with_empty_pages (line 2467) - Score: 100
+    i Test 'test_document_with_empty_pages' has multiple assertions without diagnostic messages
+    i Test 'test_document_with_empty_pages' uses .unwrap() which silently discards error information
+  test_document_with_multiple_page_sizes (line 2483) - Score: 90
+    i Test 'test_document_with_multiple_page_sizes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_document_with_multiple_page_sizes' has multiple assertions without diagnostic messages
+    - Test 'test_document_with_multiple_page_sizes' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  test_document_metadata_dates (line 2503) - Score: 100
+    i Test 'test_document_metadata_dates' has multiple assertions without diagnostic messages
+  test_document_builder_pattern (line 2522) - Score: 100
+    i Test 'test_document_builder_pattern' has multiple assertions without diagnostic messages
+  test_xref_streams_functionality (line 2535) - Score: 100
+    i Test 'test_xref_streams_functionality' has multiple assertions without diagnostic messages
+    i Test 'test_xref_streams_functionality' uses .unwrap() which silently discards error information
+  test_document_save_to_vec (line 2595) - Score: 100
+    i Test 'test_document_save_to_vec' has multiple assertions without diagnostic messages
+    i Test 'test_document_save_to_vec' uses .unwrap() which silently discards error information
+  test_document_unicode_metadata (line 2611) - Score: 100
+    i Test 'test_document_unicode_metadata' has multiple assertions without diagnostic messages
+  test_document_page_iteration (line 2630) - Score: 90
+    i Test 'test_document_page_iteration' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_document_page_iteration' has multiple assertions without diagnostic messages
+    - Test 'test_document_page_iteration' has low assert-to-setup ratio (13%): 2 asserts vs 13 setup lines
+  test_document_with_graphics_content (line 2652) - Score: 90
+    - Test 'test_document_with_graphics_content' has low assert-to-setup ratio (3%): 1 asserts vs 31 setup lines
+  test_document_producer_version (line 2688) - Score: 100
+    i Test 'test_document_producer_version' has multiple assertions without diagnostic messages
+  test_document_empty_metadata_fields (line 2700) - Score: 100
+    i Test 'test_document_empty_metadata_fields' has multiple assertions without diagnostic messages
+  test_document_very_long_metadata (line 2717) - Score: 100
+    i Test 'test_document_very_long_metadata' has multiple assertions without diagnostic messages
+  test_add_font_from_bytes_writes_to_per_document_store_not_global (line 2736) - Score: 100
+    i Test 'test_add_font_from_bytes_writes_to_per_document_store_not_global' has multiple assertions without diagnostic messages
+  test_new_page_a4_returns_page_bound_to_document_store (line 2764) - Score: 100
+    i Test 'test_new_page_a4_returns_page_bound_to_document_store' has multiple assertions without diagnostic messages
+    i Test 'test_new_page_a4_returns_page_bound_to_document_store' uses .unwrap() which silently discards error information
+  test_new_page_letter_and_new_page_carry_store (line 2779) - Score: 100
+    i Test 'test_new_page_letter_and_new_page_carry_store' has multiple assertions without diagnostic messages
+  test_add_page_injects_store_into_legacy_page (line 2788) - Score: 100
+    i Test 'test_add_page_injects_store_into_legacy_page' has multiple assertions without diagnostic messages
+  test_add_page_does_not_overwrite_existing_store (line 2815) - Score: 100
+    i Test 'test_add_page_does_not_overwrite_existing_store' has multiple assertions without diagnostic messages
+    i Test 'test_add_page_does_not_overwrite_existing_store' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

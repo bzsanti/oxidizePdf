@@ -260,14 +260,13 @@ impl TextContext {
     /// are both tracked; the writer later filters to the set of
     /// registered custom fonts when subsetting.
     fn record_used_chars(&mut self, text: &str) {
-        let name = match &self.current_font {
-            Font::Custom(name) => name.clone(),
-            builtin => builtin.pdf_name(),
-        };
-        self.used_characters_by_font
-            .entry(name)
-            .or_default()
-            .extend(text.chars());
+        let name = self.current_font.pdf_name_ref();
+        if let Some(chars) = self.used_characters_by_font.get_mut(name) {
+            chars.extend(text.chars());
+        } else {
+            self.used_characters_by_font
+                .insert(name.to_owned(), text.chars().collect());
+        }
     }
 
     /// Introspection helper for Task 7 tests (issue #230).
