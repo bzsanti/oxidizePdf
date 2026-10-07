@@ -1,3 +1,11 @@
+## Normalización de espacios — PR #688
+
+- Issue: #687 — `TextExtractor`: Normalize Unicode non-breaking space (`U+00A0`) to standard space (`U+0020`) in extracted text — https://github.com/bzsanti/oxidizePdf/issues/687
+- Estado: en validación. Prioridad P1. Responsable: Codex.
+- Cierre: normalización opt-in en texto y fragmentos, incluidos ActualText inline/estructura, conservando defaults y límites; regresiones ejecutadas por la matriz de contratos del CI.
+- Última validación: nuevas regresiones reproducen el defecto y pasan con la corrección; controles MacRoman y ActualText existentes aprobados.
+- Siguiente acción: verificar CI del HEAD corregido antes de integrar en develop.
+
 ## Release 5.3.0 — 2026-10-06
 
 - Issue: #684 — release: publish 5.3.0 and reconcile release history — https://github.com/bzsanti/oxidizePdf/issues/684

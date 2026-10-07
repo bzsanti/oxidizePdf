@@ -2568,7 +2568,20 @@ impl TextExtractor {
                     // scope (innermost-ActualText-wins per spec §4).
                     if let Some(ref text) = actual_text {
                         state.pending_actualtext = Some(PendingActualText {
-                            text: text.clone(),
+                            // ActualText bypasses glyph decoding/sanitization. Apply
+                            // only the opt-in character substitution here, before
+                            // byte accounting and fragment emission; preserve its
+                            // other characters and intentional repeated spaces.
+                            text: if self.normalize_non_breaking_spaces {
+                                text.chars()
+                                    .map(|ch| match ch {
+                                        '\u{00a0}' | '\u{202f}' => ' ',
+                                        _ => ch,
+                                    })
+                                    .collect()
+                            } else {
+                                text.clone()
+                            },
                             first_x: 0.0,
                             first_y: 0.0,
                             width: 0.0,
