@@ -1,0 +1,110 @@
+[
+  {
+    "variant": "control",
+    "mode": "empty",
+    "pages": 1,
+    "bytes": 4769,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "23df331757de3f6c75dda37c4fab6c06490c17ec07a02a4e4b906bea3db2f1c8"
+  },
+  {
+    "variant": "compression",
+    "mode": "empty",
+    "pages": 1,
+    "bytes": 4769,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "18a7c7255e4617744ec09bdc73be0a24e1bea889858f6f2cccc68921acda6f36"
+  },
+  {
+    "variant": "control",
+    "mode": "empty",
+    "pages": 10,
+    "bytes": 7014,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "00f29404219ee4796969202928cc2e0e9034fb2d1d0224701297f3b88c0e2b5a"
+  },
+  {
+    "variant": "compression",
+    "mode": "empty",
+    "pages": 10,
+    "bytes": 7014,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "53e6befec654f97615cb3339b9746e7da92b6383e404e85b0546df5979543a8f"
+  },
+  {
+    "variant": "control",
+    "mode": "image",
+    "pages": 1,
+    "bytes": 70593,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "f3e06efa35b59981d2586a57e9afc8a3f7c540dbd93eef6c24dc17f8db13a54c"
+  },
+  {
+    "variant": "compression",
+    "mode": "image",
+    "pages": 1,
+    "bytes": 70593,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "76d19bbd94c45199f43c55abc5b3703f0ea0c314ae130733dd5f9828c868b5c6"
+  },
+  {
+    "variant": "control",
+    "mode": "image",
+    "pages": 10,
+    "bytes": 665267,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "8a4170ae4f76fe9e3bc3c3a169a75bfcceece359504f8fcc1a811cf12d2a18e8"
+  },
+  {
+    "variant": "compression",
+    "mode": "image",
+    "pages": 10,
+    "bytes": 665267,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "1afef15702bf1f5efeaa14f596bc4660dc25d93c7f28789551a5f68a5a1fdf6a"
+  },
+  {
+    "variant": "control",
+    "mode": "cjk",
+    "pages": 1,
+    "bytes": 6653,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "9377fd2bbb6307ecabca74bba91127c64cbbe26a71ae037b4f80c30c50b0fbdf"
+  },
+  {
+    "variant": "compression",
+    "mode": "cjk",
+    "pages": 1,
+    "bytes": 6653,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "e17c560848e485c6382653bc9dc31ec9c70851141c3b35979413a184170de94e"
+  },
+  {
+    "variant": "control",
+    "mode": "cjk",
+    "pages": 10,
+    "bytes": 9541,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "b416d7288fb1a71475d45ac5a37ad4e775aa92e48cb35d4d3c9b1998fb471b81"
+  },
+  {
+    "variant": "compression",
+    "mode": "cjk",
+    "pages": 10,
+    "bytes": 9541,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "3969d8b19fe1c8aa57cf4f02a8dcf48f81b3f038491c07d1dc2f78623454465c"
+  }
+]

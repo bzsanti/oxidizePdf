@@ -1,0 +1,60 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 99 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...idize-pdf-core/tests/issue_661_writer_resources_test.rs        7     99
+
+--- Worst Offenders ---
+  standard_resources_are_written_once_and_raw_variants_survive (target/issue661-writer/oxidize-pdf-core/tests/issue_661_writer_resources_test.rs:34) - Score: 90
+    - Test 'standard_resources_are_written_once_and_raw_variants_survive' has a match arm with empty body, ignoring potential error cases
+    i Test 'standard_resources_are_written_once_and_raw_variants_survive' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'standard_resources_are_written_once_and_raw_variants_survive' has multiple assertions without diagnostic messages
+    i Test 'standard_resources_are_written_once_and_raw_variants_survive' uses .unwrap() which silently discards error information
+  shared_resources_survive_repeated_saves_and_added_custom_page (target/issue661-writer/oxidize-pdf-core/tests/issue_661_writer_resources_test.rs:87) - Score: 100
+    i Test 'shared_resources_survive_repeated_saves_and_added_custom_page' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'shared_resources_survive_repeated_saves_and_added_custom_page' has multiple assertions without diagnostic messages
+    i Test 'shared_resources_survive_repeated_saves_and_added_custom_page' uses .unwrap() which silently discards error information
+  imported_shared_resources_remain_local_while_new_pages_share (target/issue661-writer/oxidize-pdf-core/tests/issue_661_writer_resources_test.rs:127) - Score: 100
+    i Test 'imported_shared_resources_remain_local_while_new_pages_share' uses .unwrap() which silently discards error information
+  shared_custom_font_named_like_a_standard_font_keeps_its_glyphs (target/issue661-writer/oxidize-pdf-core/tests/issue_661_writer_resources_test.rs:153) - Score: 100
+    i Test 'shared_custom_font_named_like_a_standard_font_keeps_its_glyphs' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'shared_custom_font_named_like_a_standard_font_keeps_its_glyphs' has multiple assertions without diagnostic messages
+    i Test 'shared_custom_font_named_like_a_standard_font_keeps_its_glyphs' uses .unwrap() which silently discards error information
+  shared_cjk_font_preserves_characters_from_every_page (target/issue661-writer/oxidize-pdf-core/tests/issue_661_writer_resources_test.rs:204) - Score: 100
+    i Test 'shared_cjk_font_preserves_characters_from_every_page' uses .unwrap() which silently discards error information
+
+--- Details ---
+target/issue661-writer/oxidize-pdf-core/tests/issue_661_writer_resources_test.rs:
+  standard_resources_are_written_once_and_raw_variants_survive (line 34) - Score: 90
+    - Test 'standard_resources_are_written_once_and_raw_variants_survive' has a match arm with empty body, ignoring potential error cases
+    i Test 'standard_resources_are_written_once_and_raw_variants_survive' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'standard_resources_are_written_once_and_raw_variants_survive' has multiple assertions without diagnostic messages
+    i Test 'standard_resources_are_written_once_and_raw_variants_survive' uses .unwrap() which silently discards error information
+  shared_resources_survive_repeated_saves_and_added_custom_page (line 87) - Score: 100
+    i Test 'shared_resources_survive_repeated_saves_and_added_custom_page' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'shared_resources_survive_repeated_saves_and_added_custom_page' has multiple assertions without diagnostic messages
+    i Test 'shared_resources_survive_repeated_saves_and_added_custom_page' uses .unwrap() which silently discards error information
+  imported_shared_resources_remain_local_while_new_pages_share (line 127) - Score: 100
+    i Test 'imported_shared_resources_remain_local_while_new_pages_share' uses .unwrap() which silently discards error information
+  shared_custom_font_named_like_a_standard_font_keeps_its_glyphs (line 153) - Score: 100
+    i Test 'shared_custom_font_named_like_a_standard_font_keeps_its_glyphs' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'shared_custom_font_named_like_a_standard_font_keeps_its_glyphs' has multiple assertions without diagnostic messages
+    i Test 'shared_custom_font_named_like_a_standard_font_keeps_its_glyphs' uses .unwrap() which silently discards error information
+  shared_cjk_font_preserves_characters_from_every_page (line 204) - Score: 100
+    i Test 'shared_cjk_font_preserves_characters_from_every_page' uses .unwrap() which silently discards error information
+  late_custom_registration_keeps_usage_from_both_contexts_and_pages (line 232) - Score: 100
+    i Test 'late_custom_registration_keeps_usage_from_both_contexts_and_pages' uses .unwrap() which silently discards error information
+  mixed_short_and_long_streams_remain_independent_across_repeated_saves (line 271) - Score: 100
+    i Test 'mixed_short_and_long_streams_remain_independent_across_repeated_saves' has multiple assertions without diagnostic messages
+    i Test 'mixed_short_and_long_streams_remain_independent_across_repeated_saves' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

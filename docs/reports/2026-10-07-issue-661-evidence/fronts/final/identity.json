@@ -1,0 +1,16 @@
+{
+  "control_commit": "5621e4cb25690c7618981edc03deb15883e4dbc9",
+  "files": {
+    "oxidize-pdf-core/src/document.rs": "b5ebd7b3b762ead8d58b15d46a13f62e4e1af7eb7f0e2350eb5de61d54938d6c",
+    "oxidize-pdf-core/src/graphics/mod.rs": "a4459773300f827c949c9dd8354d85d6741c5e6f7dfc9273b2d10475c88409dd",
+    "oxidize-pdf-core/src/objects/stream.rs": "52a5b09bacea99a3be75efefdf228fda57c394f47d4e71d99c67e6ebfd926747",
+    "oxidize-pdf-core/src/page.rs": "9289b28a64ff159fe109703f624fc20aeccff2c57fb04d43c81970ab09d33543",
+    "oxidize-pdf-core/src/text/font.rs": "9102bec423ab63182923694f115d3ffe413640e41981ad8e020e2c4d3310b289",
+    "oxidize-pdf-core/src/text/mod.rs": "64da86b3eae8a968b59af3f77815bae2d75a0382a3164046302893e2112da9dc",
+    "oxidize-pdf-core/src/writer/pdf_writer/mod.rs": "b469efccf361fc9067e849836f9529fe235f0ff425560361f3de607526bd68ce",
+    "oxidize-pdf-core/src/writer/pdf_writer/tests.rs": "d7aadeb27209d3b4058356bc84a103f5ad766d1481a3ebe15267eb5ddf33d834",
+    "oxidize-pdf-core/tests/issue_661_writer_resources_test.rs": "a377b04d13ac3fa7dbe28373a725b9cbfba93ce161a435940f9f1e1154bd18ce"
+  },
+  "lock_sha256": "dcf319be6677fd61ed7e81d5bdbac99c20ca53b1a4ffee164ac3c8ffe9b33577",
+  "compression_policy": "Only multipage documents with page operators >=2048 bytes; reset deferred until next eligible stream"
+}

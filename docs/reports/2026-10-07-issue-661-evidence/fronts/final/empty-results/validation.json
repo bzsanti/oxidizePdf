@@ -1,0 +1,38 @@
+[
+  {
+    "variant": "control",
+    "mode": "empty",
+    "pages": 1,
+    "bytes": 4769,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "ca94526f7b4b735bac6271a66d7694f933d99057ce6fa9cc5145c1c8a581f036"
+  },
+  {
+    "variant": "compression",
+    "mode": "empty",
+    "pages": 1,
+    "bytes": 4769,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "22a691a2371b8885f05eecef445324d9ebe9830cef251ce52f7b0ef10b0e3521"
+  },
+  {
+    "variant": "control",
+    "mode": "empty",
+    "pages": 10,
+    "bytes": 7014,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "7b261521aed81125eb71f9b56f3425484b3c521bd573399342fc764e82a02cc6"
+  },
+  {
+    "variant": "compression",
+    "mode": "empty",
+    "pages": 10,
+    "bytes": 7014,
+    "qpdf": "pass",
+    "text": "exact",
+    "sha256": "66d43255b88a845800d00bebf96a42d4ae7c91810cf53bb3a37aec595620610d"
+  }
+]

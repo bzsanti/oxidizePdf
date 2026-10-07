@@ -1,0 +1,57 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 99 | Tests: 12 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+.../issue661-writer/oxidize-pdf-core/src/objects/stream.rs       12     99
+
+--- Worst Offenders ---
+  test_stream_with_existing_length (target/issue661-writer/oxidize-pdf-core/src/objects/stream.rs:294) - Score: 90
+    - Test 'test_stream_with_existing_length' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_stream_new (target/issue661-writer/oxidize-pdf-core/src/objects/stream.rs:120) - Score: 100
+    i Test 'test_stream_new' has multiple assertions without diagnostic messages
+  test_stream_with_dictionary (target/issue661-writer/oxidize-pdf-core/src/objects/stream.rs:129) - Score: 100
+    i Test 'test_stream_with_dictionary' has multiple assertions without diagnostic messages
+  test_stream_accessors (target/issue661-writer/oxidize-pdf-core/src/objects/stream.rs:150) - Score: 100
+    i Test 'test_stream_accessors' has multiple assertions without diagnostic messages
+  test_stream_mutators (target/issue661-writer/oxidize-pdf-core/src/objects/stream.rs:163) - Score: 100
+    i Test 'test_stream_mutators' has multiple assertions without diagnostic messages
+
+--- Details ---
+target/issue661-writer/oxidize-pdf-core/src/objects/stream.rs:
+  test_stream_new (line 120) - Score: 100
+    i Test 'test_stream_new' has multiple assertions without diagnostic messages
+  test_stream_with_dictionary (line 129) - Score: 100
+    i Test 'test_stream_with_dictionary' has multiple assertions without diagnostic messages
+  test_stream_accessors (line 150) - Score: 100
+    i Test 'test_stream_accessors' has multiple assertions without diagnostic messages
+  test_stream_mutators (line 163) - Score: 100
+    i Test 'test_stream_mutators' has multiple assertions without diagnostic messages
+  test_set_filter (line 183) - Score: 100
+    i Test 'test_set_filter' has multiple assertions without diagnostic messages
+  test_set_decode_params (line 200) - Score: 100
+    i Test 'test_set_decode_params' has multiple assertions without diagnostic messages
+  test_empty_stream (line 225) - Score: 100
+    i Test 'test_empty_stream' has multiple assertions without diagnostic messages
+  test_large_stream (line 233) - Score: 100
+    i Test 'test_large_stream' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_large_stream' has multiple assertions without diagnostic messages
+  test_compress_flate (line 246) - Score: 100
+    i Test 'test_compress_flate' has multiple assertions without diagnostic messages
+  test_compress_flate_empty (line 278) - Score: 100
+    i Test 'test_compress_flate_empty' has multiple assertions without diagnostic messages
+  test_stream_with_existing_length (line 294) - Score: 90
+    - Test 'test_stream_with_existing_length' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  reusable_encoder_resets_history_and_preserves_exact_streams (line 308) - Score: 100
+    i Test 'reusable_encoder_resets_history_and_preserves_exact_streams' has multiple assertions without diagnostic messages
+    i Test 'reusable_encoder_resets_history_and_preserves_exact_streams' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -4339,3 +4339,65 @@ mod comprehensive_tests {
 mod catalog_entries_tests;
 mod form_filling_tests;
 mod incremental_update_tests;
+
+#[test]
+fn numeric_and_binary_serialization_preserves_legacy_bytes() {
+    // Historical fixed-six-decimal formatting is the compatibility oracle,
+    // including extremes and values close to rounding boundaries.
+    let reals = [
+        0.0,
+        -0.0,
+        0.0000004,
+        -0.0000004,
+        0.0000005,
+        1.2345675,
+        -1.2345675,
+        1e20,
+        f64::MAX,
+        f64::MIN,
+        f64::MIN_POSITIVE,
+        f64::NAN,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+    ];
+    let mut cases: Vec<(Object, Vec<u8>)> = reals
+        .into_iter()
+        .map(|f| {
+            (
+                Object::Real(f),
+                format!("{f:.6}")
+                    .trim_end_matches('0')
+                    .trim_end_matches('.')
+                    .as_bytes()
+                    .to_vec(),
+            )
+        })
+        .collect();
+    for i in [i64::MIN, -1, 0, 1, i64::MAX] {
+        cases.push((Object::Integer(i), i.to_string().into_bytes()));
+    }
+    cases.push((
+        Object::Reference(ObjectId::new(u32::MAX, u16::MAX)),
+        b"4294967295 65535 R".to_vec(),
+    ));
+    let octets: Vec<u8> = (0..=255).collect();
+    let hex = format!(
+        "<{}>",
+        octets
+            .iter()
+            .map(|b| format!("{b:02X}"))
+            .collect::<String>()
+    );
+    cases.push((Object::ByteString(octets), hex.into_bytes()));
+    for (object, expected) in cases {
+        let mut writer = PdfWriter::new_with_writer(Vec::new());
+        writer.write_object_value(&object).unwrap();
+        assert_eq!(writer.current_position as usize, expected.len());
+        assert_eq!(writer.writer, expected);
+        let mut buffer = Vec::new();
+        writer
+            .write_object_value_to_buffer(&object, &mut buffer)
+            .unwrap();
+        assert_eq!(buffer, expected);
+    }
+}
