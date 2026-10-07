@@ -1,11 +1,20 @@
+## Release 5.4.0
+
+- Issue: #693 — release: prepare and publish 5.4.0 — https://github.com/bzsanti/oxidizePdf/issues/693
+- Estado: paquete 5.4.0 validado; PR de release/CI pendientes. Prioridad P1. Responsable: Codex.
+- Cierre: versión/changelog coherentes, paquete validado, PR de release integrado en main con CI aprobado, tag y publicación GitHub/crates.io verificados, sincronización en develop.
+- Última validación: base develop `90c16c0`, PR #692 integrado con 29 checks aprobados y 2 omitidos; producto con 10.419 tests aprobados y QR completo.
+- Siguiente acción: abrir el PR de release hacia main; comprobar CI antes de integrar, etiquetar y publicar.
+- Restricción: #690 permanece abierta por aceptación en Studio y avisos qpdf heredados; #658 queda fuera de la release.
+
 ## Consolidar preparación en el editor incremental — #690
 
 - Issue: #690 — fix(operations): complete nested tagged split and preflight for the #621/#677 input — https://github.com/bzsanti/oxidizePdf/issues/690
-- Estado: corrección de API implementada y validada localmente; PR/CI pendientes. Prioridad P1. Responsable: Codex.
+- Estado: corrección integrada en develop mediante #692 (`90c16c0`); CI29 aprobados/2 omitidos. Prioridad P1. Responsable: Codex.
 - Cierre: retirar las APIs específicas no publicadas y reutilizar el editor, sus mutaciones y validación sin perder los contratos demostrados de #690.
 - Última validación: corrección:10.419 PASS/0 FAIL, Clippy y QR; consumidor compatible y original3/3/6 con12/12 textos/píxeles idénticos. [Evidencia](docs/reports/2026-10-07-issue-690-review.md).
-- Siguiente acción: publicar el PR de consolidación del editor contra develop y comprobar CI.
-- Pendiente de aceptación: Studio/API publicada y avisos xref heredados. No publicar versión hasta completar esta corrección.
+- Siguiente acción: verificar aceptación en Studio con el paquete publicado por #693.
+- Pendiente de aceptación: Studio/API publicada y avisos xref heredados. Corrección integrada; aceptación externa pendiente.
 
 ## Continuación autorizada de los cuatro frentes — #661 — 2026-10-07
 
