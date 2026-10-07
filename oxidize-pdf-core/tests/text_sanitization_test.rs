@@ -83,6 +83,22 @@ fn test_unicode_separators_reset_space_collapsing() {
 }
 
 #[test]
+fn test_non_breaking_spaces_normalized_to_ascii_space() {
+    assert_eq!(
+        sanitize_extracted_text("Phone:\u{00a0}+34\u{00a0}91\u{00a0}8063000"),
+        "Phone: +34 91 8063000",
+    );
+    assert_eq!(
+        sanitize_extracted_text("Narrow:\u{202f}100\u{202f}km"),
+        "Narrow: 100 km",
+    );
+    assert_eq!(
+        sanitize_extracted_text("Mixed \u{00a0}  \u{202f} space"),
+        "Mixed space",
+    );
+}
+
+#[test]
 fn test_normalize_line_ending_preserves_standalone_carriage_returns() {
     let input = "unix\nwindows\r\nclassic-mac\rend";
     let expected = "unix\nwindows\nclassic-mac\rend";

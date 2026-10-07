@@ -4,10 +4,11 @@
 //! handling text positioning, transformations, and basic encodings.
 
 mod recovery;
-pub use recovery::{RecoveredText, RecoveryLocation, TextRecoveryAction, TextRecoveryDiagnostic};
 
 use std::collections::HashMap;
 use std::io::{Read, Seek};
+
+pub use recovery::{RecoveredText, RecoveryLocation, TextRecoveryAction, TextRecoveryDiagnostic};
 
 use crate::graphics::Color;
 use crate::parser::content::{ContentOperation, ContentParser, TextElement};
@@ -4988,8 +4989,8 @@ pub fn sanitize_extracted_text_with_policy(
                 last_was_space = ch == '\t';
             }
 
-            // Regular space - collapse multiples
-            ' ' => {
+            // Regular space and non-breaking spaces (U+00A0, U+202F) - normalize and collapse multiples (#687)
+            ' ' | '\u{00a0}' | '\u{202f}' => {
                 if !last_was_space {
                     result.push(' ');
                     last_was_space = true;
