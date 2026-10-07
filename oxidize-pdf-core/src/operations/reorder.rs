@@ -319,7 +319,13 @@ pub fn mutate_pdf_pages_lossless<P: AsRef<Path>, Q: AsRef<Path>>(
 
 /// Recover only derived tagged indexes/page keys, keeping the original page tree.
 /// The temporary revision may still lack author metadata and stays internal.
-pub(super) fn recover_tagged_structure(base: &[u8]) -> Result<Vec<u8>, PdfError> {
+pub(crate) fn recover_tagged_structure(base: &[u8]) -> Result<Vec<u8>, PdfError> {
+    recover_tagged_structure_with_inventory(base).map(|(bytes, _)| bytes)
+}
+
+pub(crate) fn recover_tagged_structure_with_inventory(
+    base: &[u8],
+) -> Result<(Vec<u8>, Vec<(u32, u16)>), PdfError> {
     let mut reader = PdfReader::new(Cursor::new(base))?;
     if reader.is_encrypted() {
         return Err(PdfError::PermissionDenied(
@@ -368,6 +374,11 @@ pub(super) fn recover_tagged_structure(base: &[u8]) -> Result<Vec<u8>, PdfError>
     // must still fail, as must unrelated reachable malformed references.
     reachable_from_catalog(&mut reader, &catalog, &projection.recovered)?;
     let mut update = IncrementalUpdate::from_base(base)?;
+    let mut changed: Vec<_> = projection.replacements.keys().copied().collect();
+    if let Some(xref) = update.pending_xref_stream_id() {
+        changed.push(xref);
+    }
+    changed.sort_unstable();
     for (id, replacement) in projection.replacements {
         if !index_ids.contains(&id) {
             let mut before = object_dictionary(&mut reader, id, "recovery source")?;
@@ -392,7 +403,7 @@ pub(super) fn recover_tagged_structure(base: &[u8]) -> Result<Vec<u8>, PdfError>
         }
         update.replace(id, replacement)?;
     }
-    update.finish()
+    Ok((update.finish()?, changed))
 }
 
 fn mutate_pdf_bytes_lossless(

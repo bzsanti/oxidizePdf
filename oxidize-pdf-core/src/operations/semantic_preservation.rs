@@ -684,7 +684,7 @@ fn plan_split_pdf_preserving(
         return Err(OperationError::NoPagesToProcess);
     }
     let base = read_snapshot(input)?;
-    super::tagged_preparation::ensure_tagged_source_ready(&base)?;
+    ensure_tagged_source_ready(&base)?;
     let mut reader = PdfReader::new(Cursor::new(&base))
         .map_err(|error| OperationError::ParseError(error.to_string()))?;
     let page_count = reader
@@ -756,7 +756,7 @@ fn split_pdf_preserving(
         }
     }
     let base = read_snapshot(input)?;
-    super::tagged_preparation::ensure_tagged_source_ready(&base)?;
+    ensure_tagged_source_ready(&base)?;
     let mut reader = PdfReader::new(Cursor::new(&base))
         .map_err(|error| OperationError::ParseError(error.to_string()))?;
     let page_count = reader
@@ -1650,4 +1650,19 @@ mod tests {
         assert_eq!(report.page_count, 1);
         assert!(report.replaced_objects.is_empty());
     }
+}
+
+// Diagnose the whole source before any split part is materialized.
+fn ensure_tagged_source_ready(base: &[u8]) -> crate::error::Result<()> {
+    let mut reader = PdfReader::new(Cursor::new(base))?;
+    if reader.catalog()?.contains_key("StructTreeRoot") {
+        let report = crate::writer::IncrementalTaggedPdfEditor::new(base).preflight()?;
+        if !report.valid {
+            return Err(crate::error::PdfError::InvalidStructure(format!(
+                "projected tagged structure is invalid; source preflight: {:?}",
+                report.findings
+            )));
+        }
+    }
+    Ok(())
 }

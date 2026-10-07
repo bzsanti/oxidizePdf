@@ -1,0 +1,25 @@
+{
+  "base": "833cdd1c9de5ed114198f40a1bab083795f35753",
+  "full_suite": {
+    "passed": 10419,
+    "failed": 0,
+    "ignored": 71,
+    "summaries": 417
+  },
+  "clippy": "PASS workspace all-targets internal-testing -D warnings",
+  "qr": "manual + four Kripteia quality/security analyses completed",
+  "consumer": "PASS default + ocr-tesseract + signatures; exhaustive enum match compiles",
+  "original": "PASS editor preflight + explicit preparation + split 3/3/6; engine/Poppler text and raster identical for 12 pages; original/prefixes preserved",
+  "qpdf": "exit 3: inherited unreachable zero-offset entries 6,8,10,22",
+  "sources": {
+    "oxidize-pdf-core/src/operations/mod.rs": "c512d94f66c25bf09c833fbdaab565ec8e6215f2770252fbde771c03b4dd7299",
+    "oxidize-pdf-core/src/operations/reorder.rs": "cefc9a7e9a84e71730c95f5f7c2a686f5ab7583d7066b2527b76326ef69b5954",
+    "oxidize-pdf-core/src/operations/semantic_preservation.rs": "145f2e808eb4225e694215f95dbac5b7ef60696150e3eb72ac1396c17d324299",
+    "oxidize-pdf-core/src/writer/incremental_tagged_pdf.rs": "44754a8ba143fb2b86afeccbe485a01c121c45294ebc6bb4ad164eb5373df731",
+    "oxidize-pdf-core/tests/text_tagged_preparation_contract_test.rs": "ab5f1d7404e960d56493b202d4e47c544a54db019f4a14cec2cac1cd5ef72ec9"
+  },
+  "pending": [
+    "PR/CI",
+    "Studio/published release acceptance"
+  ]
+}

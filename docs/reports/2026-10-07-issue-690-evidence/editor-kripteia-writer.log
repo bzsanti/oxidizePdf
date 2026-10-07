@@ -1,0 +1,33 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 2 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...w/oxidize-pdf-core/src/writer/incremental_tagged_pdf.rs        2     95
+
+--- Worst Offenders ---
+  association_resolves_an_indirect_parent_owner_array (target/issue690-review/oxidize-pdf-core/src/writer/incremental_tagged_pdf.rs:906) - Score: 90
+    i Test 'association_resolves_an_indirect_parent_owner_array' uses .unwrap() which silently discards error information
+    - Test 'association_resolves_an_indirect_parent_owner_array' has low assert-to-setup ratio (15%): 3 asserts vs 17 setup lines
+  reparents_an_element_losslessly_and_rejects_cycles (target/issue690-review/oxidize-pdf-core/src/writer/incremental_tagged_pdf.rs:940) - Score: 100
+    i Test 'reparents_an_element_losslessly_and_rejects_cycles' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'reparents_an_element_losslessly_and_rejects_cycles' uses .unwrap() which silently discards error information
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/src/writer/incremental_tagged_pdf.rs:
+  association_resolves_an_indirect_parent_owner_array (line 906) - Score: 90
+    i Test 'association_resolves_an_indirect_parent_owner_array' uses .unwrap() which silently discards error information
+    - Test 'association_resolves_an_indirect_parent_owner_array' has low assert-to-setup ratio (15%): 3 asserts vs 17 setup lines
+  reparents_an_element_losslessly_and_rejects_cycles (line 940) - Score: 100
+    i Test 'reparents_an_element_losslessly_and_rejects_cycles' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'reparents_an_element_losslessly_and_rejects_cycles' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

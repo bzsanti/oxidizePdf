@@ -1,11 +1,11 @@
-## Resolver división de PDF etiquetado — #690
+## Consolidar preparación en el editor incremental — #690
 
 - Issue: #690 — fix(operations): complete nested tagged split and preflight for the #621/#677 input — https://github.com/bzsanti/oxidizePdf/issues/690
-- Estado: fix implementado con TDD; PR/CI y aceptación publicada pendientes. Prioridad P1. Responsable: Codex.
-- Cierre: preflight completo y preparación explícita del original; split 3/3/6 en Studio/API publicada, texto/píxeles/tags y origen conservados, rollback y CI aprobados.
-- Última validación: 10.417 PASS/0 FAIL; Clippy y consumidor público pasan. Original: split3/3/6 y12/12 textos/píxeles idénticos, origen intacto. [Evidencia](docs/reports/2026-10-07-issue-690-review.md).
-- Siguiente acción: publicar PR a develop y comprobar CI; después verificar Studio con versión publicada.
-- Pendiente de aceptación: Studio con candidato publicado; aclarar los avisos qpdf heredados de cuatro entradas xref inválidas no alcanzables. El original y los valores autorizados ya están disponibles; no cerrar #690 con evidencia exclusivamente sintética.
+- Estado: corrección de API implementada y validada localmente; PR/CI pendientes. Prioridad P1. Responsable: Codex.
+- Cierre: retirar las APIs específicas no publicadas y reutilizar el editor, sus mutaciones y validación sin perder los contratos demostrados de #690.
+- Última validación: corrección:10.419 PASS/0 FAIL, Clippy y QR; consumidor compatible y original3/3/6 con12/12 textos/píxeles idénticos. [Evidencia](docs/reports/2026-10-07-issue-690-review.md).
+- Siguiente acción: publicar el PR de consolidación del editor contra develop y comprobar CI.
+- Pendiente de aceptación: Studio/API publicada y avisos xref heredados. No publicar versión hasta completar esta corrección.
 
 ## Continuación autorizada de los cuatro frentes — #661 — 2026-10-07
 
