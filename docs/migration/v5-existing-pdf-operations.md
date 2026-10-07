@@ -102,35 +102,57 @@ source before processing any part. A missing language or description anywhere
 in the source prevents publication; selecting a different first range does not
 hide the remaining requirements.
 
-Use `operations::existing_document::preflight_tagged_pdf(&source_bytes)` to get
-all residual findings together. It recovers only unambiguous derived indexes
-and missing page keys in a private in-memory revision, preserving the page tree,
-page/content identities, existing descriptions and ActualText. Findings carry
-original structure-element identities. Malformed references, ambiguous MCID
-ownership, unsupported external-stream MCRs and forbidden edits remain errors.
-This is bounded tagged-PDF validation, not PDF/UA certification.
+Use `writer::IncrementalTaggedPdfEditor::new(&source_bytes).preflight()` to
+inspect all residual findings together. This recovers only unambiguous derived
+indexes and missing page keys in a private in-memory view. It preserves page
+hierarchy, content identities, descriptions and ActualText. Malformed references,
+ambiguous ownership, unsupported external-stream MCRs and forbidden edits remain
+errors. This is bounded tagged validation, not PDF/UA certification.
 
-After the author supplies the required values, call
-`prepare_tagged_pdf(&source_bytes, &TaggedPdfMetadata { language, alternate_text })`.
-`language` is an explicit `Option<String>`; `alternate_text` is a `BTreeMap` from
-`TaggedPdfObjectRef` to the author's description. Blank/unknown requests and
-requests to overwrite existing nonempty metadata are rejected. No language or
-description is inferred. If anything still fails validation, the function
-returns an error containing the remaining findings and **no prepared bytes**.
+Use the same editor for the subsequent revision:
 
-Successful preparation returns `PreparedTaggedPdf { pdf_bytes, validation }`.
-The bytes contain separate incremental recovery/metadata revisions and retain
-the original source as an exact prefix. The API performs no filesystem writes.
-Store them in a **different** prepared file, then pass that file to the ordinary
-preserving split API. Keep the original file and do not use it as an output path.
-Studio/callers should bind user-supplied values to the same source-byte snapshot
-used for preflight and show the full findings before requesting those values.
-No input flattening or rewriting is required. All output parts must materialize
-and validate before publication; a normal rename failure rolls back earlier
-parts. This does not promise crash-atomic multi-file publication or recovery
-from a filesystem that also refuses rollback writes.
+```rust,ignore
+use oxidize_pdf::writer::{IncrementalTaggedPdfEditor, TaggedPdfMutation};
+use oxidize_pdf::parser::objects::{PdfObject, PdfString};
 
-For the #690 case, acceptance still requires running this two-stage workflow
-against the original private document with authoritative metadata in Studio
-and against the exact candidate package. Synthetic test values are not authority
-for that document and must never be inserted as defaults.
+let editor = IncrementalTaggedPdfEditor::new(&source_bytes)
+    .with_recovered_indexes()?
+    .with_document_language(&author_supplied_language)?;
+let changes = [TaggedPdfMutation::SetElementAttribute {
+    element: figure_from_preflight,
+    key: "Alt".into(),
+    value: Some(PdfObject::String(author_supplied_pdf_string)),
+}];
+let preparation_objects = editor.preparation_objects();
+let plan = editor.plan(&changes)?;
+let result = editor.apply(&changes)?;
+```
+
+Supply one attribute mutation for **each** missing description. Use PDF string
+encoding (UTF-16BE with BOM for arbitrary Unicode), as with other editor
+attributes. Omit `with_document_language` when the source already has a language.
+No author value is inferred. Blank/unknown descriptions or overwriting existing
+descriptions in preparation mode are rejected. Existing ordinary editor edits
+retain their previous behavior.
+
+The builder prepares an in-memory baseline without publishing bytes. Its exact
+object inventory is `preparation_objects()`; `plan.changed_objects` describes
+subsequent mutations relative to that baseline. Both must be shown when reviewing
+the complete change. `result.plan` matches `plan`, and the existing
+`validation_before`/`validation_after` fields describe the mutation stage.
+The public mutation/report enums remain unchanged, preserving exhaustive matches
+and existing struct construction in consumers.
+
+After either preparation builder is used, `apply` requires full validation even
+for an empty mutation list. If findings remain, it returns an error with those
+findings and **no prepared bytes**. Successful `result.pdf_bytes` includes the
+preparation and mutation revisions with the original source as an exact prefix.
+Store it in a separate file and use that file with the ordinary preserving split
+API. The editor performs no filesystem writes; keep the original file unchanged.
+
+Studio/callers must bind author values to the exact snapshot used for preflight.
+All split parts materialize and validate before publication; normal rename
+failures roll back prior parts. This does not promise crash-atomic multi-file
+publication or recovery when the filesystem also refuses rollback writes.
+#690 remains open until Studio and the published package pass original-input
+acceptance. Synthetic descriptions must never become defaults for real documents.

@@ -1,0 +1,9 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 12.27s
+     Running tests/text_tagged_preparation_contract_test.rs (target/issue661-writer/target/debug/deps/text_tagged_preparation_contract_test-bde8bacc4a389050)
+
+running 1 test
+test existing_editor_prepares_then_plans_and_applies_attributes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 1.65s
+

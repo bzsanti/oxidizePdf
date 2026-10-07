@@ -69,9 +69,45 @@ fn nested_tagged_tree_with_authoritative_metadata_splits_3_3_6() {
     verify_split(&fixture::fixture(false, true, true));
 }
 
-use oxidize_pdf::operations::existing_document::{
-    preflight_tagged_pdf, prepare_tagged_pdf, TaggedPdfMetadata,
-};
+use oxidize_pdf::parser::objects::{PdfObject, PdfString};
+use oxidize_pdf::writer::{IncrementalTaggedPdfEditor, TaggedPdfMutation, TaggedPdfMutationReport};
+use oxidize_pdf::{error::Result, verification::tagged_pdf::TaggedPdfValidationReport};
+
+// Fixture input data, not a second product API. All paths below exercise the
+// existing editor and its mutation/report contracts.
+#[derive(Default)]
+struct TaggedPdfMetadata {
+    language: Option<String>,
+    alternate_text: BTreeMap<TaggedPdfObjectRef, String>,
+}
+fn preflight_tagged_pdf(bytes: &[u8]) -> Result<TaggedPdfValidationReport> {
+    IncrementalTaggedPdfEditor::new(bytes).preflight()
+}
+fn prepare_tagged_pdf(bytes: &[u8], values: &TaggedPdfMetadata) -> Result<TaggedPdfMutationReport> {
+    let mut editor = IncrementalTaggedPdfEditor::new(bytes).with_recovered_indexes()?;
+    if let Some(language) = &values.language {
+        editor = editor.with_document_language(language)?;
+    }
+    let mutations: Vec<_> = values
+        .alternate_text
+        .iter()
+        .map(|(element, value)| {
+            let mut encoded = vec![0xfe, 0xff];
+            for unit in value.encode_utf16() {
+                encoded.extend_from_slice(&unit.to_be_bytes());
+            }
+            TaggedPdfMutation::SetElementAttribute {
+                element: *element,
+                key: "Alt".into(),
+                value: Some(PdfObject::String(PdfString::new(encoded))),
+            }
+        })
+        .collect();
+    let plan = editor.plan(&mutations)?;
+    let result = editor.apply(&mutations)?;
+    assert_eq!(plan, result.plan);
+    Ok(result)
+}
 use oxidize_pdf::verification::tagged_pdf::{TaggedPdfFindingCode as Code, TaggedPdfObjectRef};
 use std::collections::BTreeMap;
 
@@ -94,7 +130,9 @@ fn author_metadata() -> TaggedPdfMetadata {
 #[test]
 fn preflight_reports_language_and_both_figures_together() {
     let bytes = fixture::fixture(false, false, false);
-    let report = preflight_tagged_pdf(&bytes).expect("recover only unambiguous derived indexes");
+    let report = oxidize_pdf::writer::IncrementalTaggedPdfEditor::new(&bytes)
+        .preflight()
+        .expect("recover only unambiguous derived indexes");
     assert!(!report.valid);
     assert_eq!(
         report
@@ -131,7 +169,7 @@ fn supplied_metadata_prepares_nested_source_without_rewriting_it() {
     let prepared = prepare_tagged_pdf(&original, &author_metadata())
         .expect("explicit values complete the original nested source");
     assert!(prepared.pdf_bytes.starts_with(&original));
-    assert!(prepared.validation.valid);
+    assert!(prepared.validation_after.valid);
     let mut reader = PdfReader::new(std::io::Cursor::new(&prepared.pdf_bytes)).unwrap();
     for (id, parent) in [(10, 22), (17, 22), (18, 23), (21, 23), (22, 2), (23, 2)] {
         assert_eq!(
@@ -379,6 +417,85 @@ fn preparation_preserves_empty_structure_groups() {
                 after.get_object(id, 0).unwrap()
             );
         }
-        assert!(prepared.validation.valid);
+        assert!(prepared.validation_after.valid);
     }
+}
+
+#[test]
+fn existing_editor_prepares_then_plans_and_applies_attributes() {
+    use oxidize_pdf::{
+        parser::objects::{PdfObject, PdfString},
+        writer::{IncrementalTaggedPdfEditor, TaggedPdfMutation},
+    };
+    let source = fixture::fixture(false, false, false);
+    let editor = IncrementalTaggedPdfEditor::new(&source)
+        .with_recovered_indexes()
+        .unwrap()
+        .with_document_language("es-ES")
+        .unwrap();
+    let changed = editor.preparation_objects();
+    let expected: Vec<TaggedPdfObjectRef> = [1, 3, 6, 7]
+        .into_iter()
+        .chain(10..22)
+        .map(|id| (id, 0).into())
+        .collect();
+    assert_eq!(changed, expected);
+
+    for id in [1, 3, 6, 7, 10, 21] {
+        assert!(
+            changed.contains(&(id, 0).into()),
+            "missing preparation object {id}"
+        );
+    }
+    assert!(
+        editor.apply(&[]).is_err(),
+        "missing descriptions must block bytes"
+    );
+    let mutations = [1452, 1453].map(|id| TaggedPdfMutation::SetElementAttribute {
+        element: (id, 0).into(),
+        key: "Alt".into(),
+        value: Some(PdfObject::String(PdfString::new(
+            b"Explicit description".to_vec(),
+        ))),
+    });
+    let plan = editor.plan(&mutations).unwrap();
+    assert_eq!(plan.changed_objects.len(), 2);
+    let result = editor.apply(&mutations).unwrap();
+    assert_eq!(plan, result.plan);
+    assert_eq!(result.validation_before.findings.len(), 2);
+    assert!(result.validation_after.valid);
+    assert!(result.pdf_bytes.starts_with(&source));
+    verify_split(&result.pdf_bytes);
+}
+
+#[test]
+fn ordinary_editor_still_supports_explicit_existing_attribute_edits() {
+    let source = fixture::matrix(1, true, true, true, true);
+    let editor = IncrementalTaggedPdfEditor::new(&source);
+    assert!(editor.preparation_objects().is_empty());
+    let empty = editor.apply(&[]).unwrap();
+    assert_eq!(empty.pdf_bytes, source);
+    let mutation = TaggedPdfMutation::SetElementAttribute {
+        element: (1001, 0).into(),
+        key: "Alt".into(),
+        value: Some(PdfObject::String(PdfString::new(
+            b"Intentional replacement".to_vec(),
+        ))),
+    };
+    let edited = editor.apply(&[mutation]).unwrap();
+    assert!(edited.validation_after.valid);
+    let mut reader = PdfReader::new(std::io::Cursor::new(edited.pdf_bytes)).unwrap();
+    assert_eq!(
+        reader
+            .get_object(1001, 0)
+            .unwrap()
+            .as_dict()
+            .unwrap()
+            .get("Alt")
+            .unwrap()
+            .as_string()
+            .unwrap()
+            .to_text(),
+        "Intentional replacement"
+    );
 }

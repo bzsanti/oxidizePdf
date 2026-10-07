@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.71s
+     Running tests/text_tagged_preparation_contract_test.rs (target/issue661-writer/target/debug/deps/text_tagged_preparation_contract_test-bde8bacc4a389050)
+
+running 1 test
+test existing_editor_prepares_then_plans_and_applies_attributes ... FAILED
+
+failures:
+
+---- existing_editor_prepares_then_plans_and_applies_attributes stdout ----
+
+thread 'existing_editor_prepares_then_plans_and_applies_attributes' (401) panicked at oxidize-pdf-core/tests/text_tagged_preparation_contract_test.rs:394:38:
+missing preparation object 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    existing_editor_prepares_then_plans_and_applies_attributes
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_tagged_preparation_contract_test`

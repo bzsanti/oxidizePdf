@@ -2,12 +2,13 @@
 
 use super::incremental_update::IncrementalUpdate;
 use crate::error::{PdfError, Result};
-use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject};
+use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfString};
 use crate::parser::PdfReader;
 use crate::signatures::{ensure_modification_allowed, IncrementalModification};
 use crate::verification::tagged_pdf::{
     validate_tagged_pdf, TaggedPdfObjectRef, TaggedPdfValidationOptions, TaggedPdfValidationReport,
 };
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Cursor;
 
@@ -78,16 +79,147 @@ pub struct TaggedPdfMutationReport {
 
 /// Plans and applies one lossless incremental tagged-structure revision.
 pub struct IncrementalTaggedPdfEditor<'a> {
-    base_bytes: &'a [u8],
+    base_bytes: Cow<'a, [u8]>,
+    preparation_objects: Vec<TaggedPdfObjectRef>,
+    require_valid: bool,
     options: TaggedPdfValidationOptions,
 }
 
 impl<'a> IncrementalTaggedPdfEditor<'a> {
     pub fn new(base_bytes: &'a [u8]) -> Self {
         Self {
-            base_bytes,
+            base_bytes: Cow::Borrowed(base_bytes),
+            preparation_objects: Vec::new(),
+            require_valid: false,
             options: TaggedPdfValidationOptions::default(),
         }
+    }
+
+    /// Inspect all source findings after unambiguous derived-index recovery.
+    /// This does not write files or invent missing accessibility metadata.
+    ///
+    /// # Errors
+    /// Rejects forbidden edits, ambiguous ownership, malformed graphs and
+    /// unsupported recovery; validation resource limits remain effective.
+    pub fn preflight(&self) -> Result<TaggedPdfValidationReport> {
+        let recovered =
+            crate::operations::reorder::recover_tagged_structure(self.base_bytes.as_ref())?;
+        validate_tagged_pdf(&recovered, &self.options)
+    }
+
+    /// Prepare an in-memory editing baseline by recovering unambiguous derived
+    /// indexes and page keys. Authoritative structure and content stay unchanged.
+    /// `plan` describes subsequent mutations relative to this baseline; use
+    /// `preparation_objects` for the additional objects changed by preparation.
+    /// `apply` will only return bytes if the complete resulting document is valid.
+    ///
+    /// # Errors
+    /// Rejects forbidden edits, malformed/ambiguous source graphs and unsupported
+    /// recovery. No bytes are published by this method.
+    pub fn with_recovered_indexes(mut self) -> Result<Self> {
+        let (bytes, objects) = crate::operations::reorder::recover_tagged_structure_with_inventory(
+            self.base_bytes.as_ref(),
+        )?;
+        self.base_bytes = Cow::Owned(bytes);
+        self.record_preparation(objects);
+        self.require_valid = true;
+        Ok(self)
+    }
+
+    /// Supply a missing catalog language in the in-memory editing baseline.
+    /// Existing nonempty language values cannot be overwritten by preparation.
+    /// `apply` requires a fully valid result before returning prepared bytes.
+    ///
+    /// # Errors
+    /// Rejects blank values, existing language, encryption and forbidden edits.
+    pub fn with_document_language(mut self, language: &str) -> Result<Self> {
+        if language.trim().is_empty() {
+            return Err(invalid("explicit language must not be blank"));
+        }
+        let mut reader = policy_reader(self.base_bytes.as_ref())?;
+        let id = reader.trailer().root()?;
+        let mut catalog = reader.catalog()?.clone();
+        if catalog.get("Lang").is_some_and(|v| match v {
+            PdfObject::String(value) => !value.to_text().is_empty(),
+            PdfObject::Null => false,
+            _ => true,
+        }) {
+            return Err(invalid("catalog language is already present"));
+        }
+        let mut encoded = vec![0xfe, 0xff];
+        for unit in language.encode_utf16() {
+            encoded.extend_from_slice(&unit.to_be_bytes());
+        }
+        catalog.insert(
+            "Lang".to_string(),
+            PdfObject::String(PdfString::new(encoded)),
+        );
+        let mut update = IncrementalUpdate::from_base(self.base_bytes.as_ref())?;
+        let mut objects = vec![id];
+        if let Some(xref) = update.pending_xref_stream_id() {
+            objects.push(xref);
+        }
+        update.replace(id, PdfObject::Dictionary(catalog))?;
+        self.base_bytes = Cow::Owned(update.finish()?);
+        self.record_preparation(objects);
+        self.require_valid = true;
+        Ok(self)
+    }
+
+    /// Exact objects changed while preparing the editor's baseline, including
+    /// any xref-stream objects. The subsequent mutation plan is reported by
+    /// `plan` and `apply`; together these inventories cover the entire revision.
+    pub fn preparation_objects(&self) -> &[TaggedPdfObjectRef] {
+        &self.preparation_objects
+    }
+
+    fn record_preparation(&mut self, objects: Vec<(u32, u16)>) {
+        self.preparation_objects
+            .extend(objects.into_iter().map(TaggedPdfObjectRef::from));
+        self.preparation_objects.sort_unstable();
+        self.preparation_objects.dedup();
+    }
+
+    fn require_valid_result(&self, report: &TaggedPdfValidationReport) -> Result<()> {
+        if self.require_valid && !report.valid {
+            return Err(invalid(format!(
+                "tagged source requires explicit metadata or structural correction: {:?}",
+                report.findings
+            )));
+        }
+        Ok(())
+    }
+
+    fn validate_preparation_mutations(
+        &self,
+        report: &TaggedPdfValidationReport,
+        mutations: &[TaggedPdfMutation],
+    ) -> Result<()> {
+        if !self.require_valid {
+            return Ok(());
+        }
+        for mutation in mutations {
+            if let TaggedPdfMutation::SetElementAttribute {
+                element,
+                key,
+                value,
+            } = mutation
+            {
+                if key == "Alt" || key == "ActualText" {
+                    let missing = report.findings.iter().any(|f| f.code == crate::verification::tagged_pdf::TaggedPdfFindingCode::MissingAlternateText && f.object == Some(*element));
+                    if !missing {
+                        return Err(invalid(
+                            "preparation cannot overwrite an existing description",
+                        ));
+                    }
+                    if !matches!(value, Some(PdfObject::String(s)) if !s.to_text().trim().is_empty())
+                    {
+                        return Err(invalid("explicit description must be a nonblank string"));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn with_validation_options(mut self, options: TaggedPdfValidationOptions) -> Self {
@@ -95,30 +227,48 @@ impl<'a> IncrementalTaggedPdfEditor<'a> {
         self
     }
 
-    /// Validate a request and identify every indirect object that would change.
+    /// Validate mutations and identify the objects they change in the current
+    /// editing baseline. If preparation builders were used, their changes are
+    /// listed separately by `preparation_objects`.
     ///
     /// # Errors
     ///
     /// Returns an error for malformed requests, encrypted documents, unsupported
     /// direct structure objects, missing content MCIDs, or forbidden DocMDP edits.
     pub fn plan(&self, mutations: &[TaggedPdfMutation]) -> Result<TaggedPdfEditPlan> {
-        let validation = validate_tagged_pdf(self.base_bytes, &self.options)?;
-        let mut reader = policy_reader(self.base_bytes)?;
+        let validation = validate_tagged_pdf(self.base_bytes.as_ref(), &self.options)?;
+        let mut reader = policy_reader(self.base_bytes.as_ref())?;
+        self.validate_preparation_mutations(&validation, mutations)?;
         validate_mutations(&mut reader, &validation, mutations)?;
-        build_plan(self.base_bytes, &mut reader, &validation, mutations)
+        build_plan(
+            self.base_bytes.as_ref(),
+            &mut reader,
+            &validation,
+            mutations,
+        )
     }
 
-    /// Append one incremental revision, preserving the input as an exact prefix.
+    /// Append a mutation revision to the current editing baseline, preserving
+    /// the original input as an exact prefix. Preparation revisions are included.
+    /// Prepared editors return bytes only after full validation, including no-op
+    /// mutation lists; ordinary editors retain their existing diagnostic reports.
     ///
     /// # Errors
     ///
     /// Returns an error when planning, serialization, or reopening/validation fails.
     pub fn apply(&self, mutations: &[TaggedPdfMutation]) -> Result<TaggedPdfMutationReport> {
-        let validation_before = validate_tagged_pdf(self.base_bytes, &self.options)?;
-        let mut reader = policy_reader(self.base_bytes)?;
+        let validation_before = validate_tagged_pdf(self.base_bytes.as_ref(), &self.options)?;
+        let mut reader = policy_reader(self.base_bytes.as_ref())?;
+        self.validate_preparation_mutations(&validation_before, mutations)?;
         validate_mutations(&mut reader, &validation_before, mutations)?;
-        let plan = build_plan(self.base_bytes, &mut reader, &validation_before, mutations)?;
+        let plan = build_plan(
+            self.base_bytes.as_ref(),
+            &mut reader,
+            &validation_before,
+            mutations,
+        )?;
         if plan.changed_objects.is_empty() {
+            self.require_valid_result(&validation_before)?;
             return Ok(TaggedPdfMutationReport {
                 pdf_bytes: self.base_bytes.to_vec(),
                 plan,
@@ -129,7 +279,7 @@ impl<'a> IncrementalTaggedPdfEditor<'a> {
 
         let parent_tree = parent_tree_reference(&mut reader)?;
         let mut replacements = BTreeMap::<TaggedPdfObjectRef, PdfDictionary>::new();
-        let mut update = IncrementalUpdate::from_reader(self.base_bytes, &reader)?;
+        let mut update = IncrementalUpdate::from_reader(self.base_bytes.as_ref(), &reader)?;
         let mut parent_entries = validation_before.parent_tree.clone();
         let mut current_parents: BTreeMap<_, _> = validation_before
             .elements
@@ -240,12 +390,13 @@ impl<'a> IncrementalTaggedPdfEditor<'a> {
             )?;
         }
         let pdf_bytes = update.finish()?;
-        if !pdf_bytes.starts_with(self.base_bytes) {
+        if !pdf_bytes.starts_with(self.base_bytes.as_ref()) {
             return Err(invalid(
                 "incremental result does not preserve the base as an exact prefix",
             ));
         }
         let validation_after = validate_tagged_pdf(&pdf_bytes, &self.options)?;
+        self.require_valid_result(&validation_after)?;
         Ok(TaggedPdfMutationReport {
             pdf_bytes,
             plan,
