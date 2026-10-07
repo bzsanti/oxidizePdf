@@ -726,6 +726,8 @@ pub struct TextExtractor {
     /// public `ExtractionOptions` so adding it does not break exhaustive struct
     /// literals in downstream crates.
     carriage_return_handling: CarriageReturnHandling,
+    /// Normalize non-breaking spaces (U+00A0, U+202F) to ASCII space (U+0020).
+    normalize_non_breaking_spaces: bool,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
     /// Narrowest usable CID width for Type0 fonts in the current page. Derived
@@ -747,6 +749,7 @@ impl TextExtractor {
             reading_order: false,
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
+            normalize_non_breaking_spaces: false,
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
@@ -763,6 +766,7 @@ impl TextExtractor {
             reading_order: false,
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
+            normalize_non_breaking_spaces: false,
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
@@ -824,6 +828,18 @@ impl TextExtractor {
     /// The default is [`CarriageReturnHandling::Remove`].
     pub fn with_carriage_return_handling(mut self, handling: CarriageReturnHandling) -> Self {
         self.carriage_return_handling = handling;
+        self
+    }
+
+    /// Enable (or disable) normalizing Unicode non-breaking spaces (`U+00A0`, `U+202F`)
+    /// to standard ASCII space (`U+0020`).
+    ///
+    /// Off by default to preserve exact font encoding contracts. When enabled,
+    /// non-breaking spaces in extracted text and fragments are normalized to
+    /// standard ASCII spaces (`U+0020`), improving pattern matching and tokenizer
+    /// compatibility in downstream NLP/RAG pipelines (issue #687).
+    pub fn with_non_breaking_space_normalization(mut self, enable: bool) -> Self {
+        self.normalize_non_breaking_spaces = enable;
         self
     }
 
@@ -3610,9 +3626,10 @@ impl TextExtractor {
                     // or garbage). Whitespace counts as meaningful: a decode
                     // that is exactly a space is a space, not a failed decode
                     // (#438). See `decode_is_usable`.
-                    let sanitized = sanitize_extracted_text_with_policy(
+                    let sanitized = sanitize_extracted_text_with_options(
                         &decoded,
                         self.carriage_return_handling,
+                        self.normalize_non_breaking_spaces,
                     );
                     if crate::text::extraction_cmap::decode_is_usable(&sanitized)
                         || (decoded.is_empty()
@@ -3662,8 +3679,11 @@ impl TextExtractor {
 
         let fallback_result = encoding.decode(text);
         // Apply sanitization to remove control characters (Issue #116)
-        let sanitized =
-            sanitize_extracted_text_with_policy(&fallback_result, self.carriage_return_handling);
+        let sanitized = sanitize_extracted_text_with_options(
+            &fallback_result,
+            self.carriage_return_handling,
+            self.normalize_non_breaking_spaces,
+        );
         tracing::debug!(
             "Fallback encoding decoding: {:?} -> \"{}\"",
             text,
@@ -4906,6 +4926,15 @@ pub fn sanitize_extracted_text_with_policy(
     text: &str,
     carriage_return_handling: CarriageReturnHandling,
 ) -> String {
+    sanitize_extracted_text_with_options(text, carriage_return_handling, false)
+}
+
+/// Sanitize extracted text with explicit carriage-return and space normalization policies.
+pub fn sanitize_extracted_text_with_options(
+    text: &str,
+    carriage_return_handling: CarriageReturnHandling,
+    normalize_non_breaking_spaces: bool,
+) -> String {
     if text.is_empty() {
         return String::new();
     }
@@ -4989,8 +5018,16 @@ pub fn sanitize_extracted_text_with_policy(
                 last_was_space = ch == '\t';
             }
 
-            // Regular space and non-breaking spaces (U+00A0, U+202F) - normalize and collapse multiples (#687)
-            ' ' | '\u{00a0}' | '\u{202f}' => {
+            // Non-breaking spaces (U+00A0, U+202F) when normalization is enabled (#687)
+            '\u{00a0}' | '\u{202f}' if normalize_non_breaking_spaces => {
+                if !last_was_space {
+                    result.push(' ');
+                    last_was_space = true;
+                }
+            }
+
+            // Regular space - collapse multiples
+            ' ' => {
                 if !last_was_space {
                     result.push(' ');
                     last_was_space = true;

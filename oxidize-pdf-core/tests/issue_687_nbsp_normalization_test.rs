@@ -31,24 +31,36 @@ fn test_extracted_text_normalizes_non_breaking_space_to_ascii_space() {
         PdfReader::new_with_options(Cursor::new(&pdf_bytes), ParseOptions::lenient()).unwrap();
     let doc = reader.into_document();
 
-    let mut extractor = TextExtractor::new();
-    let extracted = extractor
+    // 1. By default, raw U+00A0 is preserved to respect font encoding contracts
+    let mut extractor_default = TextExtractor::new();
+    let extracted_default = extractor_default
         .extract_from_page(&doc, 0)
-        .expect("extract_from_page");
+        .expect("extract_from_page default");
+    assert!(
+        extracted_default.text.contains('\u{00a0}'),
+        "Default extractor preserves U+00A0: {:?}",
+        extracted_default.text
+    );
+
+    // 2. With with_non_breaking_space_normalization(true), U+00A0 normalizes to standard space
+    let mut extractor_norm = TextExtractor::new().with_non_breaking_space_normalization(true);
+    let extracted_norm = extractor_norm
+        .extract_from_page(&doc, 0)
+        .expect("extract_from_page normalized");
 
     assert!(
-        !extracted.text.contains('\u{00a0}'),
-        "Extracted text must not contain U+00A0: {:?}",
-        extracted.text
+        !extracted_norm.text.contains('\u{00a0}'),
+        "Normalized text must not contain U+00A0: {:?}",
+        extracted_norm.text
     );
     assert!(
-        extracted.text.contains("+34 91 8063000"),
+        extracted_norm.text.contains("+34 91 8063000"),
         "Expected normalized phone number, got: {:?}",
-        extracted.text
+        extracted_norm.text
     );
     assert!(
-        extracted.text.contains("100 km"),
+        extracted_norm.text.contains("100 km"),
         "Expected normalized measurement, got: {:?}",
-        extracted.text
+        extracted_norm.text
     );
 }
