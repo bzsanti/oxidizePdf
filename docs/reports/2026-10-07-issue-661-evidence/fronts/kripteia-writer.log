@@ -1,0 +1,375 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 117 | Files: 5
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...xidize-pdf-core/src/writer/pdf_writer/rigorous_tests.rs       23     99
+...re/src/writer/pdf_writer/tests/catalog_entries_tests.rs        8     98
+...-core/src/writer/pdf_writer/tests/form_filling_tests.rs        4     85
+...src/writer/pdf_writer/tests/incremental_update_tests.rs        8    100
+...-writer/oxidize-pdf-core/src/writer/pdf_writer/tests.rs       74     98
+
+--- Worst Offenders ---
+  test_form_filling_preserves_template_and_adds_data (target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/tests/form_filling_tests.rs:28) - Score: 80
+    - Test 'test_form_filling_preserves_template_and_adds_data' is marked as #[ignore]
+    i Test 'test_form_filling_preserves_template_and_adds_data' uses .unwrap() which silently discards error information
+  test_page_replacement_keeps_correct_page_count (target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/tests/form_filling_tests.rs:147) - Score: 80
+    - Test 'test_page_replacement_keeps_correct_page_count' is marked as #[ignore]
+    i Test 'test_page_replacement_keeps_correct_page_count' uses .unwrap() which silently discards error information
+  test_multiple_page_replacement_preserves_unmodified_pages (target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/tests/form_filling_tests.rs:193) - Score: 80
+    - Test 'test_multiple_page_replacement_preserves_unmodified_pages' is marked as #[ignore]
+    i Test 'test_multiple_page_replacement_preserves_unmodified_pages' has multiple assertions without diagnostic messages
+    i Test 'test_multiple_page_replacement_preserves_unmodified_pages' uses .unwrap() which silently discards error information
+  test_writer_config_default_values (target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/rigorous_tests.rs:57) - Score: 90
+    i Test 'test_writer_config_default_values' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_writer_config_default_values' does not call any production code
+  test_document_multiple_pages (target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/rigorous_tests.rs:444) - Score: 90
+    i Test 'test_document_multiple_pages' uses .unwrap() which silently discards error information
+    - Test 'test_document_multiple_pages' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+
+--- Details ---
+target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/rigorous_tests.rs:
+  test_writer_config_modern_values (line 17) - Score: 100
+    i Test 'test_writer_config_modern_values' asserts against a hardcoded constant instead of a computed expected value
+  test_writer_config_legacy_values (line 37) - Score: 100
+    i Test 'test_writer_config_legacy_values' asserts against a hardcoded constant instead of a computed expected value
+  test_writer_config_default_values (line 57) - Score: 90
+    i Test 'test_writer_config_default_values' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_writer_config_default_values' does not call any production code
+  test_writer_with_modern_config (line 81) - Score: 100
+    i Test 'test_writer_with_modern_config' asserts against a hardcoded constant instead of a computed expected value
+  test_writer_with_legacy_config (line 93) - Score: 100
+    i Test 'test_writer_with_legacy_config' asserts against a hardcoded constant instead of a computed expected value
+  test_allocate_object_id_sequential (line 109) - Score: 100
+    i Test 'test_allocate_object_id_sequential' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_allocate_object_id_sequential' has multiple assertions without diagnostic messages
+  test_write_header_pdf_version (line 163) - Score: 100
+    i Test 'test_write_header_pdf_version' uses .unwrap() which silently discards error information
+  test_write_header_binary_comment (line 180) - Score: 100
+    i Test 'test_write_header_binary_comment' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_write_header_binary_comment' uses .unwrap() which silently discards error information
+  test_write_header_length (line 196) - Score: 100
+    i Test 'test_write_header_length' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_write_header_length' uses .unwrap() which silently discards error information
+  test_xref_format_in_document (line 215) - Score: 100
+    i Test 'test_xref_format_in_document' has multiple assertions without diagnostic messages
+    i Test 'test_xref_format_in_document' uses .unwrap() which silently discards error information
+  test_xref_positions_format (line 237) - Score: 100
+    i Test 'test_xref_positions_format' uses .unwrap() which silently discards error information
+  test_trailer_structure_in_document (line 265) - Score: 100
+    i Test 'test_trailer_structure_in_document' has multiple assertions without diagnostic messages
+    i Test 'test_trailer_structure_in_document' uses .unwrap() which silently discards error information
+  test_trailer_references_valid_objects (line 299) - Score: 100
+    i Test 'test_trailer_references_valid_objects' uses .unwrap() which silently discards error information
+  test_document_ends_with_eof (line 329) - Score: 100
+    i Test 'test_document_ends_with_eof' uses .unwrap() which silently discards error information
+  test_eof_marker_format (line 348) - Score: 100
+    i Test 'test_eof_marker_format' uses .unwrap() which silently discards error information
+  test_empty_document_structure (line 375) - Score: 100
+    i Test 'test_empty_document_structure' has multiple assertions without diagnostic messages
+    i Test 'test_empty_document_structure' uses .unwrap() which silently discards error information
+  test_empty_document_page_count (line 398) - Score: 100
+    i Test 'test_empty_document_page_count' uses .unwrap() which silently discards error information
+  test_document_single_page (line 421) - Score: 100
+    i Test 'test_document_single_page' has multiple assertions without diagnostic messages
+    i Test 'test_document_single_page' uses .unwrap() which silently discards error information
+  test_document_multiple_pages (line 444) - Score: 90
+    i Test 'test_document_multiple_pages' uses .unwrap() which silently discards error information
+    - Test 'test_document_multiple_pages' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  test_document_with_title (line 471) - Score: 100
+    i Test 'test_document_with_title' uses .unwrap() which silently discards error information
+  test_document_with_author (line 491) - Score: 100
+    i Test 'test_document_with_author' uses .unwrap() which silently discards error information
+  test_document_with_all_metadata (line 511) - Score: 100
+    i Test 'test_document_with_all_metadata' has multiple assertions without diagnostic messages
+    i Test 'test_document_with_all_metadata' uses .unwrap() which silently discards error information
+
+target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/tests/catalog_entries_tests.rs:
+  test_write_catalog_includes_open_action (line 28) - Score: 100
+    i Test 'test_write_catalog_includes_open_action' has multiple assertions without diagnostic messages
+  test_write_catalog_includes_viewer_preferences (line 49) - Score: 100
+    i Test 'test_write_catalog_includes_viewer_preferences' has multiple assertions without diagnostic messages
+  test_write_catalog_includes_named_destinations (line 67) - Score: 100
+    i Test 'test_write_catalog_includes_named_destinations' has multiple assertions without diagnostic messages
+  test_write_catalog_includes_all_four_entries_simultaneously (line 99) - Score: 100
+    i Test 'test_write_catalog_includes_all_four_entries_simultaneously' has multiple assertions without diagnostic messages
+  test_write_catalog_includes_page_labels (line 140) - Score: 100
+    i Test 'test_write_catalog_includes_page_labels' has multiple assertions without diagnostic messages
+  test_page_labels_uppercase_roman_emits_uppercase_s_name (line 164) - Score: 90
+    i Test 'test_page_labels_uppercase_roman_emits_uppercase_s_name' has multiple assertions without diagnostic messages
+    - Test 'test_page_labels_uppercase_roman_emits_uppercase_s_name' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+  test_page_labels_lowercase_roman_emits_lowercase_s_name (line 192) - Score: 100
+    i Test 'test_page_labels_lowercase_roman_emits_lowercase_s_name' has multiple assertions without diagnostic messages
+  test_page_labels_mixed_roman_ranges_keep_correct_case (line 216) - Score: 90
+    i Test 'test_page_labels_mixed_roman_ranges_keep_correct_case' has multiple assertions without diagnostic messages
+    - Test 'test_page_labels_mixed_roman_ranges_keep_correct_case' has low assert-to-setup ratio (17%): 3 asserts vs 15 setup lines
+
+target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/tests/form_filling_tests.rs:
+  test_form_filling_preserves_template_and_adds_data (line 28) - Score: 80
+    - Test 'test_form_filling_preserves_template_and_adds_data' is marked as #[ignore]
+    i Test 'test_form_filling_preserves_template_and_adds_data' uses .unwrap() which silently discards error information
+  test_page_replacement_keeps_correct_page_count (line 147) - Score: 80
+    - Test 'test_page_replacement_keeps_correct_page_count' is marked as #[ignore]
+    i Test 'test_page_replacement_keeps_correct_page_count' uses .unwrap() which silently discards error information
+  test_multiple_page_replacement_preserves_unmodified_pages (line 193) - Score: 80
+    - Test 'test_multiple_page_replacement_preserves_unmodified_pages' is marked as #[ignore]
+    i Test 'test_multiple_page_replacement_preserves_unmodified_pages' has multiple assertions without diagnostic messages
+    i Test 'test_multiple_page_replacement_preserves_unmodified_pages' uses .unwrap() which silently discards error information
+  test_incremental_update_structure_compliance (line 274) - Score: 100
+    i Test 'test_incremental_update_structure_compliance' uses .unwrap() which silently discards error information
+
+target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/tests/incremental_update_tests.rs:
+  test_incremental_update_basic (line 14) - Score: 100
+    i Test 'test_incremental_update_basic' uses .unwrap() which silently discards error information
+  test_incremental_update_preserves_base_content (line 69) - Score: 100
+    i Test 'test_incremental_update_preserves_base_content' has multiple assertions without diagnostic messages
+    i Test 'test_incremental_update_preserves_base_content' uses .unwrap() which silently discards error information
+  test_incremental_update_has_prev_pointer (line 104) - Score: 100
+    i Test 'test_incremental_update_has_prev_pointer' uses .unwrap() which silently discards error information
+  test_incremental_update_config (line 137) - Score: 100
+    i Test 'test_incremental_update_config' asserts against a hardcoded constant instead of a computed expected value
+  test_incremental_update_with_form_fields (line 148) - Score: 100
+    i Test 'test_incremental_update_with_form_fields' uses .unwrap() which silently discards error information
+  test_incremental_update_multiple_times (line 187) - Score: 100
+    i Test 'test_incremental_update_multiple_times' has multiple assertions without diagnostic messages
+    i Test 'test_incremental_update_multiple_times' uses .unwrap() which silently discards error information
+  test_incremental_update_error_on_missing_base (line 231) - Score: 100
+    i Test 'test_incremental_update_error_on_missing_base' uses .unwrap() which silently discards error information
+  test_incremental_update_pdf_version (line 249) - Score: 100
+    i Test 'test_incremental_update_pdf_version' uses .unwrap() which silently discards error information
+
+target/issue661-writer/oxidize-pdf-core/src/writer/pdf_writer/tests.rs:
+  test_pdf_writer_new_with_writer (line 10) - Score: 100
+    i Test 'test_pdf_writer_new_with_writer' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_writer_new_with_writer' has multiple assertions without diagnostic messages
+  test_write_header (line 18) - Score: 100
+    i Test 'test_write_header' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_write_header' has multiple assertions without diagnostic messages
+    i Test 'test_write_header' uses .unwrap() which silently discards error information
+  test_write_catalog (line 37) - Score: 100
+    i Test 'test_write_catalog' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_write_catalog' has multiple assertions without diagnostic messages
+    i Test 'test_write_catalog' uses .unwrap() which silently discards error information
+  test_write_empty_document (line 73) - Score: 100
+    i Test 'test_write_empty_document' has multiple assertions without diagnostic messages
+    i Test 'test_write_empty_document' uses .unwrap() which silently discards error information
+  test_write_document_with_pages (line 90) - Score: 90
+    - Test 'test_write_document_with_pages' has identical neighborhood to 'test_write_different_page_sizes'
+    i Test 'test_write_document_with_pages' has multiple assertions without diagnostic messages
+    i Test 'test_write_document_with_pages' uses .unwrap() which silently discards error information
+  test_write_info (line 108) - Score: 100
+    i Test 'test_write_info' has multiple assertions without diagnostic messages
+    i Test 'test_write_info' uses .unwrap() which silently discards error information
+  test_write_info_with_dates (line 141) - Score: 100
+    i Test 'test_write_info_with_dates' has multiple assertions without diagnostic messages
+    i Test 'test_write_info_with_dates' uses .unwrap() which silently discards error information
+  test_format_pdf_date (line 175) - Score: 100
+    i Test 'test_format_pdf_date' has multiple assertions without diagnostic messages
+    i Test 'test_format_pdf_date' uses .unwrap() which silently discards error information
+  test_write_object (line 191) - Score: 100
+    i Test 'test_write_object' has multiple assertions without diagnostic messages
+    i Test 'test_write_object' uses .unwrap() which silently discards error information
+  test_write_xref (line 209) - Score: 100
+    i Test 'test_write_xref' has multiple assertions without diagnostic messages
+    i Test 'test_write_xref' uses .unwrap() which silently discards error information
+  test_write_trailer (line 230) - Score: 100
+    i Test 'test_write_trailer' has multiple assertions without diagnostic messages
+    i Test 'test_write_trailer' uses .unwrap() which silently discards error information
+  test_write_bytes (line 255) - Score: 100
+    i Test 'test_write_bytes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_write_bytes' has multiple assertions without diagnostic messages
+    i Test 'test_write_bytes' uses .unwrap() which silently discards error information
+  test_complete_pdf_generation (line 274) - Score: 100
+    i Test 'test_complete_pdf_generation' has multiple assertions without diagnostic messages
+    i Test 'test_complete_pdf_generation' uses .unwrap() which silently discards error information
+  test_writer_document_integration (line 309) - Score: 100
+    i Test 'test_writer_document_integration' has multiple assertions without diagnostic messages
+    i Test 'test_writer_document_integration' uses .unwrap() which silently discards error information
+  test_writer_page_content_integration (line 359) - Score: 100
+    i Test 'test_writer_page_content_integration' has multiple assertions without diagnostic messages
+    i Test 'test_writer_page_content_integration' uses .unwrap() which silently discards error information
+  test_writer_image_integration (line 416) - Score: 100
+    i Test 'test_writer_image_integration' has multiple assertions without diagnostic messages
+    i Test 'test_writer_image_integration' uses .unwrap() which silently discards error information
+  test_writer_buffer_vs_file_output (line 480) - Score: 100
+    i Test 'test_writer_buffer_vs_file_output' has multiple assertions without diagnostic messages
+    i Test 'test_writer_buffer_vs_file_output' uses .unwrap() which silently discards error information
+  test_writer_large_document_performance (line 531) - Score: 100
+    i Test 'test_writer_large_document_performance' has multiple assertions without diagnostic messages
+    i Test 'test_writer_large_document_performance' uses .unwrap() which silently discards error information
+  test_writer_metadata_handling (line 593) - Score: 100
+    i Test 'test_writer_metadata_handling' has multiple assertions without diagnostic messages
+    i Test 'test_writer_metadata_handling' uses .unwrap() which silently discards error information
+  test_writer_empty_document (line 631) - Score: 100
+    i Test 'test_writer_empty_document' has multiple assertions without diagnostic messages
+    i Test 'test_writer_empty_document' uses .unwrap() which silently discards error information
+  test_writer_error_handling (line 657) - Score: 100
+    i Test 'test_writer_error_handling' has multiple assertions without diagnostic messages
+  test_writer_object_id_management (line 675) - Score: 100
+    i Test 'test_writer_object_id_management' has multiple assertions without diagnostic messages
+    i Test 'test_writer_object_id_management' uses .unwrap() which silently discards error information
+  test_writer_content_stream_handling (line 710) - Score: 100
+    i Test 'test_writer_content_stream_handling' has multiple assertions without diagnostic messages
+    i Test 'test_writer_content_stream_handling' uses .unwrap() which silently discards error information
+  test_writer_font_resource_handling (line 746) - Score: 100
+    i Test 'test_writer_font_resource_handling' has multiple assertions without diagnostic messages
+    i Test 'test_writer_font_resource_handling' uses .unwrap() which silently discards error information
+  test_writer_cross_reference_table (line 788) - Score: 100
+    i Test 'test_writer_cross_reference_table' has multiple assertions without diagnostic messages
+    i Test 'test_writer_cross_reference_table' uses .unwrap() which silently discards error information
+  test_write_failure_during_header (line 874) - Score: 90
+    - Test 'test_write_failure_during_header' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_write_empty_collections (line 885) - Score: 100
+    i Test 'test_write_empty_collections' has multiple assertions without diagnostic messages
+    i Test 'test_write_empty_collections' uses .unwrap() which silently discards error information
+  test_write_deeply_nested_structures (line 907) - Score: 100
+    i Test 'test_write_deeply_nested_structures' has multiple assertions without diagnostic messages
+    i Test 'test_write_deeply_nested_structures' uses .unwrap() which silently discards error information
+  test_write_large_integers (line 926) - Score: 100
+    i Test 'test_write_large_integers' uses .unwrap() which silently discards error information
+  test_write_float_edge_cases (line 946) - Score: 100
+    i Test 'test_write_float_edge_cases' has multiple assertions without diagnostic messages
+    i Test 'test_write_float_edge_cases' uses .unwrap() which silently discards error information
+  test_write_special_characters_in_strings (line 971) - Score: 90
+    i Test 'test_write_special_characters_in_strings' has multiple assertions without diagnostic messages
+    i Test 'test_write_special_characters_in_strings' uses .unwrap() which silently discards error information
+    - Test 'test_write_special_characters_in_strings' has low assert-to-setup ratio (12%): 3 asserts vs 21 setup lines
+  test_write_names_with_special_chars (line 1005) - Score: 90
+    i Test 'test_write_names_with_special_chars' has multiple assertions without diagnostic messages
+    i Test 'test_write_names_with_special_chars' uses .unwrap() which silently discards error information
+    - Test 'test_write_names_with_special_chars' has low assert-to-setup ratio (14%): 3 asserts vs 19 setup lines
+  test_write_binary_streams (line 1037) - Score: 100
+    i Test 'test_write_binary_streams' has multiple assertions without diagnostic messages
+    i Test 'test_write_binary_streams' uses .unwrap() which silently discards error information
+  test_write_zero_length_stream (line 1068) - Score: 100
+    i Test 'test_write_zero_length_stream' has multiple assertions without diagnostic messages
+    i Test 'test_write_zero_length_stream' uses .unwrap() which silently discards error information
+  test_write_duplicate_dictionary_keys (line 1086) - Score: 100
+    i Test 'test_write_duplicate_dictionary_keys' has multiple assertions without diagnostic messages
+    i Test 'test_write_duplicate_dictionary_keys' uses .unwrap() which silently discards error information
+  test_write_unicode_metadata (line 1107) - Score: 100
+    i Test 'test_write_unicode_metadata' has multiple assertions without diagnostic messages
+    i Test 'test_write_unicode_metadata' uses .unwrap() which silently discards error information
+  test_write_very_long_strings (line 1129) - Score: 100
+    i Test 'test_write_very_long_strings' uses .unwrap() which silently discards error information
+  test_write_maximum_object_id (line 1144) - Score: 100
+    i Test 'test_write_maximum_object_id' uses .unwrap() which silently discards error information
+  test_write_complex_page (line 1157) - Score: 100
+    i Test 'test_write_complex_page' has multiple assertions without diagnostic messages
+    i Test 'test_write_complex_page' uses .unwrap() which silently discards error information
+  test_write_many_pages_document (line 1206) - Score: 100
+    i Test 'test_write_many_pages_document' has multiple assertions without diagnostic messages
+    i Test 'test_write_many_pages_document' uses .unwrap() which silently discards error information
+  test_write_failure_during_xref (line 1238) - Score: 90
+    - Test 'test_write_failure_during_xref' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  test_position_tracking_accuracy (line 1254) - Score: 100
+    i Test 'test_position_tracking_accuracy' has multiple assertions without diagnostic messages
+    i Test 'test_position_tracking_accuracy' uses .unwrap() which silently discards error information
+  test_write_object_reference_cycles (line 1279) - Score: 100
+    i Test 'test_write_object_reference_cycles' has multiple assertions without diagnostic messages
+    i Test 'test_write_object_reference_cycles' uses .unwrap() which silently discards error information
+  test_write_different_page_sizes (line 1299) - Score: 90
+    - Test 'test_write_different_page_sizes' has identical neighborhood to 'test_write_document_with_pages'
+    i Test 'test_write_different_page_sizes' has multiple assertions without diagnostic messages
+    i Test 'test_write_different_page_sizes' uses .unwrap() which silently discards error information
+  test_write_empty_metadata (line 1321) - Score: 100
+    i Test 'test_write_empty_metadata' has multiple assertions without diagnostic messages
+    i Test 'test_write_empty_metadata' uses .unwrap() which silently discards error information
+  test_write_permission_error (line 1341) - Score: 90
+    - Test 'test_write_permission_error' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_write_xref_many_objects (line 1352) - Score: 100
+    i Test 'test_write_xref_many_objects' has multiple assertions without diagnostic messages
+    i Test 'test_write_xref_many_objects' uses .unwrap() which silently discards error information
+  test_write_stream_with_filter (line 1378) - Score: 100
+    i Test 'test_write_stream_with_filter' has multiple assertions without diagnostic messages
+    i Test 'test_write_stream_with_filter' uses .unwrap() which silently discards error information
+  test_write_mixed_type_arrays (line 1398) - Score: 90
+    i Test 'test_write_mixed_type_arrays' uses .unwrap() which silently discards error information
+    - Test 'test_write_mixed_type_arrays' has low assert-to-setup ratio (12%): 2 asserts vs 15 setup lines
+  test_write_nested_dictionaries (line 1422) - Score: 100
+    i Test 'test_write_nested_dictionaries' has multiple assertions without diagnostic messages
+    i Test 'test_write_nested_dictionaries' uses .unwrap() which silently discards error information
+  test_write_max_generation_number (line 1447) - Score: 100
+    i Test 'test_write_max_generation_number' uses .unwrap() which silently discards error information
+  test_write_consistent_line_endings (line 1460) - Score: 100
+    i Test 'test_write_consistent_line_endings' has multiple assertions without diagnostic messages
+    i Test 'test_write_consistent_line_endings' uses .unwrap() which silently discards error information
+  test_writer_flush_behavior (line 1475) - Score: 90
+    i Test 'test_writer_flush_behavior' uses .unwrap() which silently discards error information
+    - Test 'test_writer_flush_behavior' has low assert-to-setup ratio (7%): 2 asserts vs 25 setup lines
+  test_write_pdf_special_characters (line 1509) - Score: 100
+    i Test 'test_write_pdf_special_characters' has multiple assertions without diagnostic messages
+    i Test 'test_write_pdf_special_characters' uses .unwrap() which silently discards error information
+  test_write_resource_dictionary (line 1551) - Score: 100
+    i Test 'test_write_resource_dictionary' has multiple assertions without diagnostic messages
+    i Test 'test_write_resource_dictionary' uses .unwrap() which silently discards error information
+  test_error_recovery_after_failed_write (line 1585) - Score: 100
+    i Test 'test_error_recovery_after_failed_write' has multiple assertions without diagnostic messages
+    i Test 'test_error_recovery_after_failed_write' uses .unwrap() which silently discards error information
+  test_memory_efficiency_large_document (line 1607) - Score: 100
+    i Test 'test_memory_efficiency_large_document' has multiple assertions without diagnostic messages
+    i Test 'test_memory_efficiency_large_document' uses .unwrap() which silently discards error information
+  test_trailer_dictionary_content (line 1638) - Score: 100
+    i Test 'test_trailer_dictionary_content' has multiple assertions without diagnostic messages
+    i Test 'test_trailer_dictionary_content' uses .unwrap() which silently discards error information
+  test_write_bytes_partial_writes (line 1665) - Score: 90
+    i Test 'test_write_bytes_partial_writes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_write_bytes_partial_writes' has multiple assertions without diagnostic messages
+    i Test 'test_write_bytes_partial_writes' uses .unwrap() which silently discards error information
+    - Test 'test_write_bytes_partial_writes' has low assert-to-setup ratio (10%): 3 asserts vs 26 setup lines
+  test_object_id_conflict_handling (line 1701) - Score: 100
+    i Test 'test_object_id_conflict_handling' has multiple assertions without diagnostic messages
+    i Test 'test_object_id_conflict_handling' uses .unwrap() which silently discards error information
+  test_content_stream_encoding (line 1722) - Score: 100
+    i Test 'test_content_stream_encoding' uses .unwrap() which silently discards error information
+  test_pdf_version_header (line 1746) - Score: 100
+    i Test 'test_pdf_version_header' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_version_header' has multiple assertions without diagnostic messages
+    i Test 'test_pdf_version_header' uses .unwrap() which silently discards error information
+  test_page_content_operations_order (line 1768) - Score: 90
+    i Test 'test_page_content_operations_order' has multiple assertions without diagnostic messages
+    i Test 'test_page_content_operations_order' uses .unwrap() which silently discards error information
+    - Test 'test_page_content_operations_order' has low assert-to-setup ratio (16%): 3 asserts vs 16 setup lines
+  test_invalid_utf8_handling (line 1797) - Score: 90
+    i Test 'test_invalid_utf8_handling' uses .unwrap() which silently discards error information
+    - Test 'test_invalid_utf8_handling' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  test_roundtrip_write_parse (line 1815) - Score: 90
+    i Test 'test_roundtrip_write_parse' uses .unwrap() which silently discards error information
+    - Test 'test_roundtrip_write_parse' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  test_pdf_object_references_are_valid (line 1842) - Score: 100
+    i Test 'test_pdf_object_references_are_valid' uses .unwrap() which silently discards error information
+  test_xref_stream_generation (line 1948) - Score: 100
+    i Test 'test_xref_stream_generation' has multiple assertions without diagnostic messages
+    i Test 'test_xref_stream_generation' uses .unwrap() which silently discards error information
+  test_writer_config_default (line 1989) - Score: 90
+    i Test 'test_writer_config_default' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_writer_config_default' does not call any production code
+  test_pdf_version_in_header (line 1996) - Score: 90
+    i Test 'test_pdf_version_in_header' uses .unwrap() which silently discards error information
+    - Test 'test_pdf_version_in_header' has low assert-to-setup ratio (12%): 2 asserts vs 15 setup lines
+  test_xref_stream_with_multiple_objects (line 2019) - Score: 90
+    i Test 'test_xref_stream_with_multiple_objects' uses .unwrap() which silently discards error information
+    - Test 'test_xref_stream_with_multiple_objects' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  test_write_pdf_header (line 2047) - Score: 100
+    i Test 'test_write_pdf_header' has multiple assertions without diagnostic messages
+    i Test 'test_write_pdf_header' uses .unwrap() which silently discards error information
+  test_write_empty_document (line 2058) - Score: 100
+    i Test 'test_write_empty_document' has multiple assertions without diagnostic messages
+  test_png_transparency_smask (line 4260) - Score: 90
+    - Test 'test_png_transparency_smask' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_png_transparency_smask' has multiple assertions without diagnostic messages
+    i Test 'test_png_transparency_smask' uses .unwrap() which silently discards error information
+  numeric_and_binary_serialization_preserves_legacy_bytes (line 4344) - Score: 90
+    i Test 'numeric_and_binary_serialization_preserves_legacy_bytes' has multiple assertions without diagnostic messages
+    i Test 'numeric_and_binary_serialization_preserves_legacy_bytes' uses .unwrap() which silently discards error information
+    - Test 'numeric_and_binary_serialization_preserves_legacy_bytes' has low assert-to-setup ratio (9%): 5 asserts vs 49 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

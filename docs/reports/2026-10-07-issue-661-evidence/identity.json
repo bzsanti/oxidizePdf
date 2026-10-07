@@ -1,0 +1,11 @@
+{
+  "base": "9dcf8188a906132991e14946eec228efe98ada01",
+  "base_product_sha256": "81c616a0fe721558fb1b32e14beff14e4f0e1afa31421a6c857bf37ecbf6e673",
+  "candidate_product_sha256": "c5891acaf337a54ed2a8b89aaf3547ac683c732d14b66913436911b40a8db8e6",
+  "lock_sha256": "dcf319be6677fd61ed7e81d5bdbac99c20ca53b1a4ffee164ac3c8ffe9b33577",
+  "workload": "22 invoice lines per A4 page, Helvetica 10pt; 1/10/100 pages; default/raw",
+  "timing": "16 complete randomly interleaved blocks, seed661; 3 warmups; max(10,1000/pages) documents per sample; construction+serialization+destruction; output and validation excluded",
+  "allocations": "separate allocator-instrumented binaries; 10 documents/case; cumulative requests, including new realloc sizes; not RSS or peak live memory",
+  "historical_evidence": "unchanged; consumer lock updated only path package oxidize-pdf 5.2.0 -> 5.3.0; flate2 1.1.10/miniz_oxide 0.9.1 (workspace validation uses different locked versions)",
+  "dependencies_changed": false
+}

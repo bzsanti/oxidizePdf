@@ -1,0 +1,11 @@
+{
+  "source": "test-pdfs/SourceHanSansSC-Regular.otf (existing repository fixture)",
+  "source_sha256": "f1d8611151880c6c336aabeac4640ef434fa13cbfbf1ffe82d0a71b2a5637256",
+  "fonttools": "4.60.1",
+  "characters": "U+4E00–U+51FF plus 中文测试; test usage selects only 中文测试",
+  "fixture": "WriterCjkTest-Regular.otf",
+  "fixture_sha256": "1113ddc22a9526854d95d1942ee6adc5767436049583f3b9b5edf9ef1552666b",
+  "license": "SIL Open Font License 1.1; embedded copyright/license records retained; renamed derivative",
+  "generation": "PYTHONPATH=target/issue666-fonttools python3 generate.py SOURCE_OTF OUTPUT_OTF",
+  "purpose": "Exercise automatic CFF subsetting above the existing 100000-byte threshold, with real glyphs and no padding"
+}

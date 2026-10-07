@@ -1,0 +1,56 @@
+[
+  {
+    "mode": "empty",
+    "pages": 1,
+    "median_us": {
+      "control": 170.2389,
+      "compression": 197.1957
+    },
+    "improvement_pct": -15.834688781471208
+  },
+  {
+    "mode": "empty",
+    "pages": 10,
+    "median_us": {
+      "control": 1215.299,
+      "compression": 1400.5815
+    },
+    "improvement_pct": -15.24583662127592
+  },
+  {
+    "mode": "image",
+    "pages": 1,
+    "median_us": {
+      "control": 282.7179,
+      "compression": 256.92095
+    },
+    "improvement_pct": 9.124625642734319
+  },
+  {
+    "mode": "image",
+    "pages": 10,
+    "median_us": {
+      "control": 749.56875,
+      "compression": 691.0735
+    },
+    "improvement_pct": 7.803853882649192
+  },
+  {
+    "mode": "cjk",
+    "pages": 1,
+    "median_us": {
+      "control": 1615.919175,
+      "compression": 1593.61915
+    },
+    "improvement_pct": 1.3800210644817734
+  },
+  {
+    "mode": "cjk",
+    "pages": 10,
+    "median_us": {
+      "control": 2210.75825,
+      "compression": 2026.7794999999999
+    },
+    "improvement_pct": 8.321975050867724
+  }
+]

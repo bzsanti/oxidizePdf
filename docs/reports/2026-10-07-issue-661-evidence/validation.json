@@ -1,0 +1,110 @@
+[
+  {
+    "variant": "control",
+    "mode": "default",
+    "pages": 1,
+    "bytes": 5015,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "2343fedd0f1a492114134f1a15099ac4aca5ce38d1fc30529ce6a3fcb4f40a0b"
+  },
+  {
+    "variant": "control",
+    "mode": "default",
+    "pages": 10,
+    "bytes": 20466,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "a614d9ecd7280c26fc76965e1e5121a153e561ba631ee60a767c241a1f4b5697"
+  },
+  {
+    "variant": "control",
+    "mode": "default",
+    "pages": 100,
+    "bytes": 175035,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "b182d5e5fa5d3eb7a3f91219deb454de7aee6ad0586104c10ad5bb4315d629d2"
+  },
+  {
+    "variant": "control",
+    "mode": "raw",
+    "pages": 1,
+    "bytes": 6799,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "e975d89f3760536ebf5beda61c7af621e133cfe1d7f29f3076fc5866618dbf74"
+  },
+  {
+    "variant": "control",
+    "mode": "raw",
+    "pages": 10,
+    "bytes": 38297,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "045a817fda55965c61980998d47f8420e704b65c2612d7fa212caf4963c0c230"
+  },
+  {
+    "variant": "control",
+    "mode": "raw",
+    "pages": 100,
+    "bytes": 353511,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "5f24b8708dbe90db622274b7304a5147e5fa120177ec60205bcbdc7ad9e45639"
+  },
+  {
+    "variant": "shared",
+    "mode": "default",
+    "pages": 1,
+    "bytes": 5015,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "8d7ffe5e21bbf52da75793dd399454f39872de04fd95040da4274347cf5e5bbb"
+  },
+  {
+    "variant": "shared",
+    "mode": "default",
+    "pages": 10,
+    "bytes": 9483,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "c5e757dedc9336482d012411ef0aea51500b1ac6d11fc5f7aa77007f8df2ceab"
+  },
+  {
+    "variant": "shared",
+    "mode": "default",
+    "pages": 100,
+    "bytes": 53903,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "12c52e6a0c73754d6ec34e39390f78ac6a92b49194c620f8264bbda9f21dc633"
+  },
+  {
+    "variant": "shared",
+    "mode": "raw",
+    "pages": 1,
+    "bytes": 6799,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "b698dca31a554a0b29ae5efe9f2da84116ca517e50d9f683406e81e9efb7febf"
+  },
+  {
+    "variant": "shared",
+    "mode": "raw",
+    "pages": 10,
+    "bytes": 27315,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "609aea8c79b1d84356e27e441d6566e38364177e7326403027a03831b364749a"
+  },
+  {
+    "variant": "shared",
+    "mode": "raw",
+    "pages": 100,
+    "bytes": 232380,
+    "qpdf": "pass",
+    "exact_lines": "pass",
+    "sha256": "a0f79c1a0f0ef15ce32757f392339f14fc43293888c54602f44625fbf406add0"
+  }
+]

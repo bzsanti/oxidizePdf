@@ -1,0 +1,200 @@
+[
+  {
+    "mode": "default",
+    "pages": 1,
+    "base": "control",
+    "variant": "formatting",
+    "median_paired_improvement_pct": 5.477174341242075,
+    "bootstrap_95pct": [
+      3.5762107749877314,
+      6.2480258996989395
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 1,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 4.749506810082626,
+    "bootstrap_95pct": [
+      1.952130360965304,
+      7.854421784729871
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 1,
+    "base": "formatting",
+    "variant": "compression",
+    "median_paired_improvement_pct": 0.41212034069028625,
+    "bootstrap_95pct": [
+      -2.185982284854293,
+      2.426962153206935
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 10,
+    "base": "control",
+    "variant": "formatting",
+    "median_paired_improvement_pct": 4.535715134581264,
+    "bootstrap_95pct": [
+      2.634252492497613,
+      11.557447226480344
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 10,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 49.739715248336125,
+    "bootstrap_95pct": [
+      48.03723608280234,
+      51.127754379644955
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 10,
+    "base": "formatting",
+    "variant": "compression",
+    "median_paired_improvement_pct": 46.40861376298899,
+    "bootstrap_95pct": [
+      44.51336500215331,
+      47.751672489599606
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 100,
+    "base": "control",
+    "variant": "formatting",
+    "median_paired_improvement_pct": 10.713228786644109,
+    "bootstrap_95pct": [
+      7.997347292164281,
+      12.817178681999097
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 100,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 13.492859492618825,
+    "bootstrap_95pct": [
+      9.613814562846756,
+      15.24627179464576
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 100,
+    "base": "formatting",
+    "variant": "compression",
+    "median_paired_improvement_pct": 2.7598584545543203,
+    "bootstrap_95pct": [
+      0.27058214833071137,
+      5.157302799749641
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 1,
+    "base": "control",
+    "variant": "formatting",
+    "median_paired_improvement_pct": 8.989583071789703,
+    "bootstrap_95pct": [
+      4.007877870068677,
+      12.777399308061089
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 1,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 8.602047463232886,
+    "bootstrap_95pct": [
+      5.002567553979009,
+      13.705847188333653
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 1,
+    "base": "formatting",
+    "variant": "compression",
+    "median_paired_improvement_pct": -0.7953597818226688,
+    "bootstrap_95pct": [
+      -2.67027186169011,
+      3.4587226820977035
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 10,
+    "base": "control",
+    "variant": "formatting",
+    "median_paired_improvement_pct": 14.413189174621188,
+    "bootstrap_95pct": [
+      10.704500663814054,
+      16.868560025716622
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 10,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 10.006172186291046,
+    "bootstrap_95pct": [
+      7.393975933068902,
+      12.229448266910481
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 10,
+    "base": "formatting",
+    "variant": "compression",
+    "median_paired_improvement_pct": -4.509729018361675,
+    "bootstrap_95pct": [
+      -9.535903055233351,
+      2.736085536794708
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 100,
+    "base": "control",
+    "variant": "formatting",
+    "median_paired_improvement_pct": 10.376035840921976,
+    "bootstrap_95pct": [
+      8.537581958435991,
+      13.368358116683844
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 100,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 12.26867934405147,
+    "bootstrap_95pct": [
+      10.521869002508133,
+      13.587394067606695
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 100,
+    "base": "formatting",
+    "variant": "compression",
+    "median_paired_improvement_pct": 1.2586277109613186,
+    "bootstrap_95pct": [
+      -2.5795427125336223,
+      3.8386997676149393
+    ]
+  }
+]

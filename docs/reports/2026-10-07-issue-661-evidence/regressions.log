@@ -1,0 +1,165 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue661-writer/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 23s
+     Running unittests src/lib.rs (target/debug/deps/oxidize_pdf-c699162f8fca4744)
+
+running 116 tests
+test writer::pdf_writer::rigorous_tests::test_allocate_object_id_sequential ... ok
+test writer::pdf_writer::rigorous_tests::test_allocate_object_id_no_gaps ... ok
+test writer::pdf_writer::rigorous_tests::test_empty_document_page_count ... ok
+test writer::pdf_writer::rigorous_tests::test_document_ends_with_eof ... ok
+test writer::pdf_writer::rigorous_tests::test_document_with_author ... ok
+test writer::pdf_writer::rigorous_tests::test_document_with_title ... ok
+test writer::pdf_writer::rigorous_tests::test_empty_document_structure ... ok
+test writer::pdf_writer::rigorous_tests::test_document_with_all_metadata ... ok
+test writer::pdf_writer::rigorous_tests::test_write_header_binary_comment ... ok
+test writer::pdf_writer::rigorous_tests::test_write_header_length ... ok
+test writer::pdf_writer::rigorous_tests::test_document_single_page ... ok
+test writer::pdf_writer::rigorous_tests::test_writer_config_default_values ... ok
+test writer::pdf_writer::rigorous_tests::test_eof_marker_format ... ok
+test writer::pdf_writer::rigorous_tests::test_writer_config_legacy_values ... ok
+test writer::pdf_writer::rigorous_tests::test_write_header_pdf_version ... ok
+test writer::pdf_writer::rigorous_tests::test_writer_config_modern_values ... ok
+test writer::pdf_writer::rigorous_tests::test_trailer_structure_in_document ... ok
+test writer::pdf_writer::rigorous_tests::test_writer_with_legacy_config ... ok
+test writer::pdf_writer::rigorous_tests::test_writer_with_modern_config ... ok
+test writer::pdf_writer::rigorous_tests::test_document_multiple_pages ... ok
+test writer::pdf_writer::rigorous_tests::test_xref_format_in_document ... ok
+test writer::pdf_writer::rigorous_tests::test_trailer_references_valid_objects ... ok
+test writer::pdf_writer::tests::catalog_entries_tests::catalog_entries_tests::test_page_labels_lowercase_roman_emits_lowercase_s_name ... ok
+test writer::pdf_writer::rigorous_tests::test_xref_positions_format ... ok
+test writer::pdf_writer::tests::catalog_entries_tests::catalog_entries_tests::test_page_labels_uppercase_roman_emits_uppercase_s_name ... ok
+test writer::pdf_writer::tests::catalog_entries_tests::catalog_entries_tests::test_page_labels_mixed_roman_ranges_keep_correct_case ... ok
+test writer::pdf_writer::tests::catalog_entries_tests::catalog_entries_tests::test_write_catalog_includes_named_destinations ... ok
+test writer::pdf_writer::tests::catalog_entries_tests::catalog_entries_tests::test_write_catalog_includes_all_four_entries_simultaneously ... ok
+test writer::pdf_writer::tests::catalog_entries_tests::catalog_entries_tests::test_write_catalog_includes_open_action ... ok
+test writer::pdf_writer::tests::catalog_entries_tests::catalog_entries_tests::test_write_catalog_includes_page_labels ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_error_recovery_after_failed_write ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_invalid_utf8_handling ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_object_id_conflict_handling ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_pdf_version_header ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_position_tracking_accuracy ... ok
+test writer::pdf_writer::tests::catalog_entries_tests::catalog_entries_tests::test_write_catalog_includes_viewer_preferences ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_content_stream_encoding ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_page_content_operations_order ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_pdf_version_in_header ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_trailer_dictionary_content ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_bytes_partial_writes ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_binary_streams ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_consistent_line_endings ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_deeply_nested_structures ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_duplicate_dictionary_keys ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_empty_collections ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_pdf_object_references_are_valid ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_empty_document ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_roundtrip_write_parse ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_failure_during_header ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_float_edge_cases ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_failure_during_xref ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_large_integers ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_empty_metadata ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_complex_page ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_maximum_object_id ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_max_generation_number ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_mixed_type_arrays ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_different_page_sizes ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_names_with_special_chars ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_nested_dictionaries ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_object_reference_cycles ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_pdf_header ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_pdf_special_characters ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_permission_error ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_special_characters_in_strings ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_stream_with_filter ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_unicode_metadata ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_writer_config_default ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_very_long_strings ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_zero_length_stream ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_writer_flush_behavior ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_resource_dictionary ... ok
+test writer::pdf_writer::tests::form_filling_tests::form_filling_tests::test_form_filling_preserves_template_and_adds_data ... ignored
+test writer::pdf_writer::tests::form_filling_tests::form_filling_tests::test_multiple_page_replacement_preserves_unmodified_pages ... ignored
+test writer::pdf_writer::tests::form_filling_tests::form_filling_tests::test_page_replacement_keeps_correct_page_count ... ignored
+test writer::pdf_writer::tests::comprehensive_tests::test_xref_stream_generation ... ok
+test writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_config ... ok
+test writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_error_on_missing_base ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_xref_stream_with_multiple_objects ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_png_transparency_smask ... ok
+test writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_basic ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_xref_many_objects ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_write_many_pages_document ... ok
+test writer::pdf_writer::tests::comprehensive_tests::test_memory_efficiency_large_document ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_content_stream_handling ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_cross_reference_table ... ok
+test writer::pdf_writer::tests::form_filling_tests::form_filling_tests::test_incremental_update_structure_compliance ... ok
+test writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_has_prev_pointer ... ok
+test writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_multiple_times ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_font_resource_handling ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_error_handling ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_empty_document ... ok
+test writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_preserves_base_content ... ok
+test writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_with_form_fields ... ok
+test writer::pdf_writer::tests::incremental_update_tests::incremental_update_tests::test_incremental_update_pdf_version ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_buffer_vs_file_output ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_image_integration ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_document_integration ... ok
+test writer::pdf_writer::tests::test_format_pdf_date ... ok
+test writer::pdf_writer::tests::test_write_bytes ... ok
+test writer::pdf_writer::tests::test_pdf_writer_new_with_writer ... ok
+test writer::pdf_writer::tests::test_write_catalog ... ok
+test writer::pdf_writer::tests::test_write_header ... ok
+test writer::pdf_writer::tests::test_write_empty_document ... ok
+test writer::pdf_writer::tests::test_write_info ... ok
+test writer::pdf_writer::tests::test_write_object ... ok
+test writer::pdf_writer::tests::test_complete_pdf_generation ... ok
+test writer::pdf_writer::tests::test_write_info_with_dates ... ok
+test writer::pdf_writer::tests::test_write_trailer ... ok
+test writer::pdf_writer::tests::test_write_xref ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_metadata_handling ... ok
+test writer::pdf_writer::tests::test_write_document_with_pages ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_page_content_integration ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_object_id_management ... ok
+test writer::pdf_writer::tests::integration_tests::test_writer_large_document_performance ... ok
+
+test result: ok. 113 passed; 0 failed; 3 ignored; 0 measured; 6688 filtered out; finished in 0.25s
+
+     Running tests/incremental_overlay_tests.rs (target/debug/deps/incremental_overlay_tests-bfbcb97bd0ca81d4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/inline_font_resources_test.rs (target/debug/deps/inline_font_resources_test-167c7ee6dbafcaca)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/issue_302_indirect_font_dict_test.rs (target/debug/deps/issue_302_indirect_font_dict_test-9fd2bf0c9430d126)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/issue_392_unicode_keyed_cyrillic_test.rs (target/debug/deps/issue_392_unicode_keyed_cyrillic_test-da967572ae176f8b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/issue_639_build_identification_test.rs (target/debug/deps/issue_639_build_identification_test-ae58e86f529510e6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+     Running tests/overlay_font_preservation_test.rs (target/debug/deps/overlay_font_preservation_test-6d21b56153687649)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/per_font_char_tracking_test.rs (target/debug/deps/per_font_char_tracking_test-2f50ae660e8a4492)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s

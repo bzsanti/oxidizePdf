@@ -185,12 +185,7 @@ impl Document {
         // Merge the page's per-font character accumulators into the
         // document-wide map (issue #204 — each font gets subsetted with
         // only its own characters later at write time).
-        for (font_name, chars) in page.get_used_characters_by_font() {
-            self.used_characters_by_font
-                .entry(font_name)
-                .or_default()
-                .extend(chars);
-        }
+        page.merge_used_characters_into(&mut self.used_characters_by_font);
         self.pages.push(page);
     }
 

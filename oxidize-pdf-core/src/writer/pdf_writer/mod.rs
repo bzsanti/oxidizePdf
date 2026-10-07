@@ -138,6 +138,9 @@ pub struct PdfWriter<W: Write> {
     page_ids: Vec<ObjectId>,       // page IDs for form field references
     // Configuration
     config: WriterConfig,
+    // Lazily allocated and scoped to this writer; no global compressor cache.
+    #[cfg(feature = "compression")]
+    page_compressor: Option<flate2::write::ZlibEncoder<Vec<u8>>>,
     // Characters used in document, bucketed by font name (issue #204).
     // The writer uses this to subset each custom font with only its
     // own characters — a single global set caused unused fonts to be
@@ -205,6 +208,8 @@ impl<W: Write> PdfWriter<W> {
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
             config,
+            #[cfg(feature = "compression")]
+            page_compressor: None,
             document_used_chars_by_font: std::collections::HashMap::new(),
             buffered_objects: HashMap::new(),
             compressed_object_map: HashMap::new(),
@@ -225,9 +230,7 @@ impl<W: Write> PdfWriter<W> {
         }
 
         // Store used characters for font subsetting
-        if !document.used_characters_by_font.is_empty() {
-            self.document_used_chars_by_font = document.used_characters_by_font.clone();
-        }
+        self.capture_custom_font_usage(document);
 
         self.write_header()?;
 
@@ -512,7 +515,7 @@ impl<W: Write> PdfWriter<W> {
         self.prev_xref_offset = Some(prev_xref);
         // A source file need not end with whitespace after %%EOF.
         self.write_bytes(b"\n")?;
-        self.document_used_chars_by_font = document.used_characters_by_font.clone();
+        self.capture_custom_font_usage(document);
         let fonts = self.write_fonts(document)?;
         self.write_pages_preserving_metadata(
             document,
@@ -914,11 +917,9 @@ impl<W: Write> PdfWriter<W> {
         page: &crate::page::Page,
         preserved_font_map: &HashMap<String, String>,
     ) -> Result<()> {
-        let mut page_copy = page.clone();
-        // Issue #395: drive the preserved-content font rewrite from the same
-        // collision-only map used for the resource-dict rename.
-        page_copy.preserved_font_rewrite_map = preserved_font_map.clone();
-        let content = page_copy.generate_content()?;
+        // Use the same collision-only map as the resource dictionary without
+        // modifying or cloning the caller's page (including its fonts/images).
+        let content = page.generate_content_with_font_map(preserved_font_map)?;
 
         // Create stream with compression if enabled
         #[cfg(feature = "compression")]
@@ -927,13 +928,19 @@ impl<W: Write> PdfWriter<W> {
             let mut stream = Stream::new(content);
             // Only compress if config allows it
             if self.config.compress_streams {
-                stream.compress_flate()?;
+                // Resetting compressor history has a fixed cost: measurements
+                // regress for short/image-only streams and one-page documents.
+                // Retain the fresh-encoder path for those cases; reuse only for
+                // multipage documents with at least 2 KiB of page operators.
+                if self.page_ids.len() > 1 && stream.data().len() >= 2048 {
+                    stream.compress_flate_with_encoder(&mut self.page_compressor)?;
+                } else {
+                    stream.compress_flate()?;
+                }
             }
 
-            self.write_object(
-                content_id,
-                Object::Stream(stream.dictionary().clone(), stream.data().to_vec()),
-            )?;
+            let (dictionary, data) = stream.into_parts();
+            self.write_object(content_id, Object::Stream(dictionary, data))?;
         }
 
         #[cfg(not(feature = "compression"))]
@@ -1318,6 +1325,17 @@ impl<W: Write> PdfWriter<W> {
 
         self.write_object(info_id, Object::Dictionary(info_dict))?;
         Ok(())
+    }
+
+    /// Only registered custom fonts consume these sets at serialization time.
+    /// Keep all names in Document: fonts may be registered after pages are added.
+    fn capture_custom_font_usage(&mut self, document: &Document) {
+        self.document_used_chars_by_font = document
+            .used_characters_by_font
+            .iter()
+            .filter(|(name, _)| document.has_custom_font(name))
+            .map(|(name, chars)| (name.clone(), chars.clone()))
+            .collect();
     }
 
     fn write_fonts(&mut self, document: &Document) -> Result<HashMap<String, ObjectId>> {
@@ -2319,6 +2337,26 @@ impl<W: Write> PdfWriter<W> {
         self.write_pages_preserving_metadata(document, font_refs, &[])
     }
 
+    /// Keep every reserved standard name available to untyped Raw operators.
+    /// Custom/CID registrations retain precedence over the injected Type1 stubs.
+    fn page_font_resources(font_refs: &HashMap<String, ObjectId>) -> Dictionary {
+        let mut fonts = Dictionary::with_capacity(
+            crate::writer::INJECTED_BASE_FONT_KEYS.len() + font_refs.len(),
+        );
+        for name in crate::writer::INJECTED_BASE_FONT_KEYS {
+            let mut font = Dictionary::with_capacity(4);
+            font.set("Type", Object::Name("Font".to_string()));
+            font.set("Subtype", Object::Name("Type1".to_string()));
+            font.set("BaseFont", Object::Name(name.to_string()));
+            font.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+            fonts.set(name, Object::Dictionary(font));
+        }
+        for (name, id) in font_refs {
+            fonts.set(name, Object::Reference(*id));
+        }
+        fonts
+    }
+
     fn write_pages_preserving_metadata(
         &mut self,
         document: &Document,
@@ -2362,6 +2400,23 @@ impl<W: Write> PdfWriter<W> {
             .map(Self::struct_parent_keys)
             .unwrap_or_default();
 
+        // Share only when at least two pages can reuse the dictionary unchanged.
+        // Keep this state local to this write: object IDs belong to one output.
+        let shared_font_resources = if document
+            .pages
+            .iter()
+            .filter(|page| page.get_preserved_resources().is_none())
+            .take(2)
+            .count()
+            == 2
+        {
+            let id = self.allocate_object_id()?;
+            self.write_object(id, Object::Dictionary(Self::page_font_resources(font_refs)))?;
+            Some(id)
+        } else {
+            None
+        };
+
         // Write individual pages with font references
         for (i, page) in document.pages.iter().enumerate() {
             let page_id = page_ids[i];
@@ -2379,6 +2434,7 @@ impl<W: Write> PdfWriter<W> {
                 page,
                 struct_parent_keys.get(&i).copied(),
                 font_refs,
+                shared_font_resources,
                 &preserved_font_map,
                 originals.get(i).map(|(_, dict)| dict),
             )?;
@@ -2406,6 +2462,7 @@ impl<W: Write> PdfWriter<W> {
         page: &crate::page::Page,
         struct_parent_key: Option<i64>,
         font_refs: &HashMap<String, ObjectId>,
+        shared_font_resources: Option<ObjectId>,
         preserved_font_map: &HashMap<String, String>,
         original: Option<&Dictionary>,
     ) -> Result<()> {
@@ -2452,120 +2509,13 @@ impl<W: Write> PdfWriter<W> {
             Dictionary::new()
         };
 
-        // Add font resources
-        let mut font_dict = Dictionary::new();
-
-        // Add ALL standard PDF fonts (Type1) with WinAnsiEncoding
-        // This fixes the text rendering issue in dashboards where HelveticaBold was missing
-
-        // Helvetica family
-        let mut helvetica_dict = Dictionary::new();
-        helvetica_dict.set("Type", Object::Name("Font".to_string()));
-        helvetica_dict.set("Subtype", Object::Name("Type1".to_string()));
-        helvetica_dict.set("BaseFont", Object::Name("Helvetica".to_string()));
-        helvetica_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Helvetica", Object::Dictionary(helvetica_dict));
-
-        let mut helvetica_bold_dict = Dictionary::new();
-        helvetica_bold_dict.set("Type", Object::Name("Font".to_string()));
-        helvetica_bold_dict.set("Subtype", Object::Name("Type1".to_string()));
-        helvetica_bold_dict.set("BaseFont", Object::Name("Helvetica-Bold".to_string()));
-        helvetica_bold_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Helvetica-Bold", Object::Dictionary(helvetica_bold_dict));
-
-        let mut helvetica_oblique_dict = Dictionary::new();
-        helvetica_oblique_dict.set("Type", Object::Name("Font".to_string()));
-        helvetica_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
-        helvetica_oblique_dict.set("BaseFont", Object::Name("Helvetica-Oblique".to_string()));
-        helvetica_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set(
-            "Helvetica-Oblique",
-            Object::Dictionary(helvetica_oblique_dict),
-        );
-
-        let mut helvetica_bold_oblique_dict = Dictionary::new();
-        helvetica_bold_oblique_dict.set("Type", Object::Name("Font".to_string()));
-        helvetica_bold_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
-        helvetica_bold_oblique_dict.set(
-            "BaseFont",
-            Object::Name("Helvetica-BoldOblique".to_string()),
-        );
-        helvetica_bold_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set(
-            "Helvetica-BoldOblique",
-            Object::Dictionary(helvetica_bold_oblique_dict),
-        );
-
-        // Times family
-        let mut times_dict = Dictionary::new();
-        times_dict.set("Type", Object::Name("Font".to_string()));
-        times_dict.set("Subtype", Object::Name("Type1".to_string()));
-        times_dict.set("BaseFont", Object::Name("Times-Roman".to_string()));
-        times_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Times-Roman", Object::Dictionary(times_dict));
-
-        let mut times_bold_dict = Dictionary::new();
-        times_bold_dict.set("Type", Object::Name("Font".to_string()));
-        times_bold_dict.set("Subtype", Object::Name("Type1".to_string()));
-        times_bold_dict.set("BaseFont", Object::Name("Times-Bold".to_string()));
-        times_bold_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Times-Bold", Object::Dictionary(times_bold_dict));
-
-        let mut times_italic_dict = Dictionary::new();
-        times_italic_dict.set("Type", Object::Name("Font".to_string()));
-        times_italic_dict.set("Subtype", Object::Name("Type1".to_string()));
-        times_italic_dict.set("BaseFont", Object::Name("Times-Italic".to_string()));
-        times_italic_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Times-Italic", Object::Dictionary(times_italic_dict));
-
-        let mut times_bold_italic_dict = Dictionary::new();
-        times_bold_italic_dict.set("Type", Object::Name("Font".to_string()));
-        times_bold_italic_dict.set("Subtype", Object::Name("Type1".to_string()));
-        times_bold_italic_dict.set("BaseFont", Object::Name("Times-BoldItalic".to_string()));
-        times_bold_italic_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set(
-            "Times-BoldItalic",
-            Object::Dictionary(times_bold_italic_dict),
-        );
-
-        // Courier family
-        let mut courier_dict = Dictionary::new();
-        courier_dict.set("Type", Object::Name("Font".to_string()));
-        courier_dict.set("Subtype", Object::Name("Type1".to_string()));
-        courier_dict.set("BaseFont", Object::Name("Courier".to_string()));
-        courier_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Courier", Object::Dictionary(courier_dict));
-
-        let mut courier_bold_dict = Dictionary::new();
-        courier_bold_dict.set("Type", Object::Name("Font".to_string()));
-        courier_bold_dict.set("Subtype", Object::Name("Type1".to_string()));
-        courier_bold_dict.set("BaseFont", Object::Name("Courier-Bold".to_string()));
-        courier_bold_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Courier-Bold", Object::Dictionary(courier_bold_dict));
-
-        let mut courier_oblique_dict = Dictionary::new();
-        courier_oblique_dict.set("Type", Object::Name("Font".to_string()));
-        courier_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
-        courier_oblique_dict.set("BaseFont", Object::Name("Courier-Oblique".to_string()));
-        courier_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set("Courier-Oblique", Object::Dictionary(courier_oblique_dict));
-
-        let mut courier_bold_oblique_dict = Dictionary::new();
-        courier_bold_oblique_dict.set("Type", Object::Name("Font".to_string()));
-        courier_bold_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
-        courier_bold_oblique_dict.set("BaseFont", Object::Name("Courier-BoldOblique".to_string()));
-        courier_bold_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
-        font_dict.set(
-            "Courier-BoldOblique",
-            Object::Dictionary(courier_bold_oblique_dict),
-        );
-
-        // Add custom fonts (Type0 fonts for Unicode support)
-        for (font_name, font_id) in font_refs {
-            font_dict.set(font_name, Object::Reference(*font_id));
-        }
-
-        resources.set("Font", Object::Dictionary(font_dict));
+        // Imported resources need a private dictionary for collision-aware merging.
+        // Ordinary pages can reference the immutable document-wide dictionary.
+        let fonts = match shared_font_resources {
+            Some(id) if page.get_preserved_resources().is_none() => Object::Reference(id),
+            _ => Object::Dictionary(Self::page_font_resources(font_refs)),
+        };
+        resources.set("Font", fonts);
 
         // Add images and Form XObjects as XObjects
         let has_images = !page.images().is_empty();
@@ -3075,6 +3025,8 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
             config: WriterConfig::default(),
+            #[cfg(feature = "compression")]
+            page_compressor: None,
             document_used_chars_by_font: std::collections::HashMap::new(),
             buffered_objects: HashMap::new(),
             compressed_object_map: HashMap::new(),
@@ -3476,8 +3428,7 @@ impl<W: Write> PdfWriter<W> {
         self.xref_positions.insert(id, self.current_position);
 
         // Pre-format header to count exact bytes once
-        let header = format!("{} {} obj\n", id.number(), id.generation());
-        self.write_bytes(header.as_bytes())?;
+        self.write_formatted(format_args!("{} {} obj\n", id.number(), id.generation()))?;
 
         self.write_object_value(&object)?;
 
@@ -3489,13 +3440,8 @@ impl<W: Write> PdfWriter<W> {
         match object {
             Object::Null => self.write_bytes(b"null")?,
             Object::Boolean(b) => self.write_bytes(if *b { b"true" } else { b"false" })?,
-            Object::Integer(i) => self.write_bytes(i.to_string().as_bytes())?,
-            Object::Real(f) => self.write_bytes(
-                format!("{f:.6}")
-                    .trim_end_matches('0')
-                    .trim_end_matches('.')
-                    .as_bytes(),
-            )?,
+            Object::Integer(i) => self.write_formatted(format_args!("{i}"))?,
+            Object::Real(f) => self.write_bytes(format_real(*f, &mut [0; 384])?)?,
             Object::String(s) => {
                 // ISO 32000-1 §7.3.4.2: inside a literal string, the
                 // characters `\`, `(` and `)` MUST be escaped (as `\\`,
@@ -3513,7 +3459,7 @@ impl<W: Write> PdfWriter<W> {
                 // Write as PDF hex string <AABB...> for byte-perfect binary data
                 self.write_bytes(b"<")?;
                 for byte in bytes {
-                    self.write_bytes(format!("{byte:02X}").as_bytes())?;
+                    self.write_bytes(&hex_byte(*byte))?;
                 }
                 self.write_bytes(b">")?;
             }
@@ -3562,8 +3508,7 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(b"\nendstream")?;
             }
             Object::Reference(id) => {
-                let ref_str = format!("{} {} R", id.number(), id.generation());
-                self.write_bytes(ref_str.as_bytes())?;
+                self.write_formatted(format_args!("{} {} R", id.number(), id.generation()))?;
             }
         }
         Ok(())
@@ -3574,13 +3519,8 @@ impl<W: Write> PdfWriter<W> {
         match object {
             Object::Null => buffer.extend_from_slice(b"null"),
             Object::Boolean(b) => buffer.extend_from_slice(if *b { b"true" } else { b"false" }),
-            Object::Integer(i) => buffer.extend_from_slice(i.to_string().as_bytes()),
-            Object::Real(f) => buffer.extend_from_slice(
-                format!("{f:.6}")
-                    .trim_end_matches('0')
-                    .trim_end_matches('.')
-                    .as_bytes(),
-            ),
+            Object::Integer(i) => write!(buffer, "{i}")?,
+            Object::Real(f) => buffer.extend_from_slice(format_real(*f, &mut [0; 384])?),
             Object::String(s) => {
                 // Same escape rules as the streaming `write_object_value`
                 // path — see ISO 32000-1 §7.3.4.2.
@@ -3591,7 +3531,7 @@ impl<W: Write> PdfWriter<W> {
             Object::ByteString(bytes) => {
                 buffer.push(b'<');
                 for byte in bytes {
-                    buffer.extend_from_slice(format!("{byte:02X}").as_bytes());
+                    buffer.extend_from_slice(&hex_byte(*byte));
                 }
                 buffer.push(b'>');
             }
@@ -3631,8 +3571,7 @@ impl<W: Write> PdfWriter<W> {
                 ));
             }
             Object::Reference(id) => {
-                let ref_str = format!("{} {} R", id.number(), id.generation());
-                buffer.extend_from_slice(ref_str.as_bytes());
+                write!(buffer, "{} {} R", id.number(), id.generation())?;
             }
         }
         Ok(())
@@ -3976,6 +3915,16 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
+    /// Stack storage suffices for the bounded integers and references at these
+    /// call sites. Position accounting still goes through write_bytes.
+    fn write_formatted(&mut self, args: std::fmt::Arguments<'_>) -> Result<()> {
+        let mut storage = [0; 64];
+        let mut cursor = std::io::Cursor::new(storage.as_mut_slice());
+        cursor.write_fmt(args)?;
+        let len = cursor.position() as usize;
+        self.write_bytes(&storage[..len])
+    }
+
     fn write_bytes(&mut self, data: &[u8]) -> Result<()> {
         self.writer.write_all(data)?;
         self.current_position += data.len() as u64;
@@ -4144,6 +4093,27 @@ fn format_pdf_date(date: DateTime<Utc>) -> String {
 
     // For UTC, the offset is always +00'00
     format!("{formatted}+00'00")
+}
+
+/// Preserve Rust's fixed-six-decimal formatting and historical trimming,
+/// including negative zero and non-finite values. Even f64::MAX needs fewer
+/// than 384 bytes with sign, decimal point and six fractional digits.
+fn format_real(value: f64, storage: &mut [u8; 384]) -> Result<&[u8]> {
+    let mut cursor = std::io::Cursor::new(storage.as_mut_slice());
+    write!(cursor, "{value:.6}")?;
+    let mut len = cursor.position() as usize;
+    while len > 0 && storage[len - 1] == b'0' {
+        len -= 1;
+    }
+    if len > 0 && storage[len - 1] == b'.' {
+        len -= 1;
+    }
+    Ok(&storage[..len])
+}
+
+fn hex_byte(value: u8) -> [u8; 2] {
+    const DIGITS: &[u8; 16] = b"0123456789ABCDEF";
+    [DIGITS[(value >> 4) as usize], DIGITS[(value & 15) as usize]]
 }
 
 #[cfg(test)]

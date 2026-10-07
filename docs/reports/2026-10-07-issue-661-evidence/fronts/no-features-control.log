@@ -1,0 +1,209 @@
+    Checking typenum v1.20.1
+   Compiling syn v2.0.117
+    Checking generic-array v0.14.7
+    Checking cfg-if v1.0.4
+    Checking serde_core v1.0.228
+    Checking crypto-common v0.1.7
+    Checking libc v0.2.186
+    Checking block-padding v0.3.3
+    Checking rand_core v0.10.1
+    Checking memchr v2.8.1
+   Compiling num-traits v0.2.19
+    Checking inout v0.1.4
+   Compiling serde v1.0.228
+    Checking once_cell v1.21.4
+    Checking aho-corasick v1.1.4
+    Checking cipher v0.4.4
+    Checking getrandom v0.4.2
+   Compiling serde_derive v1.0.228
+    Checking block-buffer v0.10.4
+    Checking const-oid v0.9.6
+    Checking regex-syntax v0.8.10
+    Checking cpufeatures v0.3.0
+    Checking winnow v1.0.3
+    Checking cpufeatures v0.2.17
+    Checking tinyvec_macros v0.1.1
+    Checking linux-raw-sys v0.12.1
+    Checking bitflags v2.13.0
+    Checking rustix v1.1.4
+    Checking tinyvec v1.11.0
+    Checking toml_parser v1.1.2+spec-1.1.0
+    Checking chacha20 v0.10.0
+    Checking regex-automata v0.4.14
+    Checking digest v0.10.7
+    Checking tracing-core v0.1.36
+   Compiling tracing-attributes v0.1.31
+   Compiling thiserror-impl v2.0.18
+   Compiling zeroize_derive v1.4.3
+    Checking serde_spanned v1.1.1
+    Checking toml_datetime v0.7.5+spec-1.1.0
+    Checking toml_writer v1.1.1+spec-1.1.0
+    Checking fastrand v2.4.1
+    Checking winnow v0.7.15
+    Checking iana-time-zone v0.1.65
+    Checking pin-project-lite v0.2.17
+    Checking tracing v0.1.44
+    Checking chrono v0.4.45
+    Checking toml v0.9.12+spec-1.1.0
+    Checking tempfile v3.27.0
+    Checking thiserror v2.0.18
+    Checking zeroize v1.8.2
+    Checking regex v1.12.3
+    Checking sha2 v0.10.9
+    Checking rand v0.10.1
+    Checking unicode-normalization v0.1.25
+    Checking aes v0.8.4
+    Checking cbc v0.1.2
+    Checking quick-xml v0.41.0
+    Checking num_cpus v1.17.0
+    Checking md5 v0.8.0
+    Checking lazy_static v1.5.0
+    Checking subtle v2.6.1
+    Checking oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue661-package-check/oxidize-pdf-5.3.0)
+error[E0433]: cannot find module or crate `flate2` in this scope
+ --> oxidize-pdf-5.3.0/src/compression.rs:7:9
+  |
+7 |     use flate2::write::ZlibEncoder;
+  |         ^^^^^^ use of unresolved module or unlinked crate `flate2`
+  |
+  = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `flate2` in this scope
+  --> oxidize-pdf-5.3.0/src/compression.rs:21:9
+   |
+21 |     use flate2::read::ZlibDecoder;
+   |         ^^^^^^ use of unresolved module or unlinked crate `flate2`
+   |
+   = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `flate2` in this scope
+   --> oxidize-pdf-5.3.0/src/graphics/pdf_image.rs:361:21
+    |
+361 |                 use flate2::write::ZlibEncoder;
+    |                     ^^^^^^ use of unresolved module or unlinked crate `flate2`
+    |
+    = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `flate2`
+ --> oxidize-pdf-5.3.0/src/compression.rs:8:9
+  |
+8 |     use flate2::Compression;
+  |         ^^^^^^ use of unresolved module or unlinked crate `flate2`
+  |
+  = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `flate2` in this scope
+   --> oxidize-pdf-5.3.0/src/graphics/pdf_image.rs:375:21
+    |
+375 |                 use flate2::write::ZlibEncoder;
+    |                     ^^^^^^ use of unresolved module or unlinked crate `flate2`
+    |
+    = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `flate2`
+   --> oxidize-pdf-5.3.0/src/graphics/pdf_image.rs:362:21
+    |
+362 |                 use flate2::Compression;
+    |                     ^^^^^^ use of unresolved module or unlinked crate `flate2`
+    |
+    = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `flate2` in this scope
+   --> oxidize-pdf-5.3.0/src/graphics/pdf_image.rs:398:13
+    |
+398 |         use flate2::write::ZlibEncoder;
+    |             ^^^^^^ use of unresolved module or unlinked crate `flate2`
+    |
+    = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `flate2`
+   --> oxidize-pdf-5.3.0/src/graphics/pdf_image.rs:376:21
+    |
+376 |                 use flate2::Compression;
+    |                     ^^^^^^ use of unresolved module or unlinked crate `flate2`
+    |
+    = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `flate2` in this scope
+  --> oxidize-pdf-5.3.0/src/graphics/png_decoder.rs:10:5
+   |
+10 | use flate2::read::ZlibDecoder;
+   |     ^^^^^^ use of unresolved module or unlinked crate `flate2`
+   |
+   = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `flate2` in this scope
+    --> oxidize-pdf-5.3.0/src/operations/extract_images.rs:1173:13
+     |
+1173 |         use flate2::write::ZlibEncoder;
+     |             ^^^^^^ use of unresolved module or unlinked crate `flate2`
+     |
+     = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `flate2`
+   --> oxidize-pdf-5.3.0/src/graphics/pdf_image.rs:399:13
+    |
+399 |         use flate2::Compression;
+    |             ^^^^^^ use of unresolved module or unlinked crate `flate2`
+    |
+    = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `flate2` in this scope
+    --> oxidize-pdf-5.3.0/src/operations/page_analysis.rs:2166:13
+     |
+2166 |         use flate2::write::ZlibEncoder;
+     |             ^^^^^^ use of unresolved module or unlinked crate `flate2`
+     |
+     = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `flate2`
+    --> oxidize-pdf-5.3.0/src/operations/extract_images.rs:1174:13
+     |
+1174 |         use flate2::Compression;
+     |             ^^^^^^ use of unresolved module or unlinked crate `flate2`
+     |
+     = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `flate2` in this scope
+   --> oxidize-pdf-5.3.0/src/parser/xref_stream.rs:428:9
+    |
+428 |     use flate2::write::ZlibEncoder;
+    |         ^^^^^^ use of unresolved module or unlinked crate `flate2`
+    |
+    = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `flate2`
+    --> oxidize-pdf-5.3.0/src/operations/page_analysis.rs:2167:13
+     |
+2167 |         use flate2::Compression;
+     |             ^^^^^^ use of unresolved module or unlinked crate `flate2`
+     |
+     = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `flate2` in this scope
+  --> oxidize-pdf-5.3.0/src/writer/object_streams.rs:13:5
+   |
+13 | use flate2::write::ZlibEncoder;
+   |     ^^^^^^ use of unresolved module or unlinked crate `flate2`
+   |
+   = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `flate2`
+   --> oxidize-pdf-5.3.0/src/parser/xref_stream.rs:429:9
+    |
+429 |     use flate2::Compression;
+    |         ^^^^^^ use of unresolved module or unlinked crate `flate2`
+    |
+    = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `flate2`
+  --> oxidize-pdf-5.3.0/src/writer/object_streams.rs:14:5
+   |
+14 | use flate2::Compression;
+   |     ^^^^^^ use of unresolved module or unlinked crate `flate2`
+   |
+   = help: if you wanted to use a crate named `flate2`, use `cargo add flate2` to add it to your `Cargo.toml`
+
+Some errors have detailed explanations: E0432, E0433.
+For more information about an error, try `rustc --explain E0432`.
+error: could not compile `oxidize-pdf` (lib) due to 18 previous errors

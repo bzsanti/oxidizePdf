@@ -1,0 +1,113 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 31 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+target/issue661-writer/oxidize-pdf-core/src/text/font.rs         31     95
+
+--- Worst Offenders ---
+  test_font_encoding_equality (target/issue661-writer/oxidize-pdf-core/src/text/font.rs:481) - Score: 70
+    i Test 'test_font_encoding_equality' has multiple assertions without diagnostic messages
+    - Test 'test_font_encoding_equality' line 482: assert_eq! with identical arguments: FontEncoding :: WinAnsiEncoding
+    - Test 'test_font_encoding_equality' line 487: assert_eq! with identical arguments: FontEncoding :: Custom ("Test")
+  test_font_equality (target/issue661-writer/oxidize-pdf-core/src/text/font.rs:308) - Score: 75
+    i Test 'test_font_equality' has multiple assertions without diagnostic messages
+    - Test 'test_font_equality' does not call any production code
+    - Test 'test_font_equality' line 309: assert_eq! with identical arguments: Font :: Helvetica
+  test_font_family_equality (target/issue661-writer/oxidize-pdf-core/src/text/font.rs:375) - Score: 75
+    i Test 'test_font_family_equality' has multiple assertions without diagnostic messages
+    - Test 'test_font_family_equality' does not call any production code
+    - Test 'test_font_family_equality' line 376: assert_eq! with identical arguments: FontFamily :: Helvetica
+  test_font_debug (target/issue661-writer/oxidize-pdf-core/src/text/font.rs:315) - Score: 90
+    i Test 'test_font_debug' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_font_debug' does not call any production code
+  test_font_clone (target/issue661-writer/oxidize-pdf-core/src/text/font.rs:322) - Score: 90
+    - Test 'test_font_clone' does not call any production code
+
+--- Details ---
+target/issue661-writer/oxidize-pdf-core/src/text/font.rs:
+  test_font_pdf_names (line 273) - Score: 100
+    i Test 'test_font_pdf_names' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_pdf_names' has multiple assertions without diagnostic messages
+  test_font_is_symbolic (line 297) - Score: 100
+    i Test 'test_font_is_symbolic' has multiple assertions without diagnostic messages
+  test_font_equality (line 308) - Score: 75
+    i Test 'test_font_equality' has multiple assertions without diagnostic messages
+    - Test 'test_font_equality' does not call any production code
+    - Test 'test_font_equality' line 309: assert_eq! with identical arguments: Font :: Helvetica
+  test_font_debug (line 315) - Score: 90
+    i Test 'test_font_debug' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_font_debug' does not call any production code
+  test_font_clone (line 322) - Score: 90
+    - Test 'test_font_clone' does not call any production code
+  test_font_hash (line 329) - Score: 100
+    i Test 'test_font_hash' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_hash' has multiple assertions without diagnostic messages
+  test_font_family_regular (line 344) - Score: 100
+    i Test 'test_font_family_regular' has multiple assertions without diagnostic messages
+  test_font_family_bold (line 351) - Score: 100
+    i Test 'test_font_family_bold' has multiple assertions without diagnostic messages
+  test_font_family_italic (line 358) - Score: 100
+    i Test 'test_font_family_italic' has multiple assertions without diagnostic messages
+  test_font_family_bold_italic (line 365) - Score: 100
+    i Test 'test_font_family_bold_italic' has multiple assertions without diagnostic messages
+  test_font_family_equality (line 375) - Score: 75
+    i Test 'test_font_family_equality' has multiple assertions without diagnostic messages
+    - Test 'test_font_family_equality' does not call any production code
+    - Test 'test_font_family_equality' line 376: assert_eq! with identical arguments: FontFamily :: Helvetica
+  test_font_family_debug (line 382) - Score: 90
+    i Test 'test_font_family_debug' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_font_family_debug' does not call any production code
+  test_font_family_clone (line 389) - Score: 90
+    - Test 'test_font_family_clone' does not call any production code
+  test_font_family_copy (line 396) - Score: 90
+    i Test 'test_font_family_copy' has multiple assertions without diagnostic messages
+    - Test 'test_font_family_copy' does not call any production code
+  test_all_helvetica_variants (line 407) - Score: 100
+    i Test 'test_all_helvetica_variants' has multiple assertions without diagnostic messages
+  test_all_times_variants (line 417) - Score: 100
+    i Test 'test_all_times_variants' has multiple assertions without diagnostic messages
+  test_all_courier_variants (line 427) - Score: 100
+    i Test 'test_all_courier_variants' has multiple assertions without diagnostic messages
+  test_font_encoding_pdf_names (line 439) - Score: 100
+    i Test 'test_font_encoding_pdf_names' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_encoding_pdf_names' has multiple assertions without diagnostic messages
+  test_font_encoding_recommended_for_font (line 457) - Score: 100
+    i Test 'test_font_encoding_recommended_for_font' has multiple assertions without diagnostic messages
+  test_font_encoding_equality (line 481) - Score: 70
+    i Test 'test_font_encoding_equality' has multiple assertions without diagnostic messages
+    - Test 'test_font_encoding_equality' line 482: assert_eq! with identical arguments: FontEncoding :: WinAnsiEncoding
+    - Test 'test_font_encoding_equality' line 487: assert_eq! with identical arguments: FontEncoding :: Custom ("Test")
+  test_font_with_encoding_new (line 494) - Score: 90
+    i Test 'test_font_with_encoding_new' has multiple assertions without diagnostic messages
+    - Test 'test_font_with_encoding_new' does not call any production code
+  test_font_with_encoding_with_recommended (line 505) - Score: 100
+    i Test 'test_font_with_encoding_with_recommended' has multiple assertions without diagnostic messages
+  test_font_with_encoding_with_specific (line 516) - Score: 100
+    i Test 'test_font_with_encoding_with_specific' has multiple assertions without diagnostic messages
+  test_font_with_encoding_without_encoding (line 524) - Score: 100
+    i Test 'test_font_with_encoding_without_encoding' has multiple assertions without diagnostic messages
+  test_font_with_encoding_from_font (line 531) - Score: 90
+    i Test 'test_font_with_encoding_from_font' has multiple assertions without diagnostic messages
+    - Test 'test_font_with_encoding_from_font' does not call any production code
+  test_font_convenience_methods (line 538) - Score: 100
+    i Test 'test_font_convenience_methods' has multiple assertions without diagnostic messages
+  test_font_with_encoding_equality (line 559) - Score: 100
+    i Test 'test_font_with_encoding_equality' has multiple assertions without diagnostic messages
+  test_font_with_encoding_debug (line 573) - Score: 100
+    i Test 'test_font_with_encoding_debug' has multiple assertions without diagnostic messages
+  test_font_with_encoding_copy (line 590) - Score: 100
+    i Test 'test_font_with_encoding_copy' has multiple assertions without diagnostic messages
+  test_custom_encoding (line 601) - Score: 100
+    i Test 'test_custom_encoding' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_custom_encoding' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

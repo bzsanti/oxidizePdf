@@ -1,0 +1,20 @@
+[
+  {
+    "mode": "empty",
+    "pages": 1,
+    "median_us": {
+      "control": 145.822469,
+      "compression": 149.2748295
+    },
+    "improvement_pct": -2.3675092896692007
+  },
+  {
+    "mode": "empty",
+    "pages": 10,
+    "median_us": {
+      "control": 1091.5596,
+      "compression": 1105.4952349999999
+    },
+    "improvement_pct": -1.2766719288621386
+  }
+]

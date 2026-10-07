@@ -1,0 +1,39 @@
+   Compiling oxidize-pdf v5.3.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue661-writer/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 22.09s
+     Running tests/font_subset_pdf_round_trip_test.rs (target/issue661-writer/target/debug/deps/font_subset_pdf_round_trip_test-65a8d402f02d8f96)
+
+running 7 tests
+test test_non_cid_cff_pdf_round_trip_preserves_text ... ok
+test test_tounicode_cmap_stream_is_flatedecoded ... ok
+test test_otf_fontfile3_stream_has_flatedecode_filter ... ok
+test test_ttf_pdf_round_trip_preserves_text ... ok
+test test_tounicode_cmap_only_contains_used_characters ... ok
+test test_ttf_fontfile2_stream_has_flatedecode_filter ... ok
+test test_mixed_cff_and_ttf_pdf_round_trip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/issue_358_cid_keyed_font_test.rs (target/issue661-writer/target/debug/deps/issue_358_cid_keyed_font_test-b9f114a73b800735)
+
+running 1 test
+test cid_keyed_font_emits_subsetted_cidfonttype2_with_tounicode_and_widths ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/issue_395_font_collision_test.rs (target/issue661-writer/target/debug/deps/issue_395_font_collision_test-7206a9ab85bd51e1)
+
+running 3 tests
+test non_base14_key_cross_line_content_not_corrupted ... ok
+test base14_key_collision_cross_line_content ... ok
+test base14_key_collision_simple_content ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_661_writer_resources_test.rs (target/issue661-writer/target/debug/deps/issue_661_writer_resources_test-f8fb3db83df4e3e9)
+
+running 3 tests
+test standard_resources_are_written_once_and_raw_variants_survive ... ok
+test imported_shared_resources_remain_local_while_new_pages_share ... ok
+test shared_resources_survive_repeated_saves_and_added_custom_page ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.92s

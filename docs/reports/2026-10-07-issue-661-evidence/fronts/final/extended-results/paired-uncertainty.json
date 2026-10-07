@@ -1,0 +1,68 @@
+[
+  {
+    "mode": "cjk",
+    "pages": 1,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 3.2268359887584253,
+    "bootstrap_95pct": [
+      -3.0826712340617624,
+      13.707487428421611
+    ]
+  },
+  {
+    "mode": "cjk",
+    "pages": 10,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 0.41026522335701476,
+    "bootstrap_95pct": [
+      -22.98780688539128,
+      23.894339633409757
+    ]
+  },
+  {
+    "mode": "empty",
+    "pages": 1,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": -5.922482548825592,
+    "bootstrap_95pct": [
+      -15.355984389067446,
+      0.9155327117784773
+    ]
+  },
+  {
+    "mode": "empty",
+    "pages": 10,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": -3.3468740430317556,
+    "bootstrap_95pct": [
+      -26.40308850893759,
+      3.9129306495327922
+    ]
+  },
+  {
+    "mode": "image",
+    "pages": 1,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 2.7564530813875887,
+    "bootstrap_95pct": [
+      0.4215299104976977,
+      7.859710910924705
+    ]
+  },
+  {
+    "mode": "image",
+    "pages": 10,
+    "base": "control",
+    "variant": "compression",
+    "median_paired_improvement_pct": 3.994380921635993,
+    "bootstrap_95pct": [
+      -2.9701676048839047,
+      10.404452782394568
+    ]
+  }
+]

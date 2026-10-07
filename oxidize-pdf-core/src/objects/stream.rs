@@ -26,6 +26,11 @@ impl Stream {
         }
     }
 
+    #[cfg(feature = "compression")]
+    pub(crate) fn into_parts(self) -> (Dictionary, Vec<u8>) {
+        (self.dictionary, self.data)
+    }
+
     pub fn dictionary(&self) -> &Dictionary {
         &self.dictionary
     }
@@ -49,6 +54,39 @@ impl Stream {
 
     pub fn set_decode_params(&mut self, params: Dictionary) {
         self.dictionary.set("DecodeParms", params);
+    }
+
+    /// Reuse only completed encoders. Reset on the next use, so a final or
+    /// singleton eligible stream does not pay for unused compressor history.
+    /// The output belongs to this stream; errors discard the cached state and
+    /// leave this Stream unchanged.
+    #[cfg(feature = "compression")]
+    pub(crate) fn compress_flate_with_encoder(
+        &mut self,
+        cached: &mut Option<flate2::write::ZlibEncoder<Vec<u8>>>,
+    ) -> Result<()> {
+        use flate2::{write::ZlibEncoder, Compression};
+        use std::io::Write;
+        let mut encoder = if let Some(mut encoder) = cached.take() {
+            encoder
+                .reset(Vec::new())
+                .map_err(|e| PdfError::CompressionError(e.to_string()))?;
+            encoder
+        } else {
+            ZlibEncoder::new(Vec::new(), Compression::default())
+        };
+        encoder
+            .write_all(&self.data)
+            .map_err(|e| PdfError::CompressionError(e.to_string()))?;
+        encoder
+            .try_finish()
+            .map_err(|e| PdfError::CompressionError(e.to_string()))?;
+        let compressed = std::mem::take(encoder.get_mut());
+        *cached = Some(encoder);
+        self.data = compressed;
+        self.dictionary.set("Length", self.data.len() as i64);
+        self.set_filter("FlateDecode");
+        Ok(())
     }
 
     #[cfg(feature = "compression")]
@@ -264,5 +302,53 @@ mod tests {
 
         // Length should be corrected to actual data length
         assert_eq!(stream.dictionary().get("Length"), Some(&Object::Integer(5)));
+    }
+    #[test]
+    #[cfg(feature = "compression")]
+    fn reusable_encoder_resets_history_and_preserves_exact_streams() {
+        use std::io::Read;
+        let mut encoder = None;
+        let mut seed = 661_u32;
+        let noise: Vec<u8> = (0..512 * 1024)
+            .map(|_| {
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+                seed as u8
+            })
+            .collect();
+        let inputs = vec![
+            Vec::new(),
+            b"Repeated page text ".repeat(1000),
+            noise,
+            include_bytes!("../../tests/fixtures/writer_resources/WriterCjkTest-Regular.otf")
+                .to_vec(),
+            Vec::new(),
+            b"last independent stream".to_vec(),
+        ];
+        for input in inputs.iter().chain(inputs.iter().rev()) {
+            let mut reference = Stream::new(input.clone());
+            reference.compress_flate().unwrap();
+            let mut reused = Stream::new(input.clone());
+            reused.compress_flate_with_encoder(&mut encoder).unwrap();
+            assert_eq!(
+                reused.data(),
+                reference.data(),
+                "encoder history leaked between streams"
+            );
+            assert_eq!(
+                reused.dictionary().get("Length"),
+                Some(&Object::Integer(reused.data().len() as i64))
+            );
+            assert_eq!(
+                reused.dictionary().get("Filter"),
+                Some(&Object::Name("FlateDecode".into()))
+            );
+            let mut decoded = Vec::new();
+            flate2::read::ZlibDecoder::new(reused.data())
+                .read_to_end(&mut decoded)
+                .unwrap();
+            assert_eq!(&decoded, input);
+        }
     }
 }
