@@ -434,9 +434,10 @@ fn existing_editor_prepares_then_plans_and_applies_attributes() {
         .with_document_language("es-ES")
         .unwrap();
     let changed = editor.preparation_objects();
-    let expected: Vec<TaggedPdfObjectRef> = [1, 3, 6, 7]
+    let expected: Vec<TaggedPdfObjectRef> = [1, 3, 6, 7, 9]
         .into_iter()
         .chain(10..22)
+        .chain(26..29)
         .map(|id| (id, 0).into())
         .collect();
     assert_eq!(changed, expected);

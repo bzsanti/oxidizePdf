@@ -3,6 +3,7 @@
 use crate::error::{PdfError, Result};
 use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfString};
 use crate::parser::PdfReader;
+use std::collections::BTreeSet;
 use std::io::{Cursor, Read, Seek};
 
 pub(crate) struct IncrementalUpdate<'a> {
@@ -15,6 +16,7 @@ pub(crate) struct IncrementalUpdate<'a> {
     first_id: Option<Vec<u8>>,
     replacements: Vec<(u32, u16, PdfObject)>,
     xref_kind: XrefKind,
+    retired: BTreeSet<u32>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -52,6 +54,7 @@ impl<'a> IncrementalUpdate<'a> {
             next_id: size,
             first_id,
             replacements: Vec::new(),
+            retired: BTreeSet::new(),
             xref_kind: detect_xref_kind(base, trailer.xref_offset)?,
         })
     }
@@ -76,10 +79,11 @@ impl<'a> IncrementalUpdate<'a> {
     }
 
     pub(crate) fn replace(&mut self, id: (u32, u16), object: PdfObject) -> Result<()> {
-        if self
-            .replacements
-            .iter()
-            .any(|(number, generation, _)| (*number, *generation) == id)
+        if self.retired.contains(&id.0)
+            || self
+                .replacements
+                .iter()
+                .any(|(number, _, _)| *number == id.0)
         {
             return Err(PdfError::InvalidStructure(format!(
                 "object {} {} is rewritten more than once",
@@ -87,6 +91,23 @@ impl<'a> IncrementalUpdate<'a> {
             )));
         }
         self.replacements.push((id.0, id.1, object));
+        Ok(())
+    }
+
+    /// Permanently retire an absent, unreachable object number. The caller must
+    /// prove that no authoritative reference needs it before invoking this.
+    /// ISO 32000-1 7.5.4 allows free entries at generation 65535 that point to
+    /// object zero without changing the existing free-list head. Never reuse them.
+    pub(crate) fn retire_unreachable(&mut self, number: u32) -> Result<()> {
+        if number == 0
+            || number >= self.original_size
+            || self.replacements.iter().any(|(n, _, _)| *n == number)
+            || !self.retired.insert(number)
+        {
+            return Err(PdfError::InvalidStructure(format!(
+                "object {number} cannot be retired in this revision"
+            )));
+        }
         Ok(())
     }
 
@@ -107,8 +128,15 @@ impl<'a> IncrementalUpdate<'a> {
         for (number, generation, object) in &self.replacements {
             let offset = out.len() as u64;
             write_indirect_object(&mut out, *number, *generation, object)?;
-            changed.push((*number, *generation, offset));
+            changed.push((*number, *generation, offset, true));
         }
+
+        changed.extend(
+            self.retired
+                .iter()
+                .map(|number| (*number, u16::MAX, 0, false)),
+        );
+        changed.sort_by_key(|entry| entry.0);
 
         let xref_position = out.len() as u64;
         let xref_stream_id = if self.xref_kind == XrefKind::Stream {
@@ -116,7 +144,7 @@ impl<'a> IncrementalUpdate<'a> {
             self.next_id = self.next_id.checked_add(1).ok_or_else(|| {
                 PdfError::InvalidStructure("PDF object number space is exhausted".to_string())
             })?;
-            changed.push((id, 0, xref_position));
+            changed.push((id, 0, xref_position, true));
             Some(id)
         } else {
             None
@@ -308,7 +336,7 @@ pub(super) fn format_real(value: f64) -> String {
     }
 }
 
-fn partial_xref(changed: &[(u32, u16, u64)]) -> Vec<u8> {
+fn partial_xref(changed: &[(u32, u16, u64, bool)]) -> Vec<u8> {
     let mut out = b"xref\n".to_vec();
     let mut index = 0;
     while index < changed.len() {
@@ -318,8 +346,9 @@ fn partial_xref(changed: &[(u32, u16, u64)]) -> Vec<u8> {
             end += 1;
         }
         out.extend_from_slice(format!("{start} {}\n", end - index + 1).as_bytes());
-        for (_, generation, offset) in &changed[index..=end] {
-            out.extend_from_slice(format!("{offset:010} {generation:05} n \n").as_bytes());
+        for (_, generation, offset, in_use) in &changed[index..=end] {
+            let flag = if *in_use { 'n' } else { 'f' };
+            out.extend_from_slice(format!("{offset:010} {generation:05} {flag} \n").as_bytes());
         }
         index = end + 1;
     }
@@ -329,7 +358,7 @@ fn partial_xref(changed: &[(u32, u16, u64)]) -> Vec<u8> {
 fn write_xref_stream(
     out: &mut Vec<u8>,
     object_number: u32,
-    changed: &[(u32, u16, u64)],
+    changed: &[(u32, u16, u64, bool)],
     previous_xref: u64,
     root: (u32, u16),
     info: Option<(u32, u16)>,
@@ -340,8 +369,8 @@ fn write_xref_stream(
     sorted.sort_by_key(|entry| entry.0);
     let ranges = xref_ranges(&sorted);
     let mut data = Vec::with_capacity(sorted.len() * 11);
-    for (_, generation, offset) in &sorted {
-        data.push(1);
+    for (_, generation, offset, in_use) in &sorted {
+        data.push(u8::from(*in_use));
         data.extend_from_slice(&offset.to_be_bytes());
         data.extend_from_slice(&generation.to_be_bytes());
     }
@@ -415,7 +444,7 @@ fn write_xref_stream(
     Ok(())
 }
 
-fn xref_ranges(changed: &[(u32, u16, u64)]) -> Vec<(u32, u32)> {
+fn xref_ranges(changed: &[(u32, u16, u64, bool)]) -> Vec<(u32, u32)> {
     let mut ranges = Vec::new();
     let mut index = 0;
     while index < changed.len() {
@@ -459,4 +488,26 @@ fn write_trailer(
         out.extend_from_slice(format!("/ID [<{}> <{}>] ", hex(&first), hex(&second)).as_bytes());
     }
     out.extend_from_slice(format!(">>\nstartxref\n{xref_position}\n%%EOF\n").as_bytes());
+}
+
+#[cfg(test)]
+mod retirement_tests {
+    use super::*;
+    const SOURCE: &[u8] = include_bytes!("../../tests/fixtures/issue690-unused-xref.pdf");
+
+    #[test]
+    fn retirement_and_replacement_cannot_target_the_same_object_number() {
+        let mut update = IncrementalUpdate::from_base(SOURCE).unwrap();
+        update.retire_unreachable(10).unwrap();
+        assert!(update.replace((10, 1), PdfObject::Null).is_err());
+        assert!(update.retire_unreachable(10).is_err());
+        assert!(update.retire_unreachable(0).is_err());
+        assert!(update.retire_unreachable(11).is_err());
+        assert_eq!(update.allocate_id().unwrap(), (11, 0));
+
+        let mut update = IncrementalUpdate::from_base(SOURCE).unwrap();
+        update.replace((10, 0), PdfObject::Null).unwrap();
+        assert!(update.retire_unreachable(10).is_err());
+        assert!(update.replace((10, 1), PdfObject::Null).is_err());
+    }
 }

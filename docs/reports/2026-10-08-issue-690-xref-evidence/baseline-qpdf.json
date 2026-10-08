@@ -1,0 +1,14 @@
+[
+  {
+    "file": "issue690-unused-xref.pdf",
+    "sha256": "2da2753fd025f2ebc879475d374a28a7561ca3397099c07a73c2644dc9151ce1",
+    "exit": 3,
+    "stderr": "WARNING: target/issue690-review/oxidize-pdf-core/tests/fixtures/issue690-unused-xref.pdf (object 6 0): object has offset 0\nWARNING: target/issue690-review/oxidize-pdf-core/tests/fixtures/issue690-unused-xref.pdf (object 7 0): object has offset 0\nWARNING: target/issue690-review/oxidize-pdf-core/tests/fixtures/issue690-unused-xref.pdf (object 10 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+  },
+  {
+    "file": "prepared.pdf",
+    "sha256": "8a169d0234c64b2db57dee5d0b3cee306d5f6de3cbbca0a30a55b35946f09566",
+    "exit": 3,
+    "stderr": "WARNING: target/issue690-editor-original/prepared.pdf (object 6 0): object has offset 0\nWARNING: target/issue690-editor-original/prepared.pdf (object 8 0): object has offset 0\nWARNING: target/issue690-editor-original/prepared.pdf (object 10 0): object has offset 0\nWARNING: target/issue690-editor-original/prepared.pdf (object 22 0): object has offset 0\nqpdf: operation succeeded with warnings\n"
+  }
+]

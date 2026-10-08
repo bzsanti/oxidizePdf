@@ -1,0 +1,9 @@
+{
+  "command": "cargo test --locked --offline --workspace --features internal-testing --no-fail-fast",
+  "exit": 0,
+  "targets": 418,
+  "passed": 10430,
+  "failed": 0,
+  "ignored": 71,
+  "log_sha256": "b2ef8a20b974cc1295e53ab65178c0349a6f89982e9f556e9c117c8c01051380"
+}

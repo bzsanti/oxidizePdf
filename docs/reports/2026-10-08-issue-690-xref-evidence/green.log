@@ -1,0 +1,10 @@
+   Compiling oxidize-pdf v5.4.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 13.35s
+     Running tests/text_tagged_xref_recovery_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/text_tagged_xref_recovery_contract_test-54e03a7b96f6c15b)
+
+running 3 tests
+test catalog_reference_to_zero_offset_object_is_not_discarded ... ok
+test trailer_reference_to_zero_offset_object_is_not_discarded ... ok
+test public_reproducer_retires_only_the_unreachable_zero_offset_entry ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s

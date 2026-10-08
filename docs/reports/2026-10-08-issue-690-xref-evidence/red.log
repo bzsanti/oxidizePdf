@@ -1,0 +1,30 @@
+   Compiling oxidize-pdf v5.4.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 33.04s
+     Running tests/text_tagged_xref_recovery_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/text_tagged_xref_recovery_contract_test-54e03a7b96f6c15b)
+
+running 3 tests
+test catalog_reference_to_zero_offset_object_is_not_discarded ... ok
+test public_reproducer_retires_only_the_unreachable_zero_offset_entry ... FAILED
+test trailer_reference_to_zero_offset_object_is_not_discarded ... FAILED
+
+failures:
+
+---- public_reproducer_retires_only_the_unreachable_zero_offset_entry stdout ----
+
+thread 'public_reproducer_retires_only_the_unreachable_zero_offset_entry' (322) panicked at oxidize-pdf-core/tests/text_tagged_xref_recovery_contract_test.rs:25:5:
+assertion failed: editor.preparation_objects().contains(&(10, 0).into())
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- trailer_reference_to_zero_offset_object_is_not_discarded stdout ----
+
+thread 'trailer_reference_to_zero_offset_object_is_not_discarded' (323) panicked at oxidize-pdf-core/tests/text_tagged_xref_recovery_contract_test.rs:45:41:
+reachable trailer corruption must fail
+
+
+failures:
+    public_reproducer_retires_only_the_unreachable_zero_offset_entry
+    trailer_reference_to_zero_offset_object_is_not_discarded
+
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_tagged_xref_recovery_contract_test`
