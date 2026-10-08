@@ -80,7 +80,8 @@ impl PageMutationBatch {
 /// Objects affected by a planned or completed page-tree mutation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PageMutationReport {
-    /// Existing indirect objects that will receive a new definition.
+    /// Existing indirect objects whose definition or cross-reference state changes.
+    /// Retired absent objects are listed using their original source generation.
     pub replaced_objects: Vec<(u32, u16)>,
     /// New indirect objects allocated by the revision.
     pub added_objects: Vec<(u32, u16)>,
@@ -373,8 +374,17 @@ pub(crate) fn recover_tagged_structure_with_inventory(
     // Exact root-edge exemptions only: aliases of an absent index elsewhere
     // must still fail, as must unrelated reachable malformed references.
     reachable_from_catalog(&mut reader, &catalog, &projection.recovered)?;
+    let retired = unreachable_zero_offset_objects(
+        &mut reader,
+        &projection.recovered,
+        &projection.recovered_ids,
+    )?;
     let mut update = IncrementalUpdate::from_base(base)?;
     let mut changed: Vec<_> = projection.replacements.keys().copied().collect();
+    for id in retired {
+        update.retire_unreachable(id.0)?;
+        changed.push(id);
+    }
     if let Some(xref) = update.pending_xref_stream_id() {
         changed.push(xref);
     }
@@ -546,6 +556,16 @@ fn mutate_pdf_bytes_lossless(
     let mut final_pages = Vec::with_capacity(planned.len());
     let mut validation_pages = Vec::with_capacity(planned.len());
     let mut replacements = HashSet::new();
+    if catalog.contains_key("StructTreeRoot") {
+        for id in unreachable_zero_offset_objects(
+            &mut reader,
+            &projection.recovered,
+            &projection.recovered_ids,
+        )? {
+            update.retire_unreachable(id.0)?;
+            replacements.insert(id);
+        }
+    }
     let mut preserved_source_refs = HashSet::new();
     replacements.insert(root_reference);
     let mut projected_ids: Vec<_> = projection.replacements.keys().copied().collect();
@@ -1273,6 +1293,49 @@ fn object_from_pending(added: &[((u32, u16), PdfObject)], id: (u32, u16)) -> Pdf
         .and_then(|(_, object)| object.as_dict())
         .cloned()
         .expect("new page dictionary was just queued")
+}
+
+/// Retire only unreadable, uncompressed zero-offset entries outside the live
+/// document graph. Walk every trailer value, not only /Root: /Info and custom
+/// references are authoritative too. Recovered index roots are excluded because
+/// the projection replaces their exact-generation definitions instead.
+fn unreachable_zero_offset_objects<R: Read + Seek>(
+    reader: &mut PdfReader<R>,
+    recovered: &HashMap<(u32, u16), PdfObject>,
+    repaired_ids: &HashSet<(u32, u16)>,
+) -> Result<Vec<(u32, u16)>, PdfError> {
+    let candidates: Vec<_> = reader
+        .object_references()
+        .into_iter()
+        .filter(|id| reader.object_storage_offset(id.0) == Some(0))
+        .collect();
+    if candidates.is_empty() {
+        return Ok(Vec::new());
+    }
+    if candidates.len() > MAX_CLONED_OBJECTS_PER_PAGE {
+        return Err(invalid_lossless("too many zero-offset xref entries"));
+    }
+    let trailer = reader.trailer().dict.clone();
+    let reachable = reachable_from_catalog(reader, &trailer, recovered)?;
+    let mut retired = Vec::new();
+    for id in candidates {
+        if reader.object_is_compressed(id.0) {
+            return Err(invalid_lossless(format!(
+                "cannot recover object {} {} in a missing object stream",
+                id.0, id.1
+            )));
+        }
+        // Root-edge recovery may have hidden this derived index from traversal;
+        // it receives a replacement and must never receive a free entry as well.
+        if repaired_ids.contains(&id)
+            || reachable.contains(&id)
+            || reader.get_object(id.0, id.1).is_ok()
+        {
+            continue;
+        }
+        retired.push(id);
+    }
+    Ok(retired)
 }
 
 fn reachable_from_catalog<R: Read + Seek>(

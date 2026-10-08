@@ -1,0 +1,27 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 1 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/writer/incremental_update.rs                 1    100
+
+--- Worst Offenders ---
+  retirement_and_replacement_cannot_target_the_same_object_number (oxidize-pdf-core/src/writer/incremental_update.rs:499) - Score: 100
+    i Test 'retirement_and_replacement_cannot_target_the_same_object_number' has multiple assertions without diagnostic messages
+    i Test 'retirement_and_replacement_cannot_target_the_same_object_number' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/writer/incremental_update.rs:
+  retirement_and_replacement_cannot_target_the_same_object_number (line 499) - Score: 100
+    i Test 'retirement_and_replacement_cannot_target_the_same_object_number' has multiple assertions without diagnostic messages
+    i Test 'retirement_and_replacement_cannot_target_the_same_object_number' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

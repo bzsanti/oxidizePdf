@@ -173,6 +173,11 @@ impl<R: Read + Seek> PdfReader<R> {
         self.xref.object_storage_offset(object_number)
     }
 
+    /// Whether the current definition resides in an object stream.
+    pub(crate) fn object_is_compressed(&self, object_number: u32) -> bool {
+        self.xref.is_compressed(object_number)
+    }
+
     /// Return physical xref revisions from the base revision to the latest.
     pub(crate) fn xref_revisions(&self) -> Vec<super::xref::XRefRevision> {
         self.xref.revisions_oldest_first()

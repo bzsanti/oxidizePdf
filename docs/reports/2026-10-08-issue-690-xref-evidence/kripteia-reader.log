@@ -1,0 +1,277 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 93 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/parser/reader.rs                            93     95
+
+--- Worst Offenders ---
+  test_reader_malformed_version (oxidize-pdf-core/src/parser/reader.rs:4547) - Score: 75
+    - Test 'test_reader_malformed_version' executes production code without asserting on its behaviour
+  find_dict_end_offset_is_a_char_boundary_with_multibyte_content (oxidize-pdf-core/src/parser/reader.rs:3387) - Score: 80
+    - Test 'find_dict_end_offset_is_a_char_boundary_with_multibyte_content' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'find_dict_end_offset_is_a_char_boundary_with_multibyte_content' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'find_dict_end_offset_is_a_char_boundary_with_multibyte_content' does not call any production code
+  test_extract_stream_manually_bounded_honors_length (oxidize-pdf-core/src/parser/reader.rs:3433) - Score: 80
+    - Test 'test_extract_stream_manually_bounded_honors_length' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_extract_stream_manually_bounded_honors_length' has low assert-to-setup ratio (8%): 5 asserts vs 57 setup lines
+  test_find_page_objects_bounded (oxidize-pdf-core/src/parser/reader.rs:3682) - Score: 80
+    - Test 'test_find_page_objects_bounded' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_find_page_objects_bounded' has low assert-to-setup ratio (7%): 4 asserts vs 51 setup lines
+  test_document_metadata_struct (oxidize-pdf-core/src/parser/reader.rs:4127) - Score: 80
+    i Test 'test_document_metadata_struct' has multiple assertions without diagnostic messages
+    - Test 'test_document_metadata_struct' has low assert-to-setup ratio (13%): 2 asserts vs 13 setup lines
+    - Test 'test_document_metadata_struct' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/src/parser/reader.rs:
+  slice_between_extracts_delimited_content (line 3327) - Score: 90
+    i Test 'slice_between_extracts_delimited_content' has multiple assertions without diagnostic messages
+    - Test 'slice_between_extracts_delimited_content' does not call any production code
+  slice_between_searches_the_closer_after_the_opener (line 3336) - Score: 90
+    i Test 'slice_between_searches_the_closer_after_the_opener' has multiple assertions without diagnostic messages
+    - Test 'slice_between_searches_the_closer_after_the_opener' does not call any production code
+  slice_between_returns_none_when_a_delimiter_is_missing (line 3346) - Score: 90
+    i Test 'slice_between_returns_none_when_a_delimiter_is_missing' has multiple assertions without diagnostic messages
+    - Test 'slice_between_returns_none_when_a_delimiter_is_missing' does not call any production code
+  slice_between_never_splits_a_multibyte_char (line 3353) - Score: 90
+    i Test 'slice_between_never_splits_a_multibyte_char' has multiple assertions without diagnostic messages
+    - Test 'slice_between_never_splits_a_multibyte_char' does not call any production code
+  find_dict_end_locates_the_closing_marker (line 3366) - Score: 90
+    i Test 'find_dict_end_locates_the_closing_marker' has multiple assertions without diagnostic messages
+    - Test 'find_dict_end_locates_the_closing_marker' does not call any production code
+  find_dict_end_matches_nesting (line 3374) - Score: 90
+    - Test 'find_dict_end_matches_nesting' does not call any production code
+  find_dict_end_returns_none_when_unbalanced (line 3379) - Score: 90
+    i Test 'find_dict_end_returns_none_when_unbalanced' has multiple assertions without diagnostic messages
+    - Test 'find_dict_end_returns_none_when_unbalanced' does not call any production code
+  find_dict_end_offset_is_a_char_boundary_with_multibyte_content (line 3387) - Score: 80
+    - Test 'find_dict_end_offset_is_a_char_boundary_with_multibyte_content' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'find_dict_end_offset_is_a_char_boundary_with_multibyte_content' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'find_dict_end_offset_is_a_char_boundary_with_multibyte_content' does not call any production code
+  truncate_on_char_boundary_cuts_without_splitting (line 3396) - Score: 90
+    i Test 'truncate_on_char_boundary_cuts_without_splitting' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'truncate_on_char_boundary_cuts_without_splitting' has multiple assertions without diagnostic messages
+    - Test 'truncate_on_char_boundary_cuts_without_splitting' does not call any production code
+  test_extract_stream_manually_bounded_honors_length (line 3433) - Score: 80
+    - Test 'test_extract_stream_manually_bounded_honors_length' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_extract_stream_manually_bounded_honors_length' has low assert-to-setup ratio (8%): 5 asserts vs 57 setup lines
+  test_reconstruct_preserves_non_flate_filter (line 3552) - Score: 90
+    - Test 'test_reconstruct_preserves_non_flate_filter' only exercises the happy path — no None, Err, or edge-case inputs
+  test_reconstruct_preserves_filter_array_and_decodeparms (line 3598) - Score: 90
+    - Test 'test_reconstruct_preserves_filter_array_and_decodeparms' only exercises the happy path — no None, Err, or edge-case inputs
+  test_reconstruct_malformed_dict_falls_back_without_panic (line 3646) - Score: 90
+    - Test 'test_reconstruct_malformed_dict_falls_back_without_panic' only exercises the happy path — no None, Err, or edge-case inputs
+  test_find_page_objects_bounded (line 3682) - Score: 80
+    - Test 'test_find_page_objects_bounded' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_find_page_objects_bounded' has low assert-to-setup ratio (7%): 4 asserts vs 51 setup lines
+  test_signature_verification_reads_full_file_intentionally (line 3756) - Score: 90
+    - Test 'test_signature_verification_reads_full_file_intentionally' has low assert-to-setup ratio (11%): 2 asserts vs 17 setup lines
+  test_reader_version (line 3787) - Score: 100
+    i Test 'test_reader_version' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_reader_version' has multiple assertions without diagnostic messages
+    i Test 'test_reader_version' uses .unwrap() which silently discards error information
+  test_reader_different_versions (line 3796) - Score: 100
+    i Test 'test_reader_different_versions' has multiple assertions without diagnostic messages
+    i Test 'test_reader_different_versions' uses .unwrap() which silently discards error information
+  test_reader_catalog (line 3813) - Score: 100
+    i Test 'test_reader_catalog' has multiple assertions without diagnostic messages
+    i Test 'test_reader_catalog' uses .unwrap() which silently discards error information
+  test_reader_info_none (line 3829) - Score: 100
+    i Test 'test_reader_info_none' uses .unwrap() which silently discards error information
+  test_reader_info_present (line 3839) - Score: 100
+    i Test 'test_reader_info_present' has multiple assertions without diagnostic messages
+    i Test 'test_reader_info_present' uses .unwrap() which silently discards error information
+  test_reader_get_object (line 3863) - Score: 100
+    i Test 'test_reader_get_object' has multiple assertions without diagnostic messages
+    i Test 'test_reader_get_object' uses .unwrap() which silently discards error information
+  test_reader_get_invalid_object (line 3877) - Score: 100
+    i Test 'test_reader_get_invalid_object' uses .unwrap() which silently discards error information
+  test_reader_get_free_object (line 3888) - Score: 100
+    i Test 'test_reader_get_free_object' has multiple assertions without diagnostic messages
+    i Test 'test_reader_get_free_object' uses .unwrap() which silently discards error information
+  test_reader_resolve_reference (line 3900) - Score: 100
+    i Test 'test_reader_resolve_reference' has multiple assertions without diagnostic messages
+    i Test 'test_reader_resolve_reference' uses .unwrap() which silently discards error information
+  test_reader_resolve_non_reference (line 3914) - Score: 90
+    - Test 'test_reader_resolve_non_reference' has identical neighborhood to 'test_resolve_direct_object'
+    i Test 'test_reader_resolve_non_reference' uses .unwrap() which silently discards error information
+  test_reader_cache_behavior (line 3927) - Score: 100
+    i Test 'test_reader_cache_behavior' has multiple assertions without diagnostic messages
+    i Test 'test_reader_cache_behavior' uses .unwrap() which silently discards error information
+  test_reader_wrong_generation (line 3942) - Score: 100
+    i Test 'test_reader_wrong_generation' uses .unwrap() which silently discards error information
+  test_reader_invalid_pdf (line 3953) - Score: 90
+    - Test 'test_reader_invalid_pdf' only exercises the happy path — no None, Err, or edge-case inputs
+  test_reader_corrupt_xref (line 3962) - Score: 90
+    i Test 'test_reader_corrupt_xref' has multiple assertions without diagnostic messages
+    - Test 'test_reader_corrupt_xref' has low assert-to-setup ratio (19%): 4 asserts vs 17 setup lines
+  test_reader_missing_trailer (line 3995) - Score: 90
+    i Test 'test_reader_missing_trailer' has multiple assertions without diagnostic messages
+    - Test 'test_reader_missing_trailer' has low assert-to-setup ratio (19%): 4 asserts vs 17 setup lines
+  test_reader_page_count (line 4035) - Score: 100
+    i Test 'test_reader_page_count' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_reader_page_count' has multiple assertions without diagnostic messages
+    i Test 'test_reader_page_count' uses .unwrap() which silently discards error information
+  test_reader_into_document (line 4046) - Score: 100
+    i Test 'test_reader_into_document' uses .unwrap() which silently discards error information
+  test_reader_pages_dict (line 4058) - Score: 100
+    i Test 'test_reader_pages_dict' has multiple assertions without diagnostic messages
+    i Test 'test_reader_pages_dict' uses .unwrap() which silently discards error information
+  test_reader_metadata (line 4082) - Score: 100
+    i Test 'test_reader_metadata' uses .unwrap() which silently discards error information
+  test_reader_metadata_empty (line 4095) - Score: 100
+    i Test 'test_reader_metadata_empty' uses .unwrap() which silently discards error information
+  test_reader_object_number_mismatch (line 4108) - Score: 100
+    i Test 'test_reader_object_number_mismatch' has multiple assertions without diagnostic messages
+    i Test 'test_reader_object_number_mismatch' uses .unwrap() which silently discards error information
+  test_document_metadata_struct (line 4127) - Score: 80
+    i Test 'test_document_metadata_struct' has multiple assertions without diagnostic messages
+    - Test 'test_document_metadata_struct' has low assert-to-setup ratio (13%): 2 asserts vs 13 setup lines
+    - Test 'test_document_metadata_struct' does not call any production code
+  test_document_metadata_clone (line 4161) - Score: 90
+    - Test 'test_document_metadata_clone' does not call any production code
+  test_reader_trailer_validation_error (line 4174) - Score: 90
+    i Test 'test_reader_trailer_validation_error' has multiple assertions without diagnostic messages
+    - Test 'test_reader_trailer_validation_error' has low assert-to-setup ratio (17%): 4 asserts vs 20 setup lines
+  test_reader_with_options (line 4210) - Score: 90
+    - Test 'test_reader_with_options' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  test_lenient_stream_parsing (line 4223) - Score: 90
+    i Test 'test_lenient_stream_parsing' has multiple assertions without diagnostic messages
+    - Test 'test_lenient_stream_parsing' has low assert-to-setup ratio (10%): 4 asserts vs 36 setup lines
+  test_parse_options_default (line 4282) - Score: 90
+    i Test 'test_parse_options_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_parse_options_default' does not call any production code
+  test_parse_options_clone (line 4290) - Score: 90
+    i Test 'test_parse_options_clone' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_options_clone' has multiple assertions without diagnostic messages
+    - Test 'test_parse_options_clone' does not call any production code
+  test_reader_encryption_detection (line 4349) - Score: 100
+    i Test 'test_reader_encryption_detection' has multiple assertions without diagnostic messages
+    i Test 'test_reader_encryption_detection' uses .unwrap() which silently discards error information
+  test_reader_encryption_methods_unencrypted (line 4376) - Score: 100
+    i Test 'test_reader_encryption_methods_unencrypted' has multiple assertions without diagnostic messages
+    i Test 'test_reader_encryption_methods_unencrypted' uses .unwrap() which silently discards error information
+  test_reader_encryption_handler_access (line 4393) - Score: 100
+    i Test 'test_reader_encryption_handler_access' has multiple assertions without diagnostic messages
+    i Test 'test_reader_encryption_handler_access' uses .unwrap() which silently discards error information
+  test_reader_multiple_password_attempts (line 4408) - Score: 100
+    i Test 'test_reader_multiple_password_attempts' has multiple assertions without diagnostic messages
+    i Test 'test_reader_multiple_password_attempts' uses .unwrap() which silently discards error information
+  test_reader_encryption_state_consistency (line 4426) - Score: 100
+    i Test 'test_reader_encryption_state_consistency' has multiple assertions without diagnostic messages
+    i Test 'test_reader_encryption_state_consistency' uses .unwrap() which silently discards error information
+  test_reader_encryption_error_handling (line 4449) - Score: 80
+    - Test 'test_reader_encryption_error_handling' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_reader_encryption_error_handling' has low assert-to-setup ratio (7%): 1 asserts vs 13 setup lines
+  test_reader_encryption_with_options (line 4472) - Score: 100
+    i Test 'test_reader_encryption_with_options' has multiple assertions without diagnostic messages
+    i Test 'test_reader_encryption_with_options' uses .unwrap() which silently discards error information
+  test_reader_encryption_integration_edge_cases (line 4491) - Score: 100
+    i Test 'test_reader_encryption_integration_edge_cases' has multiple assertions without diagnostic messages
+    i Test 'test_reader_encryption_integration_edge_cases' uses .unwrap() which silently discards error information
+  test_reader_invalid_pdf_header (line 4518) - Score: 80
+    - Test 'test_reader_invalid_pdf_header' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_reader_invalid_pdf_header' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_reader_truncated_header (line 4528) - Score: 80
+    - Test 'test_reader_truncated_header' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_reader_truncated_header' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_reader_malformed_version (line 4547) - Score: 75
+    - Test 'test_reader_malformed_version' executes production code without asserting on its behaviour
+  test_reader_get_nonexistent_object (line 4561) - Score: 100
+    i Test 'test_reader_get_nonexistent_object' uses .unwrap() which silently discards error information
+  test_reader_get_object_wrong_generation (line 4573) - Score: 100
+    i Test 'test_reader_get_object_wrong_generation' uses .unwrap() which silently discards error information
+  test_resolve_direct_object (line 4593) - Score: 90
+    - Test 'test_resolve_direct_object' has identical neighborhood to 'test_reader_resolve_non_reference'
+    i Test 'test_resolve_direct_object' uses .unwrap() which silently discards error information
+  test_resolve_reference (line 4608) - Score: 100
+    i Test 'test_resolve_reference' uses .unwrap() which silently discards error information
+  test_is_encrypted_on_unencrypted (line 4642) - Score: 100
+    i Test 'test_is_encrypted_on_unencrypted' uses .unwrap() which silently discards error information
+  test_is_unlocked_on_unencrypted (line 4654) - Score: 100
+    i Test 'test_is_unlocked_on_unencrypted' uses .unwrap() which silently discards error information
+  test_try_empty_password_on_unencrypted (line 4664) - Score: 100
+    i Test 'test_try_empty_password_on_unencrypted' uses .unwrap() which silently discards error information
+  test_reader_with_strict_options (line 4679) - Score: 90
+    - Test 'test_reader_with_strict_options' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_reader_with_lenient_options (line 4690) - Score: 90
+    - Test 'test_reader_with_lenient_options' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_reader_options_accessible (line 4701) - Score: 100
+    i Test 'test_reader_options_accessible' uses .unwrap() which silently discards error information
+  test_catalog_has_required_fields (line 4718) - Score: 100
+    i Test 'test_catalog_has_required_fields' has multiple assertions without diagnostic messages
+    i Test 'test_catalog_has_required_fields' uses .unwrap() which silently discards error information
+  test_info_fields_when_present (line 4740) - Score: 100
+    i Test 'test_info_fields_when_present' has multiple assertions without diagnostic messages
+    i Test 'test_info_fields_when_present' uses .unwrap() which silently discards error information
+  test_info_none_when_absent (line 4756) - Score: 100
+    i Test 'test_info_none_when_absent' uses .unwrap() which silently discards error information
+  test_version_exact_values (line 4770) - Score: 100
+    i Test 'test_version_exact_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_version_exact_values' uses .unwrap() which silently discards error information
+  test_version_pdf_20 (line 4781) - Score: 100
+    i Test 'test_version_pdf_20' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_version_pdf_20' uses .unwrap() which silently discards error information
+  test_pages_returns_pages_dict (line 4796) - Score: 100
+    i Test 'test_pages_returns_pages_dict' uses .unwrap() which silently discards error information
+  test_page_count_minimal_pdf (line 4813) - Score: 100
+    i Test 'test_page_count_minimal_pdf' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_count_minimal_pdf' uses .unwrap() which silently discards error information
+  test_page_count_with_info_pdf (line 4823) - Score: 100
+    i Test 'test_page_count_with_info_pdf' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_count_with_info_pdf' uses .unwrap() which silently discards error information
+  test_metadata_minimal_pdf (line 4837) - Score: 100
+    i Test 'test_metadata_minimal_pdf' has multiple assertions without diagnostic messages
+    i Test 'test_metadata_minimal_pdf' uses .unwrap() which silently discards error information
+  test_metadata_with_info (line 4850) - Score: 100
+    i Test 'test_metadata_with_info' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_metadata_with_info' has multiple assertions without diagnostic messages
+    i Test 'test_metadata_with_info' uses .unwrap() which silently discards error information
+  test_resolve_stream_length_direct_integer (line 4868) - Score: 100
+    i Test 'test_resolve_stream_length_direct_integer' uses .unwrap() which silently discards error information
+  test_resolve_stream_length_negative_integer (line 4883) - Score: 100
+    i Test 'test_resolve_stream_length_negative_integer' uses .unwrap() which silently discards error information
+  test_resolve_stream_length_non_integer (line 4898) - Score: 100
+    i Test 'test_resolve_stream_length_non_integer' uses .unwrap() which silently discards error information
+  test_get_all_pages_empty_pdf (line 4917) - Score: 100
+    i Test 'test_get_all_pages_empty_pdf' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_all_pages_empty_pdf' uses .unwrap() which silently discards error information
+  test_get_all_pages_with_info (line 4929) - Score: 100
+    i Test 'test_get_all_pages_with_info' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_all_pages_with_info' uses .unwrap() which silently discards error information
+  test_into_document_consumes_reader (line 4949) - Score: 100
+    i Test 'test_into_document_consumes_reader' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_into_document_consumes_reader' uses .unwrap() which silently discards error information
+  test_clear_parse_context (line 4979) - Score: 100
+    i Test 'test_clear_parse_context' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_clear_parse_context' uses .unwrap() which silently discards error information
+  test_parse_context_mut_accessible (line 4993) - Score: 100
+    i Test 'test_parse_context_mut_accessible' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_context_mut_accessible' uses .unwrap() which silently discards error information
+  test_find_byte_pattern_basic (line 5016) - Score: 90
+    - Test 'test_find_byte_pattern_basic' only exercises the happy path — no None, Err, or edge-case inputs
+  test_find_byte_pattern_not_found (line 5024) - Score: 90
+    - Test 'test_find_byte_pattern_not_found' only exercises the happy path — no None, Err, or edge-case inputs
+  test_find_byte_pattern_at_start (line 5032) - Score: 90
+    - Test 'test_find_byte_pattern_at_start' only exercises the happy path — no None, Err, or edge-case inputs
+  test_is_immediate_stream_start_with_stream (line 5040) - Score: 80
+    - Test 'test_is_immediate_stream_start_with_stream' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_is_immediate_stream_start_with_stream' does not call any production code
+  test_is_immediate_stream_start_with_whitespace (line 5049) - Score: 80
+    - Test 'test_is_immediate_stream_start_with_whitespace' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_is_immediate_stream_start_with_whitespace' does not call any production code
+  test_is_immediate_stream_start_no_stream (line 5058) - Score: 80
+    - Test 'test_is_immediate_stream_start_no_stream' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_is_immediate_stream_start_no_stream' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

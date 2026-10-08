@@ -108,7 +108,8 @@ impl<'a> IncrementalTaggedPdfEditor<'a> {
     }
 
     /// Prepare an in-memory editing baseline by recovering unambiguous derived
-    /// indexes and page keys. Authoritative structure and content stay unchanged.
+    /// indexes and page keys and retiring unreachable, unreadable zero-offset
+    /// xref entries. Authoritative structure and content stay unchanged.
     /// `plan` describes subsequent mutations relative to this baseline; use
     /// `preparation_objects` for the additional objects changed by preparation.
     /// `apply` will only return bytes if the complete resulting document is valid.
@@ -167,7 +168,8 @@ impl<'a> IncrementalTaggedPdfEditor<'a> {
     }
 
     /// Exact objects changed while preparing the editor's baseline, including
-    /// any xref-stream objects. The subsequent mutation plan is reported by
+    /// any xref-stream objects and the original identities of retired absent
+    /// objects. The subsequent mutation plan is reported by
     /// `plan` and `apply`; together these inventories cover the entire revision.
     pub fn preparation_objects(&self) -> &[TaggedPdfObjectRef] {
         &self.preparation_objects

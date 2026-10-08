@@ -1,0 +1,17 @@
+   Compiling oxidize-pdf v5.4.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.77s
+     Running tests/text_tagged_xref_recovery_contract_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/text_tagged_xref_recovery_contract_test-54e03a7b96f6c15b)
+
+running 10 tests
+test catalog_reference_to_zero_offset_object_is_not_discarded ... ok
+test missing_object_stream_container_is_not_treated_as_an_unused_object ... ok
+test retirement_preserves_an_existing_free_list ... ok
+test trailer_reference_to_zero_offset_object_is_not_discarded ... ok
+test public_reproducer_retires_only_the_unreachable_zero_offset_entry ... ok
+test latest_live_definition_and_nonzero_corruption_are_not_retired ... ok
+test trailer_aliases_and_nested_references_cannot_hide_live_corruption ... ok
+test nonzero_generation_absent_entry_is_permanently_retired_and_reported_by_source_id ... ok
+test table_stream_and_hybrid_preparation_remain_clean_across_revisions ... ok
+test nested_source_and_each_split_retire_all_four_absent_entries ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s

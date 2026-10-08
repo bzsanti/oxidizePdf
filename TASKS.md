@@ -1,3 +1,29 @@
+## #690 — inherited zero-offset xref entries — 2026-10-08
+
+## Release 5.4.1 — 2026-10-08
+
+- Issue: #697 — release: publish oxidize-pdf 5.4.1 — https://github.com/bzsanti/oxidizePdf/issues/697
+- Status: active. Priority: P1. Owner: maintenance.
+- Closure: #696 integrated; reviewed 5.4.1 package; green release PR merged into main; tag and successful publication verified against registry checksum and source provenance; main synchronized into develop.
+- Validation: #696 merged as `4420acc3f4fc14259c30c866dacd8690ddeb6620`; its entire tree is identical to reviewed HEAD `3e47216125b25e43918893569cf0a361edfa4c5a`. PR CI: 29 successful checks, 2 configured skips. Reusable product evidence: 10,430 tests passed, 19 PDFs accepted by qpdf without warnings, Kripteia quality/security review.
+- Remaining blockers: verify version/package changes; release PR CI; tagged publication/provenance; branch synchronization. #690 Studio acceptance remains separate and open.
+- Package validation: passed; extracted package compiled and 1,427 source/test files plus README match the checkout. Kripteia: 98/100, no security findings. Evidence: `docs/reports/2026-10-08-release-5.4.1-review.md`.
+- Next action: publish the release PR against main and wait for CI before merging.
+
+- Issue: #690 — fix(operations): complete nested tagged split and preflight for the #621/#677 input — https://github.com/bzsanti/oxidizePdf/issues/690
+- Status: implementation, focused/full regression and local original-input acceptance complete; review and Clippy passed; delivery pending; issue confirmed OPEN. Priority P1. Owner: Codex.
+- Scope: safely retire unreachable in-use zero-offset entries in a preserving incremental revision, without masking reachable corruption or changing source/content/page-tree identities. Existing clean checkout target/issue690-review reused, branch fix/issue-690-unused-xref from origin/develop 592f771; root WIP preserved.
+- Acceptance / evidence / blockers:
+  - Clean prepared and split xref: demonstrated on candidate: 19 qpdf exit-0 outputs; baseline consumer 5.4.0 had exit 3. Evidence: docs/reports/2026-10-08-issue-690-xref-evidence/external-final.json.
+  - Preservation and permission policy: demonstrated on candidate by native contracts and original-input consumer, including text/pixels, prefixes and permission/metadata negatives.
+  - Safe reachability and revision handling: demonstrated: complete trailer reachability, generation/alias rejection, missing compressed-container rejection, table/stream/hybrid and repeat-revision checks.
+  - Proportional regression, Clippy, quality/security review: complete locally on final sources (10,430 PASS/0 FAIL; Clippy and both Kripteia analyses). Published-candidate Studio acceptance remains external after delivery.
+- Last validation: public follow-up https://github.com/bzsanti/oxidizePdf/issues/690#issuecomment-6057868240 read; baseline checkout clean and develop fetched.
+- Latest candidate evidence: 10/10 new public contracts, 39 prior tagged contracts including 48 combinations; 15 synthetic PDFs pass qpdf without warnings and two 12-page cohorts preserve Poppler text/pixels. Initial RED: retirement inventory absent and trailer reference accepted. An additional negative test was corrected to expect the existing DocMDP rejection of nonzero corrupt offsets; no product guard was weakened.
+- Final validation so far: workspace 10,430 PASS/0 FAIL/71 existing ignored; format passed. Candidate original-input public consumer passes 3/3/6 with unchanged source and prefixes; 19 PDFs pass qpdf clean, and original plus both synthetic workflows preserve all 12 text/raster pages at 72 dpi. Both Kripteia analyses completed across affected code/tests; no security alerts.
+- Review: docs/reports/2026-10-08-issue-690-xref-review.md; exact hashes and reproducible external verifier archived.
+- Next action: publish the reviewed change against develop and verify candidate CI. No issue closure before published-candidate Studio acceptance.
+
 ## Release 5.4.0
 
 - Issue: #693 — release: prepare and publish 5.4.0 — https://github.com/bzsanti/oxidizePdf/issues/693
