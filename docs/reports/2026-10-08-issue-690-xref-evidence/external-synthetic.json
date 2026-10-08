@@ -1,0 +1,95 @@
+{
+  "qpdf_version": "qpdf version 11.9.0",
+  "poppler_version": "pdftotext version 24.02.0",
+  "qpdf": [
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/free-list-prepared.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/hybrid-prepared.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/hybrid-repeated.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/latest-definition-prepared.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/nested-direct-part0.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/nested-direct-part1.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/nested-direct-part2.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/nested-prepared-part0.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/nested-prepared-part1.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/nested-prepared-part2.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/nested-prepared.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/stream-prepared.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/stream-repeated.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/table-prepared.pdf",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "file": "/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-xref-pdfs/table-repeated.pdf",
+      "exit": 0,
+      "stderr": ""
+    }
+  ],
+  "comparisons": {
+    "direct": {
+      "pages": 12,
+      "text_identical": true,
+      "pixels_identical_72dpi": true,
+      "prefixes_preserved": true
+    },
+    "prepared": {
+      "pages": 12,
+      "text_identical": true,
+      "pixels_identical_72dpi": true,
+      "prefixes_preserved": true
+    }
+  }
+}

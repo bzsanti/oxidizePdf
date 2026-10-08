@@ -1,0 +1,10 @@
+{
+  "oxidize-pdf-core/src/operations/reorder.rs": "191e6088d43b3127ced4596b43771d1033c6976e467a07070245d9bb135a67ce",
+  "oxidize-pdf-core/src/parser/reader.rs": "02d6b36dbebf6df32384b3dba40995e29e1ecee57cb3eadc4342c8d6f29d595c",
+  "oxidize-pdf-core/src/writer/incremental_update.rs": "43cf7118c088f8ea7405c6b15f9139a63bac52afd949f2f1dda0c014816aa880",
+  "oxidize-pdf-core/src/writer/incremental_tagged_pdf.rs": "720e8dec5ab579d123f2bddbfc211397f30c4f6447660e8e3f0510544e4dcb6f",
+  "oxidize-pdf-core/tests/text_tagged_preparation_contract_test.rs": "f6117a926a4ce57953f9068b2dfb1cfc5581ab0379ef6e2545938dcd650d3631",
+  "oxidize-pdf-core/tests/text_tagged_xref_recovery_contract_test.rs": "65adcb2ca025f6e3b1b8514422aa1f56f9e9fa7a129f4afb091c13e01dd69507",
+  "oxidize-pdf-core/tests/fixtures/issue690-unused-xref.pdf": "2da2753fd025f2ebc879475d374a28a7561ca3397099c07a73c2644dc9151ce1",
+  "Cargo.lock": "8d089c7ce26e756af2cf8f7ea0eb8a8165380b8877be9c53bdc0391ac1c90d8f"
+}

@@ -1,0 +1,57 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 10 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...f-core/tests/text_tagged_xref_recovery_contract_test.rs       10     98
+
+--- Worst Offenders ---
+  catalog_reference_to_zero_offset_object_is_not_discarded (oxidize-pdf-core/tests/text_tagged_xref_recovery_contract_test.rs:68) - Score: 90
+    - Test 'catalog_reference_to_zero_offset_object_is_not_discarded' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  trailer_aliases_and_nested_references_cannot_hide_live_corruption (oxidize-pdf-core/tests/text_tagged_xref_recovery_contract_test.rs:184) - Score: 90
+    - Test 'trailer_aliases_and_nested_references_cannot_hide_live_corruption' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  public_reproducer_retires_only_the_unreachable_zero_offset_entry (oxidize-pdf-core/tests/text_tagged_xref_recovery_contract_test.rs:34) - Score: 100
+    i Test 'public_reproducer_retires_only_the_unreachable_zero_offset_entry' has multiple assertions without diagnostic messages
+    i Test 'public_reproducer_retires_only_the_unreachable_zero_offset_entry' uses .unwrap() which silently discards error information
+  trailer_reference_to_zero_offset_object_is_not_discarded (oxidize-pdf-core/tests/text_tagged_xref_recovery_contract_test.rs:56) - Score: 100
+    i Test 'trailer_reference_to_zero_offset_object_is_not_discarded' uses .unwrap() which silently discards error information
+  table_stream_and_hybrid_preparation_remain_clean_across_revisions (oxidize-pdf-core/tests/text_tagged_xref_recovery_contract_test.rs:153) - Score: 100
+    i Test 'table_stream_and_hybrid_preparation_remain_clean_across_revisions' has multiple assertions without diagnostic messages
+    i Test 'table_stream_and_hybrid_preparation_remain_clean_across_revisions' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/text_tagged_xref_recovery_contract_test.rs:
+  public_reproducer_retires_only_the_unreachable_zero_offset_entry (line 34) - Score: 100
+    i Test 'public_reproducer_retires_only_the_unreachable_zero_offset_entry' has multiple assertions without diagnostic messages
+    i Test 'public_reproducer_retires_only_the_unreachable_zero_offset_entry' uses .unwrap() which silently discards error information
+  trailer_reference_to_zero_offset_object_is_not_discarded (line 56) - Score: 100
+    i Test 'trailer_reference_to_zero_offset_object_is_not_discarded' uses .unwrap() which silently discards error information
+  catalog_reference_to_zero_offset_object_is_not_discarded (line 68) - Score: 90
+    - Test 'catalog_reference_to_zero_offset_object_is_not_discarded' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  table_stream_and_hybrid_preparation_remain_clean_across_revisions (line 153) - Score: 100
+    i Test 'table_stream_and_hybrid_preparation_remain_clean_across_revisions' has multiple assertions without diagnostic messages
+    i Test 'table_stream_and_hybrid_preparation_remain_clean_across_revisions' uses .unwrap() which silently discards error information
+  trailer_aliases_and_nested_references_cannot_hide_live_corruption (line 184) - Score: 90
+    - Test 'trailer_aliases_and_nested_references_cannot_hide_live_corruption' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  latest_live_definition_and_nonzero_corruption_are_not_retired (line 207) - Score: 100
+    i Test 'latest_live_definition_and_nonzero_corruption_are_not_retired' has multiple assertions without diagnostic messages
+    i Test 'latest_live_definition_and_nonzero_corruption_are_not_retired' uses .unwrap() which silently discards error information
+  nonzero_generation_absent_entry_is_permanently_retired_and_reported_by_source_id (line 247) - Score: 100
+    i Test 'nonzero_generation_absent_entry_is_permanently_retired_and_reported_by_source_id' uses .unwrap() which silently discards error information
+  nested_source_and_each_split_retire_all_four_absent_entries (line 262) - Score: 100
+    i Test 'nested_source_and_each_split_retire_all_four_absent_entries' has multiple assertions without diagnostic messages
+    i Test 'nested_source_and_each_split_retire_all_four_absent_entries' uses .unwrap() which silently discards error information
+  retirement_preserves_an_existing_free_list (line 342) - Score: 100
+    i Test 'retirement_preserves_an_existing_free_list' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'retirement_preserves_an_existing_free_list' has multiple assertions without diagnostic messages
+    i Test 'retirement_preserves_an_existing_free_list' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

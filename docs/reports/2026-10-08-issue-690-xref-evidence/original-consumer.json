@@ -1,0 +1,19 @@
+{
+  "consumer_exit": 0,
+  "features": [
+    "default",
+    "ocr-tesseract",
+    "signatures"
+  ],
+  "preflight_missing_values": 3,
+  "split_page_counts": [
+    3,
+    3,
+    6
+  ],
+  "engine_text_all_pages_equal": true,
+  "source_unchanged": true,
+  "source_prefixes_preserved": true,
+  "lock_change": "Only local package oxidize-pdf 5.3.0 -> 5.4.0; transitive dependencies unchanged",
+  "publication": "Candidate checkout, not a registry release"
+}
