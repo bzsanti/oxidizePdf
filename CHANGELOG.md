@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.4.1] - 2026-10-08
+
+### Fixed
+
+- Retire unreachable, unreadable zero-offset xref entries when preparing or
+  splitting tagged PDFs, so recovered output passes qpdf validation without
+  warnings. Preserve existing free-list links and recovered derived indexes;
+  reject corruption reachable through trailer references or object streams
+  (#690, #696).
+
 ## [5.4.0] - 2026-10-07
 
 ### Added
