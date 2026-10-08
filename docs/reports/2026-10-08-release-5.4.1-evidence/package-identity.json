@@ -1,0 +1,10 @@
+{
+  "version": "5.4.1",
+  "msrv": "1.88",
+  "sources_and_tests_identical": 1427,
+  "readme_identical": true,
+  "recipient_encryption_excluded": true,
+  "dependency_resolution_unchanged": true,
+  "reviewed_product_head": "3e47216125b25e43918893569cf0a361edfa4c5a",
+  "integrated_develop": "4420acc3f4fc14259c30c866dacd8690ddeb6620"
+}
