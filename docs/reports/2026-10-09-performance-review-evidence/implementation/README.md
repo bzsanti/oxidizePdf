@@ -22,3 +22,5 @@ The main report explains phase controls. The workload harness grew CJK and fract
 `702-unit.log` is an accidental root-checkout invocation that was interrupted; it is not candidate evidence. `703-initial-workspace-interrupted.log` was stopped when performance evidence invalidated that candidate, before counting any full-suite pass. Early #701 logs were replaced by the successful rerun after fixing type inference; no setup/compile failure is claimed as a discriminating RED.
 
 CI/integration status belongs to TASKS.md and the PR. A local PASS does not imply the issues are closed or the change is released.
+
+Captured logs retain their original whitespace. The evidence-local .gitattributes marks synthetic outputs as binary and excludes captured log/profile/patch whitespace from Git whitespace checks; Rust source formatting is checked normally.
