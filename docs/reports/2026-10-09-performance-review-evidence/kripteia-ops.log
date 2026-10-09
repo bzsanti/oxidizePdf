@@ -1,0 +1,75 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 15 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...et/issue690-review/oxidize-pdf-core/src/graphics/ops.rs       15     90
+
+--- Worst Offenders ---
+  rect_fill_roundtrip_emits_re_f (target/issue690-review/oxidize-pdf-core/src/graphics/ops.rs:412) - Score: 90
+    - Test 'rect_fill_roundtrip_emits_re_f' does not call any production code
+  move_to_with_nan_components_sanitises_to_zero (target/issue690-review/oxidize-pdf-core/src/graphics/ops.rs:428) - Score: 90
+    - Test 'move_to_with_nan_components_sanitises_to_zero' does not call any production code
+  raw_op_passes_bytes_through_unchanged (target/issue690-review/oxidize-pdf-core/src/graphics/ops.rs:439) - Score: 90
+    - Test 'raw_op_passes_bytes_through_unchanged' does not call any production code
+  line_width_with_nan_clamps_to_zero (target/issue690-review/oxidize-pdf-core/src/graphics/ops.rs:447) - Score: 90
+    i Test 'line_width_with_nan_clamps_to_zero' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'line_width_with_nan_clamps_to_zero' does not call any production code
+  cm_translate_with_neg_inf_clamps_to_zero (target/issue690-review/oxidize-pdf-core/src/graphics/ops.rs:453) - Score: 90
+    i Test 'cm_translate_with_neg_inf_clamps_to_zero' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'cm_translate_with_neg_inf_clamps_to_zero' does not call any production code
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/src/graphics/ops.rs:
+  rect_fill_roundtrip_emits_re_f (line 412) - Score: 90
+    - Test 'rect_fill_roundtrip_emits_re_f' does not call any production code
+  move_to_with_nan_components_sanitises_to_zero (line 428) - Score: 90
+    - Test 'move_to_with_nan_components_sanitises_to_zero' does not call any production code
+  raw_op_passes_bytes_through_unchanged (line 439) - Score: 90
+    - Test 'raw_op_passes_bytes_through_unchanged' does not call any production code
+  line_width_with_nan_clamps_to_zero (line 447) - Score: 90
+    i Test 'line_width_with_nan_clamps_to_zero' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'line_width_with_nan_clamps_to_zero' does not call any production code
+  cm_translate_with_neg_inf_clamps_to_zero (line 453) - Score: 90
+    i Test 'cm_translate_with_neg_inf_clamps_to_zero' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'cm_translate_with_neg_inf_clamps_to_zero' does not call any production code
+  td_with_nan_clamps_to_zero (line 466) - Score: 90
+    i Test 'td_with_nan_clamps_to_zero' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'td_with_nan_clamps_to_zero' does not call any production code
+  show_text_wraps_with_parens_and_tj (line 475) - Score: 90
+    i Test 'show_text_wraps_with_parens_and_tj' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'show_text_wraps_with_parens_and_tj' does not call any production code
+  show_text_hex_wraps_with_angle_brackets_and_tj (line 481) - Score: 90
+    i Test 'show_text_hex_wraps_with_angle_brackets_and_tj' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'show_text_hex_wraps_with_angle_brackets_and_tj' does not call any production code
+  show_text_array_interleaves_glyphs_and_adjustments_as_tj (line 487) - Score: 90
+    i Test 'show_text_array_interleaves_glyphs_and_adjustments_as_tj' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'show_text_array_interleaves_glyphs_and_adjustments_as_tj' does not call any production code
+  show_text_array_single_glyph_run_has_no_adjustment (line 497) - Score: 90
+    i Test 'show_text_array_single_glyph_run_has_no_adjustment' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'show_text_array_single_glyph_run_has_no_adjustment' does not call any production code
+  show_text_array_sanitises_non_finite_adjustment_to_zero (line 505) - Score: 90
+    i Test 'show_text_array_sanitises_non_finite_adjustment_to_zero' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'show_text_array_sanitises_non_finite_adjustment_to_zero' does not call any production code
+  fill_color_components_pad_with_trailing_space_before_sc (line 515) - Score: 90
+    i Test 'fill_color_components_pad_with_trailing_space_before_sc' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'fill_color_components_pad_with_trailing_space_before_sc' does not call any production code
+  comment_emits_percent_prefix (line 521) - Score: 90
+    i Test 'comment_emits_percent_prefix' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'comment_emits_percent_prefix' does not call any production code
+  paint_shading_emits_name_sh (line 527) - Score: 90
+    i Test 'paint_shading_emits_name_sh' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'paint_shading_emits_name_sh' does not call any production code
+  clip_end_path_emits_w_then_n (line 534) - Score: 90
+    i Test 'clip_end_path_emits_w_then_n' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'clip_end_path_emits_w_then_n' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

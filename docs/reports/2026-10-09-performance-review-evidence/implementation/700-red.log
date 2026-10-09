@@ -1,0 +1,24 @@
+   Compiling writer-perf-probe v0.1.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009)
+    Finished `release` profile [optimized + debuginfo] target(s) in 2.80s
+     Running tests/metrics.rs (target/performance-review-20261009/target/release/deps/metrics-bb365d468b1d0394)
+
+running 1 test
+test warmed_queries_do_not_clone_maps_and_replacements_remain_visible ... FAILED
+
+failures:
+
+---- warmed_queries_do_not_clone_maps_and_replacements_remain_visible stdout ----
+
+thread 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' (104) panicked at tests/metrics.rs:29:5:
+assertion `left == right` failed: width queries must borrow/share metrics, not clone maps
+  left: 100
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    warmed_queries_do_not_clone_maps_and_replacements_remain_visible
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test metrics`

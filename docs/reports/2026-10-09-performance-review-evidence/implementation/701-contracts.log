@@ -1,0 +1,15 @@
+   Compiling oxidize-pdf v5.4.1 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 20.42s
+     Running tests/issue_661_writer_resources_test.rs (target/performance-700-703/core-target/debug/deps/issue_661_writer_resources_test-934d23cfd5085540)
+
+running 7 tests
+test standard_resources_are_written_once_and_raw_variants_survive ... ok
+test imported_shared_resources_remain_local_while_new_pages_share ... ok
+test shared_cjk_font_preserves_characters_from_every_page ... ok
+test shared_custom_font_named_like_a_standard_font_keeps_its_glyphs ... ok
+test late_custom_registration_keeps_usage_from_both_contexts_and_pages ... ok
+test mixed_short_and_long_streams_remain_independent_across_repeated_saves ... ok
+test shared_resources_survive_repeated_saves_and_added_custom_page ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.38s
+

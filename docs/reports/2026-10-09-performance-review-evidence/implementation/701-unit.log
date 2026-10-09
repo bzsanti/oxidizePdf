@@ -1,0 +1,17 @@
+   Compiling oxidize-pdf v5.4.1 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 33.30s
+     Running unittests src/lib.rs (target/performance-700-703/core-target/debug/deps/oxidize_pdf-f98c467871087551)
+
+running 9 tests
+test text::tests::test_used_characters_empty_initially ... ok
+test graphics::tests::test_show_text_tracks_used_characters ... ok
+test text::tests::test_used_characters_multiple_writes ... ok
+test text::tests::test_used_characters_tracking_ascii ... ok
+test page::unit_tests::test_get_used_characters_from_text_context ... ok
+test page::unit_tests::test_get_used_characters_cjk_via_text_context ... ok
+test page::unit_tests::test_get_used_characters_combines_both_contexts ... ok
+test text::tests::test_used_characters_tracking_cjk ... ok
+test text::used_characters::tests::repeated_ascii_and_unicode_union_remains_lossless_after_clone ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 6802 filtered out; finished in 0.00s
+

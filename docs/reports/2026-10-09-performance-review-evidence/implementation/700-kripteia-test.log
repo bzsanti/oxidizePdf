@@ -1,0 +1,32 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 1 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ize-pdf-core/tests/issue_700_metric_allocations_test.rs        1    100
+
+--- Worst Offenders ---
+  warmed_queries_do_not_clone_maps_and_replacements_remain_visible (target/issue690-review/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:33) - Score: 100
+    i Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' uses .unwrap() which silently discards error information
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:
+  warmed_queries_do_not_clone_maps_and_replacements_remain_visible (line 33) - Score: 100
+    i Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+--- Unsafe Usages (4) ---
+  target/issue690-review/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:17 — fn alloc
+  target/issue690-review/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:18 — fn alloc_zeroed
+  target/issue690-review/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:19 — fn realloc
+  target/issue690-review/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:20 — fn dealloc
+

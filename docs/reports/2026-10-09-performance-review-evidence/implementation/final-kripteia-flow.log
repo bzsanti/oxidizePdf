@@ -1,0 +1,184 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 52 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+target/issue690-review/oxidize-pdf-core/src/text/flow.rs         52     96
+
+--- Worst Offenders ---
+  test_text_align_variants (target/issue690-review/oxidize-pdf-core/src/text/flow.rs:511) - Score: 60
+    i Test 'test_text_align_variants' has multiple assertions without diagnostic messages
+    - Test 'test_text_align_variants' does not call any production code
+    - Test 'test_text_align_variants' line 512: assert_eq! with identical arguments: TextAlign :: Left 
+    - Test 'test_text_align_variants' line 513: assert_eq! with identical arguments: TextAlign :: Right 
+    - Test 'test_text_align_variants' line 514: assert_eq! with identical arguments: TextAlign :: Center 
+    - Test 'test_text_align_variants' line 515: assert_eq! with identical arguments: TextAlign :: Justified 
+  test_text_flow_context_threads_metrics_store (target/issue690-review/oxidize-pdf-core/src/text/flow.rs:1180) - Score: 80
+    - Test 'test_text_flow_context_threads_metrics_store' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_text_flow_context_threads_metrics_store' uses .unwrap() which silently discards error information
+    - Test 'test_text_flow_context_threads_metrics_store' has low assert-to-setup ratio (17%): 4 asserts vs 20 setup lines
+  test_text_flow_context_new (target/issue690-review/oxidize-pdf-core/src/text/flow.rs:448) - Score: 90
+    i Test 'test_text_flow_context_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_flow_context_new' has multiple assertions without diagnostic messages
+    - Test 'test_text_flow_context_new' does not call any production code
+  test_text_align_debug (target/issue690-review/oxidize-pdf-core/src/text/flow.rs:640) - Score: 90
+    i Test 'test_text_align_debug' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_text_align_debug' does not call any production code
+  test_text_align_clone (target/issue690-review/oxidize-pdf-core/src/text/flow.rs:647) - Score: 90
+    - Test 'test_text_align_clone' does not call any production code
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/src/text/flow.rs:
+  test_text_flow_context_new (line 448) - Score: 90
+    i Test 'test_text_flow_context_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_flow_context_new' has multiple assertions without diagnostic messages
+    - Test 'test_text_flow_context_new' does not call any production code
+  test_set_font (line 463) - Score: 100
+    i Test 'test_set_font' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_font' has multiple assertions without diagnostic messages
+  test_set_line_height (line 473) - Score: 100
+    i Test 'test_set_line_height' asserts against a hardcoded constant instead of a computed expected value
+  test_at_position (line 491) - Score: 100
+    i Test 'test_at_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_at_position' has multiple assertions without diagnostic messages
+  test_content_width (line 502) - Score: 100
+    i Test 'test_content_width' asserts against a hardcoded constant instead of a computed expected value
+  test_text_align_variants (line 511) - Score: 60
+    i Test 'test_text_align_variants' has multiple assertions without diagnostic messages
+    - Test 'test_text_align_variants' does not call any production code
+    - Test 'test_text_align_variants' line 512: assert_eq! with identical arguments: TextAlign :: Left 
+    - Test 'test_text_align_variants' line 513: assert_eq! with identical arguments: TextAlign :: Right 
+    - Test 'test_text_align_variants' line 514: assert_eq! with identical arguments: TextAlign :: Center 
+    - Test 'test_text_align_variants' line 515: assert_eq! with identical arguments: TextAlign :: Justified 
+  test_write_wrapped_simple (line 521) - Score: 100
+    i Test 'test_write_wrapped_simple' has multiple assertions without diagnostic messages
+    i Test 'test_write_wrapped_simple' uses .unwrap() which silently discards error information
+  test_write_paragraph (line 535) - Score: 100
+    i Test 'test_write_paragraph' uses .unwrap() which silently discards error information
+  test_newline (line 547) - Score: 100
+    i Test 'test_newline' has multiple assertions without diagnostic messages
+  test_cursor_position (line 563) - Score: 100
+    i Test 'test_cursor_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_cursor_position' has multiple assertions without diagnostic messages
+  test_generate_operations (line 574) - Score: 100
+    i Test 'test_generate_operations' uses .unwrap() which silently discards error information
+  test_clear_operations (line 586) - Score: 100
+    i Test 'test_clear_operations' has multiple assertions without diagnostic messages
+    i Test 'test_clear_operations' uses .unwrap() which silently discards error information
+  test_page_dimensions (line 598) - Score: 100
+    i Test 'test_page_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_dimensions' has multiple assertions without diagnostic messages
+  test_margins_access (line 608) - Score: 100
+    i Test 'test_margins_access' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_margins_access' has multiple assertions without diagnostic messages
+  test_method_chaining (line 620) - Score: 100
+    i Test 'test_method_chaining' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_method_chaining' has multiple assertions without diagnostic messages
+  test_text_align_debug (line 640) - Score: 90
+    i Test 'test_text_align_debug' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_text_align_debug' does not call any production code
+  test_text_align_clone (line 647) - Score: 90
+    - Test 'test_text_align_clone' does not call any production code
+  test_text_align_copy (line 654) - Score: 90
+    i Test 'test_text_align_copy' has multiple assertions without diagnostic messages
+    - Test 'test_text_align_copy' does not call any production code
+  test_write_wrapped_with_alignment_right (line 665) - Score: 100
+    i Test 'test_write_wrapped_with_alignment_right' has multiple assertions without diagnostic messages
+    i Test 'test_write_wrapped_with_alignment_right' uses .unwrap() which silently discards error information
+  test_write_wrapped_with_alignment_center (line 680) - Score: 100
+    i Test 'test_write_wrapped_with_alignment_center' has multiple assertions without diagnostic messages
+    i Test 'test_write_wrapped_with_alignment_center' uses .unwrap() which silently discards error information
+  test_write_wrapped_with_alignment_justified (line 693) - Score: 100
+    i Test 'test_write_wrapped_with_alignment_justified' has multiple assertions without diagnostic messages
+    i Test 'test_write_wrapped_with_alignment_justified' uses .unwrap() which silently discards error information
+  test_write_wrapped_empty_text (line 708) - Score: 100
+    i Test 'test_write_wrapped_empty_text' uses .unwrap() which silently discards error information
+  test_write_wrapped_whitespace_only (line 719) - Score: 100
+    i Test 'test_write_wrapped_whitespace_only' uses .unwrap() which silently discards error information
+  test_write_wrapped_special_characters (line 731) - Score: 100
+    i Test 'test_write_wrapped_special_characters' has multiple assertions without diagnostic messages
+    i Test 'test_write_wrapped_special_characters' uses .unwrap() which silently discards error information
+  test_write_wrapped_newlines_tabs (line 746) - Score: 100
+    i Test 'test_write_wrapped_newlines_tabs' uses .unwrap() which silently discards error information
+  test_write_wrapped_very_long_word (line 758) - Score: 100
+    i Test 'test_write_wrapped_very_long_word' has multiple assertions without diagnostic messages
+    i Test 'test_write_wrapped_very_long_word' uses .unwrap() which silently discards error information
+  test_write_wrapped_cursor_movement (line 771) - Score: 100
+    i Test 'test_write_wrapped_cursor_movement' has multiple assertions without diagnostic messages
+    i Test 'test_write_wrapped_cursor_movement' uses .unwrap() which silently discards error information
+  test_write_paragraph_spacing (line 789) - Score: 100
+    i Test 'test_write_paragraph_spacing' has multiple assertions without diagnostic messages
+    i Test 'test_write_paragraph_spacing' uses .unwrap() which silently discards error information
+  test_multiple_newlines (line 809) - Score: 90
+    i Test 'test_multiple_newlines' has multiple assertions without diagnostic messages
+    - Test 'test_multiple_newlines' has low assert-to-setup ratio (13%): 3 asserts vs 20 setup lines
+  test_content_width_different_margins (line 836) - Score: 90
+    i Test 'test_content_width_different_margins' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_content_width_different_margins' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_custom_line_height (line 850) - Score: 90
+    - Test 'test_custom_line_height' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  test_different_fonts (line 865) - Score: 90
+    i Test 'test_different_fonts' uses .unwrap() which silently discards error information
+    - Test 'test_different_fonts' has low assert-to-setup ratio (11%): 2 asserts vs 16 setup lines
+  test_font_size_variations (line 890) - Score: 100
+    i Test 'test_font_size_variations' uses .unwrap() which silently discards error information
+  test_at_position_edge_cases (line 907) - Score: 100
+    i Test 'test_at_position_edge_cases' has multiple assertions without diagnostic messages
+  test_write_wrapped_with_narrow_content (line 925) - Score: 90
+    i Test 'test_write_wrapped_with_narrow_content' uses .unwrap() which silently discards error information
+    - Test 'test_write_wrapped_with_narrow_content' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  test_justified_text_single_word_line (line 946) - Score: 100
+    i Test 'test_justified_text_single_word_line' uses .unwrap() which silently discards error information
+  test_justified_text_last_line (line 959) - Score: 100
+    i Test 'test_justified_text_last_line' uses .unwrap() which silently discards error information
+  test_generate_operations_encoding (line 973) - Score: 100
+    i Test 'test_generate_operations_encoding' has multiple assertions without diagnostic messages
+    i Test 'test_generate_operations_encoding' uses .unwrap() which silently discards error information
+  test_clear_resets_operations_only (line 987) - Score: 100
+    i Test 'test_clear_resets_operations_only' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_clear_resets_operations_only' has multiple assertions without diagnostic messages
+    i Test 'test_clear_resets_operations_only' uses .unwrap() which silently discards error information
+  test_long_text_wrapping (line 1012) - Score: 90
+    - Test 'test_long_text_wrapping' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_long_text_wrapping' uses .unwrap() which silently discards error information
+  test_empty_operations_initially (line 1029) - Score: 100
+    i Test 'test_empty_operations_initially' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_empty_operations_initially' has multiple assertions without diagnostic messages
+  test_write_paragraph_empty (line 1038) - Score: 100
+    i Test 'test_write_paragraph_empty' uses .unwrap() which silently discards error information
+  test_extreme_line_height (line 1050) - Score: 100
+    i Test 'test_extreme_line_height' has multiple assertions without diagnostic messages
+  test_zero_content_width (line 1068) - Score: 90
+    i Test 'test_zero_content_width' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_zero_content_width' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  test_cursor_x_reset_on_newline (line 1081) - Score: 100
+    i Test 'test_cursor_x_reset_on_newline' has multiple assertions without diagnostic messages
+  test_available_width_respects_cursor_x (line 1100) - Score: 100
+    i Test 'test_available_width_respects_cursor_x' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_available_width_respects_cursor_x' has multiple assertions without diagnostic messages
+  test_available_width_clamps_to_zero (line 1114) - Score: 90
+    i Test 'test_available_width_clamps_to_zero' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_available_width_clamps_to_zero' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_write_wrapped_at_x_limits_available_width (line 1125) - Score: 90
+    i Test 'test_write_wrapped_at_x_limits_available_width' uses .unwrap() which silently discards error information
+    - Test 'test_write_wrapped_at_x_limits_available_width' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  test_write_wrapped_respects_cursor_x_offset (line 1147) - Score: 90
+    i Test 'test_write_wrapped_respects_cursor_x_offset' uses .unwrap() which silently discards error information
+    - Test 'test_write_wrapped_respects_cursor_x_offset' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  test_text_flow_context_threads_metrics_store (line 1180) - Score: 80
+    - Test 'test_text_flow_context_threads_metrics_store' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_text_flow_context_threads_metrics_store' uses .unwrap() which silently discards error information
+    - Test 'test_text_flow_context_threads_metrics_store' has low assert-to-setup ratio (17%): 4 asserts vs 20 setup lines
+  nan_cursor_position_in_flow_is_sanitised_at_emission (line 1247) - Score: 100
+    i Test 'nan_cursor_position_in_flow_is_sanitised_at_emission' has multiple assertions without diagnostic messages
+    i Test 'nan_cursor_position_in_flow_is_sanitised_at_emission' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

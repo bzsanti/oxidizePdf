@@ -1,0 +1,62 @@
+[
+  {
+    "file": "default-1.pdf",
+    "qpdf_exit": 0,
+    "qpdf": "checking target/performance-review-20261009/default-1.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "text_exit": 0,
+    "text_stderr": "",
+    "exact_text": true,
+    "pages": 1,
+    "sha256": "cfe9d70662d1577a5738f7c46df7981462cca06c9ec2aca1df4c90c372496d6e"
+  },
+  {
+    "file": "default-10.pdf",
+    "qpdf_exit": 0,
+    "qpdf": "checking target/performance-review-20261009/default-10.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "text_exit": 0,
+    "text_stderr": "",
+    "exact_text": true,
+    "pages": 10,
+    "sha256": "6ee4711a3f02f56cb8972bc2694759dc9cf13777d3c2d703c1ebb8097e9c704e"
+  },
+  {
+    "file": "default-100.pdf",
+    "qpdf_exit": 0,
+    "qpdf": "checking target/performance-review-20261009/default-100.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "text_exit": 0,
+    "text_stderr": "",
+    "exact_text": true,
+    "pages": 100,
+    "sha256": "1e35da2e79108179ff2923df0259fd67d966e4ba2de6d69565caccc3a0c44779"
+  },
+  {
+    "file": "raw-1.pdf",
+    "qpdf_exit": 0,
+    "qpdf": "checking target/performance-review-20261009/raw-1.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "text_exit": 0,
+    "text_stderr": "",
+    "exact_text": true,
+    "pages": 1,
+    "sha256": "bdfdd6179ce55d75d7169731d30df00330ff50eb139aac56b7c470dea320d616"
+  },
+  {
+    "file": "raw-10.pdf",
+    "qpdf_exit": 0,
+    "qpdf": "checking target/performance-review-20261009/raw-10.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "text_exit": 0,
+    "text_stderr": "",
+    "exact_text": true,
+    "pages": 10,
+    "sha256": "c62e57857bc50bae452d34fc68f940e6cd493c3a2c0addb67b3eba4c0fbfdc06"
+  },
+  {
+    "file": "raw-100.pdf",
+    "qpdf_exit": 0,
+    "qpdf": "checking target/performance-review-20261009/raw-100.pdf\nPDF Version: 1.7\nFile is not encrypted\nFile is not linearized\nNo syntax or stream encoding errors found; the file may still contain\nerrors that qpdf cannot detect\n",
+    "text_exit": 0,
+    "text_stderr": "",
+    "exact_text": true,
+    "pages": 100,
+    "sha256": "ce22146ab0b8f58865d0e266d2be5af6bb3903c864a28aeb08b9faed095be09b"
+  }
+]

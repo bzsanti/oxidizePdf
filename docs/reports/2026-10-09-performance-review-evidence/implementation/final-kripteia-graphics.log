@@ -1,0 +1,336 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 99 | Tests: 158 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...et/issue690-review/oxidize-pdf-core/src/graphics/mod.rs      158     99
+
+--- Worst Offenders ---
+  set_fill_color_icc_empty_components_panics_in_debug (target/issue690-review/oxidize-pdf-core/src/graphics/mod.rs:4144) - Score: 75
+    - Test 'set_fill_color_icc_empty_components_panics_in_debug' executes production code without asserting on its behaviour
+  set_stroke_color_icc_empty_components_panics_in_debug (target/issue690-review/oxidize-pdf-core/src/graphics/mod.rs:4155) - Score: 75
+    - Test 'set_stroke_color_icc_empty_components_panics_in_debug' executes production code without asserting on its behaviour
+  cid_show_element_new_sets_fields (target/issue690-review/oxidize-pdf-core/src/graphics/mod.rs:1676) - Score: 90
+    i Test 'cid_show_element_new_sets_fields' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_show_element_new_sets_fields' has multiple assertions without diagnostic messages
+    - Test 'cid_show_element_new_sets_fields' does not call any production code
+  test_translate (target/issue690-review/oxidize-pdf-core/src/graphics/mod.rs:1955) - Score: 90
+    - Test 'test_translate' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_multiple_clipping_regions (target/issue690-review/oxidize-pdf-core/src/graphics/mod.rs:2385) - Score: 90
+    i Test 'test_multiple_clipping_regions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_multiple_clipping_regions' has multiple assertions without diagnostic messages
+    - Test 'test_multiple_clipping_regions' has low assert-to-setup ratio (17%): 4 asserts vs 19 setup lines
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/src/graphics/mod.rs:
+  cid_show_element_new_sets_fields (line 1676) - Score: 90
+    i Test 'cid_show_element_new_sets_fields' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_show_element_new_sets_fields' has multiple assertions without diagnostic messages
+    - Test 'cid_show_element_new_sets_fields' does not call any production code
+  cid_show_element_x_offset_defaults_zero_and_builder_sets_it (line 1686) - Score: 100
+    i Test 'cid_show_element_x_offset_defaults_zero_and_builder_sets_it' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cid_show_element_x_offset_defaults_zero_and_builder_sets_it' has multiple assertions without diagnostic messages
+  show_cid_array_x_offset_displaces_without_consuming_advance (line 1698) - Score: 100
+    i Test 'show_cid_array_x_offset_displaces_without_consuming_advance' uses .unwrap() which silently discards error information
+  show_cid_array_x_offset_combines_with_adjust (line 1716) - Score: 100
+    i Test 'show_cid_array_x_offset_combines_with_adjust' uses .unwrap() which silently discards error information
+  show_cid_array_emits_tj_with_adjustment_between_glyph_runs (line 1734) - Score: 100
+    i Test 'show_cid_array_emits_tj_with_adjustment_between_glyph_runs' uses .unwrap() which silently discards error information
+  show_cid_array_with_empty_run_does_not_panic_and_emits_empty_tj (line 1752) - Score: 100
+    i Test 'show_cid_array_with_empty_run_does_not_panic_and_emits_empty_tj' uses .unwrap() which silently discards error information
+  show_cid_array_coalesces_consecutive_unadjusted_glyphs (line 1765) - Score: 100
+    i Test 'show_cid_array_coalesces_consecutive_unadjusted_glyphs' uses .unwrap() which silently discards error information
+  test_graphics_context_new (line 1782) - Score: 100
+    i Test 'test_graphics_context_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_graphics_context_new' has multiple assertions without diagnostic messages
+  test_graphics_context_default (line 1793) - Score: 100
+    i Test 'test_graphics_context_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_graphics_context_default' has multiple assertions without diagnostic messages
+  test_circle (line 1838) - Score: 100
+    i Test 'test_circle' has multiple assertions without diagnostic messages
+  test_stroke (line 1859) - Score: 100
+    i Test 'test_stroke' has multiple assertions without diagnostic messages
+  test_fill (line 1871) - Score: 100
+    i Test 'test_fill' has multiple assertions without diagnostic messages
+  test_fill_stroke (line 1883) - Score: 100
+    i Test 'test_fill_stroke' has multiple assertions without diagnostic messages
+  test_set_line_width (line 1911) - Score: 100
+    i Test 'test_set_line_width' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_line_width' has multiple assertions without diagnostic messages
+  test_set_line_cap (line 1919) - Score: 100
+    i Test 'test_set_line_cap' has multiple assertions without diagnostic messages
+  test_set_line_join (line 1932) - Score: 100
+    i Test 'test_set_line_join' has multiple assertions without diagnostic messages
+  test_save_restore_state (line 1945) - Score: 100
+    i Test 'test_save_restore_state' has multiple assertions without diagnostic messages
+  test_translate (line 1955) - Score: 90
+    - Test 'test_translate' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_rotate (line 1977) - Score: 100
+    i Test 'test_rotate' has multiple assertions without diagnostic messages
+  test_draw_image (line 1999) - Score: 100
+    i Test 'test_draw_image' has multiple assertions without diagnostic messages
+  test_gray_color_operations (line 2012) - Score: 100
+    i Test 'test_gray_color_operations' has multiple assertions without diagnostic messages
+  test_cmyk_color_operations (line 2025) - Score: 100
+    i Test 'test_cmyk_color_operations' has multiple assertions without diagnostic messages
+  test_method_chaining (line 2038) - Score: 100
+    i Test 'test_method_chaining' has multiple assertions without diagnostic messages
+  test_generate_operations (line 2058) - Score: 100
+    i Test 'test_generate_operations' has multiple assertions without diagnostic messages
+  test_clear_operations (line 2070) - Score: 100
+    i Test 'test_clear_operations' has multiple assertions without diagnostic messages
+  test_complex_path (line 2080) - Score: 100
+    i Test 'test_complex_path' has multiple assertions without diagnostic messages
+  test_graphics_context_clone (line 2105) - Score: 100
+    i Test 'test_graphics_context_clone' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_graphics_context_clone' has multiple assertions without diagnostic messages
+  test_set_opacity (line 2123) - Score: 100
+    i Test 'test_set_opacity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_opacity' has multiple assertions without diagnostic messages
+  test_set_fill_opacity (line 2142) - Score: 100
+    i Test 'test_set_fill_opacity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_fill_opacity' has multiple assertions without diagnostic messages
+  test_set_stroke_opacity (line 2155) - Score: 100
+    i Test 'test_set_stroke_opacity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_stroke_opacity' has multiple assertions without diagnostic messages
+  test_uses_transparency (line 2168) - Score: 100
+    i Test 'test_uses_transparency' has multiple assertions without diagnostic messages
+  test_generate_graphics_state_dict (line 2190) - Score: 100
+    i Test 'test_generate_graphics_state_dict' has multiple assertions without diagnostic messages
+  test_opacity_with_graphics_operations (line 2226) - Score: 100
+    i Test 'test_opacity_with_graphics_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_opacity_with_graphics_operations' has multiple assertions without diagnostic messages
+  test_begin_end_text (line 2244) - Score: 100
+    i Test 'test_begin_end_text' has multiple assertions without diagnostic messages
+  test_set_font (line 2254) - Score: 100
+    i Test 'test_set_font' has multiple assertions without diagnostic messages
+  test_show_text_with_escaping (line 2279) - Score: 100
+    i Test 'test_show_text_with_escaping' has multiple assertions without diagnostic messages
+  test_text_operations_chaining (line 2297) - Score: 100
+    i Test 'test_text_operations_chaining' has multiple assertions without diagnostic messages
+    i Test 'test_text_operations_chaining' uses .unwrap() which silently discards error information
+  test_clipping_with_path (line 2329) - Score: 100
+    i Test 'test_clipping_with_path' has multiple assertions without diagnostic messages
+  test_clipping_even_odd_with_path (line 2341) - Score: 100
+    i Test 'test_clipping_even_odd_with_path' has multiple assertions without diagnostic messages
+  test_clipping_chaining (line 2362) - Score: 100
+    i Test 'test_clipping_chaining' has multiple assertions without diagnostic messages
+  test_multiple_clipping_regions (line 2385) - Score: 90
+    i Test 'test_multiple_clipping_regions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_multiple_clipping_regions' has multiple assertions without diagnostic messages
+    - Test 'test_multiple_clipping_regions' has low assert-to-setup ratio (17%): 4 asserts vs 19 setup lines
+  test_move_to_and_line_to (line 2416) - Score: 100
+    i Test 'test_move_to_and_line_to' has multiple assertions without diagnostic messages
+  test_bezier_curve (line 2430) - Score: 100
+    i Test 'test_bezier_curve' has multiple assertions without diagnostic messages
+  test_circle_path (line 2446) - Score: 100
+    i Test 'test_circle_path' has multiple assertions without diagnostic messages
+  test_path_closing (line 2460) - Score: 100
+    i Test 'test_path_closing' has multiple assertions without diagnostic messages
+  test_fill_and_stroke (line 2477) - Score: 100
+    i Test 'test_fill_and_stroke' has multiple assertions without diagnostic messages
+  test_color_settings (line 2490) - Score: 100
+    i Test 'test_color_settings' has multiple assertions without diagnostic messages
+  test_line_styles (line 2509) - Score: 100
+    i Test 'test_line_styles' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_line_styles' has multiple assertions without diagnostic messages
+  test_opacity_settings (line 2527) - Score: 100
+    i Test 'test_opacity_settings' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_opacity_settings' has multiple assertions without diagnostic messages
+  test_state_save_restore (line 2542) - Score: 100
+    i Test 'test_state_save_restore' has multiple assertions without diagnostic messages
+  test_transformations (line 2557) - Score: 100
+    i Test 'test_transformations' has multiple assertions without diagnostic messages
+  test_rectangle_path (line 2585) - Score: 100
+    i Test 'test_rectangle_path' has multiple assertions without diagnostic messages
+  test_complex_path_operations (line 2607) - Score: 100
+    i Test 'test_complex_path_operations' has multiple assertions without diagnostic messages
+  test_graphics_state_dict_generation (line 2629) - Score: 100
+    i Test 'test_graphics_state_dict_generation' has multiple assertions without diagnostic messages
+  test_line_dash_pattern (line 2645) - Score: 90
+    - Test 'test_line_dash_pattern' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  test_line_cap_styles (line 2673) - Score: 100
+    i Test 'test_line_cap_styles' has multiple assertions without diagnostic messages
+  test_transparency_groups (line 2701) - Score: 100
+    i Test 'test_transparency_groups' has multiple assertions without diagnostic messages
+  test_nested_transparency_groups (line 2726) - Score: 100
+    i Test 'test_nested_transparency_groups' has multiple assertions without diagnostic messages
+  test_line_join_styles (line 2752) - Score: 100
+    i Test 'test_line_join_styles' has multiple assertions without diagnostic messages
+  test_rendering_intent (line 2780) - Score: 100
+    i Test 'test_rendering_intent' has multiple assertions without diagnostic messages
+  test_flatness_tolerance (line 2797) - Score: 100
+    i Test 'test_flatness_tolerance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_flatness_tolerance' has multiple assertions without diagnostic messages
+  test_smoothness_tolerance (line 2811) - Score: 100
+    i Test 'test_smoothness_tolerance' asserts against a hardcoded constant instead of a computed expected value
+  test_bezier_curves (line 2819) - Score: 100
+    i Test 'test_bezier_curves' has multiple assertions without diagnostic messages
+  test_color_creation (line 2863) - Score: 100
+    i Test 'test_color_creation' has multiple assertions without diagnostic messages
+  test_extended_graphics_state (line 2881) - Score: 90
+    - Test 'test_extended_graphics_state' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_path_construction_methods (line 2892) - Score: 90
+    - Test 'test_path_construction_methods' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  test_graphics_context_clone_advanced (line 2910) - Score: 100
+    i Test 'test_graphics_context_clone_advanced' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_graphics_context_clone_advanced' has multiple assertions without diagnostic messages
+  test_basic_drawing_operations (line 2921) - Score: 100
+    i Test 'test_basic_drawing_operations' has multiple assertions without diagnostic messages
+  test_graphics_state_stack (line 2939) - Score: 100
+    i Test 'test_graphics_state_stack' has multiple assertions without diagnostic messages
+  test_word_spacing (line 2965) - Score: 100
+    i Test 'test_word_spacing' uses .unwrap() which silently discards error information
+  test_character_spacing (line 2975) - Score: 100
+    i Test 'test_character_spacing' uses .unwrap() which silently discards error information
+  test_justified_text (line 2985) - Score: 100
+    i Test 'test_justified_text' has multiple assertions without diagnostic messages
+    i Test 'test_justified_text' uses .unwrap() which silently discards error information
+  test_justified_text_single_word (line 3007) - Score: 100
+    i Test 'test_justified_text_single_word' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_justified_text_single_word' has multiple assertions without diagnostic messages
+    i Test 'test_justified_text_single_word' uses .unwrap() which silently discards error information
+  test_text_width_estimation (line 3023) - Score: 100
+    i Test 'test_text_width_estimation' has multiple assertions without diagnostic messages
+  test_set_alpha_methods (line 3033) - Score: 100
+    i Test 'test_set_alpha_methods' has multiple assertions without diagnostic messages
+  test_alpha_methods_generate_extgstate (line 3056) - Score: 100
+    i Test 'test_alpha_methods_generate_extgstate' has multiple assertions without diagnostic messages
+    i Test 'test_alpha_methods_generate_extgstate' uses .unwrap() which silently discards error information
+  test_add_command (line 3087) - Score: 100
+    i Test 'test_add_command' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_add_command' has multiple assertions without diagnostic messages
+  test_set_custom_font (line 3137) - Score: 100
+    i Test 'test_set_custom_font' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_custom_font' has multiple assertions without diagnostic messages
+  test_show_text_standard_font_uses_literal_string (line 3146) - Score: 100
+    i Test 'test_show_text_standard_font_uses_literal_string' has multiple assertions without diagnostic messages
+    i Test 'test_show_text_standard_font_uses_literal_string' uses .unwrap() which silently discards error information
+  test_show_text_custom_font_uses_hex_encoding (line 3162) - Score: 100
+    i Test 'test_show_text_custom_font_uses_hex_encoding' has multiple assertions without diagnostic messages
+    i Test 'test_show_text_custom_font_uses_hex_encoding' uses .unwrap() which silently discards error information
+  test_show_text_custom_font_ascii_still_hex (line 3184) - Score: 100
+    i Test 'test_show_text_custom_font_ascii_still_hex' uses .unwrap() which silently discards error information
+  test_show_text_tracks_used_characters (line 3204) - Score: 100
+    i Test 'test_show_text_tracks_used_characters' has multiple assertions without diagnostic messages
+    i Test 'test_show_text_tracks_used_characters' uses .unwrap() which silently discards error information
+  test_is_custom_font_toggles_correctly (line 3221) - Score: 100
+    i Test 'test_is_custom_font_toggles_correctly' has multiple assertions without diagnostic messages
+  test_set_glyph_mapping (line 3239) - Score: 100
+    i Test 'test_set_glyph_mapping' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_glyph_mapping' has multiple assertions without diagnostic messages
+  test_draw_text_basic (line 3270) - Score: 100
+    i Test 'test_draw_text_basic' has multiple assertions without diagnostic messages
+  test_draw_text_with_special_characters (line 3297) - Score: 100
+    i Test 'test_draw_text_with_special_characters' has multiple assertions without diagnostic messages
+  test_draw_text_unicode_detection (line 3312) - Score: 100
+    i Test 'test_draw_text_unicode_detection' uses .unwrap() which silently discards error information
+  test_draw_text_hex_encoding (line 3333) - Score: 100
+    i Test 'test_draw_text_hex_encoding' has multiple assertions without diagnostic messages
+  test_draw_text_cid (line 3345) - Score: 100
+    i Test 'test_draw_text_cid' has multiple assertions without diagnostic messages
+  test_draw_text_unicode (line 3357) - Score: 100
+    i Test 'test_draw_text_unicode' has multiple assertions without diagnostic messages
+  test_begin_end_transparency_group (line 3368) - Score: 100
+    i Test 'test_begin_end_transparency_group' has multiple assertions without diagnostic messages
+  test_transparency_group_nesting (line 3396) - Score: 100
+    i Test 'test_transparency_group_nesting' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_transparency_group_nesting' has multiple assertions without diagnostic messages
+  test_transparency_group_without_begin (line 3426) - Score: 100
+    i Test 'test_transparency_group_without_begin' has multiple assertions without diagnostic messages
+  test_extgstate_manager_access (line 3436) - Score: 100
+    i Test 'test_extgstate_manager_access' asserts against a hardcoded constant instead of a computed expected value
+  test_extgstate_manager_mut_access (line 3443) - Score: 100
+    i Test 'test_extgstate_manager_mut_access' asserts against a hardcoded constant instead of a computed expected value
+  test_has_extgstates (line 3450) - Score: 100
+    i Test 'test_has_extgstates' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_has_extgstates' has multiple assertions without diagnostic messages
+    i Test 'test_has_extgstates' uses .unwrap() which silently discards error information
+  test_generate_extgstate_resources (line 3472) - Score: 100
+    i Test 'test_generate_extgstate_resources' uses .unwrap() which silently discards error information
+  test_apply_extgstate (line 3483) - Score: 100
+    i Test 'test_apply_extgstate' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_apply_extgstate' has multiple assertions without diagnostic messages
+    i Test 'test_apply_extgstate' uses .unwrap() which silently discards error information
+  test_with_extgstate (line 3509) - Score: 90
+    - Test 'test_with_extgstate' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_set_blend_mode (line 3520) - Score: 100
+    i Test 'test_set_blend_mode' has multiple assertions without diagnostic messages
+    i Test 'test_set_blend_mode' uses .unwrap() which silently discards error information
+  test_render_list (line 3549) - Score: 90
+    - Test 'test_render_list' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_render_column_layout (line 3559) - Score: 90
+    - Test 'test_render_column_layout' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_clip_ellipse (line 3569) - Score: 100
+    i Test 'test_clip_ellipse' has multiple assertions without diagnostic messages
+  test_clipping_path_access (line 3592) - Score: 100
+    i Test 'test_clipping_path_access' has multiple assertions without diagnostic messages
+    i Test 'test_clipping_path_access' uses .unwrap() which silently discards error information
+  test_edge_case_opacity_out_of_range (line 3626) - Score: 100
+    i Test 'test_edge_case_opacity_out_of_range' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_edge_case_opacity_out_of_range' has multiple assertions without diagnostic messages
+  test_edge_case_line_width_extremes (line 3639) - Score: 100
+    i Test 'test_edge_case_line_width_extremes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_edge_case_line_width_extremes' has multiple assertions without diagnostic messages
+  test_interaction_transparency_plus_clipping (line 3652) - Score: 100
+    i Test 'test_interaction_transparency_plus_clipping' has multiple assertions without diagnostic messages
+    i Test 'test_interaction_transparency_plus_clipping' uses .unwrap() which silently discards error information
+  test_interaction_extgstate_plus_text (line 3668) - Score: 100
+    i Test 'test_interaction_extgstate_plus_text' has multiple assertions without diagnostic messages
+    i Test 'test_interaction_extgstate_plus_text' uses .unwrap() which silently discards error information
+  test_interaction_chained_transformations (line 3686) - Score: 90
+    i Test 'test_interaction_chained_transformations' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_interaction_chained_transformations' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_e2e_complete_page_with_header (line 3700) - Score: 100
+    i Test 'test_e2e_complete_page_with_header' has multiple assertions without diagnostic messages
+    i Test 'test_e2e_complete_page_with_header' uses .unwrap() which silently discards error information
+  test_e2e_watermark_workflow (line 3732) - Score: 100
+    i Test 'test_e2e_watermark_workflow' has multiple assertions without diagnostic messages
+    i Test 'test_e2e_watermark_workflow' uses .unwrap() which silently discards error information
+  test_draw_text_uses_is_custom_font_flag (line 3772) - Score: 100
+    i Test 'test_draw_text_uses_is_custom_font_flag' uses .unwrap() which silently discards error information
+  test_draw_text_standard_font_uses_literal (line 3789) - Score: 100
+    i Test 'test_draw_text_standard_font_uses_literal' uses .unwrap() which silently discards error information
+  test_show_text_smp_character_uses_surrogate_pairs (line 3806) - Score: 100
+    i Test 'test_show_text_smp_character_uses_surrogate_pairs' has multiple assertions without diagnostic messages
+    i Test 'test_show_text_smp_character_uses_surrogate_pairs' uses .unwrap() which silently discards error information
+  test_save_restore_preserves_font_state (line 3831) - Score: 100
+    i Test 'test_save_restore_preserves_font_state' asserts against a hardcoded constant instead of a computed expected value
+  test_save_restore_mixed_font_encoding (line 3853) - Score: 100
+    i Test 'test_save_restore_mixed_font_encoding' uses .unwrap() which silently discards error information
+  test_graphics_state_arc_str_save_restore (line 3880) - Score: 100
+    i Test 'test_graphics_state_arc_str_save_restore' asserts against a hardcoded constant instead of a computed expected value
+  nan_line_width_sanitised_at_emission (line 3925) - Score: 100
+    i Test 'nan_line_width_sanitised_at_emission' has multiple assertions without diagnostic messages
+  pos_inf_line_width_sanitised_at_emission (line 3940) - Score: 100
+    i Test 'pos_inf_line_width_sanitised_at_emission' has multiple assertions without diagnostic messages
+  nan_path_coords_sanitised_at_emission (line 3955) - Score: 100
+    i Test 'nan_path_coords_sanitised_at_emission' has multiple assertions without diagnostic messages
+  set_fill_color_icc_emits_named_cs_then_components (line 4002) - Score: 90
+    - Test 'set_fill_color_icc_emits_named_cs_then_components' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  set_stroke_color_icc_emits_named_cs_then_components (line 4017) - Score: 90
+    - Test 'set_stroke_color_icc_emits_named_cs_then_components' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  set_fill_color_icc_cmyk_four_channels (line 4040) - Score: 90
+    - Test 'set_fill_color_icc_cmyk_four_channels' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  set_fill_color_calibrated_named_uses_caller_name (line 4051) - Score: 90
+    - Test 'set_fill_color_calibrated_named_uses_caller_name' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  set_stroke_color_calibrated_named_uses_caller_name (line 4063) - Score: 90
+    - Test 'set_stroke_color_calibrated_named_uses_caller_name' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  legacy_calibrated_rgb_still_emits_calrgb1 (line 4096) - Score: 90
+    - Test 'legacy_calibrated_rgb_still_emits_calrgb1' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  legacy_calibrated_gray_still_emits_calgray1 (line 4108) - Score: 90
+    - Test 'legacy_calibrated_gray_still_emits_calgray1' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  set_fill_color_icc_empty_components_panics_in_debug (line 4144) - Score: 75
+    - Test 'set_fill_color_icc_empty_components_panics_in_debug' executes production code without asserting on its behaviour
+  set_stroke_color_icc_empty_components_panics_in_debug (line 4155) - Score: 75
+    - Test 'set_stroke_color_icc_empty_components_panics_in_debug' executes production code without asserting on its behaviour
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

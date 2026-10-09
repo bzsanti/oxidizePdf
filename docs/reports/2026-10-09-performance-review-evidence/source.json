@@ -1,0 +1,4 @@
+{
+  "revision": "8a92dce443e743b385aad27bebf85ed03762b09c",
+  "purpose": "Read-only profiling; unchanged product; independent consumer lock and release profile"
+}
