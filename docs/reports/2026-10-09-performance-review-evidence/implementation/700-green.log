@@ -1,0 +1,10 @@
+   Compiling oxidize-pdf v5.4.1 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+   Compiling writer-perf-probe v0.1.0 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009)
+    Finished `release` profile [optimized + debuginfo] target(s) in 1m 53s
+     Running tests/metrics.rs (target/performance-review-20261009/target/release/deps/metrics-bb365d468b1d0394)
+
+running 1 test
+test warmed_queries_do_not_clone_maps_and_replacements_remain_visible ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,3 +1,4 @@
+use crate::text::used_characters::UsedCharacters;
 pub mod calibrated_color;
 pub mod clipping;
 pub(crate) mod color;
@@ -163,7 +164,7 @@ pub struct GraphicsContext {
     // subsetting; a single global set across all fonts caused every font's
     // subset to include chars drawn with a different font, doubling emitted
     // size when two fonts in the same family were registered).
-    used_characters_by_font: HashMap<String, HashSet<char>>,
+    used_characters_by_font: HashMap<String, UsedCharacters>,
     // Glyph mapping for Unicode fonts (Unicode code point -> Glyph ID)
     glyph_mapping: Option<HashMap<u32, u16>>,
     // Transparency group stack for nested groups
@@ -1637,12 +1638,16 @@ impl GraphicsContext {
     /// Get the per-font character map for font subsetting (issue #204).
     ///
     /// Keys are the registered custom-font names exactly as passed to
-    /// `Document::add_font_from_bytes`. Builtin fonts never appear as
-    /// keys because they don't need subsetting. A font name missing
+    /// `Document::add_font_from_bytes`. Builtin names are retained too, to
+    /// preserve late custom registration. A font name missing
     /// from the map means no content stream in this context drew any
     /// character with that font.
-    pub(crate) fn get_used_characters_by_font(&self) -> &HashMap<String, HashSet<char>> {
-        &self.used_characters_by_font
+    pub(crate) fn get_used_characters_by_font(
+        &self,
+    ) -> impl Iterator<Item = (&String, &HashSet<char>)> {
+        self.used_characters_by_font
+            .iter()
+            .map(|(name, chars)| (name, chars.as_set()))
     }
 
     /// Merge a per-font char map produced by an external content-stream
@@ -1650,12 +1655,15 @@ impl GraphicsContext {
     /// into this graphics context's accumulator. Issue #204 — callers
     /// of [`crate::Page::append_raw_content`] MUST report what they
     /// drew so the writer can subset each custom font correctly.
-    pub(crate) fn merge_font_usage(&mut self, usage: &HashMap<String, HashSet<char>>) {
+    pub(crate) fn merge_font_usage<'a>(
+        &mut self,
+        usage: impl IntoIterator<Item = (&'a String, &'a HashSet<char>)>,
+    ) {
         for (name, chars) in usage {
             self.used_characters_by_font
                 .entry(name.clone())
                 .or_default()
-                .extend(chars);
+                .extend(chars.iter().copied());
         }
     }
 }

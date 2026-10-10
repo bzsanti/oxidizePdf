@@ -1,0 +1,6 @@
+
+running 1 test
+test numeric_performance_tests::numeric_operators_match_legacy_formatting_at_boundaries_and_random_bits ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.36s
+

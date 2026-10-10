@@ -1,0 +1,77 @@
+--------------------------------------------------------------------------------
+Profile data file 'target/performance-review-20261009/raw.callgrind' (creator: callgrind-3.22.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 82117945
+Trigger: Program termination
+Profiled target:  target/performance-review-20261009/target/release/writer-perf-probe raw 10 100 target/performance-review-20261009/profile-raw.pdf (PID 4, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       95
+Include dirs:     
+User annotated:   
+Auto-annotation:  off
+
+--------------------------------------------------------------------------------
+Ir                   
+--------------------------------------------------------------------------------
+490,851,098 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                    file:function
+--------------------------------------------------------------------------------
+490,851,098 (100.0%)  ???:0x000000000001f540 [/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2]
+490,600,633 (99.95%)  ???:(below main) [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+490,600,621 (99.95%)  ./csu/../csu/libc-start.c:__libc_start_main@@GLIBC_2.34 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+490,600,438 (99.95%)  ./csu/../sysdeps/nptl/libc_start_call_main.h:(below main) [/usr/lib/x86_64-linux-gnu/libc.so.6]
+490,598,631 (99.95%)  ???:main [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+490,598,619 (99.95%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/rt.rs:std::rt::lang_start_internal [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+490,495,803 (99.93%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/ops/function.rs:std::rt::lang_start_internal
+490,495,802 (99.93%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/rt.rs:std::rt::lang_start::{{closure}} [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+490,495,788 (99.93%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:std::sys::backtrace::__rust_begin_short_backtrace [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+490,495,785 (99.93%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:std::sys::backtrace::__rust_begin_short_backtrace
+490,495,784 (99.93%)  /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/src/main.rs:writer_perf_probe::main
+490,426,443 (99.91%)  target/performance-review-20261009/src/main.rs:writer_perf_probe::main [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+490,411,385 (99.91%)  target/performance-review-20261009/src/main.rs:writer_perf_probe::main::{{closure}} [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+290,390,919 (59.16%)  target/performance-review-20261009/src/main.rs:writer_perf_probe::build [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+254,580,939 (51.87%)  /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core/src/text/mod.rs:oxidize_pdf::text::TextContext::write
+187,938,339 (38.29%)  /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core/src/document.rs:oxidize_pdf::document::Document::to_bytes
+187,931,267 (38.29%)  target/issue690-review/oxidize-pdf-core/src/document.rs:oxidize_pdf::document::Document::to_bytes [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+187,857,714 (38.27%)  /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core/src/writer/pdf_writer/mod.rs:oxidize_pdf::writer::pdf_writer::PdfWriter<W>::write_document
+172,648,666 (35.17%)  /rust/deps/hashbrown-0.16.1/src/map.rs:hashbrown::map::HashMap<K,V,S,A>::insert [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+164,220,945 (33.46%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/iter/traits/iterator.rs:oxidize_pdf::text::TextContext::write
+164,176,225 (33.45%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/non_null.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+158,325,185 (32.26%)  /rust/deps/hashbrown-0.16.1/src/map.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+149,669,434 (30.49%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/fmt/mod.rs:core::fmt::write [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+135,381,565 (27.58%)  target/issue690-review/oxidize-pdf-core/src/page.rs:oxidize_pdf::writer::pdf_writer::PdfWriter<W>::write_document
+135,372,205 (27.58%)  target/issue690-review/oxidize-pdf-core/src/page.rs:oxidize_pdf::page::Page::generate_content_with_resources [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+135,301,485 (27.56%)  /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core/src/graphics/ops.rs:oxidize_pdf::graphics::ops::serialize_ops
+125,896,177 (25.65%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/fmt/rt.rs:core::fmt::write
+125,399,976 (25.55%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/hash/mod.rs:core::hash::BuildHasher::hash_one [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+115,742,845 (23.58%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/io/mod.rs:oxidize_pdf::graphics::ops::serialize_ops
+112,508,274 (22.92%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/fmt/float.rs:<f64 as core::fmt::Display>::fmt [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+100,088,594 (20.39%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/fmt/float.rs:core::fmt::float::float_to_decimal_common_exact::<f64> [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 74,422,400 (15.16%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/num/imp/flt2dec/strategy/grisu.rs:core::fmt::float::float_to_decimal_common_exact::<f64>
+ 70,403,840 (14.34%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/num/imp/flt2dec/strategy/dragon.rs:core::num::imp::flt2dec::strategy::dragon::format_exact [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 69,150,028 (14.09%)  target/issue690-review/oxidize-pdf-core/src/text/mod.rs:oxidize_pdf::text::TextContext::write [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 67,522,428 (13.76%)  target/issue690-review/oxidize-pdf-core/src/text/mod.rs:oxidize_pdf::text::build_show_text_op [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 65,588,224 (13.36%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/hash/sip.rs:core::hash::BuildHasher::hash_one
+ 50,745,894 (10.34%)  target/issue690-review/oxidize-pdf-core/src/writer/pdf_writer/mod.rs:oxidize_pdf::writer::pdf_writer::PdfWriter<W>::write_document [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 37,242,498 ( 7.59%)  /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core/src/text/encoding.rs:oxidize_pdf::text::encoding::TextEncoding::encode
+ 33,250,672 ( 6.77%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/hash/sip.rs:<core::hash::sip::Hasher<S> as core::hash::Hasher>::write [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 33,098,989 ( 6.74%)  ???:__rustc::__rust_realloc [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 33,002,686 ( 6.72%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/alloc.rs:__rustc::__rdl_realloc [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 32,232,262 ( 6.57%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_realloc
+ 30,884,829 ( 6.29%)  ./malloc/./malloc/malloc.c:realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 28,946,924 ( 5.90%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:memcpy@GLIBC_2.2.5 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 28,065,538 ( 5.72%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs:oxidize_pdf::text::encoding::TextEncoding::encode
+ 26,891,935 ( 5.48%)  /home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core/src/text/encoding.rs:oxidize_pdf::text::encoding::escape_show_text_literal_bytes
+ 26,609,912 ( 5.42%)  /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVecInner>::finish_grow [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 26,460,754 ( 5.39%)  ./malloc/./malloc/malloc.c:_int_malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 25,621,440 ( 5.22%)  /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/intrinsics/mod.rs:core::hash::BuildHasher::hash_one
+ 24,617,658 ( 5.02%)  target/issue690-review/oxidize-pdf-core/src/writer/pdf_writer/mod.rs:oxidize_pdf::writer::pdf_writer::PdfWriter<W>::write_object [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+ 24,386,854 ( 4.97%)  ???:__rustc::__rust_alloc [/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-review-20261009/target/release/writer-perf-probe]
+
