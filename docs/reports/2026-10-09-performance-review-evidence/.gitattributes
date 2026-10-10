@@ -1,0 +1,6 @@
+# Synthetic PDF/layout outputs are evidence, not source diffs.
+*.out binary
+# Preserve captured tool output byte-for-byte, including intentional whitespace.
+*.log -whitespace
+*.txt -whitespace
+*.patch -whitespace

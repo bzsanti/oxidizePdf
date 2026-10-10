@@ -1,0 +1,197 @@
+[
+  {
+    "case": "701-encoding-control-accent-150.out",
+    "files": [
+      {
+        "name": "701-encoding-control-accent-150.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "50f3cf04c4af093b2c6cfc5e2f0c07439c0bae2de206a4ac594e9fd20fbddee2",
+        "page_rasters": [
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8"
+        ]
+      },
+      {
+        "name": "701-encoding-candidate-accent-150.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "50f3cf04c4af093b2c6cfc5e2f0c07439c0bae2de206a4ac594e9fd20fbddee2",
+        "page_rasters": [
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8"
+        ]
+      }
+    ]
+  },
+  {
+    "case": "701-encoding-control-accent-raw-150.out",
+    "files": [
+      {
+        "name": "701-encoding-control-accent-raw-150.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "50f3cf04c4af093b2c6cfc5e2f0c07439c0bae2de206a4ac594e9fd20fbddee2",
+        "page_rasters": [
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8"
+        ]
+      },
+      {
+        "name": "701-encoding-candidate-accent-raw-150.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "50f3cf04c4af093b2c6cfc5e2f0c07439c0bae2de206a4ac594e9fd20fbddee2",
+        "page_rasters": [
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8",
+          "e2cb012c253bfb1a5ede5194f88b0751f739c3d53e12b423185dc205558546a8"
+        ]
+      }
+    ]
+  },
+  {
+    "case": "701-encoding-control-cjk-60.out",
+    "files": [
+      {
+        "name": "701-encoding-control-cjk-60.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "71030ef0778c2a6ea2b9b85ff340db404ebd1af810d610bcc7e5b1b7f5362f35",
+        "page_rasters": [
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688"
+        ]
+      },
+      {
+        "name": "701-encoding-candidate-cjk-60.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "71030ef0778c2a6ea2b9b85ff340db404ebd1af810d610bcc7e5b1b7f5362f35",
+        "page_rasters": [
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688"
+        ]
+      }
+    ]
+  },
+  {
+    "case": "701-encoding-control-cjk-raw-60.out",
+    "files": [
+      {
+        "name": "701-encoding-control-cjk-raw-60.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "71030ef0778c2a6ea2b9b85ff340db404ebd1af810d610bcc7e5b1b7f5362f35",
+        "page_rasters": [
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688"
+        ]
+      },
+      {
+        "name": "701-encoding-candidate-cjk-raw-60.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "71030ef0778c2a6ea2b9b85ff340db404ebd1af810d610bcc7e5b1b7f5362f35",
+        "page_rasters": [
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688",
+          "f90ed10462db297201f17befc91c414325d227e30a4680dc5dbdef8a3e047688"
+        ]
+      }
+    ]
+  },
+  {
+    "case": "701-encoding-control-flow-50.out",
+    "files": [
+      {
+        "name": "701-encoding-control-flow-50.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "e81e4172ff5ade2b96a86c1bd230cb18df5aa54c6b53742f8b8890e43cf9acac",
+        "page_rasters": [
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6"
+        ]
+      },
+      {
+        "name": "701-encoding-candidate-flow-50.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "e81e4172ff5ade2b96a86c1bd230cb18df5aa54c6b53742f8b8890e43cf9acac",
+        "page_rasters": [
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6"
+        ]
+      }
+    ]
+  }
+]

@@ -1,3 +1,70 @@
+## Release 5.4.2 — 2026-10-10
+
+- Issue: #705 — release: publish oxidize-pdf 5.4.2 — https://github.com/bzsanti/oxidizePdf/issues/705
+- Estado: activa; publicación solicitada explícitamente. Responsable: Codex. Prioridad P1. Base develop befc1a2, árbol idéntico al head revisado 5d554e3 de #704. Checkout existente target/issue690-review; WIP raíz preservado.
+- Alcance: #700–#703 integradas; cambio patch de versión, README y changelog. Coste residual de gráficos fraccionarios sin compresión (3,6%) explícito; sin cambios adicionales de código ni dependencias.
+- Cierre: paquete verificado, CI del PR de release aprobada, merge main y tag v5.4.2, workflow Release exitoso, artefacto crates.io y GitHub Release verificados, sincronización main→develop.
+- Siguiente acción: verificar paquete y revisión proporcional, publicar PR de release a main y completar las puertas de publicación. Reutilizar evidencia vigente sobre las mismas fuentes de #704.
+
+## Implementación autorizada de rendimiento — 2026-10-09
+
+- Orden: #700 → #702 → #701 → #703. Responsable: Codex. Prioridad P2. Estado: las cuatro implementadas, medidas y revisadas localmente. Integración/CI aún pendientes para todas. Issues OPEN confirmadas; títulos/URLs y criterios particulares en sus entradas siguientes.
+- Issue: #700 — perf(text): avoid cloning complete font metric tables for each width lookup — https://github.com/bzsanti/oxidizePdf/issues/700
+- Base: checkout existente limpio target/issue690-review, rama perf/issues-700-703 desde origin/develop actualizado. Raíz/WIP preservados; sin nuevos clones ni worktrees.
+- Requisitos/bloqueantes finitos: (1) métricas sin copias, (2) bytes exactos sin buffers intermedios, (3) tracking completo con menos hashing, (4) números exactos con ruta rápida: demostrados localmente con pruebas discriminantes y comparación externa. #700: RED 100 asignaciones / GREEN 0; layout estándar 52,2% y flow comprimido 25,1% menos tiempo. #702: oráculo BMP/suplementarios, 868 unitarias y cinco pares externos; mejora incremental 1,7–9,2%. #701: 9 unitarias y 7 contratos writer, cinco pares externos; acentos 17,9–26,4%, flow 11,1%. #703: oráculo numérico, mutación -0, cuatro pares externos; enteros 44,8–72,5% menos tiempo. Primer fallback (7,8–9,1% más lento) corregido con formateo conjunto; candidato final conserva 3,6% más tiempo en raw fraccionario (IC pareado de reducción −5,4 a −1,0), declarado como tradeoff de revisión, no ocultado ni contado como mejora. El criterio de #703 exige medir/declarar ese coste, no garantiza mejora universal.
+- Validación conjunta: 10.434 PASS / 0 FAIL / 71 ignorados existentes, incluyendo doctests; exit 0 sobre las fuentes finales. Pendientes finitos: publicar PR a develop con evidencia, CI y revisión/integración. Formato, Clippy all-targets/internal-testing y los dos análisis Kripteia pasan/revisados. No se añaden dependencias ni C/FFI.
+- Validación inicial: evidencia 5.4.1 y controles binarios preservados en target/performance-700-703; controles intactos. Siguiente acción: publicar PR a develop y verificar CI. Evidencia incremental: target/performance-700-703/.
+- #690: usuario informa fallo qpdf, pero no puede confirmar ahora la versión; sigue OPEN. No atribuirlo todavía a 5.4.1 ni afirmar aceptación independiente. Investigación diferida por instrucción del usuario.
+
+## Registro de rendimiento y cierre de issues resueltas — 2026-10-09
+
+- Estado: registro y cierres administrativos completados por petición del usuario. Responsable: Codex. La autorización vigente incluye cerrar las issues de oshtivi y sustituye la reserva anterior de #662/#663.
+- #662 CLOSED/COMPLETED: PR #664 MERGED en develop (`136fa170`), incluido en v5.4.1; evidencia retenida de cinco contratos MacRoman y CI aprobada. #663 CLOSED/COMPLETED: PR #665 MERGED en develop (`4a2c38a8`), incluido en v5.4.1; evidencia retenida de trece contratos de tracking y CI aprobada. Comentarios de cierre en inglés publicados; estados y ascendencia al tag verificados, sin atribuir nuevas ejecuciones de tests.
+- Se mantienen abiertas #690 (falta aceptación de Studio con 5.4.1), #642 (aceptación de seguridad pendiente), #581 (evaluación oficial TEDS/layout pendiente), #583 (recuperación opt-in/medición pendiente) y #294 (proveedor VLM pendiente). Sus cuerpos/comentarios actuales no acreditan cierre.
+- Evidencia remota: `docs/reports/2026-10-09-performance-review-evidence/issues-after-registration-and-closure.json`. Sin cambios de producto ni implementación activada.
+
+### Métricas de fuentes sin copias completas
+
+- Issue: #700 — perf(text): avoid cloning complete font metric tables for each width lookup — https://github.com/bzsanti/oxidizePdf/issues/700
+- Estado: Implementada y validada localmente; integración/CI pendientes. Prioridad P2. Responsable: Codex.
+- Cierre: eliminar copias de mapas por consulta conservando resolución/anchuras/aislamiento; mejora medida en layout real, regresiones y revisión/CI aprobadas.
+- Última validación: RED/GREEN de asignaciones, anchuras/aislamiento/reemplazo, layout estándar 52,2% y flow comprimido 25,1% menos tiempo; evidencia 700-* en target/performance-700-703. Siguiente acción: regresión conjunta y PR a develop.
+
+### Registro de caracteres con menos hashing
+
+- Issue: #701 — perf(text): reduce repeated character hashing while preserving font usage tracking — https://github.com/bzsanti/oxidizePdf/issues/701
+- Estado: Implementada y validada localmente; integración/CI pendientes. Prioridad P2. Responsable: Codex.
+- Cierre: reducir coste conservando todos los caracteres, Unicode, unión por nombre/contexto/página, registro tardío y subsetting; medición y regresiones/revisión/CI.
+- Última validación: 9 unitarias y 7 contratos writer pasan; mutación que elimina Unicode detectada. Acentos 17,9–26,4%, flow 11,1% menos tiempo; CJK raw no concluyente. Siguiente acción: regresión conjunta y PR a develop.
+
+### Codificación y escape sin buffers intermedios
+
+- Issue: #702 — perf(text): eliminate intermediate encoding buffers in show-text construction — https://github.com/bzsanti/oxidizePdf/issues/702
+- Estado: Implementada y validada localmente; integración/CI pendientes. Prioridad P2. Responsable: Codex.
+- Cierre: menos asignaciones/tiempo con bytes, escapes, UTF-16 y semántica exactos; capacidades seguras, muestras ASCII/acentos/CJK, regresiones/revisión/CI.
+- Última validación: 868 unitarias pasan, oráculo BMP/suplementarios y cinco pares qpdf/bbox/píxeles idénticos. Mejora incremental 1,7–9,2%; reserva inicial insuficiente corregida. Siguiente acción: regresión conjunta y PR a develop.
+
+### Formateo numérico de operadores
+
+- Issue: #703 — perf(graphics): optimize numeric operator formatting without changing serialized semantics — https://github.com/bzsanti/oxidizePdf/issues/703
+- Estado: Implementada y validada localmente; integración/CI pendientes. Prioridad P2. Responsable: Codex.
+- Cierre: mejora medida conservando bytes/precisión/redondeo/no finitos/orden/geometría y píxeles; pruebas diferenciales, revisión y CI.
+- Última validación: 16 unitarias pasan con oráculo numérico y mutación -0 detectada. Primer candidato con regresión fraccionaria descartado; fallback conjunto e inline medidos en la comparación final. Siguiente acción: publicar PR a develop y verificar CI, declarando el coste residual fraccionario.
+
+El bloqueo por falta de issue del diagnóstico siguiente queda resuelto por #700–#703; su texto conserva la evidencia anterior al registro. El candidato de las cuatro issues se valida según el bloque activo superior; sus criterios siguen requiriendo integración y CI, no solo documentación, para el cierre.
+
+## Revisión de rendimiento adicional — 2026-10-09
+
+- Estado: Implementada y validada localmente; integración/CI pendientes. Prioridad P2. Responsable: Codex.
+- Issue: pendiente. GitHub consultado: siete OPEN (#294/#581/#583/#642/#662/#663/#690), ninguna aplicable. #661 ya está cerrada e integrada; no se reutiliza para activar trabajo nuevo.
+- Alcance: generación y layout de 5.4.1 en checkout existente `target/issue690-review`, HEAD `8a92dce`, árbol idéntico al tag. Raíz/WIP previos preservados; sin cambios de producto, ramas, publicaciones ni métricas históricas.
+- Hallazgos: copia completa de métricas por consulta; hash por carácter repetido; buffers de codificación/escape; formateo numérico de operadores. Informe y evidencias: [2026-10-09-performance-review.md](docs/reports/2026-10-09-performance-review.md).
+- Última validación: 16 unitarias pasan con oráculo numérico y mutación -0 detectada. Primer candidato con regresión fraccionaria descartado; fallback conjunto e inline medidos en la comparación final. Siguiente acción: publicar PR a develop y verificar CI, declarando el coste residual fraccionario.
+- Dependencia externa y criterio de desbloqueo: mantenimiento crea/vincula issues específicas y confirma estado OPEN con alcance/aceptación; registrar número, título y URL antes de corregir.
+- Criterio de cierre de cada optimización: ahorro medido frente a control comparable, misma semántica de métricas/Unicode/registro tardío/serialización según alcance, regresiones discriminantes, revisión y validación proporcional. No cerrar por completar el diagnóstico.
+- Siguiente acción exacta: crear/vincular primero la issue de copias de `text/metrics.rs:286–308`; probar préstamos/Arc conservando resolución por documento y medir layout real. Después abordar los otros hallazgos bajo sus issues.
+- Restricciones: no corregir ni recalibrar bajo una entrada sin issue; no omitir tracking estándar ni cambiar precisión/defaults de compresión para ganar el benchmark. No se repitió suite completa del core ni Clippy; las verificaciones de un candidato futuro siguen pendientes.
+
 ## #690 — inherited zero-offset xref entries — 2026-10-08
 
 ## Release 5.4.1 — 2026-10-08

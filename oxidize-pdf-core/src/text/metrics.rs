@@ -105,7 +105,7 @@ impl Default for FontMetricsStore {
 
 // Dynamic registry for custom font metrics
 lazy_static::lazy_static! {
-    static ref CUSTOM_FONT_METRICS: RwLock<HashMap<String, FontMetrics>> =
+    static ref CUSTOM_FONT_METRICS: RwLock<HashMap<String, Arc<FontMetrics>>> =
         RwLock::new(HashMap::new());
 }
 
@@ -249,7 +249,7 @@ pub fn split_into_words(text: &str) -> Vec<&str> {
 pub fn register_custom_font_metrics(font_name: String, metrics: FontMetrics) {
     match CUSTOM_FONT_METRICS.write() {
         Ok(mut custom_metrics) => {
-            custom_metrics.insert(font_name, metrics);
+            custom_metrics.insert(font_name, Arc::new(metrics));
         }
         Err(e) => {
             tracing::warn!(
@@ -268,10 +268,21 @@ pub fn register_custom_font_metrics(font_name: String, metrics: FontMetrics) {
     note = "use FontMetricsStore::get via a Document — the global registry is process-wide and not bounded — see issue #230"
 )]
 pub fn get_custom_font_metrics(font_name: &str) -> Option<FontMetrics> {
-    if let Ok(custom_metrics) = CUSTOM_FONT_METRICS.read() {
-        custom_metrics.get(font_name).cloned()
-    } else {
-        None
+    get_custom_font_metrics_internal(font_name).map(|metrics| (*metrics).clone())
+}
+
+enum MetricRef {
+    Standard(&'static FontMetrics),
+    Shared(Arc<FontMetrics>),
+}
+
+impl std::ops::Deref for MetricRef {
+    type Target = FontMetrics;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Standard(metrics) => metrics,
+            Self::Shared(metrics) => metrics,
+        }
     }
 }
 
@@ -283,30 +294,35 @@ pub fn get_custom_font_metrics(font_name: &str) -> Option<FontMetrics> {
 /// 3. Default metrics + rate-limited warning via `warn_unknown_custom_font_once`.
 ///
 /// Read path only — no side effects on either registry.
-fn lookup(font: &Font, store: Option<&FontMetricsStore>) -> FontMetrics {
+// Take a shared snapshot on each query. Replacement stays observable on the
+// next query, and registry locks are released before measuring any text.
+fn lookup(font: &Font, store: Option<&FontMetricsStore>) -> MetricRef {
     match font {
         Font::Custom(font_name) => {
             // 1. Document scope (precedence)
             if let Some(s) = store {
                 if let Some(arc_m) = s.get(font_name) {
-                    return (*arc_m).clone();
+                    return MetricRef::Shared(arc_m);
                 }
             }
             // 2. Legacy global (deprecated, hierarchical fallback)
             if let Some(custom_metrics) = get_custom_font_metrics_internal(font_name) {
-                return custom_metrics;
+                return MetricRef::Shared(custom_metrics);
             }
             // 3. Default + warn-once
             warn_unknown_custom_font_once(font_name);
-            (*default_custom_metrics_arc()).clone()
+            MetricRef::Shared(default_custom_metrics_arc())
         }
-        _ => FONT_METRICS.get(font).cloned().unwrap_or_else(|| {
-            tracing::debug!(
-                "Warning: Standard font metrics not found for {:?}, using default",
-                font
-            );
-            (*default_custom_metrics_arc()).clone()
-        }),
+        _ => FONT_METRICS
+            .get(font)
+            .map(MetricRef::Standard)
+            .unwrap_or_else(|| {
+                tracing::debug!(
+                    "Warning: Standard font metrics not found for {:?}, using default",
+                    font
+                );
+                MetricRef::Shared(default_custom_metrics_arc())
+            }),
     }
 }
 
@@ -314,7 +330,7 @@ fn lookup(font: &Font, store: Option<&FontMetricsStore>) -> FontMetrics {
 /// `get_custom_font_metrics` (which Task 12 of #230 will mark `#[deprecated]`)
 /// so the lookup path does not itself produce a deprecation warning at
 /// every internal call site once Task 12 lands.
-fn get_custom_font_metrics_internal(font_name: &str) -> Option<FontMetrics> {
+fn get_custom_font_metrics_internal(font_name: &str) -> Option<Arc<FontMetrics>> {
     if let Ok(custom_metrics) = CUSTOM_FONT_METRICS.read() {
         custom_metrics.get(font_name).cloned()
     } else {

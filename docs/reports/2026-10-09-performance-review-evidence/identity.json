@@ -1,0 +1,15 @@
+{
+  "src/text/mod.rs": "64da86b3eae8a968b59af3f77815bae2d75a0382a3164046302893e2112da9dc",
+  "src/text/encoding.rs": "976c4df91248ba71cb3a8ba9dbaf37969a2fb258c6d9df2d715005e2f51bb492",
+  "src/text/metrics.rs": "93278f30419a2213d7ca5675dee41bf486f4fbadb685cb7a5746336076fed5cc",
+  "src/text/flow.rs": "465c7cef6538395be5fdb39125631b8ba89ae78c4d34d9e4a153dcaa9e45ce50",
+  "src/text/text_block.rs": "feb3ffac57b5b517fef5e09babf76ba61c41f4b1a2685977366d3182a5476a69",
+  "src/text/table.rs": "1660cdbcdb0f4f1ac34abf1345699ed52c3546d34bf4e1867bddff8db70213b9",
+  "src/document.rs": "b5ebd7b3b762ead8d58b15d46a13f62e4e1af7eb7f0e2350eb5de61d54938d6c",
+  "src/graphics/ops.rs": "408e80a825f67f9044306f3b0f073d30dd4c7089e9be2eb5dfdf124e17e3219c",
+  "src/writer/pdf_writer/mod.rs": "b469efccf361fc9067e849836f9529fe235f0ff425560361f3de607526bd68ce",
+  "src/objects/stream.rs": "52a5b09bacea99a3be75efefdf228fda57c394f47d4e71d99c67e6ebfd926747",
+  "tests/issue_661_writer_resources_test.rs": "a377b04d13ac3fa7dbe28373a725b9cbfba93ce161a435940f9f1e1154bd18ce",
+  "product_git_status": "",
+  "identical_to_v5.4.1_tree": true
+}

@@ -1,0 +1,12 @@
+==3== Callgrind, a call-graph generating cache profiler
+==3== Copyright (C) 2002-2017, and GNU GPL'd, by Josef Weidendorfer et al.
+==3== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==3== Command: target/performance-review-20261009/target/release/writer-perf-probe default 10 100 target/performance-review-20261009/profile-default.pdf
+==3== 
+==3== For interactive control, run 'callgrind_control -h'.
+{"allocations":null,"bytes":9483,"construction_ns":0,"documents":100,"elapsed_ns":4267798857,"mode":"default","pages":10,"serialization_ns":0}
+==3== 
+==3== Events    : Ir
+==3== Collected : 723041332
+==3== 
+==3== I   refs:      723,041,332
