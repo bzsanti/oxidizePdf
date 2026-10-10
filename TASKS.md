@@ -1,3 +1,11 @@
+## Release 5.4.2 — 2026-10-10
+
+- Issue: #705 — release: publish oxidize-pdf 5.4.2 — https://github.com/bzsanti/oxidizePdf/issues/705
+- Estado: activa; publicación solicitada explícitamente. Responsable: Codex. Prioridad P1. Base develop befc1a2, árbol idéntico al head revisado 5d554e3 de #704. Checkout existente target/issue690-review; WIP raíz preservado.
+- Alcance: #700–#703 integradas; cambio patch de versión, README y changelog. Coste residual de gráficos fraccionarios sin compresión (3,6%) explícito; sin cambios adicionales de código ni dependencias.
+- Cierre: paquete verificado, CI del PR de release aprobada, merge main y tag v5.4.2, workflow Release exitoso, artefacto crates.io y GitHub Release verificados, sincronización main→develop.
+- Siguiente acción: verificar paquete y revisión proporcional, publicar PR de release a main y completar las puertas de publicación. Reutilizar evidencia vigente sobre las mismas fuentes de #704.
+
 ## Implementación autorizada de rendimiento — 2026-10-09
 
 - Orden: #700 → #702 → #701 → #703. Responsable: Codex. Prioridad P2. Estado: las cuatro implementadas, medidas y revisadas localmente. Integración/CI aún pendientes para todas. Issues OPEN confirmadas; títulos/URLs y criterios particulares en sus entradas siguientes.
