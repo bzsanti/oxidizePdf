@@ -1,0 +1,90 @@
+[
+  {
+    "case": "700-control-flow-20.out",
+    "files": [
+      {
+        "name": "700-control-flow-20.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "e81e4172ff5ade2b96a86c1bd230cb18df5aa54c6b53742f8b8890e43cf9acac",
+        "page_rasters": [
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6"
+        ]
+      },
+      {
+        "name": "700-candidate-flow-20.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "e81e4172ff5ade2b96a86c1bd230cb18df5aa54c6b53742f8b8890e43cf9acac",
+        "page_rasters": [
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6"
+        ]
+      }
+    ]
+  },
+  {
+    "case": "700-control-flow-raw-20.out",
+    "files": [
+      {
+        "name": "700-control-flow-raw-20.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "e81e4172ff5ade2b96a86c1bd230cb18df5aa54c6b53742f8b8890e43cf9acac",
+        "page_rasters": [
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6"
+        ]
+      },
+      {
+        "name": "700-candidate-flow-raw-20.out",
+        "qpdf_exit": 0,
+        "geometry_sha256": "e81e4172ff5ade2b96a86c1bd230cb18df5aa54c6b53742f8b8890e43cf9acac",
+        "page_rasters": [
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6",
+          "9d642a0efa4565bc0caafb1d2217e83dc582a7186b84211d0097e2af973e3ec6"
+        ]
+      }
+    ]
+  },
+  {
+    "case": "700-control-layout-custom-20.out",
+    "files": [],
+    "exact_layout": true
+  },
+  {
+    "case": "700-control-layout-standard-300.out",
+    "files": [],
+    "exact_layout": true
+  }
+]

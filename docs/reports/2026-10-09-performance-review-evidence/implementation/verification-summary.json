@@ -1,0 +1,26 @@
+{
+  "workspace": {
+    "command": "CARGO_TARGET_DIR=target/performance-700-703/core-target cargo test --manifest-path target/issue690-review/Cargo.toml --locked --offline --workspace --features internal-testing --no-fail-fast",
+    "exit": 0,
+    "passed": 10434,
+    "failed": 0,
+    "ignored": 71,
+    "completed_test_binaries_including_doctests": 419
+  },
+  "clippy": {
+    "log": "final-clippy2.log",
+    "exit": 0,
+    "features": "internal-testing",
+    "all_targets": true
+  },
+  "format": {
+    "log": "final-fmt2.log",
+    "exit": 0
+  },
+  "base": "512d7c54309cce7b744a9d747bf849ba4de4da52",
+  "product_dependencies_changed": false,
+  "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2",
+  "cargo": "cargo 1.96.0 (30a34c682 2026-05-25)",
+  "qpdf": "qpdf version 11.9.0\nRun qpdf --copyright to see copyright and license information.",
+  "poppler": "pdftoppm version 24.02.0\nCopyright 2005-2024 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC"
+}

@@ -1,0 +1,27 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 1 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...690-review/oxidize-pdf-core/src/text/used_characters.rs        1    100
+
+--- Worst Offenders ---
+  repeated_ascii_and_unicode_union_remains_lossless_after_clone (target/issue690-review/oxidize-pdf-core/src/text/used_characters.rs:39) - Score: 100
+    i Test 'repeated_ascii_and_unicode_union_remains_lossless_after_clone' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'repeated_ascii_and_unicode_union_remains_lossless_after_clone' has multiple assertions without diagnostic messages
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/src/text/used_characters.rs:
+  repeated_ascii_and_unicode_union_remains_lossless_after_clone (line 39) - Score: 100
+    i Test 'repeated_ascii_and_unicode_union_remains_lossless_after_clone' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'repeated_ascii_and_unicode_union_remains_lossless_after_clone' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

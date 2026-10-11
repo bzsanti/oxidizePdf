@@ -1,0 +1,138 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 85 | Tests: 35 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...t/issue690-review/oxidize-pdf-core/src/text/encoding.rs       35     85
+
+--- Worst Offenders ---
+  test_encoding_equality (target/issue690-review/oxidize-pdf-core/src/text/encoding.rs:933) - Score: 60
+    i Test 'test_encoding_equality' has multiple assertions without diagnostic messages
+    - Test 'test_encoding_equality' does not call any production code
+    - Test 'test_encoding_equality' line 934: assert_eq! with identical arguments: TextEncoding :: StandardEncoding 
+    - Test 'test_encoding_equality' line 938: assert_eq! with identical arguments: TextEncoding :: WinAnsiEncoding 
+  test_text_encoding_variants (target/issue690-review/oxidize-pdf-core/src/text/encoding.rs:669) - Score: 75
+    i Test 'test_text_encoding_variants' has multiple assertions without diagnostic messages
+    - Test 'test_text_encoding_variants' does not call any production code
+    - Test 'test_text_encoding_variants' line 678: assert_eq! with identical arguments: * encoding 
+  winansi_decode_char_is_inverse_of_encode (target/issue690-review/oxidize-pdf-core/src/text/encoding.rs:591) - Score: 80
+    - Test 'winansi_decode_char_is_inverse_of_encode' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+    - Test 'winansi_decode_char_is_inverse_of_encode' does not call any production code
+  test_standard_encoding_basic_ascii (target/issue690-review/oxidize-pdf-core/src/text/encoding.rs:688) - Score: 80
+    - Test 'test_standard_encoding_basic_ascii' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_standard_encoding_basic_ascii' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_encode_strict_matches_encode_across_bmp (target/issue690-review/oxidize-pdf-core/src/text/encoding.rs:714) - Score: 80
+    - Test 'test_encode_strict_matches_encode_across_bmp' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_encode_strict_matches_encode_across_bmp' has low assert-to-setup ratio (3%): 1 asserts vs 38 setup lines
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/src/text/encoding.rs:
+  winansi_decode_char_is_inverse_of_encode (line 591) - Score: 80
+    - Test 'winansi_decode_char_is_inverse_of_encode' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+    - Test 'winansi_decode_char_is_inverse_of_encode' does not call any production code
+  winansi_decode_char_specific_points (line 603) - Score: 90
+    i Test 'winansi_decode_char_specific_points' has multiple assertions without diagnostic messages
+    - Test 'winansi_decode_char_specific_points' does not call any production code
+  escape_show_text_literal_bytes_named_escape_parity (line 621) - Score: 90
+    - Test 'escape_show_text_literal_bytes_named_escape_parity' has low assert-to-setup ratio (13%): 2 asserts vs 13 setup lines
+  escape_show_text_literal_bytes_octal_fallback_three_digits (line 649) - Score: 90
+    i Test 'escape_show_text_literal_bytes_octal_fallback_three_digits' has multiple assertions without diagnostic messages
+    - Test 'escape_show_text_literal_bytes_octal_fallback_three_digits' does not call any production code
+  escape_show_text_literal_bytes_printable_ascii_passthrough (line 660) - Score: 90
+    - Test 'escape_show_text_literal_bytes_printable_ascii_passthrough' does not call any production code
+  test_text_encoding_variants (line 669) - Score: 75
+    i Test 'test_text_encoding_variants' has multiple assertions without diagnostic messages
+    - Test 'test_text_encoding_variants' does not call any production code
+    - Test 'test_text_encoding_variants' line 678: assert_eq! with identical arguments: * encoding 
+  test_standard_encoding_basic_ascii (line 688) - Score: 80
+    - Test 'test_standard_encoding_basic_ascii' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_standard_encoding_basic_ascii' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_encode_strict_matches_encode_across_bmp (line 714) - Score: 80
+    - Test 'test_encode_strict_matches_encode_across_bmp' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_encode_strict_matches_encode_across_bmp' has low assert-to-setup ratio (3%): 1 asserts vs 38 setup lines
+  test_win_ansi_encoding_special_chars (line 765) - Score: 90
+    - Test 'test_win_ansi_encoding_special_chars' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_win_ansi_encoding_special_chars' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_win_ansi_encoding_special_chars' has multiple assertions without diagnostic messages
+  test_mac_roman_encoding_special_chars (line 783) - Score: 90
+    - Test 'test_mac_roman_encoding_special_chars' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_mac_roman_encoding_special_chars' asserts against a hardcoded constant instead of a computed expected value
+  test_pdf_doc_encoding (line 807) - Score: 80
+    - Test 'test_pdf_doc_encoding' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_pdf_doc_encoding' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_pdf_doc_encoding_basic_ascii (line 818) - Score: 80
+    - Test 'test_pdf_doc_encoding_basic_ascii' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_pdf_doc_encoding_basic_ascii' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_mac_roman_encoding_basic_ascii (line 829) - Score: 80
+    - Test 'test_mac_roman_encoding_basic_ascii' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_mac_roman_encoding_basic_ascii' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_win_ansi_encoding_basic_ascii (line 840) - Score: 80
+    - Test 'test_win_ansi_encoding_basic_ascii' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_win_ansi_encoding_basic_ascii' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_win_ansi_encoding_special_characters (line 851) - Score: 90
+    - Test 'test_win_ansi_encoding_special_characters' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_win_ansi_encoding_special_characters' has multiple assertions without diagnostic messages
+  test_win_ansi_encoding_latin_supplement (line 877) - Score: 80
+    - Test 'test_win_ansi_encoding_latin_supplement' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_win_ansi_encoding_latin_supplement' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_win_ansi_encoding_unmapped_character (line 888) - Score: 90
+    - Test 'test_win_ansi_encoding_unmapped_character' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_win_ansi_encoding_unmapped_character' asserts against a hardcoded constant instead of a computed expected value
+  test_win_ansi_encoding_round_trip_special_chars (line 901) - Score: 90
+    - Test 'test_win_ansi_encoding_round_trip_special_chars' has low assert-to-setup ratio (8%): 2 asserts vs 23 setup lines
+  test_encoding_equality (line 933) - Score: 60
+    i Test 'test_encoding_equality' has multiple assertions without diagnostic messages
+    - Test 'test_encoding_equality' does not call any production code
+    - Test 'test_encoding_equality' line 934: assert_eq! with identical arguments: TextEncoding :: StandardEncoding 
+    - Test 'test_encoding_equality' line 938: assert_eq! with identical arguments: TextEncoding :: WinAnsiEncoding 
+  test_encoding_debug (line 948) - Score: 90
+    i Test 'test_encoding_debug' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_encoding_debug' does not call any production code
+  test_encoding_clone (line 955) - Score: 90
+    - Test 'test_encoding_clone' does not call any production code
+  test_encoding_copy (line 962) - Score: 90
+    i Test 'test_encoding_copy' has multiple assertions without diagnostic messages
+    - Test 'test_encoding_copy' does not call any production code
+  test_empty_string_encoding (line 973) - Score: 100
+    i Test 'test_empty_string_encoding' has multiple assertions without diagnostic messages
+  test_win_ansi_decode_undefined_bytes (line 989) - Score: 90
+    i Test 'test_win_ansi_decode_undefined_bytes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_win_ansi_decode_undefined_bytes' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_win_ansi_ascii_range (line 1005) - Score: 100
+    i Test 'test_win_ansi_ascii_range' has multiple assertions without diagnostic messages
+  test_win_ansi_latin1_overlap (line 1021) - Score: 80
+    - Test 'test_win_ansi_latin1_overlap' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_win_ansi_latin1_overlap' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  test_mac_roman_encode_special_characters (line 1034) - Score: 90
+    - Test 'test_mac_roman_encode_special_characters' has low assert-to-setup ratio (2%): 1 asserts vs 40 setup lines
+  test_mac_roman_encode_symbols (line 1085) - Score: 90
+    - Test 'test_mac_roman_encode_symbols' has low assert-to-setup ratio (4%): 1 asserts vs 23 setup lines
+  test_mac_roman_decode_extended_range (line 1114) - Score: 80
+    - Test 'test_mac_roman_decode_extended_range' has identical neighborhood to 'test_mac_roman_decode_final_range'
+    - Test 'test_mac_roman_decode_extended_range' has low assert-to-setup ratio (2%): 1 asserts vs 40 setup lines
+  test_mac_roman_decode_high_range (line 1164) - Score: 80
+    - Test 'test_mac_roman_decode_high_range' has identical neighborhood to 'test_mac_roman_decode_extended_range'
+    - Test 'test_mac_roman_decode_high_range' has low assert-to-setup ratio (2%): 1 asserts vs 39 setup lines
+  test_mac_roman_decode_final_range (line 1213) - Score: 80
+    - Test 'test_mac_roman_decode_final_range' has identical neighborhood to 'test_mac_roman_decode_extended_range'
+    - Test 'test_mac_roman_decode_final_range' has low assert-to-setup ratio (4%): 1 asserts vs 23 setup lines
+  test_mac_roman_unmapped_character (line 1246) - Score: 80
+    - Test 'test_mac_roman_unmapped_character' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_mac_roman_unmapped_character' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_win_ansi_encode_all_special_mappings (line 1256) - Score: 90
+    - Test 'test_win_ansi_encode_all_special_mappings' has low assert-to-setup ratio (5%): 1 asserts vs 18 setup lines
+  test_long_text_encoding_roundtrip (line 1285) - Score: 80
+    - Test 'test_long_text_encoding_roundtrip' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_long_text_encoding_roundtrip' has low assert-to-setup ratio (8%): 1 asserts vs 12 setup lines
+  test_win_ansi_decode_all_special_bytes (line 1303) - Score: 90
+    - Test 'test_win_ansi_decode_all_special_bytes' has low assert-to-setup ratio (3%): 1 asserts vs 35 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

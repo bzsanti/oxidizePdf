@@ -1,0 +1,30 @@
+[
+  {
+    "title": "perf(text): avoid cloning complete font metric tables for each width lookup",
+    "body_file": "target/performance-review-20261009/new-performance-issue-1.md",
+    "returncode": 0,
+    "stdout": "https://github.com/bzsanti/oxidizePdf/issues/700\n",
+    "stderr": ""
+  },
+  {
+    "title": "perf(text): reduce repeated character hashing while preserving font usage tracking",
+    "body_file": "target/performance-review-20261009/new-performance-issue-2.md",
+    "returncode": 0,
+    "stdout": "https://github.com/bzsanti/oxidizePdf/issues/701\n",
+    "stderr": ""
+  },
+  {
+    "title": "perf(text): eliminate intermediate encoding buffers in show-text construction",
+    "body_file": "target/performance-review-20261009/new-performance-issue-3.md",
+    "returncode": 0,
+    "stdout": "https://github.com/bzsanti/oxidizePdf/issues/702\n",
+    "stderr": ""
+  },
+  {
+    "title": "perf(graphics): optimize numeric operator formatting without changing serialized semantics",
+    "body_file": "target/performance-review-20261009/new-performance-issue-4.md",
+    "returncode": 0,
+    "stdout": "https://github.com/bzsanti/oxidizePdf/issues/703\n",
+    "stderr": ""
+  }
+]

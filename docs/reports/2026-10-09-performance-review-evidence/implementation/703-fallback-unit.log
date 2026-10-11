@@ -1,0 +1,24 @@
+   Compiling oxidize-pdf v5.4.1 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 22.17s
+     Running unittests src/lib.rs (target/performance-700-703/core-target/debug/deps/oxidize_pdf-1fdd8605daab59fc)
+
+running 16 tests
+test graphics::ops::tests::clip_end_path_emits_w_then_n ... ok
+test graphics::ops::tests::cm_translate_with_neg_inf_clamps_to_zero ... ok
+test graphics::ops::tests::comment_emits_percent_prefix ... ok
+test graphics::ops::tests::fill_color_components_pad_with_trailing_space_before_sc ... ok
+test graphics::ops::tests::line_width_with_nan_clamps_to_zero ... ok
+test graphics::ops::tests::move_to_with_nan_components_sanitises_to_zero ... ok
+test graphics::ops::tests::paint_shading_emits_name_sh ... ok
+test graphics::ops::tests::raw_op_passes_bytes_through_unchanged ... ok
+test graphics::ops::tests::rect_fill_roundtrip_emits_re_f ... ok
+test graphics::ops::tests::show_text_array_interleaves_glyphs_and_adjustments_as_tj ... ok
+test graphics::ops::tests::show_text_array_sanitises_non_finite_adjustment_to_zero ... ok
+test graphics::ops::tests::show_text_array_single_glyph_run_has_no_adjustment ... ok
+test graphics::ops::tests::show_text_hex_wraps_with_angle_brackets_and_tj ... ok
+test graphics::ops::tests::show_text_wraps_with_parens_and_tj ... ok
+test graphics::ops::tests::td_with_nan_clamps_to_zero ... ok
+test graphics::ops::numeric_performance_tests::numeric_operators_match_legacy_formatting_at_boundaries_and_random_bits ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 6796 filtered out; finished in 1.37s
+

@@ -1,0 +1,105 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 99 | Tests: 38 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+target/issue690-review/oxidize-pdf-core/src/text/mod.rs          38     99
+
+--- Worst Offenders ---
+  test_text_context_new (target/issue690-review/oxidize-pdf-core/src/text/mod.rs:578) - Score: 90
+    i Test 'test_text_context_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_context_new' has multiple assertions without diagnostic messages
+    - Test 'test_text_context_new' does not call any production code
+  test_text_context_default (target/issue690-review/oxidize-pdf-core/src/text/mod.rs:587) - Score: 90
+    i Test 'test_text_context_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_context_default' has multiple assertions without diagnostic messages
+    - Test 'test_text_context_default' does not call any production code
+  test_set_font (target/issue690-review/oxidize-pdf-core/src/text/mod.rs:594) - Score: 100
+    i Test 'test_set_font' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_font' has multiple assertions without diagnostic messages
+  test_position (target/issue690-review/oxidize-pdf-core/src/text/mod.rs:602) - Score: 100
+    i Test 'test_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_position' has multiple assertions without diagnostic messages
+  test_write_simple_text (target/issue690-review/oxidize-pdf-core/src/text/mod.rs:613) - Score: 100
+    i Test 'test_write_simple_text' has multiple assertions without diagnostic messages
+    i Test 'test_write_simple_text' uses .unwrap() which silently discards error information
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/src/text/mod.rs:
+  test_text_context_new (line 578) - Score: 90
+    i Test 'test_text_context_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_context_new' has multiple assertions without diagnostic messages
+    - Test 'test_text_context_new' does not call any production code
+  test_text_context_default (line 587) - Score: 90
+    i Test 'test_text_context_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_context_default' has multiple assertions without diagnostic messages
+    - Test 'test_text_context_default' does not call any production code
+  test_set_font (line 594) - Score: 100
+    i Test 'test_set_font' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_set_font' has multiple assertions without diagnostic messages
+  test_position (line 602) - Score: 100
+    i Test 'test_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_position' has multiple assertions without diagnostic messages
+  test_write_simple_text (line 613) - Score: 100
+    i Test 'test_write_simple_text' has multiple assertions without diagnostic messages
+    i Test 'test_write_simple_text' uses .unwrap() which silently discards error information
+  test_write_text_with_escaping (line 625) - Score: 100
+    i Test 'test_write_text_with_escaping' uses .unwrap() which silently discards error information
+  test_write_line (line 634) - Score: 100
+    i Test 'test_write_line' has multiple assertions without diagnostic messages
+    i Test 'test_write_line' uses .unwrap() which silently discards error information
+  test_clear (line 691) - Score: 100
+    i Test 'test_clear' has multiple assertions without diagnostic messages
+    i Test 'test_clear' uses .unwrap() which silently discards error information
+  test_generate_operations (line 701) - Score: 100
+    i Test 'test_generate_operations' uses .unwrap() which silently discards error information
+  test_method_chaining (line 711) - Score: 100
+    i Test 'test_method_chaining' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_method_chaining' has multiple assertions without diagnostic messages
+  test_special_characters_encoding (line 736) - Score: 100
+    i Test 'test_special_characters_encoding' has multiple assertions without diagnostic messages
+    i Test 'test_special_characters_encoding' uses .unwrap() which silently discards error information
+  test_text_state_parameters_chaining (line 818) - Score: 100
+    i Test 'test_text_state_parameters_chaining' has multiple assertions without diagnostic messages
+  test_all_text_state_operators_generated (line 838) - Score: 100
+    i Test 'test_all_text_state_operators_generated' has multiple assertions without diagnostic messages
+  test_text_color_operations (line 870) - Score: 100
+    i Test 'test_text_color_operations' has multiple assertions without diagnostic messages
+  test_used_characters_tracking_ascii (line 933) - Score: 100
+    i Test 'test_used_characters_tracking_ascii' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_used_characters_tracking_ascii' has multiple assertions without diagnostic messages
+    i Test 'test_used_characters_tracking_ascii' uses .unwrap() which silently discards error information
+  test_used_characters_tracking_cjk (line 948) - Score: 100
+    i Test 'test_used_characters_tracking_cjk' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_used_characters_tracking_cjk' has multiple assertions without diagnostic messages
+    i Test 'test_used_characters_tracking_cjk' uses .unwrap() which silently discards error information
+  test_used_characters_multiple_writes (line 970) - Score: 100
+    i Test 'test_used_characters_multiple_writes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_used_characters_multiple_writes' has multiple assertions without diagnostic messages
+    i Test 'test_used_characters_multiple_writes' uses .unwrap() which silently discards error information
+  nan_char_spacing_sanitised_at_emission (line 991) - Score: 100
+    i Test 'nan_char_spacing_sanitised_at_emission' has multiple assertions without diagnostic messages
+    i Test 'nan_char_spacing_sanitised_at_emission' uses .unwrap() which silently discards error information
+  pos_inf_word_spacing_sanitised_at_emission (line 1007) - Score: 100
+    i Test 'pos_inf_word_spacing_sanitised_at_emission' has multiple assertions without diagnostic messages
+    i Test 'pos_inf_word_spacing_sanitised_at_emission' uses .unwrap() which silently discards error information
+  nan_horizontal_scaling_sanitised_at_emission (line 1023) - Score: 100
+    i Test 'nan_horizontal_scaling_sanitised_at_emission' uses .unwrap() which silently discards error information
+  nan_leading_and_text_rise_sanitised_at_emission (line 1035) - Score: 100
+    i Test 'nan_leading_and_text_rise_sanitised_at_emission' has multiple assertions without diagnostic messages
+    i Test 'nan_leading_and_text_rise_sanitised_at_emission' uses .unwrap() which silently discards error information
+  test_text_context_threads_metrics_store (line 1052) - Score: 100
+    i Test 'test_text_context_threads_metrics_store' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_context_threads_metrics_store' has multiple assertions without diagnostic messages
+  show_text_bytes_match_historical_encoding_for_unicode_and_escapes (line 1077) - Score: 100
+    i Test 'show_text_bytes_match_historical_encoding_for_unicode_and_escapes' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

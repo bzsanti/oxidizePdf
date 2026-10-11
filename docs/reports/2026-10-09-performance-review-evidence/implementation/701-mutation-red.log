@@ -1,0 +1,20 @@
+
+running 1 test
+test tests::repeated_ascii_and_unicode_union_remains_lossless_after_clone ... FAILED
+
+failures:
+
+---- tests::repeated_ascii_and_unicode_union_remains_lossless_after_clone stdout ----
+
+thread 'tests::repeated_ascii_and_unicode_union_remains_lossless_after_clone' (33) panicked at target/performance-700-703/701-mutant.rs:64:9:
+assertion `left == right` failed
+  left: {'^', '7', 'T', 'Y', 'W', '\u{1b}', 'j', '\u{8}', ' ', '&', '\u{b}', '+', '_', '\u{11}', 'S', 'c', '(', ';', '\u{1e}', '\u{14}', '|', '\n', '\u{16}', 'r', '\u{3}', '\u{19}', '6', '$', 'u', '!', '`', 'd', '.', 'y', 'b', '\r', '\u{13}', '\t', '0', '5', '\u{6}', '\u{12}', '\u{17}', 'I', '}', 'C', '\\', '\u{10}', '3', 'E', '\u{1f}', 'O', '\u{5}', '*', '\u{1d}', 'A', 'z', '8', '\u{7f}', 'Z', '\u{1}', '\u{1a}', 'D', 'Q', 'V', '1', '\u{4}', '>', 'p', '\u{c}', 'l', 'K', '-', 'x', '\u{f}', '<', 't', 'H', '%', '@', 'f', '2', 'J', '{', 'q', 'R', 'n', 'v', '\u{2}', '[', '\'', 'k', 'X', ')', 'm', ',', '\u{e}', '\u{15}', ']', 'g', 'h', 'U', 's', '9', '#', 'o', '4', '"', '?', 'i', ':', 'G', 'F', '\u{1c}', '/', 'B', 'L', 'e', '~', '\0', '\u{7}', 'w', 'a', '\u{18}', 'P', 'M', 'N', '='}
+ right: {';', 'I', '7', '}', '1', ' ', '\r', 'g', 'B', 'O', '\u{2}', 'u', '\u{1f}', '\0', '\u{10}', 'W', '6', '=', '~', '2', 'C', 'j', '\u{1d}', ']', '$', '5', 'm', 'T', ')', 'p', '\u{19}', '\\', 'r', 'Z', 'i', '/', 'A', 'G', '*', 'E', 'J', 'y', 'f', '\u{3}', '新', '>', 'N', '\u{5}', '\u{1a}', '\'', 'z', '-', '\u{e}', 'b', 'h', 'D', '\u{1e}', '_', 'k', '\u{15}', ':', 'H', 'q', '`', '\u{80}', 'F', '文', '^', 'S', 'e', '0', 'l', '\t', '.', 'X', '\u{10ffff}', '[', 'P', 'M', '\u{8}', 'U', '+', '"', '8', '(', 'a', 'n', '!', '\u{7}', '\u{12}', '\u{4}', '{', 'V', '\u{b}', 'c', '4', '<', 'é', '\u{6}', '\u{11}', 'L', '\u{7f}', '\u{1}', 'x', 'd', '\u{16}', ',', '9', '中', '|', '\u{14}', '3', 's', '%', 'w', '?', '\u{18}', '\u{c}', 'Y', '\u{1c}', '#', 'o', '\u{1b}', '\u{17}', '@', '😀', 't', '\u{f}', 'K', '\n', 'R', '\u{13}', 'v', '&', 'Q'}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tests::repeated_ascii_and_unicode_union_remains_lossless_after_clone
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

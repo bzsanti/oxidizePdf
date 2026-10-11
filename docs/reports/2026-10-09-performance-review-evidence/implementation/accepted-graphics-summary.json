@@ -1,0 +1,54 @@
+[
+  {
+    "case": "graphics-60",
+    "median_us": {
+      "control": 3695.5421583333336,
+      "candidate": 2039.185175
+    },
+    "ratio_improvement": 0.4482040556886354,
+    "paired_median": 0.4338259192734947,
+    "paired_bootstrap95": [
+      0.41595428108011295,
+      0.4593979036823194
+    ]
+  },
+  {
+    "case": "graphics-fractional-60",
+    "median_us": {
+      "control": 3943.070583333333,
+      "candidate": 3967.3021666666664
+    },
+    "ratio_improvement": -0.006145358755624608,
+    "paired_median": -0.006899482720703398,
+    "paired_bootstrap95": [
+      -0.04291801536844109,
+      0.019177629113268813
+    ]
+  },
+  {
+    "case": "graphics-fractional-raw-100",
+    "median_us": {
+      "control": 2439.5348599999998,
+      "candidate": 2528.3876849999997
+    },
+    "ratio_improvement": -0.03642203538751643,
+    "paired_median": -0.0371206920893008,
+    "paired_bootstrap95": [
+      -0.05397658756398971,
+      -0.010105782334604685
+    ]
+  },
+  {
+    "case": "graphics-raw-100",
+    "median_us": {
+      "control": 2185.44181,
+      "candidate": 601.636485
+    },
+    "ratio_improvement": 0.7247071588696292,
+    "paired_median": 0.7259773614066163,
+    "paired_bootstrap95": [
+      0.7203244106047046,
+      0.7400061976765072
+    ]
+  }
+]

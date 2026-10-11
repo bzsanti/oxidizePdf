@@ -1,0 +1,12 @@
+{
+  "oxidize-pdf-core/src/graphics/mod.rs": "5c034173f529ce6624a3fb29f708e9da61e98d4ff982fb5b290d24164c1daac0",
+  "oxidize-pdf-core/src/graphics/ops.rs": "ed6dc97999e4ac0e5489ee025fea667f41ab5a6da2514b35758f2b832d218431",
+  "oxidize-pdf-core/src/page.rs": "4e51eb99d2e31afac807f2ed199856f9c85b2e6c64019725dacfd8a5360549c4",
+  "oxidize-pdf-core/src/text/encoding.rs": "0c00707e5d1afb6c2d9ccba2a00c1434afad70d982b3581abcfd263648191a7d",
+  "oxidize-pdf-core/src/text/flow.rs": "719d2b64502eeaf4949261f7d3d5cfa093f91de682c08de3250716602db61df8",
+  "oxidize-pdf-core/src/text/metrics.rs": "87725640537d308b11fb465b82cda3470e1e003d5f4b7b0d905df2b51681a0b4",
+  "oxidize-pdf-core/src/text/mod.rs": "d0647e4032b84a404d1fc208c5e8e32834b6c69c08d5e5d23ea1aad820dd0f14",
+  "oxidize-pdf-core/src/writer/pdf_writer/mod.rs": "b339a86b071e7c4d0921208fcc5fedd518a45527d4cce31abafcf505af7ef31e",
+  "oxidize-pdf-core/src/text/used_characters.rs": "adb783428397050e06f52fb9b8335cc3dc46465542ff6f690bc9e66949900d95",
+  "oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs": "4b62c37fcf2304705f580a18cc44565c59a62837a3b735f2bdfb30fb405a615b"
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "mode": "default",
+    "pages": 1,
+    "median_us": 241.03597833333333,
+    "min_us": 226.93717333333333,
+    "max_us": 251.17764666666667,
+    "output_bytes": 5015
+  },
+  {
+    "mode": "default",
+    "pages": 10,
+    "median_us": 1092.083375,
+    "min_us": 992.6694,
+    "max_us": 1115.28745,
+    "output_bytes": 9483
+  },
+  {
+    "mode": "default",
+    "pages": 100,
+    "median_us": 8156.92185,
+    "min_us": 8059.6218,
+    "max_us": 8313.391099999999,
+    "output_bytes": 53903
+  },
+  {
+    "mode": "raw",
+    "pages": 1,
+    "median_us": 106.61211,
+    "min_us": 84.54781,
+    "max_us": 109.05904666666666,
+    "output_bytes": 6799
+  },
+  {
+    "mode": "raw",
+    "pages": 10,
+    "median_us": 657.5441833333334,
+    "min_us": 563.2216500000001,
+    "max_us": 696.7153166666667,
+    "output_bytes": 27315
+  },
+  {
+    "mode": "raw",
+    "pages": 100,
+    "median_us": 5341.9591,
+    "min_us": 5146.0037,
+    "max_us": 5600.9235,
+    "output_bytes": 232380
+  }
+]

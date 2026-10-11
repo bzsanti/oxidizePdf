@@ -1,0 +1,183 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 55 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...et/issue690-review/oxidize-pdf-core/src/text/metrics.rs       55     90
+
+--- Worst Offenders ---
+  test_all_font_metrics_exist (target/issue690-review/oxidize-pdf-core/src/text/metrics.rs:727) - Score: 65
+    - Test 'test_all_font_metrics_exist' does not call any production code
+    - Test 'test_all_font_metrics_exist' executes production code without asserting on its behaviour
+  test_get_custom_font_metrics_not_found (target/issue690-review/oxidize-pdf-core/src/text/metrics.rs:912) - Score: 65
+    - Test 'test_get_custom_font_metrics_not_found' does not call any production code
+    - Test 'test_get_custom_font_metrics_not_found' executes production code without asserting on its behaviour
+  test_measure_text_courier (target/issue690-review/oxidize-pdf-core/src/text/metrics.rs:622) - Score: 70
+    - Test 'test_measure_text_courier' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_measure_text_courier' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_measure_text_courier' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+    - Test 'test_measure_text_courier' does not call any production code
+  test_measure_text_helvetica (target/issue690-review/oxidize-pdf-core/src/text/metrics.rs:612) - Score: 80
+    - Test 'test_measure_text_helvetica' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_measure_text_helvetica' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_measure_text_symbolic_fonts (target/issue690-review/oxidize-pdf-core/src/text/metrics.rs:632) - Score: 80
+    - Test 'test_measure_text_symbolic_fonts' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_measure_text_symbolic_fonts' has multiple assertions without diagnostic messages
+    - Test 'test_measure_text_symbolic_fonts' does not call any production code
+
+--- Details ---
+target/issue690-review/oxidize-pdf-core/src/text/metrics.rs:
+  test_font_metrics_creation (line 518) - Score: 90
+    i Test 'test_font_metrics_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_metrics_creation' has multiple assertions without diagnostic messages
+    - Test 'test_font_metrics_creation' does not call any production code
+  test_font_metrics_with_widths (line 525) - Score: 100
+    i Test 'test_font_metrics_with_widths' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_metrics_with_widths' has multiple assertions without diagnostic messages
+  test_font_metrics_clone (line 536) - Score: 100
+    i Test 'test_font_metrics_clone' has multiple assertions without diagnostic messages
+  test_non_ascii_winansi_width_matches_afm_helvetica (line 557) - Score: 90
+    i Test 'test_non_ascii_winansi_width_matches_afm_helvetica' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_non_ascii_winansi_width_matches_afm_helvetica' has multiple assertions without diagnostic messages
+    - Test 'test_non_ascii_winansi_width_matches_afm_helvetica' does not call any production code
+  test_non_ascii_winansi_width_matches_afm_helvetica_bold (line 579) - Score: 90
+    i Test 'test_non_ascii_winansi_width_matches_afm_helvetica_bold' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_non_ascii_winansi_width_matches_afm_helvetica_bold' has multiple assertions without diagnostic messages
+    - Test 'test_non_ascii_winansi_width_matches_afm_helvetica_bold' does not call any production code
+  test_non_ascii_winansi_width_matches_afm_times (line 587) - Score: 90
+    i Test 'test_non_ascii_winansi_width_matches_afm_times' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_non_ascii_winansi_width_matches_afm_times' has multiple assertions without diagnostic messages
+    - Test 'test_non_ascii_winansi_width_matches_afm_times' does not call any production code
+  test_non_ascii_winansi_width_courier_is_monospace (line 597) - Score: 90
+    i Test 'test_non_ascii_winansi_width_courier_is_monospace' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_non_ascii_winansi_width_courier_is_monospace' does not call any production code
+  test_measure_text_helvetica (line 612) - Score: 80
+    - Test 'test_measure_text_helvetica' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_measure_text_helvetica' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_measure_text_courier (line 622) - Score: 70
+    - Test 'test_measure_text_courier' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_measure_text_courier' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_measure_text_courier' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+    - Test 'test_measure_text_courier' does not call any production code
+  test_measure_text_symbolic_fonts (line 632) - Score: 80
+    - Test 'test_measure_text_symbolic_fonts' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_measure_text_symbolic_fonts' has multiple assertions without diagnostic messages
+    - Test 'test_measure_text_symbolic_fonts' does not call any production code
+  test_measure_char_courier (line 652) - Score: 90
+    i Test 'test_measure_char_courier' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_measure_char_courier' does not call any production code
+  test_measure_char_symbolic (line 660) - Score: 90
+    i Test 'test_measure_char_symbolic' has multiple assertions without diagnostic messages
+    - Test 'test_measure_char_symbolic' does not call any production code
+  test_split_into_words_simple (line 671) - Score: 80
+    - Test 'test_split_into_words_simple' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_split_into_words_simple' does not call any production code
+  test_split_into_words_multiple_spaces (line 679) - Score: 80
+    - Test 'test_split_into_words_multiple_spaces' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_split_into_words_multiple_spaces' does not call any production code
+  test_split_into_words_leading_trailing_spaces (line 687) - Score: 80
+    - Test 'test_split_into_words_leading_trailing_spaces' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_split_into_words_leading_trailing_spaces' does not call any production code
+  test_split_into_words_tabs_newlines (line 695) - Score: 80
+    - Test 'test_split_into_words_tabs_newlines' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_split_into_words_tabs_newlines' does not call any production code
+  test_split_into_words_empty (line 703) - Score: 80
+    - Test 'test_split_into_words_empty' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_split_into_words_empty' does not call any production code
+  test_split_into_words_only_spaces (line 711) - Score: 80
+    - Test 'test_split_into_words_only_spaces' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_split_into_words_only_spaces' does not call any production code
+  test_split_into_words_single_word (line 719) - Score: 80
+    - Test 'test_split_into_words_single_word' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_split_into_words_single_word' does not call any production code
+  test_all_font_metrics_exist (line 727) - Score: 65
+    - Test 'test_all_font_metrics_exist' does not call any production code
+    - Test 'test_all_font_metrics_exist' executes production code without asserting on its behaviour
+  test_helvetica_specific_characters (line 750) - Score: 90
+    - Test 'test_helvetica_specific_characters' has low assert-to-setup ratio (5%): 1 asserts vs 18 setup lines
+  test_times_specific_characters (line 777) - Score: 80
+    - Test 'test_times_specific_characters' has low assert-to-setup ratio (5%): 1 asserts vs 18 setup lines
+    - Test 'test_times_specific_characters' does not call any production code
+  test_courier_monospace_property (line 801) - Score: 80
+    i Test 'test_courier_monospace_property' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_courier_monospace_property' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+    - Test 'test_courier_monospace_property' does not call any production code
+  test_font_size_scaling (line 813) - Score: 90
+    - Test 'test_font_size_scaling' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_measure_text_empty_string (line 827) - Score: 90
+    i Test 'test_measure_text_empty_string' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_measure_text_empty_string' does not call any production code
+  test_measure_text_consistency (line 833) - Score: 80
+    - Test 'test_measure_text_consistency' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_measure_text_consistency' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_font_variants_use_base_metrics (line 847) - Score: 90
+    i Test 'test_font_variants_use_base_metrics' has multiple assertions without diagnostic messages
+    - Test 'test_font_variants_use_base_metrics' does not call any production code
+  test_unicode_characters_default_width (line 861) - Score: 90
+    i Test 'test_unicode_characters_default_width' has multiple assertions without diagnostic messages
+    - Test 'test_unicode_characters_default_width' has low assert-to-setup ratio (14%): 3 asserts vs 18 setup lines
+  test_register_custom_font_metrics (line 897) - Score: 100
+    i Test 'test_register_custom_font_metrics' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_register_custom_font_metrics' has multiple assertions without diagnostic messages
+    i Test 'test_register_custom_font_metrics' uses .unwrap() which silently discards error information
+  test_get_custom_font_metrics_not_found (line 912) - Score: 65
+    - Test 'test_get_custom_font_metrics_not_found' does not call any production code
+    - Test 'test_get_custom_font_metrics_not_found' executes production code without asserting on its behaviour
+  test_measure_text_custom_font (line 921) - Score: 90
+    - Test 'test_measure_text_custom_font' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_measure_char_custom_font (line 934) - Score: 90
+    - Test 'test_measure_char_custom_font' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_custom_font_no_auto_register_default (line 945) - Score: 100
+    i Test 'test_custom_font_no_auto_register_default' has multiple assertions without diagnostic messages
+  test_create_default_custom_metrics (line 967) - Score: 100
+    i Test 'test_create_default_custom_metrics' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_create_default_custom_metrics' has multiple assertions without diagnostic messages
+  test_create_default_custom_metrics_is_cached (line 979) - Score: 90
+    - Test 'test_create_default_custom_metrics_is_cached' has low assert-to-setup ratio (8%): 1 asserts vs 12 setup lines
+  test_times_variants_use_their_own_metrics (line 1016) - Score: 100
+    i Test 'test_times_variants_use_their_own_metrics' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_times_variants_use_their_own_metrics' has multiple assertions without diagnostic messages
+  test_courier_variants_use_base_metrics (line 1030) - Score: 90
+    i Test 'test_courier_variants_use_base_metrics' has multiple assertions without diagnostic messages
+    - Test 'test_courier_variants_use_base_metrics' does not call any production code
+  test_warn_unknown_font_rate_limited_once_per_name (line 1052) - Score: 100
+    i Test 'test_warn_unknown_font_rate_limited_once_per_name' asserts against a hardcoded constant instead of a computed expected value
+  test_unknown_custom_font_does_not_register_on_read (line 1075) - Score: 90
+    - Test 'test_unknown_custom_font_does_not_register_on_read' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_split_into_words_mixed_whitespace (line 1106) - Score: 90
+    - Test 'test_split_into_words_mixed_whitespace' does not call any production code
+  test_font_metrics_store_register_and_get (line 1112) - Score: 100
+    i Test 'test_font_metrics_store_register_and_get' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_metrics_store_register_and_get' has multiple assertions without diagnostic messages
+  test_font_metrics_store_overwrite_same_name (line 1130) - Score: 100
+    i Test 'test_font_metrics_store_overwrite_same_name' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_metrics_store_overwrite_same_name' has multiple assertions without diagnostic messages
+    i Test 'test_font_metrics_store_overwrite_same_name' uses .unwrap() which silently discards error information
+  test_font_metrics_store_clone_shares_state (line 1141) - Score: 100
+    i Test 'test_font_metrics_store_clone_shares_state' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_metrics_store_clone_shares_state' has multiple assertions without diagnostic messages
+  test_font_metrics_store_get_miss_returns_none_no_side_effects (line 1154) - Score: 100
+    i Test 'test_font_metrics_store_get_miss_returns_none_no_side_effects' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_metrics_store_get_miss_returns_none_no_side_effects' has multiple assertions without diagnostic messages
+  test_lookup_document_scope_takes_precedence_over_global (line 1164) - Score: 90
+    i Test 'test_lookup_document_scope_takes_precedence_over_global' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_lookup_document_scope_takes_precedence_over_global' has low assert-to-setup ratio (5%): 1 asserts vs 19 setup lines
+  test_lookup_falls_through_to_global_when_store_misses (line 1192) - Score: 90
+    i Test 'test_lookup_falls_through_to_global_when_store_misses' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_lookup_falls_through_to_global_when_store_misses' has low assert-to-setup ratio (8%): 1 asserts vs 12 setup lines
+  test_lookup_with_none_store_uses_global_then_default (line 1213) - Score: 100
+    i Test 'test_lookup_with_none_store_uses_global_then_default' asserts against a hardcoded constant instead of a computed expected value
+  test_measure_text_with_uses_document_scope (line 1224) - Score: 90
+    - Test 'test_measure_text_with_uses_document_scope' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  test_measure_char_with_uses_document_scope (line 1248) - Score: 90
+    - Test 'test_measure_char_with_uses_document_scope' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

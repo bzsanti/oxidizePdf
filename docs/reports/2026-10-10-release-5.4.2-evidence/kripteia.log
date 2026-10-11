@@ -1,0 +1,34 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 1 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ize-pdf-core/tests/issue_700_metric_allocations_test.rs        1     90
+
+--- Worst Offenders ---
+  warmed_queries_do_not_clone_maps_and_replacements_remain_visible (oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:58) - Score: 90
+    i Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' uses .unwrap() which silently discards error information
+    - Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' has low assert-to-setup ratio (17%): 4 asserts vs 19 setup lines
+
+--- Details ---
+oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:
+  warmed_queries_do_not_clone_maps_and_replacements_remain_visible (line 58) - Score: 90
+    i Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' uses .unwrap() which silently discards error information
+    - Test 'warmed_queries_do_not_clone_maps_and_replacements_remain_visible' has low assert-to-setup ratio (17%): 4 asserts vs 19 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+--- Unsafe Usages (4) ---
+  oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:24 — fn alloc
+  oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:28 — fn alloc_zeroed
+  oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:32 — fn realloc
+  oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:36 — fn dealloc
+

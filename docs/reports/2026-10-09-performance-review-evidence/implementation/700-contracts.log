@@ -1,0 +1,50 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.1 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 09s
+     Running tests/font_metrics_per_document_render_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-700-703/core-target/debug/deps/font_metrics_per_document_render_test-52a4fd7b9b9ac6d4)
+
+running 2 tests
+test cjk_render_per_document_widths ... ok
+test render_two_documents_no_cross_contamination ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+
+     Running tests/font_metrics_per_document_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-700-703/core-target/debug/deps/font_metrics_per_document_test-636f0a50584f4c4e)
+
+running 9 tests
+test legacy_global_visible_when_document_misses ... ok
+test document_scope_takes_precedence_over_global ... ok
+test add_page_fallback_attaches_store ... ok
+test factory_method_attaches_store ... ok
+test unknown_font_warns_once_no_register ... ok
+test cross_document_no_leak_after_drop ... ok
+test metrics_die_with_document ... ok
+test add_page_does_not_overwrite_existing_store ... ok
+test multi_document_isolation ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/issue_230_text_context_injection_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-700-703/core-target/debug/deps/issue_230_text_context_injection_test-af8c1c8313ce9258)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_700_metric_allocations_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-700-703/core-target/debug/deps/issue_700_metric_allocations_test-1541c076fef53899)
+
+running 1 test
+test warmed_queries_do_not_clone_maps_and_replacements_remain_visible ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_block_metrics_tests.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-700-703/core-target/debug/deps/text_block_metrics_tests-d69687491f68e1d8)
+
+running 5 tests
+test test_empty_string ... ok
+test test_overlong_word ... ok
+test test_wraps_correctly ... ok
+test test_single_line_no_wrap ... ok
+test test_consistent_with_flow_context ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

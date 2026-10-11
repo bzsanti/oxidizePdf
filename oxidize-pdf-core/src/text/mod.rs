@@ -23,7 +23,9 @@ pub mod structured;
 pub mod table;
 pub mod table_detection;
 pub mod text_block;
+pub(crate) mod used_characters;
 pub mod validation;
+use used_characters::UsedCharacters;
 
 #[cfg(test)]
 mod cmap_tests;
@@ -146,30 +148,30 @@ impl TryFrom<i32> for TextRenderingMode {
 /// - Any builtin font → bytes are first WinAnsi-encoded
 ///   ([`TextEncoding::WinAnsiEncoding`]) and then escaped for inclusion
 ///   in a PDF string literal via
-///   [`encoding::escape_show_text_literal_bytes`].
+///   [`encoding::encode_show_text_literal`].
 pub(crate) fn build_show_text_op(text: &str, font: &Font) -> crate::graphics::ops::Op {
     use crate::graphics::ops::Op;
 
     match font {
         Font::Custom(_) => {
-            let utf16_units: Vec<u16> = text.encode_utf16().collect();
-            let mut hex = String::with_capacity(utf16_units.len() * 4);
-            for unit in utf16_units {
-                use std::fmt::Write as _;
-                write!(
-                    &mut hex,
-                    "{:02X}{:02X}",
-                    (unit >> 8) as u8,
-                    (unit & 0xFF) as u8
-                )
-                .expect("write to String never fails");
+            const HEX: &[u8; 16] = b"0123456789ABCDEF";
+            let capacity = text
+                .encode_utf16()
+                .count()
+                .checked_mul(4)
+                .expect("encoded text exceeds addressable capacity");
+            let mut hex = Vec::with_capacity(capacity);
+            for unit in text.encode_utf16() {
+                hex.extend_from_slice(&[
+                    HEX[(unit >> 12) as usize],
+                    HEX[((unit >> 8) & 15) as usize],
+                    HEX[((unit >> 4) & 15) as usize],
+                    HEX[(unit & 15) as usize],
+                ]);
             }
-            Op::ShowTextHex(hex.into_bytes())
+            Op::ShowTextHex(hex)
         }
-        _ => {
-            let encoded = TextEncoding::WinAnsiEncoding.encode(text);
-            Op::ShowText(encoding::escape_show_text_literal_bytes(&encoded))
-        }
+        _ => Op::ShowText(encoding::encode_show_text_literal(text)),
     }
 }
 
@@ -194,10 +196,9 @@ pub struct TextContext {
     // Track used characters per custom-font name (issue #204 — a single
     // global set caused every registered font to be subsetted with the
     // same characters, so two fonts of the same family ended up with
-    // duplicated subsets). Builtin fonts are not tracked because they
-    // don't need subsetting. Extended by `write` whenever the active
-    // font is `Font::Custom`.
-    used_characters_by_font: HashMap<String, HashSet<char>>,
+    // duplicated subsets). Builtin names are also tracked for custom fonts
+    // registered later under the same name. Only repeated ASCII hashing is skipped.
+    used_characters_by_font: HashMap<String, UsedCharacters>,
     /// Per-document font metrics store threaded from `Page` (issue #230).
     /// `None` means the built-in heuristic width tables are used.
     /// Non-test callers arrive in Task 9-11 (Document integration).
@@ -294,8 +295,12 @@ impl TextContext {
     }
 
     /// Get the per-font character map for font subsetting (issue #204).
-    pub(crate) fn get_used_characters_by_font(&self) -> &HashMap<String, HashSet<char>> {
-        &self.used_characters_by_font
+    pub(crate) fn get_used_characters_by_font(
+        &self,
+    ) -> impl Iterator<Item = (&String, &HashSet<char>)> {
+        self.used_characters_by_font
+            .iter()
+            .map(|(name, chars)| (name, chars.as_set()))
     }
 
     pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {
@@ -1072,3 +1077,34 @@ mod tests {
 
 mod font_program_names;
 mod intrinsic_encoding;
+
+#[cfg(test)]
+mod performance_encoding_tests {
+    use super::*;
+    use crate::graphics::ops::Op;
+
+    #[test]
+    fn show_text_bytes_match_historical_encoding_for_unicode_and_escapes() {
+        let bmp: String = (0..=0xffff).filter_map(char::from_u32).collect();
+        for text in [
+            "",
+            "ASCII (escaped) \\ test\n\r\t\u{8}\u{c}",
+            "Café € 中文 😀 𝄞\u{10ffff}",
+            &bmp,
+        ] {
+            let expected = encoding::escape_show_text_literal_bytes(
+                &TextEncoding::WinAnsiEncoding.encode(text),
+            );
+            let Op::ShowText(actual) = build_show_text_op(text, &Font::Helvetica) else {
+                panic!("expected literal text")
+            };
+            assert_eq!(actual, expected);
+            let expected: String = text.encode_utf16().map(|u| format!("{u:04X}")).collect();
+            let Op::ShowTextHex(actual) = build_show_text_op(text, &Font::Custom("Test".into()))
+            else {
+                panic!("expected hexadecimal text")
+            };
+            assert_eq!(actual, expected.as_bytes());
+        }
+    }
+}

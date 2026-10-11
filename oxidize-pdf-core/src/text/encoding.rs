@@ -513,13 +513,9 @@ pub fn macroman_encode_char(ch: char) -> Option<u8> {
 ///   intact through 7-bit-safe intermediaries and matches ISO 32000-1
 ///   §7.9.2.
 ///
-/// Used by `text::build_show_text_op` to consolidate the encoding +
-/// escape pipeline between `TextContext::write` and
-/// `TextFlowContext::write_wrapped` (issue #240). The initial capacity
-/// (`bytes.len() * 4`) is the upper bound (every byte expanding to the
-/// four-char `\NNN` octal form); for the common ASCII-dominant case it
-/// is an over-allocation but avoids realloc cascades on
-/// multibyte-heavy text (French, German, typographic glyphs).
+/// Historical byte-escaping implementation retained as an independent test
+/// oracle for the direct WinAnsi emission path (issue #702).
+#[cfg(test)]
 pub(crate) fn escape_show_text_literal_bytes(bytes: &[u8]) -> Vec<u8> {
     let mut buf = Vec::with_capacity(bytes.len() * 4);
     for &b in bytes {
@@ -578,6 +574,40 @@ pub fn escape_pdf_string_literal(input: &[u8]) -> String {
                 out.push(char::from_digit(((b >> 3) & 0x07) as u32, 8).unwrap());
                 out.push(char::from_digit((b & 0x07) as u32, 8).unwrap());
             }
+        }
+    }
+    out
+}
+
+/// Encode and escape into the final literal-string buffer. ASCII text without
+/// delimiters needs only its final copy. Other input grows the same buffer;
+/// capacity arithmetic is delegated to Vec rather than multiplying input sizes.
+pub(crate) fn encode_show_text_literal(text: &str) -> Vec<u8> {
+    if text
+        .bytes()
+        .all(|b| (0x20..=0x7e).contains(&b) && !matches!(b, b'(' | b')' | b'\\'))
+    {
+        return text.as_bytes().to_vec();
+    }
+    let mut out = Vec::with_capacity(text.len());
+    for ch in text.chars() {
+        let b = winansi_encode_char(ch).unwrap_or(b'?');
+        match b {
+            b'(' => out.extend_from_slice(b"\\("),
+            b')' => out.extend_from_slice(b"\\)"),
+            b'\\' => out.extend_from_slice(b"\\\\"),
+            b'\n' => out.extend_from_slice(b"\\n"),
+            b'\r' => out.extend_from_slice(b"\\r"),
+            b'\t' => out.extend_from_slice(b"\\t"),
+            8 => out.extend_from_slice(b"\\b"),
+            12 => out.extend_from_slice(b"\\f"),
+            0x20..=0x7e => out.push(b),
+            _ => out.extend_from_slice(&[
+                b'\\',
+                b'0' + (b >> 6),
+                b'0' + ((b >> 3) & 7),
+                b'0' + (b & 7),
+            ]),
         }
     }
     out

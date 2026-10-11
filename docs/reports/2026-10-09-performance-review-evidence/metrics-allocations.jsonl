@@ -1,0 +1,2 @@
+{"allocation_calls":1000,"case":"standard","elapsed_ns_instrumented_not_benchmark":467603,"iterations":1000,"requested_bytes":4624000,"total_width":59339.99999999851}
+{"allocation_calls":1000,"case":"custom10000","elapsed_ns_instrumented_not_benchmark":7771685,"iterations":1000,"requested_bytes":147472000,"total_width":66000.0}

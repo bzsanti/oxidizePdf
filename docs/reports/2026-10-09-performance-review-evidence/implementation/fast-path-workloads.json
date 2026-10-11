@@ -1,0 +1,23 @@
+[
+  {
+    "file": "accepted-graphics-candidate-graphics-raw-100.out",
+    "numeric_operands": 8000,
+    "integral_operands": 8000,
+    "hit_rate": 1.0,
+    "method": "Count emitted operands; these workload inputs are known exact integers or x+0.125, with no rounding-to-integer cases."
+  },
+  {
+    "file": "accepted-graphics-candidate-graphics-fractional-raw-100.out",
+    "numeric_operands": 8000,
+    "integral_operands": 0,
+    "hit_rate": 0.0,
+    "method": "Count emitted operands; these workload inputs are known exact integers or x+0.125, with no rounding-to-integer cases."
+  },
+  {
+    "file": "accepted-invoice-candidate-raw-10.out",
+    "numeric_operands": 660,
+    "integral_operands": 660,
+    "hit_rate": 1.0,
+    "method": "Count emitted operands; these workload inputs are known exact integers or x+0.125, with no rounding-to-integer cases."
+  }
+]

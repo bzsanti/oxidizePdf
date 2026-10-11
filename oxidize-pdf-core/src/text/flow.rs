@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::graphics::Color;
 use crate::page::Margins;
 use crate::text::metrics::{measure_text_with, FontMetricsStore};
+use crate::text::used_characters::UsedCharacters;
 use crate::text::{split_into_words, Font};
 use std::collections::{HashMap, HashSet};
 
@@ -46,7 +47,7 @@ pub struct TextFlowContext {
     /// #204). Consumed by `Page::add_text_flow` to merge into the
     /// page's graphics-context tracking so the writer can subset each
     /// custom font with only its own characters.
-    used_characters_by_font: HashMap<String, HashSet<char>>,
+    used_characters_by_font: HashMap<String, UsedCharacters>,
     /// Per-Document font metrics store threaded from the owning `Document`
     /// (issue #230, v2.8.0). When `Some`, `write_wrapped` resolves custom
     /// font widths via this store instead of the process-wide legacy registry.
@@ -99,8 +100,12 @@ impl TextFlowContext {
     /// (issue #204). `Page::add_text_flow` merges this into the page's
     /// graphics context so the writer knows which custom fonts were
     /// referenced and what characters each drew.
-    pub(crate) fn get_used_characters_by_font(&self) -> &HashMap<String, HashSet<char>> {
-        &self.used_characters_by_font
+    pub(crate) fn get_used_characters_by_font(
+        &self,
+    ) -> impl Iterator<Item = (&String, &HashSet<char>)> {
+        self.used_characters_by_font
+            .iter()
+            .map(|(name, chars)| (name, chars.as_set()))
     }
 
     pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {

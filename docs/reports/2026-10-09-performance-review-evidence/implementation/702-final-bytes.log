@@ -1,0 +1,9 @@
+   Compiling oxidize-pdf v5.4.1 (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/issue690-review/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 15.61s
+     Running unittests src/lib.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/performance-700-703/core-target/debug/deps/oxidize_pdf-f98c467871087551)
+
+running 1 test
+test text::performance_encoding_tests::show_text_bytes_match_historical_encoding_for_unicode_and_escapes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6809 filtered out; finished in 0.03s
+

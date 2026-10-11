@@ -1768,7 +1768,7 @@ impl Page {
         chars.extend('0'..='9');
 
         self.graphics_context
-            .merge_font_usage(&std::iter::once((font_name, chars)).collect());
+            .merge_font_usage(std::iter::once((&font_name, &chars)));
     }
 
     /// Gets a reference to the header if set.
@@ -1972,7 +1972,6 @@ impl Page {
         for (name, chars) in self
             .graphics_context
             .get_used_characters_by_font()
-            .iter()
             .chain(self.text_context.get_used_characters_by_font())
         {
             if let Some(existing) = target.get_mut(name) {

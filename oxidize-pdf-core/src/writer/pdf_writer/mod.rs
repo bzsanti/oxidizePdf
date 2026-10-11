@@ -100,7 +100,7 @@ impl WriterConfig {
 /// only `Object::String` payloads (metadata, dict entries, array
 /// elements). The show-text `(text) Tj` payloads inside content
 /// streams take an independent path (`Op::ShowText` bytes are produced
-/// by `text::encoding::escape_show_text_literal_bytes`, which DOES
+/// by `text::encoding::encode_show_text_literal`, which DOES
 /// escape the high byte range `0x80..=0xFF` as `\NNN` octal because
 /// those payloads carry WinAnsi-encoded text whose bytes must survive
 /// 7-bit-safe intermediaries). The two helpers solve different

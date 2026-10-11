@@ -184,6 +184,97 @@ pub(crate) enum Op {
     Raw(Vec<u8>),
 }
 
+/// Emit exactly representable integral magnitudes without float formatting.
+/// Keep the sign bit separately so negative zero remains observable. Values
+/// outside this bounded fast path use Rust's original formatter unchanged.
+fn write_integral(out: &mut Vec<u8>, value: f64) -> bool {
+    let magnitude = value.abs();
+    if magnitude > 9_007_199_254_740_992.0 || !value.is_finite() {
+        return false;
+    }
+    let mut integer = magnitude as u64;
+    if integer as f64 != magnitude {
+        return false;
+    }
+    let mut digits = [0u8; 16]; // 2^53 has sixteen decimal digits.
+    let mut start = digits.len();
+    loop {
+        start -= 1;
+        digits[start] = b'0' + (integer % 10) as u8;
+        integer /= 10;
+        if integer == 0 {
+            break;
+        }
+    }
+    if value.is_sign_negative() {
+        out.push(b'-');
+    }
+    out.extend_from_slice(&digits[start..]);
+    true
+}
+
+fn write_fixed<const PRECISION: usize>(out: &mut Vec<u8>, value: f64) {
+    let value = finite_or_zero(value);
+    if write_integral(out, value) {
+        out.push(b'.');
+        out.extend_from_slice(&[b'0'; PRECISION]);
+    } else {
+        write!(out, "{value:.PRECISION$}").expect("writing to Vec<u8> never fails");
+    }
+}
+
+// Inline so fixed-size coordinate tuples specialize away slice-length dispatch.
+#[inline]
+fn write_numbers<const PRECISION: usize>(out: &mut Vec<u8>, values: &[f64], suffix: &[u8]) {
+    // Keep one formatter invocation for fractional coordinate tuples. Formatting
+    // each operand separately adds overhead to the fallback-only workload.
+    let integral = values.iter().all(|&v| {
+        let v = finite_or_zero(v).abs();
+        v <= 9_007_199_254_740_992.0 && (v as u64) as f64 == v
+    });
+    if !integral {
+        match values {
+            [a, b] => {
+                write!(
+                    out,
+                    "{:.PRECISION$} {:.PRECISION$} ",
+                    finite_or_zero(*a),
+                    finite_or_zero(*b)
+                )
+                .expect("writing to Vec<u8> never fails");
+            }
+            [a, b, c, d] => {
+                write!(
+                    out,
+                    "{:.PRECISION$} {:.PRECISION$} {:.PRECISION$} {:.PRECISION$} ",
+                    finite_or_zero(*a),
+                    finite_or_zero(*b),
+                    finite_or_zero(*c),
+                    finite_or_zero(*d)
+                )
+                .expect("writing to Vec<u8> never fails");
+            }
+            [a, b, c, d, e, f] => {
+                write!(out, "{:.PRECISION$} {:.PRECISION$} {:.PRECISION$} {:.PRECISION$} {:.PRECISION$} {:.PRECISION$} ",
+                    finite_or_zero(*a), finite_or_zero(*b), finite_or_zero(*c), finite_or_zero(*d), finite_or_zero(*e), finite_or_zero(*f))
+                    .expect("writing to Vec<u8> never fails");
+            }
+            _ => {
+                for &value in values {
+                    write_fixed::<PRECISION>(out, value);
+                    out.push(b' ');
+                }
+            }
+        }
+    } else {
+        for &value in values {
+            write_fixed::<PRECISION>(out, value);
+            out.push(b' ');
+        }
+    }
+    out.extend_from_slice(suffix);
+}
+
 /// Serialises a slice of `Op` values to a byte buffer in PDF
 /// content-stream syntax. Non-finite floats are clamped to `0.0` via
 /// `finite_or_zero` at the emission boundary.
@@ -192,14 +283,10 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
         match op {
             // ── path construction ──
             Op::MoveTo { x, y } => {
-                let x = finite_or_zero(*x);
-                let y = finite_or_zero(*y);
-                writeln!(out, "{x:.2} {y:.2} m").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*x, *y], b"m\n");
             }
             Op::LineTo { x, y } => {
-                let x = finite_or_zero(*x);
-                let y = finite_or_zero(*y);
-                writeln!(out, "{x:.2} {y:.2} l").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*x, *y], b"l\n");
             }
             Op::CurveTo {
                 x1,
@@ -209,22 +296,10 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
                 x3,
                 y3,
             } => {
-                let x1 = finite_or_zero(*x1);
-                let y1 = finite_or_zero(*y1);
-                let x2 = finite_or_zero(*x2);
-                let y2 = finite_or_zero(*y2);
-                let x3 = finite_or_zero(*x3);
-                let y3 = finite_or_zero(*y3);
-                writeln!(out, "{x1:.2} {y1:.2} {x2:.2} {y2:.2} {x3:.2} {y3:.2} c")
-                    .expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*x1, *y1, *x2, *y2, *x3, *y3], b"c\n");
             }
             Op::Rect { x, y, w, h } => {
-                let x = finite_or_zero(*x);
-                let y = finite_or_zero(*y);
-                let w = finite_or_zero(*w);
-                let h = finite_or_zero(*h);
-                writeln!(out, "{x:.2} {y:.2} {w:.2} {h:.2} re")
-                    .expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*x, *y, *w, *h], b"re\n");
             }
             Op::ClosePath => out.extend_from_slice(b"h\n"),
 
@@ -243,24 +318,15 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
                 writeln!(out, "/{name} CS").expect("writing to Vec<u8> never fails");
             }
             Op::SetFillColorComponents(values) => {
-                for v in values {
-                    let v = finite_or_zero(*v);
-                    write!(out, "{v:.4} ").expect("writing to Vec<u8> never fails");
-                }
-                out.extend_from_slice(b"sc\n");
+                write_numbers::<4>(out, values, b"sc\n");
             }
             Op::SetStrokeColorComponents(values) => {
-                for v in values {
-                    let v = finite_or_zero(*v);
-                    write!(out, "{v:.4} ").expect("writing to Vec<u8> never fails");
-                }
-                out.extend_from_slice(b"SC\n");
+                write_numbers::<4>(out, values, b"SC\n");
             }
 
             // ── line / dash ──
             Op::SetLineWidth(width) => {
-                let w = finite_or_zero(*width);
-                writeln!(out, "{w:.2} w").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*width], b"w\n");
             }
             Op::SetLineCap(cap) => {
                 writeln!(out, "{cap} J").expect("writing to Vec<u8> never fails");
@@ -269,15 +335,13 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
                 writeln!(out, "{join} j").expect("writing to Vec<u8> never fails");
             }
             Op::SetMiterLimit(limit) => {
-                let l = finite_or_zero(*limit);
-                writeln!(out, "{l:.2} M").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*limit], b"M\n");
             }
             Op::SetDashPatternRaw(s) => {
                 writeln!(out, "{s} d").expect("writing to Vec<u8> never fails");
             }
             Op::SetFlatness(value) => {
-                let v = finite_or_zero(*value);
-                writeln!(out, "{v:.2} i").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*value], b"i\n");
             }
 
             // ── ExtGState ──
@@ -294,14 +358,7 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
 
             // ── transforms ──
             Op::Cm { a, b, c, d, e, f } => {
-                let a = finite_or_zero(*a);
-                let b = finite_or_zero(*b);
-                let c = finite_or_zero(*c);
-                let d = finite_or_zero(*d);
-                let e = finite_or_zero(*e);
-                let f = finite_or_zero(*f);
-                writeln!(out, "{a:.2} {b:.2} {c:.2} {d:.2} {e:.2} {f:.2} cm")
-                    .expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*a, *b, *c, *d, *e, *f], b"cm\n");
             }
 
             // ── images / forms ──
@@ -314,12 +371,16 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
             Op::EndText => out.extend_from_slice(b"ET\n"),
             Op::SetFont { name, size } => {
                 let size = finite_or_zero(*size);
-                writeln!(out, "/{name} {size} Tf").expect("writing to Vec<u8> never fails");
+                out.push(b'/');
+                out.extend_from_slice(name.as_bytes());
+                out.push(b' ');
+                if !write_integral(out, size) {
+                    write!(out, "{size}").expect("writing to Vec<u8> never fails");
+                }
+                out.extend_from_slice(b" Tf\n");
             }
             Op::SetTextPosition { x, y } => {
-                let x = finite_or_zero(*x);
-                let y = finite_or_zero(*y);
-                writeln!(out, "{x:.2} {y:.2} Td").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*x, *y], b"Td\n");
             }
             Op::ShowText(bytes) => {
                 out.push(b'(');
@@ -349,24 +410,19 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
                 out.extend_from_slice(b" ] TJ\n");
             }
             Op::SetWordSpacing(value) => {
-                let v = finite_or_zero(*value);
-                writeln!(out, "{v:.2} Tw").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*value], b"Tw\n");
             }
             Op::SetCharSpacing(value) => {
-                let v = finite_or_zero(*value);
-                writeln!(out, "{v:.2} Tc").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*value], b"Tc\n");
             }
             Op::SetHorizontalScaling(value) => {
-                let v = finite_or_zero(*value);
-                writeln!(out, "{v:.2} Tz").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*value], b"Tz\n");
             }
             Op::SetLeading(value) => {
-                let v = finite_or_zero(*value);
-                writeln!(out, "{v:.2} TL").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*value], b"TL\n");
             }
             Op::SetTextRise(value) => {
-                let v = finite_or_zero(*value);
-                writeln!(out, "{v:.2} Ts").expect("writing to Vec<u8> never fails");
+                write_numbers::<2>(out, &[*value], b"Ts\n");
             }
             Op::SetRenderingMode(mode) => {
                 writeln!(out, "{mode} Tr").expect("writing to Vec<u8> never fails");
@@ -535,5 +591,125 @@ mod tests {
         // ISO 32000-1 §8.5.4: a clip path is terminated by `W n`.
         let ops = vec![Op::ClipNonZero, Op::EndPath];
         assert_eq!(ops_to_string(&ops), "W\nn\n");
+    }
+}
+
+#[cfg(test)]
+mod numeric_performance_tests {
+    use super::*;
+
+    fn assert_legacy_bytes(value: f64) {
+        let finite = if value.is_finite() { value } else { 0.0 };
+        let mut actual = Vec::new();
+        serialize_ops(
+            &mut actual,
+            &[
+                Op::MoveTo {
+                    x: value,
+                    y: -value,
+                },
+                Op::LineTo { x: value, y: value },
+                Op::CurveTo {
+                    x1: value,
+                    y1: value,
+                    x2: value,
+                    y2: value,
+                    x3: value,
+                    y3: value,
+                },
+                Op::Rect {
+                    x: value,
+                    y: value,
+                    w: value,
+                    h: value,
+                },
+                Op::Cm {
+                    a: value,
+                    b: value,
+                    c: value,
+                    d: value,
+                    e: value,
+                    f: value,
+                },
+                Op::SetTextPosition { x: value, y: value },
+                Op::SetLineWidth(value),
+                Op::SetMiterLimit(value),
+                Op::SetFlatness(value),
+                Op::SetWordSpacing(value),
+                Op::SetCharSpacing(value),
+                Op::SetHorizontalScaling(value),
+                Op::SetLeading(value),
+                Op::SetTextRise(value),
+                Op::SetFont {
+                    name: "F1".into(),
+                    size: value,
+                },
+                Op::SetFillColorComponents(vec![value]),
+                Op::SetStrokeColorComponents(vec![value]),
+                Op::Stroke,
+            ],
+        );
+        let opposite = if value.is_finite() { -value } else { 0.0 };
+        let expected = format!(
+            concat!(
+                "{v:.2} {opposite:.2} m\n{v:.2} {v:.2} l\n",
+                "{v:.2} {v:.2} {v:.2} {v:.2} {v:.2} {v:.2} c\n",
+                "{v:.2} {v:.2} {v:.2} {v:.2} re\n",
+                "{v:.2} {v:.2} {v:.2} {v:.2} {v:.2} {v:.2} cm\n",
+                "{v:.2} {v:.2} Td\n{v:.2} w\n{v:.2} M\n{v:.2} i\n",
+                "{v:.2} Tw\n{v:.2} Tc\n{v:.2} Tz\n{v:.2} TL\n{v:.2} Ts\n",
+                "/F1 {v} Tf\n{v:.4} sc\n{v:.4} SC\nS\n"
+            ),
+            v = finite,
+            opposite = opposite
+        );
+        assert_eq!(
+            actual,
+            expected.as_bytes(),
+            "value bits: {:016x}",
+            value.to_bits()
+        );
+    }
+
+    #[test]
+    fn numeric_operators_match_legacy_formatting_at_boundaries_and_random_bits() {
+        for value in [
+            0.,
+            -0.,
+            1.,
+            -1.,
+            9.,
+            10.,
+            99.,
+            100.,
+            1.005,
+            -1.005,
+            1.125,
+            0.00005,
+            -0.00005,
+            f64::MIN_POSITIVE,
+            f64::from_bits(1),
+            f64::MAX,
+            f64::MIN,
+            f64::NAN,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            9_007_199_254_740_991.,
+            9_007_199_254_740_992.,
+            9_007_199_254_740_994.,
+        ] {
+            assert_legacy_bytes(value);
+            assert_legacy_bytes(-value);
+        }
+        for value in -1000..=1000 {
+            assert_legacy_bytes(value as f64);
+        }
+        let mut bits = 0x7037_0170_2700_u64;
+        for _ in 0..4096 {
+            bits ^= bits << 13;
+            bits ^= bits >> 7;
+            bits ^= bits << 17;
+            assert_legacy_bytes(f64::from_bits(bits));
+        }
     }
 }
