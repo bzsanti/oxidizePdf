@@ -1,3 +1,11 @@
+## Issue #712 — permisos DocMDP de notas y resaltados
+
+- Issue: #712 — fix(annotations): enforce DocMDP for incremental notes and highlights — https://github.com/bzsanti/oxidizePdf/issues/712
+- Estado: implementación validada, integración pendiente; P1; responsable Codex.
+- Cierre: P1/P2 rechazan todo lote no vacío; P3/approval permiten; lectura/no-op conservados; pruebas y CI aprobadas.
+- Última validación: RED cinco fallos/un control; GREEN seis nuevas + 37 relacionadas, 6809 biblioteca, tres qpdf, Clippy y QR/Kripteia PASS. Informe docs/reports/2026-10-11-issue-712-review.md.
+- Siguiente acción: CI y merge hacia develop. La adopción por bridges depende de una release corregida; no se publica como parte de este PR.
+
 ## Release 5.4.2 — 2026-10-10
 
 - Issue: #705 — release: publish oxidize-pdf 5.4.2 — https://github.com/bzsanti/oxidizePdf/issues/705

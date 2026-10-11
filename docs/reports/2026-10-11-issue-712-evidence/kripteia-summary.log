@@ -1,0 +1,36 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 94 | Tests: 10433 | Files: 762
+
+/tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_712_annotation_docmdp_test.rs:
+  notes_reject_certified_p1_and_p2_but_keep_reads_and_noops (line 61) - Score: 100
+    i Test 'notes_reject_certified_p1_and_p2_but_keep_reads_and_noops' has multiple assertions without diagnostic messages
+  highlights_reject_certified_p1_and_p2_but_keep_reads_and_noops (line 77) - Score: 100
+    i Test 'highlights_reject_certified_p1_and_p2_but_keep_reads_and_noops' has multiple assertions without diagnostic messages
+  p3_and_approval_signatures_allow_annotation_lifecycles (line 93) - Score: 100
+    i Test 'p3_and_approval_signatures_allow_annotation_lifecycles' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'p3_and_approval_signatures_allow_annotation_lifecycles' has multiple assertions without diagnostic messages
+    i Test 'p3_and_approval_signatures_allow_annotation_lifecycles' uses .unwrap() which silently discards error information
+  existing_annotations_cannot_be_updated_or_removed_under_p1_p2 (line 136) - Score: 100
+    i Test 'existing_annotations_cannot_be_updated_or_removed_under_p1_p2' uses .unwrap() which silently discards error information
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+--- Taint Flows (1 total, 1 unguarded) ---
+  path → std::fs::read (confidence: 100%) /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/examples/text_content_probe.rs:12
+    via: path
+
+--- Unsafe Usages (10) ---
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_618_incremental_callbacks_test.rs:23 — fn alloc
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_618_incremental_callbacks_test.rs:27 — fn dealloc
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_618_incremental_callbacks_test.rs:30 — fn realloc
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:24 — fn alloc
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:28 — fn alloc_zeroed
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:32 — fn realloc
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_700_metric_allocations_test.rs:36 — fn dealloc
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_680_memory_budget_test.rs:20 — fn alloc
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_680_memory_budget_test.rs:27 — fn dealloc
+  /tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core/tests/issue_680_memory_budget_test.rs:31 — fn realloc

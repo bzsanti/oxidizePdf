@@ -1,0 +1,21 @@
+    Finished `test` profile [unoptimized] target(s) in 0.21s
+     Running tests/issue_493_incremental_text_notes_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_493_incremental_text_notes_test-5db7a90060db5b13)
+
+running 1 test
+test qpdf_accepts_incremental_text_note_revision ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.01s
+
+     Running tests/issue_525_incremental_highlights_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_525_incremental_highlights_test-281313c64412a16c)
+
+running 1 test
+test qpdf_accepts_classic_and_xref_stream_highlight_revisions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.02s
+
+     Running tests/issue_534_incremental_free_text_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_534_incremental_free_text_test-8cb04a2f2af06c4c)
+
+running 1 test
+test qpdf_accepts_classic_and_xref_stream_free_text_revisions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.01s
