@@ -1,0 +1,77 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 11.05s
+     Running tests/issue_493_incremental_text_notes_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_493_incremental_text_notes_test-5db7a90060db5b13)
+
+running 13 tests
+test qpdf_accepts_incremental_text_note_revision ... ignored, requires qpdf; exercised by the Ubuntu CI interoperability step
+test empty_batch_is_a_true_noop ... ok
+test invalid_mutation_rejects_the_whole_batch ... ok
+test lists_only_indirect_text_notes_with_stable_ids ... ok
+test rejects_annotation_identity_referenced_from_multiple_pages ... ok
+test rejects_annots_array_shared_by_multiple_pages ... ok
+test rejects_exhausted_indirect_object_number_space_without_panicking ... ok
+test add_supports_inline_and_missing_annots_arrays ... ok
+test mixed_batch_is_one_atomic_incremental_revision ... ok
+test update_preserves_unknown_real_values_without_rounding ... ok
+test remove_drops_only_the_target_reference ... ok
+test rejects_invalid_values_duplicate_targets_and_non_text_ids ... ok
+test rejects_encrypted_pdfs_inline_text_notes_and_out_of_bounds_rectangles ... ok
+
+test result: ok. 12 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/issue_525_incremental_highlights_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_525_incremental_highlights_test-281313c64412a16c)
+
+running 8 tests
+test qpdf_accepts_classic_and_xref_stream_highlight_revisions ... ignored, requires qpdf; exercised by the Ubuntu CI interoperability step
+test empty_batch_is_a_true_noop ... ok
+test rejects_invalid_geometry_color_page_and_identity_atomically ... ok
+test reads_all_pages_indirect_annots_and_nonzero_generations ... ok
+test reads_adds_multiline_and_removes_highlights_without_touching_other_annotations ... ok
+test repeated_updates_preserve_xref_stream_revisions ... ok
+test repeated_updates_preserve_classic_xref_revisions ... ok
+test rejects_malformed_inline_and_encrypted_documents ... ok
+
+test result: ok. 7 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/issue_532_docmdp_permissions_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_532_docmdp_permissions_test-661df7b1ee06aa8f)
+
+running 9 tests
+test rejects_a_certification_dictionary_redefined_after_signing ... ok
+test rejects_conflicting_certification_signatures ... ok
+test rejects_docmdp_without_catalog_certification_entry ... ok
+test rejects_page_reordering_for_every_docmdp_permission_level ... ok
+test rejects_malformed_or_unsupported_transform_parameters ... ok
+test rejects_a_cryptographically_intact_certification_signature ... ok
+test permits_a_real_cryptographically_intact_approval_signature ... ok
+test permits_multiple_approval_signatures_and_later_incremental_revisions ... ok
+test qpdf_accepts_the_certification_fixture_when_available ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/issue_534_incremental_free_text_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_534_incremental_free_text_test-8cb04a2f2af06c4c)
+
+running 10 tests
+test qpdf_accepts_classic_and_xref_stream_free_text_revisions ... ignored, requires qpdf; exercised by the Ubuntu CI interoperability step
+test preserves_nonzero_generation_identities ... ok
+test reads_free_text_with_stable_identity_and_default_alignment ... ok
+test empty_batch_is_a_true_noop ... ok
+test mixed_batch_is_atomic_round_trips_unicode_and_preserves_unknown_keys ... ok
+test supports_xref_stream_inputs_and_emits_a_reopenable_incremental_revision ... ok
+test add_and_remove_update_indirect_annots_without_rewriting_other_annotations ... ok
+test rejects_invalid_properties_pages_stale_ids_and_conflicting_batches ... ok
+test rejects_malformed_inline_and_encrypted_inputs ... ok
+test enforces_docmdp_and_preserves_approval_signed_prefixes ... ok
+
+test result: ok. 9 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/issue_712_annotation_docmdp_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_712_annotation_docmdp_test-aed618ffb2bf83f2)
+
+running 6 tests
+test highlights_reject_certified_p1_and_p2_but_keep_reads_and_noops ... ok
+test notes_reject_certified_p1_and_p2_but_keep_reads_and_noops ... ok
+test orphan_docmdp_transform_is_rejected_by_both_editors ... ok
+test existing_annotations_cannot_be_updated_or_removed_under_p1_p2 ... ok
+test p3_and_approval_signatures_allow_annotation_lifecycles ... ok
+test original_signed_p2_fixture_is_rejected_without_modifying_signature_bytes ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s

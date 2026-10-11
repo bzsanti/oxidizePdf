@@ -1,0 +1,51 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/bridge-parity-5.4.2/core712/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 34.68s
+     Running tests/issue_712_annotation_docmdp_test.rs (/home/santi/repos/BelowZero/oxidizePdf/oxidize-pdf/target/debug/deps/issue_712_annotation_docmdp_test-aed618ffb2bf83f2)
+
+running 6 tests
+test orphan_docmdp_transform_is_rejected_by_both_editors ... FAILED
+test notes_reject_certified_p1_and_p2_but_keep_reads_and_noops ... FAILED
+test original_signed_p2_fixture_is_rejected_without_modifying_signature_bytes ... FAILED
+test existing_annotations_cannot_be_updated_or_removed_under_p1_p2 ... FAILED
+test highlights_reject_certified_p1_and_p2_but_keep_reads_and_noops ... FAILED
+test p3_and_approval_signatures_allow_annotation_lifecycles ... ok
+
+failures:
+
+---- orphan_docmdp_transform_is_rejected_by_both_editors stdout ----
+
+thread 'orphan_docmdp_transform_is_rejected_by_both_editors' (353) panicked at oxidize-pdf-core/tests/issue_712_annotation_docmdp_test.rs:167:10:
+called `Result::unwrap_err()` on an `Ok` value: TextNoteUpdate { pdf_bytes: [37, 80, 68, 70, 45, 49, 46, 52, 10, 37, 226, 227, 207, 211, 10, 49, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 47, 84, 121, 112, 101, 32, 47, 67, 97, 116, 97, 108, 111, 103, 32, 47, 80, 97, 103, 101, 115, 32, 50, 32, 48, 32, 82, 32, 32, 62, 62, 10, 101, 110, 100, 111, 98, 106, 10, 50, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 47, 84, 121, 112, 101, 32, 47, 80, 97, 103, 101, 115, 32, 47, 75, 105, 100, 115, 32, 91, 51, 32, ... [PDF Debug payload omitted]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- notes_reject_certified_p1_and_p2_but_keep_reads_and_noops stdout ----
+
+thread 'notes_reject_certified_p1_and_p2_but_keep_reads_and_noops' (351) panicked at oxidize-pdf-core/tests/issue_712_annotation_docmdp_test.rs:67:40:
+called `Result::unwrap_err()` on an `Ok` value: TextNoteUpdate { pdf_bytes: [37, 80, 68, 70, 45, 49, 46, 52, 10, 37, 226, 227, 207, 211, 10, 49, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 47, 84, 121, 112, 101, 32, 47, 67, 97, 116, 97, 108, 111, 103, 32, 47, 80, 97, 103, 101, 115, 32, 50, 32, 48, 32, 82, 32, 47, 80, 101, 114, 109, 115, 32, 60, 60, 32, 47, 68, 111, 99, 77, 68, 80, 32, 52, 32, 48, 32, 82, 32, 62, 62, 32, 62, 62, 10, 101, 110, 100, 111, 98, 106, 10, 50, 32, 48, 32, 111, 98, 106, 10, ... [PDF Debug payload omitted]
+
+---- original_signed_p2_fixture_is_rejected_without_modifying_signature_bytes stdout ----
+
+thread 'original_signed_p2_fixture_is_rejected_without_modifying_signature_bytes' (352) panicked at oxidize-pdf-core/tests/issue_712_annotation_docmdp_test.rs:184:14:
+called `Result::unwrap_err()` on an `Ok` value: TextNoteUpdate { pdf_bytes: [37, 80, 68, 70, 45, 49, 46, 52, 10, 37, 226, 227, 207, 211, 10, 49, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 47, 84, 121, 112, 101, 32, 47, 67, 97, 116, 97, 108, 111, 103, 32, 47, 80, 97, 103, 101, 115, 32, 52, 32, 48, 32, 82, 32, 47, 65, 99, 114, 111, 70, 111, 114, 109, 32, 50, 32, 48, 32, 82, 32, 47, 80, 101, 114, 109, 115, 32, 60, 60, 32, 47, 68, 111, 99, 77, 68, 80, 32, 54, 32, 48, 32, 82, 32, 62, 62, 32, 62, 62, 1 ... [PDF Debug payload omitted]
+
+---- existing_annotations_cannot_be_updated_or_removed_under_p1_p2 stdout ----
+
+thread 'existing_annotations_cannot_be_updated_or_removed_under_p1_p2' (349) panicked at oxidize-pdf-core/tests/issue_712_annotation_docmdp_test.rs:140:18:
+called `Result::unwrap_err()` on an `Ok` value: TextNoteUpdate { pdf_bytes: [37, 80, 68, 70, 45, 49, 46, 52, 10, 37, 226, 227, 207, 211, 10, 49, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 47, 84, 121, 112, 101, 32, 47, 67, 97, 116, 97, 108, 111, 103, 32, 47, 80, 97, 103, 101, 115, 32, 50, 32, 48, 32, 82, 32, 47, 80, 101, 114, 109, 115, 32, 60, 60, 32, 47, 68, 111, 99, 77, 68, 80, 32, 52, 32, 48, 32, 82, 32, 62, 62, 32, 62, 62, 10, 101, 110, 100, 111, 98, 106, 10, 50, 32, 48, 32, 111, 98, 106, 10, ... [PDF Debug payload omitted]
+
+---- highlights_reject_certified_p1_and_p2_but_keep_reads_and_noops stdout ----
+
+thread 'highlights_reject_certified_p1_and_p2_but_keep_reads_and_noops' (350) panicked at oxidize-pdf-core/tests/issue_712_annotation_docmdp_test.rs:77:45:
+called `Result::unwrap_err()` on an `Ok` value: HighlightUpdate { pdf_bytes: [37, 80, 68, 70, 45, 49, 46, 52, 10, 37, 226, 227, 207, 211, 10, 49, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 47, 84, 121, 112, 101, 32, 47, 67, 97, 116, 97, 108, 111, 103, 32, 47, 80, 97, 103, 101, 115, 32, 50, 32, 48, 32, 82, 32, 47, 80, 101, 114, 109, 115, 32, 60, 60, 32, 47, 68, 111, 99, 77, 68, 80, 32, 52, 32, 48, 32, 82, 32, 62, 62, 32, 62, 62, 10, 101, 110, 100, 111, 98, 106, 10, 50, 32, 48, 32, 111, 98, 106, 10 ... [PDF Debug payload omitted]
+
+
+failures:
+    existing_annotations_cannot_be_updated_or_removed_under_p1_p2
+    highlights_reject_certified_p1_and_p2_but_keep_reads_and_noops
+    notes_reject_certified_p1_and_p2_but_keep_reads_and_noops
+    original_signed_p2_fixture_is_rejected_without_modifying_signature_bytes
+    orphan_docmdp_transform_is_rejected_by_both_editors
+
+test result: FAILED. 1 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_712_annotation_docmdp_test`

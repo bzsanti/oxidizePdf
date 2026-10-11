@@ -188,6 +188,7 @@ impl<'a> IncrementalHighlightEditor<'a> {
             });
         }
         let existing_pages = validate_batch(&snapshot, &existing, mutations)?;
+        super::incremental_annotations::validate_annotation_policy(self.base_bytes)?;
         let mut update = IncrementalUpdate::from_base(self.base_bytes)?;
         let mut changed_pages = HashSet::new();
 

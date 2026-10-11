@@ -152,3 +152,20 @@ pub(super) fn subtype(dictionary: &PdfDictionary) -> Option<&str> {
         .and_then(PdfObject::as_name)
         .map(|name| name.0.as_str())
 }
+
+/// Shared policy gate for nonempty annotation mutation batches.
+/// Keep reads and empty batches independent of mutation permissions.
+pub(super) fn validate_annotation_policy(bytes: &[u8]) -> Result<()> {
+    use crate::signatures::{ensure_modification_allowed, IncrementalModification};
+    let mut reader = PdfReader::new(Cursor::new(bytes))
+        .map_err(|error| PdfError::InvalidStructure(format!("parse base PDF: {error}")))?;
+    let catalog = reader
+        .catalog()
+        .map_err(|error| PdfError::InvalidStructure(format!("read catalog: {error}")))?
+        .clone();
+    ensure_modification_allowed(
+        &mut reader,
+        &catalog,
+        IncrementalModification::AddAnnotation,
+    )
+}

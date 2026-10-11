@@ -132,6 +132,7 @@ impl<'a> IncrementalTextNoteEditor<'a> {
             });
         }
         validate_batch(&snapshot, mutations)?;
+        super::incremental_annotations::validate_annotation_policy(self.base_bytes)?;
         let mut update = IncrementalUpdate::from_base(self.base_bytes)?;
         let mut added_notes = Vec::new();
         let mut changed_pages = HashSet::new();
