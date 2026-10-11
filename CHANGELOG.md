@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.4.2] - 2026-10-10
+
 ### Performance
 
 - Borrow or share font metrics during width queries instead of cloning complete
@@ -18,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add bounded integer fast paths for numeric content operators while retaining
   historical fractional formatting, negative zero and non-finite handling
   (#703). The [performance report](docs/reports/2026-10-09-performance-review.md)
-  records workload-specific gains and residual fractional-only overhead.
+  records workload-specific gains. Fractional-only uncompressed graphics took
+  3.6% more time in the measured workload; no universal speedup is claimed.
 
 ## [5.4.1] - 2026-10-08
 
