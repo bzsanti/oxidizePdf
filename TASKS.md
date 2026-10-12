@@ -1,3 +1,11 @@
+## Issue #714 — 2026-10-12
+
+- Issue: #714 — Expose generic incremental catalog/object updates and external document timestamp preparation — https://github.com/bzsanti/oxidizePdf/issues/714
+- Estado: implementación y QR locales terminados; entrega remota/CI pendientes. P1 por bloqueo de Studio; responsable Codex.
+- Cierre verificable: APIs públicas de objetos/catálogo y DocTimeStamp, conservación incremental, permisos/errores, consumidores externos y regresiones. Cumplido localmente; revisión en docs/reports/2026-10-12-issue-714-review.md.
+- Última validación: 12 pruebas nuevas PASS incluidas interop qpdf/OpenSSL, consumidor externo PASS, 6834 biblioteca PASS/3 ignoradas existentes, regresiones firmas/permisos/anotaciones PASS, formato/Clippy y QR/Kripteia PASS; mutaciones discriminantes DocMDP/Type detectadas.
+- Siguiente acción: PR hacia develop y CI. Publicación de core no autorizada; no afirmar disponibilidad en el registro.
+
 ## Issue #712 — permisos DocMDP de notas y resaltados
 
 - Issue: #712 — fix(annotations): enforce DocMDP for incremental notes and highlights — https://github.com/bzsanti/oxidizePdf/issues/712

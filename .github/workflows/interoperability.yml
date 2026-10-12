@@ -86,6 +86,11 @@ jobs:
           --test issue_540_incremental_signing_test
           -- --ignored
 
+      - name: Validate incremental objects and external document timestamps
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_714_incremental_primitives_test -- --ignored
+
       - name: Validate AES-256 R5 interoperability
         run: >
           cargo test -p oxidize-pdf

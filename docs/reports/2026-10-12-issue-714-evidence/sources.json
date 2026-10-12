@@ -1,0 +1,14 @@
+{
+  "base": "206b688768cc49c3210472668e6e3c63959e043f",
+  "sha256": {
+    "oxidize-pdf-core/src/writer/incremental_objects.rs": "7168c45646b67fba3cd544a432b18e75981a6f4a47e00ecb834f712816b20084",
+    "oxidize-pdf-core/src/writer/incremental_update.rs": "eab45016a7a9d2e40ef9b45b77c3985b97ff1fdd192e321898eabe8b732342ec",
+    "oxidize-pdf-core/src/writer/mod.rs": "b0cf11a3a16785a3aaeedf765e6fa8c4807c13ad0d09e80f85962d066e3cdb13",
+    "oxidize-pdf-core/src/signatures/signing.rs": "58ebae8658da7cc2313358e1faad899d3dcc5a82763cdded583699a2a2366f2a",
+    "oxidize-pdf-core/src/signatures/permissions.rs": "63c978fbb7fd6886bc75816bd9999884fb05eac4cc1f98643e2f1dce09afe566",
+    "oxidize-pdf-core/src/signatures/mod.rs": "12102f44d6ad74ee766824414d8f68d6c163090e1f5185f357421905b5661735",
+    "oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs": "9fecf872d368dbb7115fbc1367d0f9cd6982251904f5618185e484482d425d58",
+    ".github/workflows/interoperability.yml": "79638e72dbe024d71d1dccbbdb68831ef83ad99527c5beb42f56f4b82dac3d1c",
+    "docs/signatures.md": "e966230ec7a1e91eba9093c9aa490f9a7029286a9fce38633377d7a84cf768dd"
+  }
+}

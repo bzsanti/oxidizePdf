@@ -116,6 +116,9 @@ impl<'a> IncrementalUpdate<'a> {
     }
 
     pub(crate) fn finish(mut self) -> Result<Vec<u8>> {
+        if self.replacements.is_empty() {
+            return Ok(self.base.to_vec());
+        }
         self.replacements
             .sort_by_key(|(number, generation, _)| (*number, *generation));
         let mut out = Vec::with_capacity(self.base.len() + self.replacements.len() * 256 + 512);

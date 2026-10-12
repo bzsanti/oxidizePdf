@@ -82,8 +82,9 @@ pub use detection::detect_signature_fields;
 pub use error::{SignatureError, SignatureResult};
 pub(crate) use permissions::{ensure_modification_allowed, IncrementalModification};
 pub use signing::{
-    prepare_incremental_signature, prepare_incremental_signature_with_appearance,
-    CertificationPermission, FieldLock, PreparedSignature, SignatureAppearance,
+    prepare_document_timestamp, prepare_incremental_signature,
+    prepare_incremental_signature_with_appearance, CertificationPermission,
+    DocumentTimestampOptions, FieldLock, PreparedSignature, SignatureAppearance,
     SignatureAppearanceLayout, SignaturePreparationOptions, SignatureRect, SignatureTarget,
     SignatureWatermark,
 };
