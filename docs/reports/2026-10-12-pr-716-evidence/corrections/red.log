@@ -1,0 +1,69 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/pr716-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 18s
+     Running tests/text_symbolic_truetype_fallback_test.rs (/tmp/pr716-review/target/debug/deps/text_symbolic_truetype_fallback_test-728994e47f7770ed)
+
+running 14 tests
+test format_6_codes_do_not_wrap_to_byte_codes ... FAILED
+test malformed_cmap_ranges_do_not_discard_valid_later_entries ... FAILED
+test invalid_direct_gid_does_not_hide_a_valid_symbol_prefix ... ok
+test invalid_windows_gids_do_not_hide_valid_macintosh_glyphs ... ok
+test fallback_requires_gids_within_the_declared_glyph_count ... FAILED
+test switching_fallback_rebuilds_cached_font_information ... FAILED
+test missing_or_unparseable_program_keeps_the_strict_policy ... ok
+test tounicode_and_differences_still_win ... ok
+test tounicode_does_not_require_a_readable_font_program ... FAILED
+test truncated_font_directory_returns_replacements_without_panicking ... FAILED
+test codes_the_program_does_not_map_stay_replacement ... ok
+test default_and_disabled_keep_the_strict_replacement_policy ... ok
+test post_glyph_names_take_precedence_over_the_byte ... ok
+test unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding ... ok
+
+failures:
+
+---- format_6_codes_do_not_wrap_to_byte_codes stdout ----
+
+thread 'format_6_codes_do_not_wrap_to_byte_codes' (387) panicked at oxidize-pdf-core/src/text/fonts/truetype.rs:725:41:
+attempt to add with overflow
+
+---- malformed_cmap_ranges_do_not_discard_valid_later_entries stdout ----
+
+thread 'malformed_cmap_ranges_do_not_discard_valid_later_entries' (390) panicked at oxidize-pdf-core/src/text/fonts/truetype.rs:745:34:
+attempt to subtract with overflow
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- fallback_requires_gids_within_the_declared_glyph_count stdout ----
+
+thread 'fallback_requires_gids_within_the_declared_glyph_count' (386) panicked at oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:246:21:
+assertion `left == right` failed: symbol, names=false, count=1
+  left: "AB"
+ right: "��"
+
+---- switching_fallback_rebuilds_cached_font_information stdout ----
+
+thread 'switching_fallback_rebuilds_cached_font_information' (393) panicked at oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:211:13:
+assertion `left == right` failed
+  left: "��"
+ right: "AB"
+
+---- tounicode_does_not_require_a_readable_font_program stdout ----
+
+thread 'tounicode_does_not_require_a_readable_font_program' (395) panicked at oxidize-pdf-core/src/text/fonts/truetype.rs:229:21:
+index out of bounds: the len is 12 but the index is 12
+
+---- truncated_font_directory_returns_replacements_without_panicking stdout ----
+
+thread 'truncated_font_directory_returns_replacements_without_panicking' (396) panicked at oxidize-pdf-core/src/text/fonts/truetype.rs:229:21:
+index out of bounds: the len is 12 but the index is 12
+
+
+failures:
+    fallback_requires_gids_within_the_declared_glyph_count
+    format_6_codes_do_not_wrap_to_byte_codes
+    malformed_cmap_ranges_do_not_discard_valid_later_entries
+    switching_fallback_rebuilds_cached_font_information
+    tounicode_does_not_require_a_readable_font_program
+    truncated_font_directory_returns_replacements_without_panicking
+
+test result: FAILED. 8 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test text_symbolic_truetype_fallback_test`

@@ -1,0 +1,37 @@
+{
+  "pr_head": "7b6839f04499b6c5b9155a398bee96e327da5ab6",
+  "integrated_develop": "206b688768cc49c3210472668e6e3c63959e043f",
+  "product_files": [
+    "oxidize-pdf-core/src/text/extraction.rs",
+    "oxidize-pdf-core/src/text/extraction_cmap.rs",
+    "oxidize-pdf-core/src/text/fonts/truetype.rs"
+  ],
+  "tests": {
+    "passed": 6918,
+    "failed": 0,
+    "ignored_existing": 3,
+    "targets": 13
+  },
+  "red": {
+    "passed": 8,
+    "failed": 6,
+    "meaning": "intended cache, glyph range, directory and cmap boundary assertions"
+  },
+  "font_compatibility": {
+    "files": 37,
+    "canonical_map_fingerprints": "identical"
+  },
+  "checks": {
+    "format": "PASS",
+    "clippy_lib_and_new_test_internal_testing": "PASS",
+    "latin_public_consumer": "PASS",
+    "kripteia_quality_and_security": "executed for all four files"
+  },
+  "source_hashes": {
+    "oxidize-pdf-core/src/text/extraction.rs": "a8a01f83e3dd7b242177b962e6ac076ee02086b537d648bbd447390599d03cb4",
+    "oxidize-pdf-core/src/text/extraction_cmap.rs": "605d5448066efdbd28e556a9191c8c4ead2d7b2398e35ca9c81da8c97dcbe1b0",
+    "oxidize-pdf-core/src/text/fonts/truetype.rs": "768ff70f3f83bdb227ea30b74939a062fd950eef7954e48547ae5d25ffe11688",
+    "oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs": "3188a3e91391d7b1b4b659fc90fc49ba6b427f89062632c736a0a58a2a701c54"
+  },
+  "remaining": "remote PR not updated; no merge/release; generic public cmap GID range audit outside fallback remains under #719"
+}

@@ -1,0 +1,10 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/pr716-review/source/oxidize-pdf-core)
+error[E0599]: no method named `with_symbolic_truetype_fallback` found for struct `TextExtractor` in the current scope
+  --> oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:71:31
+   |
+71 |         extractor = extractor.with_symbolic_truetype_fallback(enable);
+   |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `TextExtractor`
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `oxidize-pdf` (test "text_symbolic_truetype_fallback_test") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

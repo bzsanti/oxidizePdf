@@ -8,6 +8,7 @@ use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
 use crate::parser::{ParseError, ParseOptions, ParseResult};
 use crate::text::cid_to_unicode::AdobeCidCollection;
 use crate::text::cmap::CMap;
+use crate::text::fonts::TrueTypeFont;
 use crate::text::pdf_simple_encodings;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
@@ -378,6 +379,9 @@ pub struct FontInfo {
 /// Stateless: it carries no cache and extracts no text. `R` names the reader
 /// type of the document whose indirect objects the parse resolves.
 pub struct CMapTextExtractor<R: Read + Seek> {
+    /// Resolve symbolic simple TrueType codes through the embedded font
+    /// program instead of mapping every code to U+FFFD (issue #715).
+    symbolic_truetype_fallback: bool,
     /// PDF document reference for resource lookup
     _phantom: std::marker::PhantomData<R>,
 }
@@ -386,8 +390,15 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     /// Create a new CMap-aware font parser
     pub fn new() -> Self {
         Self {
+            symbolic_truetype_fallback: false,
             _phantom: std::marker::PhantomData,
         }
+    }
+
+    /// See [`crate::text::TextExtractor::with_symbolic_truetype_fallback`].
+    pub(crate) fn with_symbolic_truetype_fallback(mut self, enable: bool) -> Self {
+        self.symbolic_truetype_fallback = enable;
+        self
     }
 
     /// Extract font information from a font dictionary
@@ -461,6 +472,39 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             }
         }
 
+        // A declared ToUnicode remains authoritative even if it is damaged.
+        // Resolve the whole reference chain instead of inspecting one object.
+        if let Some(object) = font_dict.get("ToUnicode") {
+            let parsed = Self::resolve_tounicode(object, document);
+            font_info.to_unicode = match parsed {
+                Ok(map) => map,
+                Err(error) if document.options().strict_mode => return Err(error),
+                Err(_) => {
+                    // Preserve source-code boundaries while marking every
+                    // undecodable code. Do not re-enable a base Unicode map.
+                    let mut empty = CMap::new();
+                    if font_info.font_type == "Type0" {
+                        use crate::text::encoding_cmap::{CidEncoding, EncodingCMap};
+                        empty.codespace_ranges = match font_info.cid_encoding.as_ref() {
+                            Some(CidEncoding::Cmap(map)) => map.codespace_ranges.clone(),
+                            Some(CidEncoding::Utf16Be) => {
+                                EncodingCMap::identity(false).codespace_ranges
+                            }
+                            None if matches!(
+                                font_info.encoding.as_deref(),
+                                Some("Identity-H" | "Identity-V")
+                            ) =>
+                            {
+                                EncodingCMap::identity(false).codespace_ranges
+                            }
+                            None => Vec::new(),
+                        };
+                    }
+                    Some(empty)
+                }
+            };
+        }
+
         if font_info.font_type == "TrueType" && font_info.encoding.is_none() {
             let symbolic = font_dict
                 .get("FontDescriptor")
@@ -475,8 +519,11 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                 // name layer to retain one replacement per unknown byte,
                 // without changing the public FontInfo struct. ToUnicode
                 // still wins; explicit Differences names remain evidence.
-                let mut names: HashMap<u8, String> =
-                    (0..=255).map(|code| (code, "uniFFFD".to_owned())).collect();
+                let mut names: HashMap<u8, String> = (self.symbolic_truetype_fallback
+                    && font_info.to_unicode.is_none())
+                .then(|| Self::symbolic_truetype_program_names(font_dict, document))
+                .flatten()
+                .unwrap_or_else(|| (0..=255).map(|code| (code, "uniFFFD".to_owned())).collect());
                 if let Some(differences) = font_info.differences.take() {
                     names.extend(differences.into_iter().map(|(code, name)| {
                         let name = if glyph_name_to_unicode_sequence(&name).is_some() {
@@ -533,39 +580,6 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             }
         }
 
-        // A declared ToUnicode remains authoritative even if it is damaged.
-        // Resolve the whole reference chain instead of inspecting one object.
-        if let Some(object) = font_dict.get("ToUnicode") {
-            let parsed = Self::resolve_tounicode(object, document);
-            font_info.to_unicode = match parsed {
-                Ok(map) => map,
-                Err(error) if document.options().strict_mode => return Err(error),
-                Err(_) => {
-                    // Preserve source-code boundaries while marking every
-                    // undecodable code. Do not re-enable a base Unicode map.
-                    let mut empty = CMap::new();
-                    if font_info.font_type == "Type0" {
-                        use crate::text::encoding_cmap::{CidEncoding, EncodingCMap};
-                        empty.codespace_ranges = match font_info.cid_encoding.as_ref() {
-                            Some(CidEncoding::Cmap(map)) => map.codespace_ranges.clone(),
-                            Some(CidEncoding::Utf16Be) => {
-                                EncodingCMap::identity(false).codespace_ranges
-                            }
-                            None if matches!(
-                                font_info.encoding.as_deref(),
-                                Some("Identity-H" | "Identity-V")
-                            ) =>
-                            {
-                                EncodingCMap::identity(false).codespace_ranges
-                            }
-                            None => Vec::new(),
-                        };
-                    }
-                    Some(empty)
-                }
-            };
-        }
-
         // Extract font metrics (Widths, FirstChar, LastChar)
         font_info.metrics = self.extract_font_metrics(font_dict, document)?;
 
@@ -613,6 +627,85 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         }
 
         Ok(font_info)
+    }
+
+    /// Glyph names for every code of a symbolic simple TrueType font with no
+    /// `/Encoding`, derived from its embedded `FontFile2` program (issue #715).
+    ///
+    /// Each code is resolved to a glyph id per ISO 32000-1 §9.6.6.4: through
+    /// the (3,0) subtable at `code`, `0xF000 + code`, `0xF100 + code` or
+    /// `0xF200 + code`, otherwise through the (1,0) subtable at `code`.
+    /// A resolved glyph then takes, in order:
+    ///
+    /// 1. its `post` glyph name, when that name has a Unicode assignment;
+    /// 2. U+FFFD, when the `post` table names the glyph without a Unicode
+    ///    assignment (the font asserts a non-standard identity);
+    /// 3. otherwise the code's character in WinAnsiEncoding (found via (3,0))
+    ///    or MacRomanEncoding (found via (1,0)).
+    ///
+    /// Codes the program does not map stay U+FFFD. Returns `None` when there is
+    /// no parseable embedded TrueType program, keeping the strict policy.
+    fn symbolic_truetype_program_names(
+        font: &PdfDictionary,
+        document: &PdfDocument<R>,
+    ) -> Option<HashMap<u8, String>> {
+        let descriptor = document.resolve(font.get("FontDescriptor")?).ok()?;
+        let PdfObject::Stream(stream) = document
+            .resolve(descriptor.as_dict()?.get("FontFile2")?)
+            .ok()?
+        else {
+            return None;
+        };
+        let data = document
+            .decode_stream_with_limit(&stream, 8 * 1024 * 1024)
+            .ok()?;
+        let program = TrueTypeFont::parse(data).ok()?;
+        let subtables = program.parse_symbolic_cmap().ok()?;
+        let windows_symbol = subtables
+            .iter()
+            .find(|table| (table.platform_id, table.encoding_id) == (3, 0));
+        let mac_roman = subtables
+            .iter()
+            .find(|table| (table.platform_id, table.encoding_id) == (1, 0));
+        if windows_symbol.is_none() && mac_roman.is_none() {
+            return None;
+        }
+        let post_names = program.post_glyph_names().unwrap_or_default();
+
+        let names = (0..=255u8)
+            .map(|code| {
+                let via_windows = windows_symbol.and_then(|table| {
+                    [0, 0xF000, 0xF100, 0xF200].iter().find_map(|base| {
+                        table
+                            .mappings
+                            .get(&(base + u32::from(code)))
+                            .filter(|&&gid| gid != 0 && gid < program.num_glyphs)
+                    })
+                });
+                let resolved = match via_windows {
+                    Some(&gid) => Some((gid, decode_winansi(code))),
+                    None => mac_roman
+                        .and_then(|table| table.mappings.get(&u32::from(code)))
+                        .filter(|&&gid| gid != 0 && gid < program.num_glyphs)
+                        .map(|&gid| (gid, decode_macroman(code))),
+                };
+                let name = match resolved {
+                    None => "uniFFFD".to_owned(),
+                    Some((gid, byte_char)) => match post_names.get(&gid) {
+                        Some(name)
+                            if name != ".notdef"
+                                && glyph_name_to_unicode_sequence(name).is_some() =>
+                        {
+                            name.clone()
+                        }
+                        Some(_) => "uniFFFD".to_owned(),
+                        None => format!("uni{:04X}", u32::from(byte_char)),
+                    },
+                };
+                (code, name)
+            })
+            .collect();
+        Some(names)
     }
 
     pub(crate) fn embedded_intrinsic_encoding(
