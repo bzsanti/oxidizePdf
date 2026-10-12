@@ -1,0 +1,56 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/text_symbolic_truetype_fallback_test.rs        6     90
+
+--- Worst Offenders ---
+  default_and_disabled_keep_the_strict_replacement_policy (/tmp/pr716-review/source/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:79) - Score: 90
+    i Test 'default_and_disabled_keep_the_strict_replacement_policy' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'default_and_disabled_keep_the_strict_replacement_policy' does not call any production code
+  unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding (/tmp/pr716-review/source/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:93) - Score: 90
+    i Test 'unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding' does not call any production code
+  post_glyph_names_take_precedence_over_the_byte (/tmp/pr716-review/source/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:102) - Score: 90
+    i Test 'post_glyph_names_take_precedence_over_the_byte' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'post_glyph_names_take_precedence_over_the_byte' does not call any production code
+  codes_the_program_does_not_map_stay_replacement (/tmp/pr716-review/source/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:110) - Score: 90
+    i Test 'codes_the_program_does_not_map_stay_replacement' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'codes_the_program_does_not_map_stay_replacement' does not call any production code
+  tounicode_and_differences_still_win (/tmp/pr716-review/source/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:124) - Score: 90
+    i Test 'tounicode_and_differences_still_win' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'tounicode_and_differences_still_win' has multiple assertions without diagnostic messages
+    - Test 'tounicode_and_differences_still_win' does not call any production code
+
+--- Details ---
+/tmp/pr716-review/source/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:
+  default_and_disabled_keep_the_strict_replacement_policy (line 79) - Score: 90
+    i Test 'default_and_disabled_keep_the_strict_replacement_policy' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'default_and_disabled_keep_the_strict_replacement_policy' does not call any production code
+  unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding (line 93) - Score: 90
+    i Test 'unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding' does not call any production code
+  post_glyph_names_take_precedence_over_the_byte (line 102) - Score: 90
+    i Test 'post_glyph_names_take_precedence_over_the_byte' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'post_glyph_names_take_precedence_over_the_byte' does not call any production code
+  codes_the_program_does_not_map_stay_replacement (line 110) - Score: 90
+    i Test 'codes_the_program_does_not_map_stay_replacement' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'codes_the_program_does_not_map_stay_replacement' does not call any production code
+  tounicode_and_differences_still_win (line 124) - Score: 90
+    i Test 'tounicode_and_differences_still_win' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'tounicode_and_differences_still_win' has multiple assertions without diagnostic messages
+    - Test 'tounicode_and_differences_still_win' does not call any production code
+  missing_or_unparseable_program_keeps_the_strict_policy (line 141) - Score: 90
+    i Test 'missing_or_unparseable_program_keeps_the_strict_policy' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'missing_or_unparseable_program_keeps_the_strict_policy' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

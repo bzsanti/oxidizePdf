@@ -472,6 +472,39 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             }
         }
 
+        // A declared ToUnicode remains authoritative even if it is damaged.
+        // Resolve the whole reference chain instead of inspecting one object.
+        if let Some(object) = font_dict.get("ToUnicode") {
+            let parsed = Self::resolve_tounicode(object, document);
+            font_info.to_unicode = match parsed {
+                Ok(map) => map,
+                Err(error) if document.options().strict_mode => return Err(error),
+                Err(_) => {
+                    // Preserve source-code boundaries while marking every
+                    // undecodable code. Do not re-enable a base Unicode map.
+                    let mut empty = CMap::new();
+                    if font_info.font_type == "Type0" {
+                        use crate::text::encoding_cmap::{CidEncoding, EncodingCMap};
+                        empty.codespace_ranges = match font_info.cid_encoding.as_ref() {
+                            Some(CidEncoding::Cmap(map)) => map.codespace_ranges.clone(),
+                            Some(CidEncoding::Utf16Be) => {
+                                EncodingCMap::identity(false).codespace_ranges
+                            }
+                            None if matches!(
+                                font_info.encoding.as_deref(),
+                                Some("Identity-H" | "Identity-V")
+                            ) =>
+                            {
+                                EncodingCMap::identity(false).codespace_ranges
+                            }
+                            None => Vec::new(),
+                        };
+                    }
+                    Some(empty)
+                }
+            };
+        }
+
         if font_info.font_type == "TrueType" && font_info.encoding.is_none() {
             let symbolic = font_dict
                 .get("FontDescriptor")
@@ -486,13 +519,11 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                 // name layer to retain one replacement per unknown byte,
                 // without changing the public FontInfo struct. ToUnicode
                 // still wins; explicit Differences names remain evidence.
-                let mut names: HashMap<u8, String> = self
-                    .symbolic_truetype_fallback
-                    .then(|| Self::symbolic_truetype_program_names(font_dict, document))
-                    .flatten()
-                    .unwrap_or_else(|| {
-                        (0..=255).map(|code| (code, "uniFFFD".to_owned())).collect()
-                    });
+                let mut names: HashMap<u8, String> = (self.symbolic_truetype_fallback
+                    && font_info.to_unicode.is_none())
+                .then(|| Self::symbolic_truetype_program_names(font_dict, document))
+                .flatten()
+                .unwrap_or_else(|| (0..=255).map(|code| (code, "uniFFFD".to_owned())).collect());
                 if let Some(differences) = font_info.differences.take() {
                     names.extend(differences.into_iter().map(|(code, name)| {
                         let name = if glyph_name_to_unicode_sequence(&name).is_some() {
@@ -547,39 +578,6 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                     _ => None,
                 };
             }
-        }
-
-        // A declared ToUnicode remains authoritative even if it is damaged.
-        // Resolve the whole reference chain instead of inspecting one object.
-        if let Some(object) = font_dict.get("ToUnicode") {
-            let parsed = Self::resolve_tounicode(object, document);
-            font_info.to_unicode = match parsed {
-                Ok(map) => map,
-                Err(error) if document.options().strict_mode => return Err(error),
-                Err(_) => {
-                    // Preserve source-code boundaries while marking every
-                    // undecodable code. Do not re-enable a base Unicode map.
-                    let mut empty = CMap::new();
-                    if font_info.font_type == "Type0" {
-                        use crate::text::encoding_cmap::{CidEncoding, EncodingCMap};
-                        empty.codespace_ranges = match font_info.cid_encoding.as_ref() {
-                            Some(CidEncoding::Cmap(map)) => map.codespace_ranges.clone(),
-                            Some(CidEncoding::Utf16Be) => {
-                                EncodingCMap::identity(false).codespace_ranges
-                            }
-                            None if matches!(
-                                font_info.encoding.as_deref(),
-                                Some("Identity-H" | "Identity-V")
-                            ) =>
-                            {
-                                EncodingCMap::identity(false).codespace_ranges
-                            }
-                            None => Vec::new(),
-                        };
-                    }
-                    Some(empty)
-                }
-            };
         }
 
         // Extract font metrics (Widths, FirstChar, LastChar)
@@ -662,7 +660,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             .decode_stream_with_limit(&stream, 8 * 1024 * 1024)
             .ok()?;
         let program = TrueTypeFont::parse(data).ok()?;
-        let subtables = program.parse_cmap().ok()?;
+        let subtables = program.parse_symbolic_cmap().ok()?;
         let windows_symbol = subtables
             .iter()
             .find(|table| (table.platform_id, table.encoding_id) == (3, 0));
@@ -677,14 +675,18 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         let names = (0..=255u8)
             .map(|code| {
                 let via_windows = windows_symbol.and_then(|table| {
-                    [0, 0xF000, 0xF100, 0xF200]
-                        .iter()
-                        .find_map(|base| table.mappings.get(&(base + u32::from(code))))
+                    [0, 0xF000, 0xF100, 0xF200].iter().find_map(|base| {
+                        table
+                            .mappings
+                            .get(&(base + u32::from(code)))
+                            .filter(|&&gid| gid != 0 && gid < program.num_glyphs)
+                    })
                 });
                 let resolved = match via_windows {
                     Some(&gid) => Some((gid, decode_winansi(code))),
                     None => mac_roman
                         .and_then(|table| table.mappings.get(&u32::from(code)))
+                        .filter(|&&gid| gid != 0 && gid < program.num_glyphs)
                         .map(|&gid| (gid, decode_macroman(code))),
                 };
                 let name = match resolved {

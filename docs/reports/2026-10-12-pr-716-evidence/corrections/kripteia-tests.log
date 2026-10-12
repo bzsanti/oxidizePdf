@@ -1,0 +1,76 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 16 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-pdf-core/tests/text_symbolic_truetype_fallback_test.rs       16     93
+
+--- Worst Offenders ---
+  default_and_disabled_keep_the_strict_replacement_policy (/tmp/pr716-fix/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:95) - Score: 90
+    i Test 'default_and_disabled_keep_the_strict_replacement_policy' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'default_and_disabled_keep_the_strict_replacement_policy' does not call any production code
+  unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding (/tmp/pr716-fix/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:109) - Score: 90
+    i Test 'unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding' does not call any production code
+  post_glyph_names_take_precedence_over_the_byte (/tmp/pr716-fix/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:118) - Score: 90
+    i Test 'post_glyph_names_take_precedence_over_the_byte' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'post_glyph_names_take_precedence_over_the_byte' does not call any production code
+  codes_the_program_does_not_map_stay_replacement (/tmp/pr716-fix/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:126) - Score: 90
+    i Test 'codes_the_program_does_not_map_stay_replacement' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'codes_the_program_does_not_map_stay_replacement' does not call any production code
+  tounicode_and_differences_still_win (/tmp/pr716-fix/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:140) - Score: 90
+    i Test 'tounicode_and_differences_still_win' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'tounicode_and_differences_still_win' has multiple assertions without diagnostic messages
+    - Test 'tounicode_and_differences_still_win' does not call any production code
+
+--- Details ---
+/tmp/pr716-fix/oxidize-pdf-core/tests/text_symbolic_truetype_fallback_test.rs:
+  default_and_disabled_keep_the_strict_replacement_policy (line 95) - Score: 90
+    i Test 'default_and_disabled_keep_the_strict_replacement_policy' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'default_and_disabled_keep_the_strict_replacement_policy' does not call any production code
+  unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding (line 109) - Score: 90
+    i Test 'unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding' does not call any production code
+  post_glyph_names_take_precedence_over_the_byte (line 118) - Score: 90
+    i Test 'post_glyph_names_take_precedence_over_the_byte' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'post_glyph_names_take_precedence_over_the_byte' does not call any production code
+  codes_the_program_does_not_map_stay_replacement (line 126) - Score: 90
+    i Test 'codes_the_program_does_not_map_stay_replacement' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'codes_the_program_does_not_map_stay_replacement' does not call any production code
+  tounicode_and_differences_still_win (line 140) - Score: 90
+    i Test 'tounicode_and_differences_still_win' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'tounicode_and_differences_still_win' has multiple assertions without diagnostic messages
+    - Test 'tounicode_and_differences_still_win' does not call any production code
+  missing_or_unparseable_program_keeps_the_strict_policy (line 157) - Score: 90
+    i Test 'missing_or_unparseable_program_keeps_the_strict_policy' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'missing_or_unparseable_program_keeps_the_strict_policy' does not call any production code
+  truncated_font_directory_returns_replacements_without_panicking (line 245) - Score: 100
+    i Test 'truncated_font_directory_returns_replacements_without_panicking' asserts against a hardcoded constant instead of a computed expected value
+  tounicode_does_not_require_a_readable_font_program (line 255) - Score: 100
+    i Test 'tounicode_does_not_require_a_readable_font_program' asserts against a hardcoded constant instead of a computed expected value
+  invalid_windows_gids_do_not_hide_valid_macintosh_glyphs (line 297) - Score: 90
+    i Test 'invalid_windows_gids_do_not_hide_valid_macintosh_glyphs' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'invalid_windows_gids_do_not_hide_valid_macintosh_glyphs' does not call any production code
+  invalid_direct_gid_does_not_hide_a_valid_symbol_prefix (line 310) - Score: 90
+    i Test 'invalid_direct_gid_does_not_hide_a_valid_symbol_prefix' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'invalid_direct_gid_does_not_hide_a_valid_symbol_prefix' has low assert-to-setup ratio (11%): 4 asserts vs 32 setup lines
+  malformed_cmap_ranges_do_not_discard_valid_later_entries (line 347) - Score: 90
+    i Test 'malformed_cmap_ranges_do_not_discard_valid_later_entries' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'malformed_cmap_ranges_do_not_discard_valid_later_entries' does not call any production code
+  format_6_codes_do_not_wrap_to_byte_codes (line 364) - Score: 90
+    i Test 'format_6_codes_do_not_wrap_to_byte_codes' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'format_6_codes_do_not_wrap_to_byte_codes' does not call any production code
+  unnamed_high_bytes_use_the_selected_subtable_encoding (line 374) - Score: 90
+    - Test 'unnamed_high_bytes_use_the_selected_subtable_encoding' does not call any production code
+  null_tounicode_keeps_the_same_fallback_as_an_absent_entry (line 386) - Score: 100
+    i Test 'null_tounicode_keeps_the_same_fallback_as_an_absent_entry' asserts against a hardcoded constant instead of a computed expected value
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -1,0 +1,7 @@
+[package]
+name="pr716-latin-fixed"
+version="0.1.0"
+edition="2021"
+[workspace]
+[dependencies]
+oxidize-pdf={path="/tmp/pr716-fix/oxidize-pdf-core",default-features=false,features=["compression"]}

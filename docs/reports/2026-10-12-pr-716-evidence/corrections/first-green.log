@@ -1,0 +1,70 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/pr716-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 16.30s
+     Running tests/text_competing_cmap_contract_test.rs (/tmp/pr716-review/target/debug/deps/text_competing_cmap_contract_test-e6bec342bdd5a6ce)
+
+running 6 tests
+test fallback_uses_first_nonpreferred_table_without_inventing_unicode_priority ... ok
+test generic_unicode_wins_when_windows_unicode_is_absent ... ok
+test selected_full_unicode_keeps_non_bmp_gid_and_does_not_merge_lower_tables ... ok
+test bmp_wins_when_full_unicode_is_absent ... ok
+test competing_program_matches_independent_fonttools_tables_and_hash ... ok
+test full_unicode_wins_in_all_120_subtable_orders ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_output_api_contract_test.rs (/tmp/pr716-review/target/debug/deps/text_output_api_contract_test-f1830b7129bb833e)
+
+running 12 tests
+test document_api_resets_same_resource_name_between_pages ... ok
+test plain_outputs_propagate_unrepresentable_geometry_errors ... ok
+test plain_outputs_keep_certified_zero_width_tracking ... ok
+test nonzero_metrics_keep_tj_word_spaces_in_all_output_apis ... ok
+test mixed_page_and_nested_cid_forms_preserve_semantic_text_in_all_apis ... ok
+test type3_output_preserves_multiscalar_mapping_and_real_charprocs ... ok
+test tracking_layout_retains_outlier_spaces_and_transformed_run_extent ... ok
+test embedded_type1_and_cff_outputs_preserve_encoding_precedence ... ok
+test all_standard14_styles_have_consistent_output_apis ... ok
+test symbolic_and_nonsymbolic_truetype_outputs_preserve_unicode_sequences ... ok
+test cid_cff_inheritance_outputs_preserve_child_and_parent_text ... ok
+test cid_type0_and_type2_program_variants_have_consistent_output_apis ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests/text_symbolic_truetype_contract_test.rs (/tmp/pr716-review/target/debug/deps/text_symbolic_truetype_contract_test-b5ab5c4d81495e42)
+
+running 12 tests
+test full_and_subset_preserve_selected_symbolic_contours ... ok
+test macintosh_byte_cmap_preserves_original_glyph_selection ... ok
+test windows_symbol_cmap_preserves_private_codes_and_gids ... ok
+test windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font ... ok
+test all_symbolic_programs_and_pdfs_match_frozen_hashes ... ok
+test windows_unicode_bmp_cmap_preserves_gids_and_metrics ... ok
+test arbitrary_symbolic_truetype_has_no_implicit_adobe_symbol_unicode ... ok
+test symbolic_tounicode_preserves_sequences_independently_of_glyph_names ... ok
+test multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance ... ok
+test explicit_symbolic_encodings_and_differences_remain_evidence ... ok
+test nonsymbolic_winansi_and_explicit_unicode_have_separate_contracts ... ok
+test arbitrary_symbolic_text_uses_replacement_without_losing_advance ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/text_symbolic_truetype_fallback_test.rs (/tmp/pr716-review/target/debug/deps/text_symbolic_truetype_fallback_test-728994e47f7770ed)
+
+running 14 tests
+test malformed_cmap_ranges_do_not_discard_valid_later_entries ... ok
+test invalid_direct_gid_does_not_hide_a_valid_symbol_prefix ... ok
+test invalid_windows_gids_do_not_hide_valid_macintosh_glyphs ... ok
+test format_6_codes_do_not_wrap_to_byte_codes ... ok
+test default_and_disabled_keep_the_strict_replacement_policy ... ok
+test post_glyph_names_take_precedence_over_the_byte ... ok
+test missing_or_unparseable_program_keeps_the_strict_policy ... ok
+test codes_the_program_does_not_map_stay_replacement ... ok
+test tounicode_does_not_require_a_readable_font_program ... ok
+test switching_fallback_rebuilds_cached_font_information ... ok
+test truncated_font_directory_returns_replacements_without_panicking ... ok
+test tounicode_and_differences_still_win ... ok
+test unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding ... ok
+test fallback_requires_gids_within_the_declared_glyph_count ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

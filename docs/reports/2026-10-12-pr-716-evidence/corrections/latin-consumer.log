@@ -1,0 +1,6 @@
+/tmp/pr716-latin-final/symbolic.pdf enabled=false => Ok(Ok("���������������"))
+/tmp/pr716-latin-final/symbolic.pdf enabled=true => Ok(Ok("Hello World 123"))
+/tmp/pr716-latin-final/winansi.pdf enabled=false => Ok(Ok("Hello World 123"))
+/tmp/pr716-latin-final/winansi.pdf enabled=true => Ok(Ok("Hello World 123"))
+/tmp/pr716-latin-final/nonsymbolic.pdf enabled=false => Ok(Ok("Hello World 123"))
+/tmp/pr716-latin-final/nonsymbolic.pdf enabled=true => Ok(Ok("Hello World 123"))

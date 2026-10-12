@@ -871,7 +871,13 @@ impl TextExtractor {
     /// may decode to plausible-looking but wrong Latin characters, which is
     /// why this is opt-in.
     pub fn with_symbolic_truetype_fallback(mut self, enable: bool) -> Self {
-        self.symbolic_truetype_fallback = enable;
+        if self.symbolic_truetype_fallback != enable {
+            // FontInfo includes the decoded name layer, which depends on this policy.
+            self.font_object_cache.clear();
+            self.font_cache.clear();
+            self.type0_implicit_space_widths.clear();
+            self.symbolic_truetype_fallback = enable;
+        }
         self
     }
 

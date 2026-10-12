@@ -1,0 +1,19 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/pr716-review/source/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 15s
+     Running unittests src/lib.rs (/tmp/pr716-review/target/debug/deps/oxidize_pdf-ff79de59d27c30be)
+
+running 11 tests
+test text::fonts::truetype::tests::post_format_3_and_missing_table_have_no_names ... ok
+test text::fonts::truetype::tests::post_format_2_resolves_standard_and_custom_names ... ok
+test text::fonts::truetype::tests::post_format_2_tolerates_truncated_name_data ... ok
+test text::ocr::postprocessor_tests::test_post_processor_edit_distance ... ok
+test text::ocr::postprocessor_tests::test_post_processor_character_substitution ... ok
+test text::ocr::postprocessor_tests::test_post_processor_pattern_correction ... ok
+test text::fonts::truetype::tests::post_format_1_uses_the_standard_macintosh_order ... ok
+test text::ocr::postprocessor_tests::test_post_processor_process_fragment ... ok
+test text::ocr::postprocessor_tests::test_post_processor_with_dictionary ... ok
+test text::ocr::postprocessor_tests::test_post_processor_suggestion_limit ... ok
+test verification::semantic_comparison::tests::signatures_and_post_signing_updates_are_security_differences ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 6805 filtered out; finished in 0.05s
+

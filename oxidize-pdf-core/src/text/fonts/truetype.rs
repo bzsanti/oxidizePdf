@@ -221,6 +221,13 @@ impl TrueTypeFont {
 
         // Read table directory
         let num_tables = read_u16(&data, 4)?;
+        let directory_end = 12 + usize::from(num_tables) * 16;
+        if directory_end > data.len() {
+            return Err(ParseError::SyntaxError {
+                position: 12,
+                message: "TrueType table directory is truncated".to_string(),
+            });
+        }
         let mut tables = HashMap::new();
         let mut offset = 12;
 
@@ -277,7 +284,7 @@ impl TrueTypeFont {
         let head_table = &tables[&head_key];
         let head_offset = head_table.offset as usize;
 
-        if head_offset + 54 > data.len() {
+        if data.get(head_offset..).is_none_or(|table| table.len() < 54) {
             return Err(ParseError::SyntaxError {
                 position: head_offset,
                 message: "Head table extends beyond file".to_string(),
@@ -292,7 +299,7 @@ impl TrueTypeFont {
         let maxp_table = &tables[&maxp_key];
         let maxp_offset = maxp_table.offset as usize;
 
-        if maxp_offset + 6 > data.len() {
+        if data.get(maxp_offset..).is_none_or(|table| table.len() < 6) {
             return Err(ParseError::SyntaxError {
                 position: maxp_offset,
                 message: "Maxp table too small".to_string(),
@@ -568,200 +575,182 @@ impl TrueTypeFont {
 
     /// Parse the cmap table to get character to glyph mappings
     pub fn parse_cmap(&self) -> ParseResult<Vec<CmapSubtable>> {
-        let cmap_key: [u8; 4] = CMAP_TABLE;
-        let cmap_table = self
-            .tables
-            .get(&cmap_key)
+        self.parse_cmap_with_codes(None)
+    }
+
+    /// Read only the symbol/Macintosh selectors needed for single-byte text.
+    /// Range tables are intersected with these codes before iteration, so a
+    /// font's declared range never determines the number of expanded mappings.
+    pub(crate) fn parse_symbolic_cmap(&self) -> ParseResult<Vec<CmapSubtable>> {
+        let codes: Vec<u32> = [0, 0xF000, 0xF100, 0xF200]
+            .into_iter()
+            .flat_map(|base| (0..=255).map(move |code| base + code))
+            .collect();
+        self.parse_cmap_with_codes(Some(&codes))
+    }
+
+    fn parse_cmap_with_codes(&self, codes: Option<&[u32]>) -> ParseResult<Vec<CmapSubtable>> {
+        let entry = self.get_table(&CMAP_TABLE)?;
+        let start = entry.offset as usize;
+        let data = self
+            .data
+            .get(start..)
+            .and_then(|data| data.get(..entry.length as usize))
             .ok_or_else(|| ParseError::SyntaxError {
-                position: 0,
-                message: "Missing cmap table".to_string(),
+                position: start,
+                message: "Cmap table extends beyond font data".to_string(),
             })?;
-
-        let offset = cmap_table.offset as usize;
-        if offset + 4 > self.data.len() {
-            return Err(ParseError::SyntaxError {
-                position: offset,
-                message: "Cmap table too small".to_string(),
-            });
-        }
-
-        let _version = read_u16(&self.data, offset)?;
-        let num_subtables = read_u16(&self.data, offset + 2)?;
-        let mut subtables = Vec::new();
-
-        let mut subtable_offset = offset + 4;
-        for _ in 0..num_subtables {
-            if subtable_offset + 8 > self.data.len() {
+        let count = read_u16(data, 2)?;
+        let mut subtables: Vec<CmapSubtable> = Vec::new();
+        for index in 0..usize::from(count) {
+            let record = 4 + 8 * index;
+            let Some(record) = data.get(record..record + 8) else {
                 break;
+            };
+            let platform_id = read_u16(record, 0)?;
+            let encoding_id = read_u16(record, 2)?;
+            if codes.is_some()
+                && (!matches!((platform_id, encoding_id), (3, 0) | (1, 0))
+                    || subtables.iter().any(|table| {
+                        (table.platform_id, table.encoding_id) == (platform_id, encoding_id)
+                    }))
+            {
+                continue;
             }
-
-            let platform_id = read_u16(&self.data, subtable_offset)?;
-            let encoding_id = read_u16(&self.data, subtable_offset + 2)?;
-            let offset = read_u32(&self.data, subtable_offset + 4)? as usize;
-
-            if let Ok(subtable) = self.parse_cmap_subtable(offset, platform_id, encoding_id) {
-                subtables.push(subtable);
+            let offset = read_u32(record, 4)? as usize;
+            if let Some(data) = data.get(offset..) {
+                if let Ok(subtable) =
+                    self.parse_cmap_subtable(data, platform_id, encoding_id, codes)
+                {
+                    subtables.push(subtable);
+                }
             }
-
-            subtable_offset += 8;
         }
-
         Ok(subtables)
     }
 
-    /// Parse a single cmap subtable
     fn parse_cmap_subtable(
         &self,
-        subtable_offset: usize,
+        data: &[u8],
         platform_id: u16,
         encoding_id: u16,
+        codes: Option<&[u32]>,
     ) -> ParseResult<CmapSubtable> {
-        // The subtable offset from the directory is relative to the cmap table start
-        let cmap_key: [u8; 4] = CMAP_TABLE;
-        let cmap_table = self
-            .tables
-            .get(&cmap_key)
-            .ok_or_else(|| ParseError::SyntaxError {
-                position: 0,
-                message: "Missing cmap table".to_string(),
-            })?;
-        let absolute_offset = cmap_table.offset as usize + subtable_offset;
-
-        if absolute_offset + 6 > self.data.len() {
-            return Err(ParseError::SyntaxError {
-                position: absolute_offset,
-                message: "Cmap subtable extends beyond file".to_string(),
-            });
-        }
-
-        let format = read_u16(&self.data, absolute_offset)?;
+        let format = read_u16(data, 0)?;
+        let length = if format == 12 {
+            read_u32(data, 4)? as usize
+        } else {
+            usize::from(read_u16(data, 2)?)
+        };
+        let data = data.get(..length).ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Cmap subtable extends beyond cmap table".to_string(),
+        })?;
         let mut mappings = HashMap::new();
-
         match format {
             0 => {
-                // Format 0: Byte encoding table
-                if absolute_offset + 262 > self.data.len() {
-                    return Err(ParseError::SyntaxError {
-                        position: absolute_offset,
-                        message: "Format 0 cmap subtable too small".to_string(),
-                    });
-                }
-
-                for i in 0..256 {
-                    let glyph_id = self.data[absolute_offset + 6 + i] as u16;
-                    if glyph_id != 0 {
-                        mappings.insert(i as u32, glyph_id);
+                for code in cmap_codes(0, 255, codes) {
+                    let gid =
+                        *data
+                            .get(6 + code as usize)
+                            .ok_or_else(|| ParseError::SyntaxError {
+                                position: 6 + code as usize,
+                                message: "Format 0 cmap is truncated".to_string(),
+                            })? as u16;
+                    if gid != 0 {
+                        mappings.insert(code, gid);
                     }
                 }
             }
             4 => {
-                // Format 4: Segment mapping to delta values
-                let length = read_u16(&self.data, absolute_offset + 2)? as usize;
-                if absolute_offset + length > self.data.len() {
+                let seg_count_x2 = usize::from(read_u16(data, 6)?);
+                if seg_count_x2 % 2 != 0 {
                     return Err(ParseError::SyntaxError {
-                        position: absolute_offset,
-                        message: "Format 4 cmap subtable extends beyond file".to_string(),
+                        position: 6,
+                        message: "Odd cmap segment count".to_string(),
                     });
                 }
-
-                let seg_count_x2 = read_u16(&self.data, absolute_offset + 6)? as usize;
-                let seg_count = seg_count_x2 / 2;
-
-                let end_codes_offset = absolute_offset + 14;
-                let start_codes_offset = end_codes_offset + seg_count_x2 + 2;
-                let id_deltas_offset = start_codes_offset + seg_count_x2;
-                let id_range_offsets_offset = id_deltas_offset + seg_count_x2;
-
-                for i in 0..seg_count {
-                    let end_code = read_u16(&self.data, end_codes_offset + i * 2)?;
-                    let start_code = read_u16(&self.data, start_codes_offset + i * 2)?;
-                    let id_delta = read_i16(&self.data, id_deltas_offset + i * 2)?;
-                    let id_range_offset = read_u16(&self.data, id_range_offsets_offset + i * 2)?;
-
-                    if end_code == 0xFFFF {
+                let count = seg_count_x2 / 2;
+                let ends = 14;
+                let starts = ends + seg_count_x2 + 2;
+                let deltas = starts + seg_count_x2;
+                let offsets = deltas + seg_count_x2;
+                for index in 0..count {
+                    let end = read_u16(data, ends + 2 * index)?;
+                    if end == u16::MAX {
                         break;
                     }
-
-                    for code in start_code..=end_code {
-                        let glyph_id = if id_range_offset == 0 {
-                            ((code as i32 + id_delta as i32) & 0xFFFF) as u16
+                    let start = read_u16(data, starts + 2 * index)?;
+                    let delta = read_i16(data, deltas + 2 * index)?;
+                    let range_offset = usize::from(read_u16(data, offsets + 2 * index)?);
+                    for code in cmap_codes(u32::from(start), u32::from(end), codes) {
+                        let gid = if range_offset == 0 {
+                            (code as u16).wrapping_add(delta as u16)
                         } else {
-                            let glyph_index_offset = id_range_offsets_offset
-                                + i * 2
-                                + id_range_offset as usize
-                                + 2 * (code - start_code) as usize;
-
-                            if glyph_index_offset + 2 <= self.data.len() {
-                                let glyph_id = read_u16(&self.data, glyph_index_offset)?;
-                                if glyph_id != 0 {
-                                    ((glyph_id as i32 + id_delta as i32) & 0xFFFF) as u16
-                                } else {
-                                    0
-                                }
-                            } else {
+                            let position = offsets
+                                + 2 * index
+                                + range_offset
+                                + 2 * (code as usize - usize::from(start));
+                            let gid = read_u16(data, position).unwrap_or(0);
+                            if gid == 0 {
                                 0
+                            } else {
+                                gid.wrapping_add(delta as u16)
                             }
                         };
-
-                        if glyph_id != 0 {
-                            mappings.insert(code as u32, glyph_id);
+                        if gid != 0 {
+                            mappings.insert(code, gid);
                         }
                     }
                 }
             }
             6 => {
-                // Format 6: Trimmed mapping table
-                let _length = read_u16(&self.data, absolute_offset + 2)?;
-                let first_code = read_u16(&self.data, absolute_offset + 6)?;
-                let entry_count = read_u16(&self.data, absolute_offset + 8)?;
-
-                let mut glyph_offset = absolute_offset + 10;
-                for i in 0..entry_count {
-                    if glyph_offset + 2 > self.data.len() {
-                        break;
+                let first = u32::from(read_u16(data, 6)?);
+                let count = u32::from(read_u16(data, 8)?);
+                if count != 0 {
+                    let last = (first + count - 1).min(u32::from(u16::MAX));
+                    for code in cmap_codes(first, last, codes) {
+                        let position = 10 + 2 * (code - first) as usize;
+                        let Ok(gid) = read_u16(data, position) else {
+                            break;
+                        };
+                        if gid != 0 {
+                            mappings.insert(code, gid);
+                        }
                     }
-                    let glyph_id = read_u16(&self.data, glyph_offset)?;
-                    if glyph_id != 0 {
-                        mappings.insert((first_code + i) as u32, glyph_id);
-                    }
-                    glyph_offset += 2;
                 }
             }
             12 => {
-                // Format 12: Segmented coverage
-                let _length = read_u32(&self.data, absolute_offset + 4)?;
-                let num_groups = read_u32(&self.data, absolute_offset + 12)?;
-
-                let mut group_offset = absolute_offset + 16;
-                for _ in 0..num_groups {
-                    if group_offset + 12 > self.data.len() {
-                        break;
-                    }
-
-                    let start_char_code = read_u32(&self.data, group_offset)?;
-                    let end_char_code = read_u32(&self.data, group_offset + 4)?;
-                    let start_glyph_id = read_u32(&self.data, group_offset + 8)?;
-
-                    for i in 0..=(end_char_code - start_char_code) {
-                        let char_code = start_char_code + i;
-                        let glyph_id = (start_glyph_id + i) as u16;
-                        if glyph_id != 0 && glyph_id < self.num_glyphs {
-                            mappings.insert(char_code, glyph_id);
+                let count = read_u32(data, 12)? as usize;
+                for group in data
+                    .get(16..)
+                    .unwrap_or_default()
+                    .chunks_exact(12)
+                    .take(count)
+                {
+                    let start = read_u32(group, 0)?;
+                    let end = read_u32(group, 4)?;
+                    let first_gid = read_u32(group, 8)?;
+                    for code in cmap_codes(start, end, codes) {
+                        let Some(gid) = first_gid
+                            .checked_add(code - start)
+                            .and_then(|gid| u16::try_from(gid).ok())
+                        else {
+                            continue;
+                        };
+                        if gid != 0 && gid < self.num_glyphs {
+                            mappings.insert(code, gid);
                         }
                     }
-
-                    group_offset += 12;
                 }
             }
             _ => {
-                // Unsupported format
                 return Err(ParseError::SyntaxError {
-                    position: absolute_offset,
+                    position: 0,
                     message: format!("Unsupported cmap format: {format}"),
-                });
+                })
             }
         }
-
         Ok(CmapSubtable {
             platform_id,
             encoding_id,
@@ -1474,15 +1463,31 @@ impl TrueTypeFont {
     }
 }
 
+/// Intersect a declared range with the sorted extraction selectors when present.
+fn cmap_codes(start: u32, end: u32, codes: Option<&[u32]>) -> Box<dyn Iterator<Item = u32> + '_> {
+    if start > end {
+        return Box::new(std::iter::empty());
+    }
+    match codes {
+        Some(codes) => {
+            let first = codes.partition_point(|code| *code < start);
+            let last = codes.partition_point(|code| *code <= end);
+            Box::new(codes[first..last].iter().copied())
+        }
+        None => Box::new(start..=end),
+    }
+}
+
 /// Helper functions for reading binary data
 fn read_u16(data: &[u8], offset: usize) -> ParseResult<u16> {
-    if offset + 2 > data.len() {
-        return Err(ParseError::SyntaxError {
+    let bytes = data
+        .get(offset..)
+        .and_then(|tail| tail.get(..2))
+        .ok_or_else(|| ParseError::SyntaxError {
             position: offset,
             message: "Insufficient data for u16".to_string(),
-        });
-    }
-    Ok(((data[offset] as u16) << 8) | (data[offset + 1] as u16))
+        })?;
+    Ok(u16::from_be_bytes([bytes[0], bytes[1]]))
 }
 
 fn read_i16(data: &[u8], offset: usize) -> ParseResult<i16> {
@@ -1490,21 +1495,47 @@ fn read_i16(data: &[u8], offset: usize) -> ParseResult<i16> {
 }
 
 fn read_u32(data: &[u8], offset: usize) -> ParseResult<u32> {
-    if offset + 4 > data.len() {
-        return Err(ParseError::SyntaxError {
+    let bytes = data
+        .get(offset..)
+        .and_then(|tail| tail.get(..4))
+        .ok_or_else(|| ParseError::SyntaxError {
             position: offset,
             message: "Insufficient data for u32".to_string(),
-        });
-    }
-    Ok(((data[offset] as u32) << 24)
-        | ((data[offset + 1] as u32) << 16)
-        | ((data[offset + 2] as u32) << 8)
-        | (data[offset + 3] as u32))
+        })?;
+    Ok(u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn single_byte_cmap_selection_is_bounded_and_sorted() {
+        let codes = [0, 65, 255, 0xF041, 0xF141, 0xF241];
+        assert_eq!(
+            cmap_codes(0, u32::MAX, Some(&codes)).collect::<Vec<_>>(),
+            codes
+        );
+        assert_eq!(
+            cmap_codes(65, 255, Some(&codes)).collect::<Vec<_>>(),
+            [65, 255]
+        );
+        assert_eq!(cmap_codes(66, 254, Some(&codes)).count(), 0);
+        assert_eq!(cmap_codes(66, 65, Some(&codes)).count(), 0);
+    }
+
+    #[test]
+    fn truncated_directory_and_end_offsets_are_controlled_errors() {
+        let header = vec![0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0];
+        assert!(matches!(
+            TrueTypeFont::parse(header),
+            Err(ParseError::SyntaxError { .. })
+        ));
+        assert!(read_u16(&[0, 1], usize::MAX).is_err());
+        assert!(read_u32(&[0, 0, 0, 1], usize::MAX).is_err());
+        assert_eq!(read_u16(&[0, 1], 0).unwrap(), 1);
+        assert_eq!(read_u32(&[0, 0, 0, 1], 0).unwrap(), 1);
+    }
 
     fn font_with_post(post: Vec<u8>, num_glyphs: u16) -> TrueTypeFont {
         let length = post.len() as u32;

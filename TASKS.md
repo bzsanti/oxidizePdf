@@ -1,3 +1,27 @@
+## Correcciones de revisión del PR #716 — 2026-10-12
+
+- Issue: #715 — Text extraction: symbolic simple TrueType without /Encoding returns U+FFFD for every glyph (regression vs 5.2.0) — https://github.com/bzsanti/oxidizePdf/issues/715
+- Estado: implementada y revisada localmente; prioridad P1; responsable Codex. Issue OPEN confirmada. Head original 7b6839f; develop 206b688 integrado en este candidato. Preservada contribución del autor.
+- Cierre verificable local: los tres fallos del QR corregidos y pruebas defensivas/regresión aprobadas. Se mantiene el modo opt-in y la precedencia de los mapas explícitos.
+
+| Requisito | Evidencia final | Estado |
+| --- | --- | --- |
+| Entrada font truncada controlada | Regresiones strict/lenient, ToUnicode/null y lectores acotados | Demostrado |
+| Política coherente con caché | Reutilización false/true/false y controles nuevos | Demostrado |
+| GID válido antes de fallback | Límites numGlyphs, post2/post3, prefijos alternativos y Macintosh | Demostrado |
+| Compatibilidad | 6.918 PASS/0 FAIL/3 ignoradas existentes; 37 fuentes con huellas de mapas iguales; consumidor latino; Clippy/formato/Kripteia/revisión | Demostrado |
+
+- Evidencia e informe: docs/reports/2026-10-12-pr-716-review.md y docs/reports/2026-10-12-pr-716-evidence/corrections/. RED original seis fallos previstos; sin relajar baselines ni modificar corpus.
+- Siguiente acción: publicar candidato y comprobar CI antes de fusionar #716. Sin merge remoto ni release. #719 sigue abierta; caso GID general fuera de este consumidor no se declara resuelto.
+
+## Issue #712 — permisos DocMDP de notas y resaltados
+
+- Issue: #712 — fix(annotations): enforce DocMDP for incremental notes and highlights — https://github.com/bzsanti/oxidizePdf/issues/712
+- Estado: implementación validada, integración pendiente; P1; responsable Codex.
+- Cierre: P1/P2 rechazan todo lote no vacío; P3/approval permiten; lectura/no-op conservados; pruebas y CI aprobadas.
+- Última validación: RED cinco fallos/un control; GREEN seis nuevas + 37 relacionadas, 6809 biblioteca, tres qpdf, Clippy y QR/Kripteia PASS. Informe docs/reports/2026-10-11-issue-712-review.md.
+- Siguiente acción: CI y merge hacia develop. La adopción por bridges depende de una release corregida; no se publica como parte de este PR.
+
 ## Release 5.4.2 — 2026-10-10
 
 - Issue: #705 — release: publish oxidize-pdf 5.4.2 — https://github.com/bzsanti/oxidizePdf/issues/705
