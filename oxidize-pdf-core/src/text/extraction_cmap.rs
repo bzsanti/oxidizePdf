@@ -8,11 +8,11 @@ use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
 use crate::parser::{ParseError, ParseOptions, ParseResult};
 use crate::text::cid_to_unicode::AdobeCidCollection;
 use crate::text::cmap::CMap;
+use crate::text::fonts::TrueTypeFont;
 use crate::text::pdf_simple_encodings;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::sync::OnceLock;
-use crate::text::fonts::TrueTypeFont;
 
 /// Only Adobe registries may use the bundled Adobe collection mappings.
 pub(crate) fn resolve_cid_ordering<R: Read + Seek>(
