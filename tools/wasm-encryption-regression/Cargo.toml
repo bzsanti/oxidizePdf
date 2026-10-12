@@ -1,0 +1,13 @@
+[package]
+name = "wasm-encryption-regression"
+version = "0.0.0"
+edition = "2021"
+publish = false
+[workspace]
+[lib]
+crate-type = ["cdylib"]
+[dependencies]
+oxidize-pdf = { path = "../../oxidize-pdf-core", default-features = false, features = ["compression"] }
+wasm-bindgen = "0.2"
+getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+getrandom_04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }

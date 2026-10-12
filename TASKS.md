@@ -1,3 +1,11 @@
+## Issue #711 - 2026-10-12
+
+- Issue: #711 - AES authoring panics on wasm32-unknown-unknown: generate_iv calls unsupported SystemTime::now - https://github.com/bzsanti/oxidizePdf/issues/711
+- Estado: implementada y revisada localmente; P1; responsable Codex. CI remota pendiente.
+- Cierre: IV criptografico, errores explicitos, AES128/R5 Node/browser/native, passwords y RC4 verificados. Informe docs/reports/2026-10-12-issue-711-review.md.
+- Ultima validacion: baseline 5.4.2 RED por reloj en IV/AES128/AES256; RC4 PASS. Candidato Node/Chrome/native GREEN, qpdf y control de fallo de entropia PASS. 287 tests encryption, 29 integration y 1 qpdf R5 PASS; Clippy/formato y QR/Kripteia cerrados.
+- Siguiente accion: PR hacia develop y CI. No publicar core sin autorizacion especifica.
+
 ## Issue #712 — permisos DocMDP de notas y resaltados
 
 - Issue: #712 — fix(annotations): enforce DocMDP for incremental notes and highlights — https://github.com/bzsanti/oxidizePdf/issues/712

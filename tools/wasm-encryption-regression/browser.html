@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>WASM encryption regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import init, {direct_iv, authoring_case} from './pkg/wasm_encryption_regression.js';
+try {
+  await init();
+  if (direct_iv().length !== 16) throw Error('invalid IV');
+  for (const algorithm of [0, 1, 2]) {
+    if (authoring_case(algorithm).length < 100) throw Error('empty PDF');
+  }
+  document.querySelector('#result').textContent = 'PASS: IV, RC4, AES128, AES256 R5; dictionaries, permissions, user/owner passwords, wrong-password retry and plaintext';
+} catch (error) {
+  document.querySelector('#result').textContent = 'FAIL: ' + error.stack;
+}
+</script>

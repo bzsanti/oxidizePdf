@@ -545,39 +545,67 @@ impl Aes {
     }
 }
 
-/// Generate random IV for AES encryption
+/// Generate a cryptographically random 16-byte AES initialization vector.
+///
+/// Uses the operating-system entropy source (`getrandom` via `rand::SysRng`).
+/// On `wasm32-unknown-unknown`, the application must enable getrandom 0.4's
+/// `wasm_js` backend. No clock, process ID or deterministic fallback is used.
+///
+/// # Errors
+/// Returns an encryption error if the platform cannot provide secure entropy.
+pub fn try_generate_iv() -> crate::error::Result<Vec<u8>> {
+    generate_iv_with(&mut rand::rngs::SysRng)
+}
+
+/// Generate a cryptographically random 16-byte AES initialization vector.
+///
+/// This compatibility wrapper retains its original return type. Prefer
+/// [`try_generate_iv`] to handle entropy failures without panicking.
+///
+/// # Panics
+/// Panics if the platform cannot provide cryptographically secure entropy.
 pub fn generate_iv() -> Vec<u8> {
-    // In production, use a cryptographically secure random number generator
-    // For now, use a simple approach with multiple entropy sources
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::thread;
-    use std::time::SystemTime;
+    try_generate_iv()
+        .expect("secure entropy unavailable for AES IV; use try_generate_iv to handle this error")
+}
 
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-
-    let mut hasher = DefaultHasher::new();
-
-    // Hash multiple entropy sources to ensure uniqueness
-    SystemTime::now().hash(&mut hasher);
-    thread::current().id().hash(&mut hasher);
-    std::process::id().hash(&mut hasher);
-    COUNTER.fetch_add(1, Ordering::SeqCst).hash(&mut hasher);
-
-    let seed = hasher.finish();
-    let mut iv = Vec::new();
-
-    for i in 0..16 {
-        iv.push(((seed >> (i * 4)) as u8) ^ (i as u8));
-    }
-
-    iv
+fn generate_iv_with(rng: &mut impl rand::TryCryptoRng) -> crate::error::Result<Vec<u8>> {
+    let mut iv = vec![0u8; 16];
+    rng.try_fill_bytes(&mut iv).map_err(|error| {
+        crate::error::PdfError::EncryptionError(format!(
+            "secure entropy unavailable for AES IV: {error}"
+        ))
+    })?;
+    Ok(iv)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn entropy_failure_never_returns_a_partial_or_predictable_iv() {
+        struct FailingEntropy;
+        impl rand::TryRng for FailingEntropy {
+            type Error = std::io::Error;
+            fn try_next_u32(&mut self) -> std::result::Result<u32, Self::Error> {
+                Err(std::io::Error::other("entropy unavailable"))
+            }
+            fn try_next_u64(&mut self) -> std::result::Result<u64, Self::Error> {
+                Err(std::io::Error::other("entropy unavailable"))
+            }
+            fn try_fill_bytes(&mut self, bytes: &mut [u8]) -> std::result::Result<(), Self::Error> {
+                assert_eq!(bytes.len(), 16);
+                bytes[..8].fill(0x42);
+                Err(std::io::Error::other("entropy unavailable"))
+            }
+        }
+        // A failing stand-in for the fallible cryptographic entropy source.
+        impl rand::TryCryptoRng for FailingEntropy {}
+        assert!(
+            matches!(generate_iv_with(&mut FailingEntropy),Err(crate::error::PdfError::EncryptionError(message)) if message.contains("entropy unavailable"))
+        );
+    }
 
     // ===== AesKey Tests =====
 

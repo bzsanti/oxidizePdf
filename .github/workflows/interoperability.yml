@@ -92,3 +92,26 @@ jobs:
           --test issue_492_aes256_perms_interop_test
           qpdf_checks_and_linearizes_generated_aes256_r5_pdf
           -- --ignored --exact
+
+  wasm-encryption:
+    name: WASM encryption in Node and Chrome
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.14.0 --locked
+      - name: Build and validate Node consumer
+        run: |
+          wasm-pack build tools/wasm-encryption-regression --target nodejs --out-dir pkg-node --dev --no-opt --locked
+          node tools/wasm-encryption-regression/node_test.cjs
+      - name: Build and validate Chrome consumer
+        run: |
+          wasm-pack build tools/wasm-encryption-regression --target web --dev --no-opt --locked
+          node tools/wasm-encryption-regression/browser_test.cjs

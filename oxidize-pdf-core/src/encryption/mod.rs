@@ -27,7 +27,7 @@ mod public_key;
 mod rc4;
 mod standard_security;
 
-pub use aes::{generate_iv, Aes, AesError, AesKey, AesKeySize};
+pub use aes::{generate_iv, try_generate_iv, Aes, AesError, AesKey, AesKeySize};
 pub use crypt_filters::{AuthEvent, CryptFilterManager, FunctionalCryptFilter, SecurityHandler};
 pub use embedded_files::{EmbeddedFileEncryption, ExtendedEncryptionDict};
 pub use encryption_dict::{

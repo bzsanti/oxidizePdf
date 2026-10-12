@@ -16,7 +16,7 @@
 
 #![allow(clippy::needless_range_loop)]
 
-use crate::encryption::{generate_iv, Aes, AesKey, Permissions, Rc4, Rc4Key};
+use crate::encryption::{try_generate_iv, Aes, AesKey, Permissions, Rc4, Rc4Key};
 use crate::error::Result;
 use crate::objects::ObjectId;
 use rand::Rng;
@@ -415,22 +415,32 @@ impl StandardSecurityHandler {
         Ok(EncryptionKey::new(hash))
     }
 
-    /// Encrypt a string
-    pub fn encrypt_string(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
+    /// Encrypt a string, propagating AES and secure-entropy errors.
+    pub fn try_encrypt_string(
+        &self,
+        data: &[u8],
+        key: &EncryptionKey,
+        obj_id: &ObjectId,
+    ) -> Result<Vec<u8>> {
         match self.revision {
             SecurityHandlerRevision::R4
             | SecurityHandlerRevision::R5
-            | SecurityHandlerRevision::R6 => {
-                // AES path for R4 (AES-128) and R5/R6 (AES-256)
-                self.encrypt_aes(data, key, obj_id).unwrap_or_default()
-            }
+            | SecurityHandlerRevision::R6 => self.encrypt_aes(data, key, obj_id),
             _ => {
-                // RC4 for R2/R3
                 let obj_key = self.compute_object_key(key, obj_id);
                 let rc4_key = Rc4Key::from_slice(&obj_key);
-                rc4_encrypt(&rc4_key, data)
+                Ok(rc4_encrypt(&rc4_key, data))
             }
         }
+    }
+
+    /// Encrypt a string. Prefer [`Self::try_encrypt_string`] for fallible callers.
+    ///
+    /// # Panics
+    /// Panics on AES or entropy failure; never substitutes empty ciphertext.
+    pub fn encrypt_string(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
+        self.try_encrypt_string(data, key, obj_id)
+            .expect("string encryption failed; use try_encrypt_string to handle this error")
     }
 
     /// Decrypt a string, propagating any decryption error (issue #364).
@@ -478,7 +488,11 @@ impl StandardSecurityHandler {
             .unwrap_or_default()
     }
 
-    /// Encrypt a stream
+    /// Encrypt a stream.
+    ///
+    /// # Panics
+    /// Panics on AES or entropy failure. Use [`Self::try_encrypt_string`] for
+    /// the same encryption operation with explicit error propagation.
     pub fn encrypt_stream(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
         self.encrypt_string(data, key, obj_id)
     }
@@ -516,7 +530,7 @@ impl StandardSecurityHandler {
             }
         };
 
-        let iv = generate_iv();
+        let iv = try_generate_iv()?;
         let mut result = Vec::with_capacity(16 + data.len() + 16);
         result.extend_from_slice(&iv);
 
