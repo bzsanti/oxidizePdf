@@ -17,10 +17,45 @@ const HHEA_TABLE: [u8; 4] = *b"hhea";
 const HMTX_TABLE: [u8; 4] = *b"hmtx";
 const NAME_TABLE: [u8; 4] = *b"name";
 const CFF_TABLE: [u8; 4] = *b"CFF ";
-const _POST_TABLE: [u8; 4] = *b"post";
+const POST_TABLE: [u8; 4] = *b"post";
 const _FPGM_TABLE: [u8; 4] = *b"fpgm";
 const _CVT_TABLE: &[u8] = b"cvt ";
 const _PREP_TABLE: &[u8] = b"prep";
+
+/// Standard Macintosh glyph order referenced by `post` table formats 1.0 and
+/// 2.0 (Apple TrueType Reference Manual, `post` table).
+#[rustfmt::skip]
+const MAC_GLYPH_NAMES: [&str; 258] = [
+    ".notdef", ".null", "nonmarkingreturn", "space", "exclam", "quotedbl", "numbersign", "dollar",
+    "percent", "ampersand", "quotesingle", "parenleft", "parenright", "asterisk", "plus", "comma",
+    "hyphen", "period", "slash", "zero", "one", "two", "three", "four", "five", "six", "seven",
+    "eight", "nine", "colon", "semicolon", "less", "equal", "greater", "question", "at", "A", "B",
+    "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U",
+    "V", "W", "X", "Y", "Z", "bracketleft", "backslash", "bracketright", "asciicircum",
+    "underscore", "grave", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",
+    "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "braceleft", "bar", "braceright",
+    "asciitilde", "Adieresis", "Aring", "Ccedilla", "Eacute", "Ntilde", "Odieresis", "Udieresis",
+    "aacute", "agrave", "acircumflex", "adieresis", "atilde", "aring", "ccedilla", "eacute",
+    "egrave", "ecircumflex", "edieresis", "iacute", "igrave", "icircumflex", "idieresis", "ntilde",
+    "oacute", "ograve", "ocircumflex", "odieresis", "otilde", "uacute", "ugrave", "ucircumflex",
+    "udieresis", "dagger", "degree", "cent", "sterling", "section", "bullet", "paragraph",
+    "germandbls", "registered", "copyright", "trademark", "acute", "dieresis", "notequal", "AE",
+    "Oslash", "infinity", "plusminus", "lessequal", "greaterequal", "yen", "mu", "partialdiff",
+    "summation", "product", "pi", "integral", "ordfeminine", "ordmasculine", "Omega", "ae",
+    "oslash", "questiondown", "exclamdown", "logicalnot", "radical", "florin", "approxequal",
+    "Delta", "guillemotleft", "guillemotright", "ellipsis", "nonbreakingspace", "Agrave", "Atilde",
+    "Otilde", "OE", "oe", "endash", "emdash", "quotedblleft", "quotedblright", "quoteleft",
+    "quoteright", "divide", "lozenge", "ydieresis", "Ydieresis", "fraction", "currency",
+    "guilsinglleft", "guilsinglright", "fi", "fl", "daggerdbl", "periodcentered", "quotesinglbase",
+    "quotedblbase", "perthousand", "Acircumflex", "Ecircumflex", "Aacute", "Edieresis", "Egrave",
+    "Iacute", "Icircumflex", "Idieresis", "Igrave", "Oacute", "Ocircumflex", "apple", "Ograve",
+    "Uacute", "Ucircumflex", "Ugrave", "dotlessi", "circumflex", "tilde", "macron", "breve",
+    "dotaccent", "ring", "cedilla", "hungarumlaut", "ogonek", "caron", "Lslash", "lslash",
+    "Scaron", "scaron", "Zcaron", "zcaron", "brokenbar", "Eth", "eth", "Yacute", "yacute", "Thorn",
+    "thorn", "minus", "multiply", "onesuperior", "twosuperior", "threesuperior", "onehalf",
+    "onequarter", "threequarters", "franc", "Gbreve", "gbreve", "Idotaccent", "Scedilla",
+    "scedilla", "Cacute", "cacute", "Ccaron", "ccaron", "dcroat",
+];
 
 /// Required tables for TrueType fonts (.ttf)
 const TRUETYPE_REQUIRED_TABLES: &[&[u8]] = &[
@@ -1375,6 +1410,56 @@ impl TrueTypeFont {
         Ok(table_data)
     }
 
+    /// Glyph names from the `post` table keyed by glyph id.
+    ///
+    /// Supports formats 1.0 (standard Macintosh order) and 2.0. Returns `None`
+    /// for other formats, notably 3.0, which carries no glyph names.
+    /// Malformed or truncated name data yields the names read so far.
+    pub(crate) fn post_glyph_names(&self) -> Option<HashMap<u16, String>> {
+        let entry = self.tables.get(&POST_TABLE)?;
+        let start = entry.offset as usize;
+        let end = start
+            .checked_add(entry.length as usize)?
+            .min(self.data.len());
+        let table = self.data.get(start..end)?;
+        let version = u32::from_be_bytes(table.get(0..4)?.try_into().ok()?);
+        match version {
+            0x0001_0000 => Some(
+                (0..self.num_glyphs.min(258))
+                    .map(|gid| (gid, MAC_GLYPH_NAMES[usize::from(gid)].to_owned()))
+                    .collect(),
+            ),
+            0x0002_0000 => {
+                let count = usize::from(u16::from_be_bytes(table.get(32..34)?.try_into().ok()?));
+                let indices_end = 34 + 2 * count;
+                let indices = table.get(34..indices_end)?;
+                let mut custom = Vec::new();
+                let mut position = indices_end;
+                while let Some(&length) = table.get(position) {
+                    let name_end = position + 1 + usize::from(length);
+                    let Some(bytes) = table.get(position + 1..name_end) else {
+                        break;
+                    };
+                    custom.push(String::from_utf8_lossy(bytes).into_owned());
+                    position = name_end;
+                }
+                let mut names = HashMap::with_capacity(count);
+                for (gid, index) in (0u16..).zip(indices.chunks_exact(2)) {
+                    let index = usize::from(u16::from_be_bytes([index[0], index[1]]));
+                    let name = match index.checked_sub(MAC_GLYPH_NAMES.len()) {
+                        None => Some(MAC_GLYPH_NAMES[index].to_owned()),
+                        Some(custom_index) => custom.get(custom_index).cloned(),
+                    };
+                    if let Some(name) = name {
+                        names.insert(gid, name);
+                    }
+                }
+                Some(names)
+            }
+            _ => None,
+        }
+    }
+
     /// Get all glyph indices used in the font
     pub fn get_all_glyph_indices(&self) -> HashSet<u16> {
         let mut indices = HashSet::new();
@@ -1420,6 +1505,74 @@ fn read_u32(data: &[u8], offset: usize) -> ParseResult<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn font_with_post(post: Vec<u8>, num_glyphs: u16) -> TrueTypeFont {
+        let length = post.len() as u32;
+        let mut font = TrueTypeFont::empty_for_test();
+        font.data = post;
+        font.num_glyphs = num_glyphs;
+        font.tables.insert(
+            POST_TABLE,
+            TableEntry {
+                tag: POST_TABLE,
+                _checksum: 0,
+                offset: 0,
+                length,
+            },
+        );
+        font
+    }
+
+    fn post_v2(indices: &[u16], names: &[&[u8]]) -> Vec<u8> {
+        let mut post = 0x0002_0000u32.to_be_bytes().to_vec();
+        post.resize(32, 0);
+        post.extend_from_slice(&(indices.len() as u16).to_be_bytes());
+        for index in indices {
+            post.extend_from_slice(&index.to_be_bytes());
+        }
+        for name in names {
+            post.push(name.len() as u8);
+            post.extend_from_slice(name);
+        }
+        post
+    }
+
+    #[test]
+    fn post_format_2_resolves_standard_and_custom_names() {
+        let post = post_v2(&[0, 36, 258, 259], &[b"uniE000", b"Aogon"]);
+        let names = font_with_post(post, 4).post_glyph_names().unwrap();
+        assert_eq!(names[&0], ".notdef");
+        assert_eq!(names[&1], "A");
+        assert_eq!(names[&2], "uniE000");
+        assert_eq!(names[&3], "Aogon");
+    }
+
+    #[test]
+    fn post_format_2_tolerates_truncated_name_data() {
+        let mut post = post_v2(&[37, 258], &[]);
+        post.extend_from_slice(b"\x09abc");
+        let names = font_with_post(post, 2).post_glyph_names().unwrap();
+        assert_eq!(names.get(&0).map(String::as_str), Some("B"));
+        assert_eq!(names.get(&1), None);
+    }
+
+    #[test]
+    fn post_format_1_uses_the_standard_macintosh_order() {
+        let mut post = 0x0001_0000u32.to_be_bytes().to_vec();
+        post.resize(32, 0);
+        let names = font_with_post(post, 300).post_glyph_names().unwrap();
+        assert_eq!(names.len(), MAC_GLYPH_NAMES.len());
+        assert_eq!(names[&3], "space");
+        assert_eq!(names[&257], "dcroat");
+    }
+
+    #[test]
+    fn post_format_3_and_missing_table_have_no_names() {
+        let mut post = 0x0003_0000u32.to_be_bytes().to_vec();
+        post.resize(32, 0);
+        assert!(font_with_post(post, 4).post_glyph_names().is_none());
+        assert!(TrueTypeFont::empty_for_test().post_glyph_names().is_none());
+    }
 
     #[test]
     fn test_read_helpers() {
