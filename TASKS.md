@@ -1,3 +1,11 @@
+## Corrección #730 — 2026-10-13
+
+- Issue: #730 — fix(redaction): reject recoverable targets split across text operators — https://github.com/bzsanti/oxidizePdf/issues/730
+- Estado: implementada y validada localmente; integración pendiente; prioridad P1 seguridad; responsable Codex. OPEN confirmada; base develop d66b397a, copia local /tmp/oxidize-issue730, rama fix/issue-730-redaction. WIP raíz preservado.
+- Cierre: rechazar salida que conserva objetivo fragmentado Tj/TJ, también entre streams/estados de texto; controles seguro/duplicado completo; Poppler independiente, RED/GREEN, regresiones y revisión calidad/seguridad. Sin cambiar garantías a extracción tolerante ni reparar #737/#742.
+- Última validación: RED ocho fallos previstos; GREEN 41 pruebas y oráculo Poppler/qpdf PASS; Clippy, formato y revisión calidad/seguridad aprobados. Informe docs/reports/2026-10-13-issue-730-review.md. PR #746; integración autorizada. develop 34220e18 incorporado tras #717/#718; conflicto sólo documental conciliado preservando ambas entradas. Siguiente acción: verificar CI del candidato actualizado y fusionar. Guardia conservadora por página; límites y rechazos previos preservados.
+- Evidencia: docs/reports/2026-10-13-issue-730-evidence/. Merge de #746 autorizado; release no autorizada.
+
 ## Issue #711 — corrección de revisión 2026-10-13
 
 - Issue: #711 — AES authoring panics on wasm32-unknown-unknown: generate_iv calls unsupported SystemTime::now — https://github.com/bzsanti/oxidizePdf/issues/711
