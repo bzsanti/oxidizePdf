@@ -1,3 +1,11 @@
+## Corrección #723 — 2026-10-13
+
+- Issue: #723 — fix(forms): stop legacy signature verification from accepting fabricated signature values — https://github.com/bzsanti/oxidizePdf/issues/723
+- Estado: implementada y revisada; integración pendiente; prioridad P1; responsable Codex. OPEN confirmada. Base develop 1087c342; rama fix/issue-723-legacy-signatures en copia local reutilizada /tmp/oxidize-issue742. WIP raíz preservado.
+- Cierre: firma antigua no fabrica datos ni muta estado/locks al fallar; verificación presente devuelve error no soportado y ausencia false; validate_all conserva no válido/error. Apariencia/presencia documentadas separadamente. Contratos públicos y controles RED/GREEN; QR y seguridad antes de PR a develop.
+- Alcance: contención explícita mediante InvalidOperation existente; sin ampliar la API para recibir documentos, claves y PKI ni modificar firmas criptográficas modernas. Bloqueantes: éxito ficticio de sign/verify y su propagación; evidencia de cierre tests por API pública y regresión proporcional.
+- Última validación: RED seis fallos/tres controles; GREEN 9 nuevas +384 formularios +23 firmas modernas PASS; OpenSSL RSA/ECDSA acepta intactos/rechaza alterados; Clippy all-targets/signatures, formato y QR/Kripteia calidad/seguridad PASS. Informe docs/reports/2026-10-13-issue-723-review.md. Siguiente acción: publicar PR a develop y verificar CI. Sin merge/release autorizados.
+
 ## Corrección #742 — 2026-10-13
 
 - Issue: #742 — fix(metadata): validate XMP dates without Unicode panics or false Date values — https://github.com/bzsanti/oxidizePdf/issues/742

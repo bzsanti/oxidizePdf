@@ -1,0 +1,54 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 9 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs         9     98
+
+--- Worst Offenders ---
+  unsigned_field_is_not_valid (oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:29) - Score: 90
+    i Test 'unsigned_field_is_not_valid' has multiple assertions without diagnostic messages
+    - Test 'unsigned_field_is_not_valid' does not call any production code
+  missing_field_still_reports_not_found (oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:154) - Score: 90
+    - Test 'missing_field_still_reports_not_found' does not call any production code
+  fabricated_signature_is_unverified (oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:35) - Score: 100
+  plausible_metadata_and_algorithms_cannot_authorize_verification (oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:41) - Score: 100
+    i Test 'plausible_metadata_and_algorithms_cannot_authorize_verification' uses .unwrap() which silently discards error information
+  aggregate_validation_does_not_upgrade_presence_to_validity (oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:66) - Score: 100
+    i Test 'aggregate_validation_does_not_upgrade_presence_to_validity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'aggregate_validation_does_not_upgrade_presence_to_validity' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:
+  unsigned_field_is_not_valid (line 29) - Score: 90
+    i Test 'unsigned_field_is_not_valid' has multiple assertions without diagnostic messages
+    - Test 'unsigned_field_is_not_valid' does not call any production code
+  plausible_metadata_and_algorithms_cannot_authorize_verification (line 41) - Score: 100
+    i Test 'plausible_metadata_and_algorithms_cannot_authorize_verification' uses .unwrap() which silently discards error information
+  aggregate_validation_does_not_upgrade_presence_to_validity (line 66) - Score: 100
+    i Test 'aggregate_validation_does_not_upgrade_presence_to_validity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'aggregate_validation_does_not_upgrade_presence_to_validity' uses .unwrap() which silently discards error information
+  signing_refuses_without_mutating_existing_metadata (line 94) - Score: 100
+    i Test 'signing_refuses_without_mutating_existing_metadata' has multiple assertions without diagnostic messages
+  already_present_value_is_not_overwritten (line 104) - Score: 100
+    i Test 'already_present_value_is_not_overwritten' has multiple assertions without diagnostic messages
+  rejected_handler_signing_preserves_locks_and_completion (line 111) - Score: 100
+    i Test 'rejected_handler_signing_preserves_locks_and_completion' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'rejected_handler_signing_preserves_locks_and_completion' has multiple assertions without diagnostic messages
+    i Test 'rejected_handler_signing_preserves_locks_and_completion' uses .unwrap() which silently discards error information
+  appearances_and_presence_remain_available_without_verification (line 138) - Score: 100
+    i Test 'appearances_and_presence_remain_available_without_verification' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'appearances_and_presence_remain_available_without_verification' has multiple assertions without diagnostic messages
+    i Test 'appearances_and_presence_remain_available_without_verification' uses .unwrap() which silently discards error information
+  missing_field_still_reports_not_found (line 154) - Score: 90
+    - Test 'missing_field_still_reports_not_found' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
