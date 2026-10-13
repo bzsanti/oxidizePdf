@@ -392,7 +392,7 @@ impl SecurityHandler for StandardSecurityHandler {
         key: &EncryptionKey,
         obj_id: &ObjectId,
     ) -> Result<Vec<u8>> {
-        Ok(self.encrypt_string(data, key, obj_id))
+        self.try_encrypt_string(data, key, obj_id)
     }
 
     fn decrypt_string(
@@ -410,7 +410,7 @@ impl SecurityHandler for StandardSecurityHandler {
         key: &EncryptionKey,
         obj_id: &ObjectId,
     ) -> Result<Vec<u8>> {
-        Ok(self.encrypt_stream(data, key, obj_id))
+        self.try_encrypt_string(data, key, obj_id)
     }
 
     fn decrypt_stream(

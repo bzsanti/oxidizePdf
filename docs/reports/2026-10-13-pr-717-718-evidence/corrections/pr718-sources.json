@@ -1,0 +1,8 @@
+{
+  "head_reviewed": "4d2dae204afc2a6dbe2a554839e1e15930e1652c",
+  "develop": "d66b397aa6653c19134ca7be27ec54df2f9c3443",
+  "sha256": {
+    "oxidize-pdf-core/src/encryption/crypt_filters.rs": "22a82da797dca18b9d7a47f4d8c0b3452c7877b253fdb3dde720edb7ecc7c194",
+    "oxidize-pdf-core/tests/issue_711_aes_entropy_test.rs": "037f873506037fa0c4973f1048527b8d87bef8dc1288eed778f5b4d006d293c0"
+  }
+}
