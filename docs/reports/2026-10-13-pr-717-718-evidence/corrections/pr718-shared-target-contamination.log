@@ -1,0 +1,84 @@
+warning: function `generate_iv_with` is never used
+   --> oxidize-pdf-core/src/encryption/aes.rs:572:4
+    |
+572 | fn generate_iv_with(rng: &mut impl rand::TryCryptoRng) -> crate::error::Result<Vec<u8>> {
+    |    ^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `oxidize-pdf` (lib) generated 1 warning
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-pr718-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 3.10s
+     Running tests/encryption_write_test.rs (/tmp/oxidize-pr718-review/target/debug/deps/encryption_write_test-5601ad91189d1647)
+
+running 24 tests
+test test_aes128_handler_uses_r4 ... ok
+test test_aes256_handler_uses_r5 ... ok
+test test_aes256_dict_has_aesv3_crypt_filter ... ok
+test test_aes128_dict_has_aesv2_crypt_filter ... ok
+test test_aes128_round_trip_write_read ... FAILED
+test test_aes128_content_is_encrypted ... FAILED
+test test_encrypt_dict_object_is_not_encrypted ... ok
+test test_encrypted_document_has_encrypt_in_trailer ... ok
+test test_encryption_strength_aes128_creates_valid_dict ... ok
+test test_encrypted_document_content_is_not_plaintext ... ok
+test test_encryption_strength_aes256_creates_valid_dict ... ok
+test test_encrypted_pdf_preserves_structure ... ok
+test test_empty_password_encryption ... ok
+test test_roundtrip_aes128_recovers_content ... FAILED
+test test_roundtrip_aes256_owner_password_recovers_content ... FAILED
+test test_roundtrip_aes256_recovers_content ... FAILED
+test test_roundtrip_aes256_wrong_password_does_not_unlock ... FAILED
+test test_encryption_with_different_permissions ... ok
+test test_roundtrip_plaintext_baseline ... ok
+test test_unencrypted_document_has_no_encrypt ... ok
+test test_round_trip_encrypted_pdf_is_parseable ... ok
+test test_owner_password_also_unlocks ... ok
+test test_round_trip_wrong_password_fails ... ok
+test test_roundtrip_rc4_128_baseline ... ok
+
+failures:
+
+---- test_aes128_round_trip_write_read stdout ----
+
+thread 'test_aes128_round_trip_write_read' (948) panicked at oxidize-pdf-core/tests/encryption_write_test.rs:352:10:
+called `Result::unwrap()` on an `Err` value: EncryptionError("injected secure entropy failure")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- test_aes128_content_is_encrypted stdout ----
+
+thread 'test_aes128_content_is_encrypted' (945) panicked at oxidize-pdf-core/tests/encryption_write_test.rs:384:10:
+called `Result::unwrap()` on an `Err` value: EncryptionError("injected secure entropy failure")
+
+---- test_roundtrip_aes128_recovers_content stdout ----
+
+thread 'test_roundtrip_aes128_recovers_content' (962) panicked at oxidize-pdf-core/tests/encryption_write_test.rs:415:32:
+write document: EncryptionError("injected secure entropy failure")
+
+---- test_roundtrip_aes256_owner_password_recovers_content stdout ----
+
+thread 'test_roundtrip_aes256_owner_password_recovers_content' (963) panicked at oxidize-pdf-core/tests/encryption_write_test.rs:514:32:
+write document: EncryptionError("injected secure entropy failure")
+
+---- test_roundtrip_aes256_recovers_content stdout ----
+
+thread 'test_roundtrip_aes256_recovers_content' (964) panicked at oxidize-pdf-core/tests/encryption_write_test.rs:415:32:
+write document: EncryptionError("injected secure entropy failure")
+
+---- test_roundtrip_aes256_wrong_password_does_not_unlock stdout ----
+
+thread 'test_roundtrip_aes256_wrong_password_does_not_unlock' (965) panicked at oxidize-pdf-core/tests/encryption_write_test.rs:485:32:
+write document: EncryptionError("injected secure entropy failure")
+
+
+failures:
+    test_aes128_content_is_encrypted
+    test_aes128_round_trip_write_read
+    test_roundtrip_aes128_recovers_content
+    test_roundtrip_aes256_owner_password_recovers_content
+    test_roundtrip_aes256_recovers_content
+    test_roundtrip_aes256_wrong_password_does_not_unlock
+
+test result: FAILED. 18 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test encryption_write_test`

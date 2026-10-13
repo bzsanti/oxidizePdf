@@ -1,0 +1,75 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-pr718-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 31.00s
+     Running tests/encryption_write_test.rs (target/debug/deps/encryption_write_test-5601ad91189d1647)
+
+running 24 tests
+test test_aes128_handler_uses_r4 ... ok
+test test_aes256_handler_uses_r5 ... ok
+test test_aes256_dict_has_aesv3_crypt_filter ... ok
+test test_aes128_dict_has_aesv2_crypt_filter ... ok
+test test_aes128_content_is_encrypted ... ok
+test test_encrypt_dict_object_is_not_encrypted ... ok
+test test_encryption_strength_aes256_creates_valid_dict ... ok
+test test_empty_password_encryption ... ok
+test test_encrypted_document_content_is_not_plaintext ... ok
+test test_encryption_strength_aes128_creates_valid_dict ... ok
+test test_aes128_round_trip_write_read ... ok
+test test_encrypted_pdf_preserves_structure ... ok
+test test_encrypted_document_has_encrypt_in_trailer ... ok
+test test_encryption_with_different_permissions ... ok
+test test_round_trip_wrong_password_fails ... ok
+test test_roundtrip_aes256_wrong_password_does_not_unlock ... ok
+test test_roundtrip_plaintext_baseline ... ok
+test test_unencrypted_document_has_no_encrypt ... ok
+test test_roundtrip_aes256_recovers_content ... ok
+test test_owner_password_also_unlocks ... ok
+test test_roundtrip_aes128_recovers_content ... ok
+test test_roundtrip_aes256_owner_password_recovers_content ... ok
+test test_round_trip_encrypted_pdf_is_parseable ... ok
+test test_roundtrip_rc4_128_baseline ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/issue_492_aes256_perms_interop_test.rs (target/debug/deps/issue_492_aes256_perms_interop_test-634aec989ced5508)
+
+running 4 tests
+test aes256_dictionary_rejects_a_perms_entry_with_the_wrong_size ... ok
+test r5_uses_the_revision_neutral_perms_api ... ok
+test aes256_r5_dictionary_contains_binary_perms_entry ... ok
+test qpdf_checks_and_linearizes_generated_aes256_r5_pdf ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/issue_711_aes_entropy_test.rs (target/debug/deps/issue_711_aes_entropy_test-a7954dbc45187fda)
+
+running 5 tests
+test fallible_iv_and_encryption_errors_are_explicit ... ok
+test security_handler_trait_stream_propagates_aes_errors ... ok
+test security_handler_trait_string_propagates_aes_errors ... ok
+test security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes ... ok
+test direct_iv_and_all_authoring_algorithms_work_natively ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/text_symbolic_truetype_fallback_test.rs (target/debug/deps/text_symbolic_truetype_fallback_test-728994e47f7770ed)
+
+running 16 tests
+test malformed_cmap_ranges_do_not_discard_valid_later_entries ... ok
+test invalid_direct_gid_does_not_hide_a_valid_symbol_prefix ... ok
+test invalid_windows_gids_do_not_hide_valid_macintosh_glyphs ... ok
+test missing_or_unparseable_program_keeps_the_strict_policy ... ok
+test format_6_codes_do_not_wrap_to_byte_codes ... ok
+test default_and_disabled_keep_the_strict_replacement_policy ... ok
+test post_glyph_names_take_precedence_over_the_byte ... ok
+test tounicode_does_not_require_a_readable_font_program ... ok
+test tounicode_and_differences_still_win ... ok
+test codes_the_program_does_not_map_stay_replacement ... ok
+test switching_fallback_rebuilds_cached_font_information ... ok
+test unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding ... ok
+test truncated_font_directory_returns_replacements_without_panicking ... ok
+test null_tounicode_keeps_the_same_fallback_as_an_absent_entry ... ok
+test unnamed_high_bytes_use_the_selected_subtable_encoding ... ok
+test fallback_requires_gids_within_the_declared_glyph_count ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+

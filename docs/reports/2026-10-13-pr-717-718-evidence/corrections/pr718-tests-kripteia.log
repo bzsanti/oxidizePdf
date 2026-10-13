@@ -1,0 +1,47 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 89 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ix/oxidize-pdf-core/tests/issue_711_aes_entropy_test.rs        5     89
+
+--- Worst Offenders ---
+  direct_iv_and_all_authoring_algorithms_work_natively (/tmp/oxidize-pr718-fix/oxidize-pdf-core/tests/issue_711_aes_entropy_test.rs:5) - Score: 75
+    - Test 'direct_iv_and_all_authoring_algorithms_work_natively' executes production code without asserting on its behaviour
+  security_handler_trait_string_propagates_aes_errors (/tmp/oxidize-pr718-fix/oxidize-pdf-core/tests/issue_711_aes_entropy_test.rs:30) - Score: 90
+    - Test 'security_handler_trait_string_propagates_aes_errors' has identical neighborhood to 'security_handler_trait_stream_propagates_aes_errors'
+  security_handler_trait_stream_propagates_aes_errors (/tmp/oxidize-pr718-fix/oxidize-pdf-core/tests/issue_711_aes_entropy_test.rs:42) - Score: 90
+    - Test 'security_handler_trait_stream_propagates_aes_errors' has identical neighborhood to 'security_handler_trait_string_propagates_aes_errors'
+  security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes (/tmp/oxidize-pr718-fix/oxidize-pdf-core/tests/issue_711_aes_entropy_test.rs:54) - Score: 90
+    - Test 'security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes' has multiple assertions without diagnostic messages
+    i Test 'security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes' uses .unwrap() which silently discards error information
+  fallible_iv_and_encryption_errors_are_explicit (/tmp/oxidize-pr718-fix/oxidize-pdf-core/tests/issue_711_aes_entropy_test.rs:13) - Score: 100
+    i Test 'fallible_iv_and_encryption_errors_are_explicit' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'fallible_iv_and_encryption_errors_are_explicit' has multiple assertions without diagnostic messages
+
+--- Details ---
+/tmp/oxidize-pr718-fix/oxidize-pdf-core/tests/issue_711_aes_entropy_test.rs:
+  direct_iv_and_all_authoring_algorithms_work_natively (line 5) - Score: 75
+    - Test 'direct_iv_and_all_authoring_algorithms_work_natively' executes production code without asserting on its behaviour
+  fallible_iv_and_encryption_errors_are_explicit (line 13) - Score: 100
+    i Test 'fallible_iv_and_encryption_errors_are_explicit' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'fallible_iv_and_encryption_errors_are_explicit' has multiple assertions without diagnostic messages
+  security_handler_trait_string_propagates_aes_errors (line 30) - Score: 90
+    - Test 'security_handler_trait_string_propagates_aes_errors' has identical neighborhood to 'security_handler_trait_stream_propagates_aes_errors'
+  security_handler_trait_stream_propagates_aes_errors (line 42) - Score: 90
+    - Test 'security_handler_trait_stream_propagates_aes_errors' has identical neighborhood to 'security_handler_trait_string_propagates_aes_errors'
+  security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes (line 54) - Score: 90
+    - Test 'security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes' has multiple assertions without diagnostic messages
+    i Test 'security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

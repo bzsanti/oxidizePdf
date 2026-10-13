@@ -1,3 +1,12 @@
+## Issue #711 — corrección de revisión 2026-10-13
+
+- Issue: #711 — AES authoring panics on wasm32-unknown-unknown: generate_iv calls unsupported SystemTime::now — https://github.com/bzsanti/oxidizePdf/issues/711
+- Estado: corrección y revisión local completadas; publicación/CI pendientes. Prioridad P1; responsable Codex. develop d66b397a incorporado, conflictos de seguimiento conciliados sin pérdida.
+- Cierre verificable local: los métodos Result de SecurityHandler propagan errores de clave y entropía sin panic; controles RC4/AES128/R5 preservan plaintext, permisos y contraseñas. No cambian wrappers expresamente infalibles ni proveedor RNG.
+- Última validación: RED 2 fallos esperados/3 controles PASS; GREEN 5/5 públicos; inyección en copia 3 PASS y mutación de adaptadores 2 fallos previstos; target exclusivo final 287 unidades + 49 integración PASS, qpdf incluido, Clippy all-targets y formato PASS. QR/Kripteia calidad y seguridad terminados. El fallo intermedio por target compartido/inyección se aisló y no se atribuye al producto.
+- Informe: docs/reports/2026-10-12-issue-711-review.md; evidencia pr718 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
+- Siguiente acción: publicar candidato y confirmar CI (incluido Node/Chrome) antes de fusión. Sin merge remoto ni release.
+
 ## Correcciones de revisión del PR #716 — 2026-10-12
 
 - Issue: #715 — Text extraction: symbolic simple TrueType without /Encoding returns U+FFFD for every glyph (regression vs 5.2.0) — https://github.com/bzsanti/oxidizePdf/issues/715

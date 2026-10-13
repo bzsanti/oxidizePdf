@@ -1,0 +1,32 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-pr718-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 4.14s
+     Running tests/issue_711_aes_entropy_test.rs (/tmp/oxidize-pr718-review/target/debug/deps/issue_711_aes_entropy_test-a7954dbc45187fda)
+
+running 5 tests
+test fallible_iv_and_encryption_errors_are_explicit ... ok
+test security_handler_trait_stream_propagates_aes_errors ... FAILED
+test security_handler_trait_string_propagates_aes_errors ... FAILED
+test security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes ... ok
+test direct_iv_and_all_authoring_algorithms_work_natively ... ok
+
+failures:
+
+---- security_handler_trait_stream_propagates_aes_errors stdout ----
+
+thread 'security_handler_trait_stream_propagates_aes_errors' (128) panicked at oxidize-pdf-core/src/encryption/standard_security.rs:443:14:
+string encryption failed; use try_encrypt_string to handle this error: EncryptionError("Invalid key length: expected 32, got 1")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- security_handler_trait_string_propagates_aes_errors stdout ----
+
+thread 'security_handler_trait_string_propagates_aes_errors' (129) panicked at oxidize-pdf-core/src/encryption/standard_security.rs:443:14:
+string encryption failed; use try_encrypt_string to handle this error: EncryptionError("Invalid key length: expected 32, got 1")
+
+
+failures:
+    security_handler_trait_stream_propagates_aes_errors
+    security_handler_trait_string_propagates_aes_errors
+
+test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_711_aes_entropy_test`

@@ -1,0 +1,76 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 14 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...18-fix/oxidize-pdf-core/src/encryption/crypt_filters.rs       14     91
+
+--- Worst Offenders ---
+  test_auth_event_equality (/tmp/oxidize-pr718-fix/oxidize-pdf-core/src/encryption/crypt_filters.rs:675) - Score: 60
+    i Test 'test_auth_event_equality' has multiple assertions without diagnostic messages
+    - Test 'test_auth_event_equality' does not call any production code
+    - Test 'test_auth_event_equality' line 676: assert_eq! with identical arguments: AuthEvent :: DocOpen 
+    - Test 'test_auth_event_equality' line 677: assert_eq! with identical arguments: AuthEvent :: EFOpen 
+  test_functional_crypt_filter_creation (/tmp/oxidize-pr718-fix/oxidize-pdf-core/src/encryption/crypt_filters.rs:493) - Score: 90
+    i Test 'test_functional_crypt_filter_creation' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_functional_crypt_filter_creation' does not call any production code
+  test_crypt_filter_manager_creation (/tmp/oxidize-pr718-fix/oxidize-pdf-core/src/encryption/crypt_filters.rs:529) - Score: 90
+    - Test 'test_crypt_filter_manager_creation' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_add_and_get_filter (/tmp/oxidize-pr718-fix/oxidize-pdf-core/src/encryption/crypt_filters.rs:539) - Score: 90
+    i Test 'test_add_and_get_filter' has multiple assertions without diagnostic messages
+    - Test 'test_add_and_get_filter' has low assert-to-setup ratio (12%): 2 asserts vs 15 setup lines
+  test_set_embedded_files_filter (/tmp/oxidize-pr718-fix/oxidize-pdf-core/src/encryption/crypt_filters.rs:592) - Score: 90
+    - Test 'test_set_embedded_files_filter' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+
+--- Details ---
+/tmp/oxidize-pr718-fix/oxidize-pdf-core/src/encryption/crypt_filters.rs:
+  test_auth_event_pdf_names (line 487) - Score: 100
+    i Test 'test_auth_event_pdf_names' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_auth_event_pdf_names' has multiple assertions without diagnostic messages
+  test_functional_crypt_filter_creation (line 493) - Score: 90
+    i Test 'test_functional_crypt_filter_creation' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_functional_crypt_filter_creation' does not call any production code
+  test_crypt_filter_to_dict (line 509) - Score: 100
+    i Test 'test_crypt_filter_to_dict' has multiple assertions without diagnostic messages
+  test_crypt_filter_manager_creation (line 529) - Score: 90
+    - Test 'test_crypt_filter_manager_creation' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_add_and_get_filter (line 539) - Score: 90
+    i Test 'test_add_and_get_filter' has multiple assertions without diagnostic messages
+    - Test 'test_add_and_get_filter' has low assert-to-setup ratio (12%): 2 asserts vs 15 setup lines
+  test_standard_filter_creation (line 560) - Score: 100
+    i Test 'test_standard_filter_creation' asserts against a hardcoded constant instead of a computed expected value
+  test_encrypt_decrypt_string_identity (line 570) - Score: 100
+    i Test 'test_encrypt_decrypt_string_identity' has multiple assertions without diagnostic messages
+    i Test 'test_encrypt_decrypt_string_identity' uses .unwrap() which silently discards error information
+  test_set_embedded_files_filter (line 592) - Score: 90
+    - Test 'test_set_embedded_files_filter' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_to_cf_dict (line 602) - Score: 90
+    i Test 'test_to_cf_dict' has multiple assertions without diagnostic messages
+    - Test 'test_to_cf_dict' has low assert-to-setup ratio (10%): 3 asserts vs 26 setup lines
+  test_get_stream_filter_name_default (line 637) - Score: 90
+    i Test 'test_get_stream_filter_name_default' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_get_stream_filter_name_default' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_get_stream_filter_name_with_crypt (line 651) - Score: 90
+    i Test 'test_get_stream_filter_name_with_crypt' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_get_stream_filter_name_with_crypt' has low assert-to-setup ratio (5%): 1 asserts vs 19 setup lines
+  test_auth_event_equality (line 675) - Score: 60
+    i Test 'test_auth_event_equality' has multiple assertions without diagnostic messages
+    - Test 'test_auth_event_equality' does not call any production code
+    - Test 'test_auth_event_equality' line 676: assert_eq! with identical arguments: AuthEvent :: DocOpen 
+    - Test 'test_auth_event_equality' line 677: assert_eq! with identical arguments: AuthEvent :: EFOpen 
+  test_crypt_filter_with_recipients (line 682) - Score: 90
+    i Test 'test_crypt_filter_with_recipients' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_crypt_filter_with_recipients' has low assert-to-setup ratio (6%): 1 asserts vs 16 setup lines
+  test_filter_not_found_error (line 706) - Score: 90
+    i Test 'test_filter_not_found_error' has multiple assertions without diagnostic messages
+    - Test 'test_filter_not_found_error' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
