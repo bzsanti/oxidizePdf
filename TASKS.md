@@ -1,3 +1,11 @@
+## Corrección #730 — 2026-10-13
+
+- Issue: #730 — fix(redaction): reject recoverable targets split across text operators — https://github.com/bzsanti/oxidizePdf/issues/730
+- Estado: implementada y validada localmente; integración pendiente; prioridad P1 seguridad; responsable Codex. OPEN confirmada; base develop d66b397a, copia local /tmp/oxidize-issue730, rama fix/issue-730-redaction. WIP raíz preservado.
+- Cierre: rechazar salida que conserva objetivo fragmentado Tj/TJ, también entre streams/estados de texto; controles seguro/duplicado completo; Poppler independiente, RED/GREEN, regresiones y revisión calidad/seguridad. Sin cambiar garantías a extracción tolerante ni reparar #737/#742.
+- Última validación: RED ocho fallos previstos; GREEN 41 pruebas y oráculo Poppler/qpdf PASS; Clippy, formato y revisión calidad/seguridad aprobados. Informe docs/reports/2026-10-13-issue-730-review.md. Siguiente acción: publicar PR a develop y verificar CI. Guardia conservadora por página; límites y rechazos previos preservados.
+- Evidencia: docs/reports/2026-10-13-issue-730-evidence/. Sin merge ni release autorizados.
+
 ## Correcciones de revisión del PR #716 — 2026-10-12
 
 - Issue: #715 — Text extraction: symbolic simple TrueType without /Encoding returns U+FFFD for every glyph (regression vs 5.2.0) — https://github.com/bzsanti/oxidizePdf/issues/715

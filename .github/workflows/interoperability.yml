@@ -38,6 +38,13 @@ jobs:
           OXIDIZE_PDF_REQUIRE_DIFFERENTIAL_TOOLS: "1"
         run: cargo test -p oxidize-pdf --test semantic_comparison_differential
 
+      - name: Verify irreversible redaction with qpdf and Poppler
+        run: >-
+          cargo test -p oxidize-pdf
+          --test issue_730_redaction_boundaries_test
+          independent_output_oracle
+          -- --ignored --exact
+
       - name: Validate incremental text notes
         run: >
           cargo test -p oxidize-pdf

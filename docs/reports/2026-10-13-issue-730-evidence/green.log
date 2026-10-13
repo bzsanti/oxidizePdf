@@ -1,0 +1,56 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 39.03s
+     Running tests/issue_730_redaction_boundaries_test.rs (target/debug/deps/issue_730_redaction_boundaries_test-854fcd8f37da3e94)
+
+running 11 tests
+test independent_output_oracle ... ignored, requires installed Poppler and qpdf; run explicitly for security acceptance
+test same_page_residual_split ... ok
+test split_array_tj ... ok
+test split_arrays ... ok
+test safe_control ... ok
+test split_content_streams ... ok
+test split_tj ... ok
+test split_hex_strings ... ok
+test split_text_states ... ok
+test unsplit_duplicate ... ok
+test split_tj_tj_array ... ok
+
+test result: ok. 10 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/semantic_redactor_test.rs (target/debug/deps/semantic_redactor_test-7abef72fc52f3f92)
+
+running 31 tests
+test irreversible_redaction_rejects_marked_content ... ok
+test irreversible_api_fails_closed_without_returning_masked_bytes ... ok
+test irreversible_redaction_rejects_empty_entity_content ... ok
+test irreversible_redaction_rejects_annotations ... ok
+test irreversible_redaction_rejects_target_spanning_part_of_tj_array ... ok
+test irreversible_redaction_rejects_partial_text_operand_match ... ok
+test irreversible_redaction_rejects_symbol_font_even_when_operand_bytes_match ... ok
+test irreversible_redaction_rejects_unaudited_shading_resource_path ... ok
+test irreversible_redaction_rejects_text_outside_entity_bounds ... ok
+test irreversible_redaction_enforces_entity_budget ... ok
+test irreversible_redaction_drops_document_metadata_copy_of_target ... ok
+test irreversible_tj_redaction_preserves_character_and_word_spacing_advance ... ok
+test test_redact_entity_page_1_indexed_to_0_indexed ... ok
+test test_redact_filters_by_entity_type ... ok
+test irreversible_redaction_removes_complete_tj_array ... ok
+test test_redact_no_entities_returns_original ... ok
+test test_redact_multiple_entities_same_page ... ok
+test test_redaction_config_with_entity_types ... ok
+test test_redaction_config_default_redacts_nothing ... ok
+test irreversible_tj_redaction_preserves_following_text_position ... ok
+test test_redaction_style_black_box_is_default ... ok
+test test_redaction_style_placeholder_stores_text ... ok
+test test_semantic_redactor_error_messages ... ok
+test irreversible_tj_redaction_preserves_tj_advance ... ok
+test irreversible_redaction_removes_exact_direct_text_and_reports_success ... ok
+test test_redact_produces_valid_pdf ... ok
+test test_redaction_report_count ... ok
+test visual_mask_report_never_claims_irreversible_redaction ... ok
+test test_redaction_report_pages_affected ... ok
+test test_redact_preserves_page_count ... ok
+test test_redaction_report_by_type ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
