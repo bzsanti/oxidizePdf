@@ -225,7 +225,11 @@ impl XmpMetadata {
 
     /// Set a date property (ISO 8601 format)
     ///
-    /// Note: Date validation is performed. Invalid dates will be stored as text instead.
+    /// Accepts years (1000–9999), year-month and calendar dates, or dates with
+    /// `Thh:mm`, optional seconds and fractional seconds, and an optional `Z`
+    /// or `±hh:mm` zone. A missing zone remains unspecified. Calendar days and
+    /// time fields are validated; seconds range from 00 to 59.
+    /// Invalid input, including non-ASCII text, is preserved as text instead.
     pub fn set_date(
         &mut self,
         namespace: XmpNamespace,
@@ -885,93 +889,89 @@ impl XmpMetadata {
         }
     }
 
-    /// Validate ISO 8601 date format
-    /// Supports: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh:mm:ssTZD
+    /// Validate XMP's ISO 8601 subset, retaining the existing 1000..=9999 year range.
+    /// Time zones are optional; fractions require seconds and at least one digit.
     fn is_valid_iso8601_date(date: &str) -> bool {
-        // Simple validation - not exhaustive but catches most invalid dates
-        if date.is_empty() {
+        let bytes = date.as_bytes();
+        // Reject non-ASCII before any field access, including malformed UTF-8 boundaries.
+        if !bytes.is_ascii() {
             return false;
         }
-
-        // Must start with 4 digits (year)
-        if date.len() < 4 || !date[0..4].chars().all(|c| c.is_ascii_digit()) {
-            return false;
-        }
-
-        let year: i32 = match date[0..4].parse() {
-            Ok(y) => y,
-            Err(_) => return false,
+        let number = |start: usize, end: usize| -> Option<u32> {
+            let digits = bytes.get(start..end)?;
+            if !digits.iter().all(u8::is_ascii_digit) {
+                return None;
+            }
+            Some(
+                digits
+                    .iter()
+                    .fold(0, |n, digit| n * 10 + u32::from(digit - b'0')),
+            )
         };
-
-        // Year must be reasonable (1000-9999)
-        if !(1000..=9999).contains(&year) {
+        let Some(year @ 1000..=9999) = number(0, 4) else {
             return false;
-        }
-
-        // YYYY only - valid
-        if date.len() == 4 {
-            return true;
-        }
-
-        // Must have dash after year
-        if date.len() < 7 || date.chars().nth(4) != Some('-') {
-            return false;
-        }
-
-        // Month validation
-        let month: u32 = match date[5..7].parse() {
-            Ok(m) => m,
-            Err(_) => return false,
         };
-
-        if !(1..=12).contains(&month) {
-            return false;
-        }
-
-        // YYYY-MM only - valid
-        if date.len() == 7 {
+        if bytes.len() == 4 {
             return true;
         }
-
-        // Must have second dash
-        if date.len() < 10 || date.chars().nth(7) != Some('-') {
+        if bytes.get(4) != Some(&b'-') {
             return false;
         }
-
-        // Day validation
-        let day: u32 = match date[8..10].parse() {
-            Ok(d) => d,
-            Err(_) => return false,
+        let Some(month @ 1..=12) = number(5, 7) else {
+            return false;
         };
-
-        if !(1..=31).contains(&day) {
-            return false;
-        }
-
-        // Basic day-of-month validation (simplified)
-        if month == 2 && day > 29 {
-            return false; // February
-        }
-        if [4, 6, 9, 11].contains(&month) && day > 30 {
-            return false; // 30-day months
-        }
-
-        // YYYY-MM-DD only - valid
-        if date.len() == 10 {
+        if bytes.len() == 7 {
             return true;
         }
-
-        // If longer, must have 'T' separator for time
-        if date.len() > 10 && date.chars().nth(10) != Some('T') {
+        if bytes.get(7) != Some(&b'-') {
             return false;
         }
-
-        // Full datetime - just check for presence of colons (hh:mm:ss)
-        if date.len() > 10 && date.contains(':') {
+        let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+        let max_day = match month {
+            2 if leap => 29,
+            2 => 28,
+            4 | 6 | 9 | 11 => 30,
+            _ => 31,
+        };
+        if !matches!(number(8, 10), Some(day) if (1..=max_day).contains(&day)) {
+            return false;
+        }
+        if bytes.len() == 10 {
             return true;
         }
-
-        false
+        if bytes.get(10) != Some(&b'T')
+            || !matches!(number(11, 13), Some(0..=23))
+            || bytes.get(13) != Some(&b':')
+            || !matches!(number(14, 16), Some(0..=59))
+        {
+            return false;
+        }
+        let mut end = 16;
+        if bytes.get(end) == Some(&b':') {
+            if !matches!(number(17, 19), Some(0..=59)) {
+                return false;
+            }
+            end = 19;
+            if bytes.get(end) == Some(&b'.') {
+                end += 1;
+                let start = end;
+                while bytes.get(end).is_some_and(u8::is_ascii_digit) {
+                    end += 1;
+                }
+                if end == start {
+                    return false;
+                }
+            }
+        }
+        // Consume the entire suffix; trailing garbage cannot turn into a Date.
+        match bytes.get(end..) {
+            Some([] | [b'Z']) => true,
+            Some([b'+' | b'-', _, _, b':', _, _]) => {
+                matches!(number(end + 1, end + 3), Some(0..=23))
+                    && matches!(number(end + 4, end + 6), Some(0..=59))
+            }
+            _ => false,
+        }
     }
 
     fn escape_xml(text: &str) -> String {

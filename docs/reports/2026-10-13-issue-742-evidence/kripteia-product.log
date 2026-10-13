@@ -1,0 +1,109 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 20 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/metadata/xmp.rs                             20     91
+
+--- Worst Offenders ---
+  test_date_validation (oxidize-pdf-core/src/metadata/xmp.rs:1372) - Score: 65
+    - Test 'test_date_validation' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_date_validation' executes production code without asserting on its behaviour
+  test_invalid_date_handling (oxidize-pdf-core/src/metadata/xmp.rs:1395) - Score: 65
+    - Test 'test_invalid_date_handling' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_invalid_date_handling' executes production code without asserting on its behaviour
+  test_parse_xmp_bags (oxidize-pdf-core/src/metadata/xmp.rs:1126) - Score: 80
+    - Test 'test_parse_xmp_bags' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parse_xmp_bags' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_xmp_bags' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_xmp_bags' has multiple assertions without diagnostic messages
+    i Test 'test_parse_xmp_bags' uses .unwrap() which silently discards error information
+  test_parse_xmp_alt (oxidize-pdf-core/src/metadata/xmp.rs:1157) - Score: 80
+    - Test 'test_parse_xmp_alt' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parse_xmp_alt' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_xmp_alt' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_xmp_alt' has multiple assertions without diagnostic messages
+    i Test 'test_parse_xmp_alt' uses .unwrap() which silently discards error information
+  test_parse_structured_properties (oxidize-pdf-core/src/metadata/xmp.rs:1328) - Score: 80
+    - Test 'test_parse_structured_properties' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parse_structured_properties' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_structured_properties' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_structured_properties' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/metadata/xmp.rs:
+  test_create_xmp_metadata (line 991) - Score: 90
+    i Test 'test_create_xmp_metadata' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_create_xmp_metadata' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_xmp_to_packet (line 1001) - Score: 100
+    i Test 'test_xmp_to_packet' has multiple assertions without diagnostic messages
+  test_xmp_arrays (line 1016) - Score: 100
+    i Test 'test_xmp_arrays' has multiple assertions without diagnostic messages
+  test_xmp_alt (line 1031) - Score: 100
+    i Test 'test_xmp_alt' has multiple assertions without diagnostic messages
+  test_to_pdf_stream (line 1049) - Score: 100
+    i Test 'test_to_pdf_stream' has multiple assertions without diagnostic messages
+  test_xml_escape (line 1065) - Score: 100
+    i Test 'test_xml_escape' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_xml_escape' has multiple assertions without diagnostic messages
+  test_custom_namespace (line 1074) - Score: 100
+    i Test 'test_custom_namespace' has multiple assertions without diagnostic messages
+  test_parse_simple_xmp (line 1088) - Score: 90
+    - Test 'test_parse_simple_xmp' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_simple_xmp' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_simple_xmp' has multiple assertions without diagnostic messages
+    i Test 'test_parse_simple_xmp' uses .unwrap() which silently discards error information
+  test_parse_xmp_bags (line 1126) - Score: 80
+    - Test 'test_parse_xmp_bags' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parse_xmp_bags' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_xmp_bags' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_xmp_bags' has multiple assertions without diagnostic messages
+    i Test 'test_parse_xmp_bags' uses .unwrap() which silently discards error information
+  test_parse_xmp_alt (line 1157) - Score: 80
+    - Test 'test_parse_xmp_alt' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parse_xmp_alt' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_xmp_alt' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_xmp_alt' has multiple assertions without diagnostic messages
+    i Test 'test_parse_xmp_alt' uses .unwrap() which silently discards error information
+  test_roundtrip_xmp (line 1190) - Score: 90
+    i Test 'test_roundtrip_xmp' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_roundtrip_xmp' uses .unwrap() which silently discards error information
+    - Test 'test_roundtrip_xmp' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+  test_pdf_embedding (line 1212) - Score: 100
+    i Test 'test_pdf_embedding' has multiple assertions without diagnostic messages
+    i Test 'test_pdf_embedding' uses .unwrap() which silently discards error information
+  test_structured_properties (line 1260) - Score: 100
+    i Test 'test_structured_properties' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_structured_properties' has multiple assertions without diagnostic messages
+  test_array_of_structs (line 1294) - Score: 90
+    i Test 'test_array_of_structs' has multiple assertions without diagnostic messages
+    - Test 'test_array_of_structs' has low assert-to-setup ratio (17%): 5 asserts vs 25 setup lines
+  test_parse_structured_properties (line 1328) - Score: 80
+    - Test 'test_parse_structured_properties' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_parse_structured_properties' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_structured_properties' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_structured_properties' uses .unwrap() which silently discards error information
+  test_date_validation (line 1372) - Score: 65
+    - Test 'test_date_validation' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_date_validation' executes production code without asserting on its behaviour
+  test_invalid_date_handling (line 1395) - Score: 65
+    - Test 'test_invalid_date_handling' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_invalid_date_handling' executes production code without asserting on its behaviour
+  test_malformed_xml_rejection (line 1414) - Score: 90
+    - Test 'test_malformed_xml_rejection' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_malformed_xml_rejection' has multiple assertions without diagnostic messages
+  test_complex_roundtrip (line 1430) - Score: 90
+    i Test 'test_complex_roundtrip' uses .unwrap() which silently discards error information
+    - Test 'test_complex_roundtrip' has low assert-to-setup ratio (5%): 2 asserts vs 38 setup lines
+  test_iso8601_date_validation (line 1476) - Score: 100
+    i Test 'test_iso8601_date_validation' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

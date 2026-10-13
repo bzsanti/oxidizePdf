@@ -1,3 +1,12 @@
+## Corrección #742 — 2026-10-13
+
+- Issue: #742 — fix(metadata): validate XMP dates without Unicode panics or false Date values — https://github.com/bzsanti/oxidizePdf/issues/742
+- Estado: implementada y revisada; integración pendiente; prioridad P1; responsable Codex. OPEN confirmada. Base develop 34220e18; rama fix/issue-742-xmp-dates en /tmp/oxidize-issue742. WIP raíz preservado.
+- Cierre: API pública sin panic Unicode, calendario gregoriano válido, gramática XMP con precisión reducida, fracciones y zona opcional; conservar Text exacto para entrada inválida. RED/GREEN, regresión y QR calidad/seguridad antes de PR a develop.
+- Contrato: https://developer.adobe.com/xmp/docs/xmp-namespaces/xmp-data-types/ y fallback documentado de set_date. Se conserva el rango de años existente 1000–9999; no se amplía la API ni se normaliza la zona ausente.
+- Bloqueantes: cortes UTF8 inseguros, febrero sin regla de bisiestos, sufijo temporal validado sólo por presencia de dos puntos. Evidencia de cierre: pruebas independientes por API pública y controles válidos/invalidos.
+- Última validación: RED siete fallos y dos controles; GREEN nueve nuevas +20 existentes PASS; Clippy all-targets, formato, QR/Kripteia calidad y seguridad completos. Informe docs/reports/2026-10-13-issue-742-review.md. Siguiente acción: publicar PR hacia develop y comprobar CI. Sin merge/release ni cambios a otras issues.
+
 ## Issue #711 — corrección de revisión 2026-10-13
 
 - Issue: #711 — AES authoring panics on wasm32-unknown-unknown: generate_iv calls unsupported SystemTime::now — https://github.com/bzsanti/oxidizePdf/issues/711

@@ -1,0 +1,28 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue742/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 02s
+     Running unittests src/lib.rs (target/debug/deps/oxidize_pdf-ff79de59d27c30be)
+
+running 20 tests
+test metadata::xmp::tests::test_date_validation ... ok
+test metadata::xmp::tests::test_create_xmp_metadata ... ok
+test metadata::xmp::tests::test_invalid_date_handling ... ok
+test metadata::xmp::tests::test_custom_namespace ... ok
+test metadata::xmp::tests::test_iso8601_date_validation ... ok
+test metadata::xmp::tests::test_array_of_structs ... ok
+test metadata::xmp::tests::test_malformed_xml_rejection ... ok
+test metadata::xmp::tests::test_parse_xmp_alt ... ok
+test metadata::xmp::tests::test_parse_simple_xmp ... ok
+test metadata::xmp::tests::test_parse_xmp_bags ... ok
+test metadata::xmp::tests::test_parse_structured_properties ... ok
+test metadata::xmp::tests::test_complex_roundtrip ... ok
+test metadata::xmp::tests::test_xml_escape ... ok
+test metadata::xmp::tests::test_to_pdf_stream ... ok
+test metadata::xmp::tests::test_xmp_alt ... ok
+test metadata::xmp::tests::test_xmp_arrays ... ok
+test metadata::xmp::tests::test_xmp_to_packet ... ok
+test metadata::xmp::tests::test_pdf_embedding ... ok
+test metadata::xmp::tests::test_roundtrip_xmp ... ok
+test metadata::xmp::tests::test_structured_properties ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 6799 filtered out; finished in 0.00s
+
