@@ -3,8 +3,17 @@
 - Issue: #730 — fix(redaction): reject recoverable targets split across text operators — https://github.com/bzsanti/oxidizePdf/issues/730
 - Estado: implementada y validada localmente; integración pendiente; prioridad P1 seguridad; responsable Codex. OPEN confirmada; base develop d66b397a, copia local /tmp/oxidize-issue730, rama fix/issue-730-redaction. WIP raíz preservado.
 - Cierre: rechazar salida que conserva objetivo fragmentado Tj/TJ, también entre streams/estados de texto; controles seguro/duplicado completo; Poppler independiente, RED/GREEN, regresiones y revisión calidad/seguridad. Sin cambiar garantías a extracción tolerante ni reparar #737/#742.
-- Última validación: RED ocho fallos previstos; GREEN 41 pruebas y oráculo Poppler/qpdf PASS; Clippy, formato y revisión calidad/seguridad aprobados. Informe docs/reports/2026-10-13-issue-730-review.md. Siguiente acción: publicar PR a develop y verificar CI. Guardia conservadora por página; límites y rechazos previos preservados.
-- Evidencia: docs/reports/2026-10-13-issue-730-evidence/. Sin merge ni release autorizados.
+- Última validación: RED ocho fallos previstos; GREEN 41 pruebas y oráculo Poppler/qpdf PASS; Clippy, formato y revisión calidad/seguridad aprobados. Informe docs/reports/2026-10-13-issue-730-review.md. PR #746; integración autorizada. develop 34220e18 incorporado tras #717/#718; conflicto sólo documental conciliado preservando ambas entradas. Siguiente acción: verificar CI del candidato actualizado y fusionar. Guardia conservadora por página; límites y rechazos previos preservados.
+- Evidencia: docs/reports/2026-10-13-issue-730-evidence/. Merge de #746 autorizado; release no autorizada.
+
+## Issue #711 — corrección de revisión 2026-10-13
+
+- Issue: #711 — AES authoring panics on wasm32-unknown-unknown: generate_iv calls unsupported SystemTime::now — https://github.com/bzsanti/oxidizePdf/issues/711
+- Estado: corrección y revisión local completadas; publicación/CI pendientes. Prioridad P1; responsable Codex. develop d66b397a incorporado, conflictos de seguimiento conciliados sin pérdida.
+- Cierre verificable local: los métodos Result de SecurityHandler propagan errores de clave y entropía sin panic; controles RC4/AES128/R5 preservan plaintext, permisos y contraseñas. No cambian wrappers expresamente infalibles ni proveedor RNG.
+- Última validación: RED 2 fallos esperados/3 controles PASS; GREEN 5/5 públicos; inyección en copia 3 PASS y mutación de adaptadores 2 fallos previstos; target exclusivo final 287 unidades + 49 integración PASS, qpdf incluido, Clippy all-targets y formato PASS. QR/Kripteia calidad y seguridad terminados. El fallo intermedio por target compartido/inyección se aisló y no se atribuye al producto.
+- Informe: docs/reports/2026-10-12-issue-711-review.md; evidencia pr718 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
+- Siguiente acción: publicar candidato y confirmar CI (incluido Node/Chrome) antes de fusión. Sin merge remoto ni release.
 
 ## Correcciones de revisión del PR #716 — 2026-10-12
 
@@ -1264,3 +1273,11 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Restricciones: preservar cambios locales y baselines; #627 permanece pendiente
   y obligatoria. Esta versión conserva C en signatures/bindings por autorización
   explícita de publicar antes de #627. No corregir hallazgos ajenos sin issue.
+
+## Issue #714 — corrección de revisión 2026-10-13
+
+- Issue: #714 — Expose generic incremental catalog/object updates and external document timestamp preparation — https://github.com/bzsanti/oxidizePdf/issues/714
+- Estado: corrección y revisión local completadas; publicación/CI pendientes. Prioridad P1; responsable Codex. develop d66b397a incorporado, conflictos de seguimiento conciliados sin pérdida.
+- Cierre verificable local: todos los widgets del campo timestamp tienen Rect cero válido, independientemente del seleccionado; errores explícitos para hermanos visibles/malformados; controles invisibles conservan prefijo, widgets y DocTimeStamp.
+- Última validación: RED 2 fallos previstos; GREEN/regresión 48 PASS en cuatro targets, incluyendo qpdf/OpenSSL; Clippy all-targets/signatures y formato PASS; Kripteia calidad/seguridad e inspección final terminados. Informe actualizado docs/reports/2026-10-12-issue-714-review.md, evidencias pr717 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
+- Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.

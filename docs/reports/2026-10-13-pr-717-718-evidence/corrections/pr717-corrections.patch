@@ -1,0 +1,244 @@
+diff --git a/docs/signatures.md b/docs/signatures.md
+index 5427ee58..74abf397 100644
+--- a/docs/signatures.md
++++ b/docs/signatures.md
+@@ -133,3 +133,7 @@ locks. P=2/P=3 use the existing signing permission checks. No arbitrary catalog
+ or content modification exemption is introduced. TSA transport, CMS unsigned
+ attributes, DSS policy, PAdES profiles, revocation, renewal and long-term
+ validation remain the external application's responsibility.
++
++For an existing timestamp field, every widget must have a valid zero rectangle,
++including unselected widgets. `widget_index` selects a target but does not exempt
++other widgets from this check. Missing or malformed widget rectangles are rejected.
+diff --git a/oxidize-pdf-core/src/signatures/signing.rs b/oxidize-pdf-core/src/signatures/signing.rs
+index c88b4177..36ec13dc 100644
+--- a/oxidize-pdf-core/src/signatures/signing.rs
++++ b/oxidize-pdf-core/src/signatures/signing.rs
+@@ -379,7 +379,7 @@ impl DocumentTimestampOptions {
+         }
+     }
+ 
+-    /// Use an existing empty signature field, retaining its appearance.
++    /// Use an existing empty signature field whose widgets all have zero rectangles.
+     pub fn existing(field_name: impl Into<String>) -> Self {
+         let options = SignaturePreparationOptions::existing(field_name);
+         Self {
+@@ -397,7 +397,8 @@ impl DocumentTimestampOptions {
+ ///
+ /// Encryption, DocMDP P=1 and applicable FieldMDP locks are rejected. P=2/P=3
+ /// use the existing signing permission boundary; this is no exemption for
+-/// arbitrary content or catalog edits. Visible timestamp widgets are rejected.
++/// arbitrary content or catalog edits. Every existing widget must have a valid
++/// zero rectangle, including widgets other than the selected one.
+ pub fn prepare_document_timestamp(
+     base: &[u8],
+     options: &DocumentTimestampOptions,
+@@ -500,22 +501,7 @@ fn prepare_incremental_signature_inner(
+                 return Err(invalid("selected signature field is already signed"));
+             }
+             if document_timestamp {
+-                let widget = select_widget(&mut reader, field, *widget_index)?;
+-                let widget = reader
+-                    .get_object(widget.0, widget.1)
+-                    .map_err(|error| invalid(error.to_string()))?
+-                    .as_dict()
+-                    .ok_or_else(|| invalid("timestamp widget must be a dictionary"))?;
+-                if let Some(rect) = widget.get("Rect") {
+-                    let rect = rect
+-                        .as_array()
+-                        .ok_or_else(|| invalid("timestamp widget Rect must be an array"))?;
+-                    if rect.0.len() != 4 || rect.0.iter().any(|v| v.as_real() != Some(0.0)) {
+-                        return Err(invalid(
+-                            "existing timestamp widget must have a zero rectangle",
+-                        ));
+-                    }
+-                }
++                ensure_timestamp_widgets_invisible(&mut reader, field, *widget_index)?;
+             }
+             dictionary.insert("V".to_string(), reference(signature_id));
+             if rect.is_some() {
+@@ -985,6 +971,58 @@ fn select_widget(
+     Ok(widget)
+ }
+ 
++/// The timestamp value belongs to the field, so every associated widget must
++/// remain invisible regardless of which widget the caller selected.
++fn ensure_timestamp_widgets_invisible(
++    reader: &mut PdfReader<Cursor<&[u8]>>,
++    field: (u32, u16),
++    widget_index: Option<usize>,
++) -> SignatureResult<()> {
++    // Preserve the target-selection contract, including out-of-range indices.
++    let selected = select_widget(reader, field, widget_index)?;
++    let dictionary = resolve_dictionary(reader, &reference(field), "timestamp field")?;
++    let mut widgets = vec![selected];
++    if dictionary
++        .get("Subtype")
++        .and_then(PdfObject::as_name)
++        .is_some_and(|name| name.0 == "Widget")
++        && selected != field
++    {
++        widgets.push(field);
++    }
++    if let Some(kids) = dictionary.get("Kids") {
++        for child in resolve_array(reader, kids, "timestamp field /Kids")? {
++            let child = child
++                .as_reference()
++                .ok_or_else(|| invalid("timestamp widgets must be indirect references"))?;
++            if child != selected {
++                widgets.push(child);
++            }
++        }
++    }
++    for widget in widgets {
++        let widget = resolve_dictionary(reader, &reference(widget), "timestamp widget")?;
++        if widget
++            .get("Subtype")
++            .and_then(PdfObject::as_name)
++            .is_none_or(|name| name.0 != "Widget")
++            || widget.contains_key("Kids")
++        {
++            return Err(invalid(
++                "timestamp field children must be widget annotations",
++            ));
++        }
++        let rect = widget
++            .get("Rect")
++            .ok_or_else(|| invalid("timestamp widget requires a zero rectangle"))?;
++        let rect = resolve_array(reader, rect, "timestamp widget /Rect")?;
++        if rect.len() != 4 || rect.iter().any(|value| value.as_real() != Some(0.0)) {
++            return Err(invalid("every timestamp widget must have a zero rectangle"));
++        }
++    }
++    Ok(())
++}
++
+ #[derive(Clone, Debug)]
+ struct NamedField {
+     id: (u32, u16),
+diff --git a/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs b/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs
+index 929ec858..2410a020 100644
+--- a/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs
++++ b/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs
+@@ -628,3 +628,121 @@ fn timestamp_preserves_direct_and_indirect_catalog_extensions() {
+         assert_eq!(actual, expected);
+     }
+ }
++
++fn timestamp_widgets_fixture(first_rect: &str, second_rect: &str) -> Vec<u8> {
++    let bodies = [
++        "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>".to_string(),
++        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".into(),
++        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Annots [5 0 R 6 0 R] >>".into(),
++        "<< /FT /Sig /T (stamp) /Kids [5 0 R 6 0 R] >>".into(),
++        format!("<< /Type /Annot /Subtype /Widget /Parent 4 0 R /P 3 0 R {first_rect} >>"),
++        format!("<< /Type /Annot /Subtype /Widget /Parent 4 0 R /P 3 0 R {second_rect} >>"),
++        "[0 0 0 0]".into(),
++    ];
++    let mut out = b"%PDF-1.7\n".to_vec();
++    let mut offsets = vec![];
++    for (i, body) in bodies.iter().enumerate() {
++        offsets.push(out.len());
++        out.extend(format!("{} 0 obj\n{body}\nendobj\n", i + 1).as_bytes());
++    }
++    let xref = out.len();
++    out.extend(b"xref\n0 8\n0000000000 65535 f \n");
++    for offset in offsets {
++        out.extend(format!("{offset:010} 00000 n \n").as_bytes());
++    }
++    out.extend(
++        format!("trailer\n<< /Size 8 /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n").as_bytes(),
++    );
++    out
++}
++
++#[test]
++fn timestamp_rejects_visible_widgets_regardless_of_selected_index() {
++    use oxidize_pdf::signatures::SignatureTarget;
++    let zero = "/Rect [0 0 0 0]";
++    let visible = "/Rect [10 10 110 40]";
++    for (first, second) in [(zero, visible), (visible, zero)] {
++        let source = timestamp_widgets_fixture(first, second);
++        for selected in [0, 1] {
++            let options = DocumentTimestampOptions {
++                target: SignatureTarget::Existing {
++                    field_name: "stamp".into(),
++                    widget_index: Some(selected),
++                    rect: None,
++                },
++                ..DocumentTimestampOptions::existing("stamp")
++            };
++            assert!(
++                prepare_document_timestamp(&source, &options).is_err(),
++                "selected={selected}, first={first}, second={second}"
++            );
++        }
++    }
++}
++
++#[test]
++fn timestamp_accepts_all_invisible_widgets_and_preserves_them() {
++    use oxidize_pdf::signatures::SignatureTarget;
++    let source = timestamp_widgets_fixture("/Rect [0 0 0 0]", "/Rect 7 0 R");
++    for selected in [0, 1] {
++        let options = DocumentTimestampOptions {
++            target: SignatureTarget::Existing {
++                field_name: "stamp".into(),
++                widget_index: Some(selected),
++                rect: None,
++            },
++            ..DocumentTimestampOptions::existing("stamp")
++        };
++        let output = prepare_document_timestamp(&source, &options)
++            .unwrap()
++            .finalize(DER)
++            .unwrap();
++        assert!(output.starts_with(&source));
++        let mut before = PdfReader::new(Cursor::new(&source)).unwrap();
++        let mut after = PdfReader::new(Cursor::new(&output)).unwrap();
++        for number in [5, 6] {
++            assert_eq!(
++                after.get_object(number, 0).unwrap(),
++                before.get_object(number, 0).unwrap()
++            );
++        }
++        let sig = after
++            .get_object(4, 0)
++            .unwrap()
++            .as_dict()
++            .unwrap()
++            .get("V")
++            .unwrap()
++            .as_reference()
++            .unwrap();
++        assert_eq!(
++            after
++                .get_object(sig.0, sig.1)
++                .unwrap()
++                .as_dict()
++                .unwrap()
++                .get_type(),
++            Some("DocTimeStamp")
++        );
++    }
++}
++
++#[test]
++fn timestamp_rejects_malformed_or_missing_sibling_rectangles() {
++    use oxidize_pdf::signatures::SignatureTarget;
++    let options = DocumentTimestampOptions {
++        target: SignatureTarget::Existing {
++            field_name: "stamp".into(),
++            widget_index: Some(0),
++            rect: None,
++        },
++        ..DocumentTimestampOptions::existing("stamp")
++    };
++    for rect in ["", "/Rect null", "/Rect [0 0 0]", "/Rect [0 0 0 (bad)]"] {
++        let source = timestamp_widgets_fixture("/Rect [0 0 0 0]", rect);
++        assert!(
++            prepare_document_timestamp(&source, &options).is_err(),
++            "rect={rect}"
++        );
++    }
++}

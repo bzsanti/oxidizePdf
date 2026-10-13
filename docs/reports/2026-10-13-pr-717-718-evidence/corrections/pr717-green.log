@@ -1,0 +1,41 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-pr-fixes/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 37.80s
+     Running tests/issue_714_incremental_primitives_test.rs (/tmp/oxidize-pr717-review/target/debug/deps/issue_714_incremental_primitives_test-1fe258840eac0e40)
+
+running 15 tests
+test rejects_invalid_references_unfilled_reservations_and_structural_overrides ... ok
+test replaces_nonzero_generations_without_renumbering_catalog_or_references ... ok
+test catalog_and_object_updates_preserve_revisions_and_unrelated_entries ... ok
+checking /tmp/.tmp8bdFMK/result.pdf
+PDF Version: 1.7
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+test generic_update_preserves_approval_signature_dictionary ... ok
+test timestamp_accepts_all_invisible_widgets_and_preserves_them ... ok
+test rejects_orphan_certification_and_signature_replacements ... ok
+test timestamp_rejects_malformed_or_missing_sibling_rectangles ... ok
+test timestamp_rejects_visible_widgets_regardless_of_selected_index ... ok
+test timestamp_preserves_direct_and_indirect_catalog_extensions ... ok
+test timestamp_existing_field_and_fieldmdp_boundaries ... ok
+test real_approval_signature_remains_cryptographically_valid ... ok
+test compressed_objects_and_encryption_are_checked_by_independent_consumer ... ok
+test generic_updates_deny_all_certification_levels_and_timestamp_obeys_signing_policy ... ok
+test timestamp_type_subfilter_and_byte_range_are_engine_owned ... ok
+checking result.pdf
+PDF Version: 1.7
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+checking result.pdf
+PDF Version: 1.5
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+test real_external_timestamp_token_covers_final_pdf_and_survives_later_revision ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.63s
+

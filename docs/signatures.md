@@ -84,3 +84,56 @@ page coordinates within the crop/media box; appearance rotation supports
 with at most 1000 strokes and 20,000 points. Optional labels must fit at 8 pt
 and be representable in WinAnsi. This API does not manage participants' identity,
 consent, private keys, or a signing service.
+
+## Generic incremental objects and external document timestamps
+
+`writer::IncrementalObjectEditor` stages caller-supplied `parser::PdfObject`
+values. Reserve references with `allocate_id`, populate them or replace existing
+objects with `replace`, and change individual catalog entries with
+`set_catalog_entry`/`remove_catalog_entry`. `finish` returns a complete PDF whose
+original bytes remain an exact prefix; it does not write to a file. Existing
+object generations, unrelated catalog entries and references remain unchanged.
+The input must have valid cross-references. Classic and stream xrefs, including
+compressed source objects, are supported. Every reserved reference must be
+populated before finishing; duplicate replacements and stale generations fail.
+
+This low-level API does not determine whether caller-provided object semantics
+are correct. The caller owns evidence construction and merging, including any
+DSS data. All DocMDP certification levels reject generic edits: arbitrary
+objects cannot be assumed to be permitted signing/form/annotation changes.
+Use the dedicated APIs for those operations. Encrypted inputs, FieldMDP locks, malformed
+certification policies, signature dictionary replacement and storage dictionary
+replacement are rejected. Preserving a signed prefix is not a general permission
+to change certified content and does not validate any signature or trust chain.
+
+```rust
+use oxidize_pdf::parser::{PdfObject, PdfString};
+use oxidize_pdf::writer::IncrementalObjectEditor;
+# fn example(base: &[u8]) -> Result<Vec<u8>, oxidize_pdf::PdfError> {
+let mut update = IncrementalObjectEditor::new(base)?;
+let object = update.allocate_id()?;
+update.replace(object, PdfObject::String(PdfString(b"caller evidence".to_vec())))?;
+update.set_catalog_entry("ApplicationEvidence", PdfObject::Reference(object.0, object.1))?;
+update.finish()
+# }
+```
+
+`signatures::prepare_document_timestamp` accepts `DocumentTimestampOptions`
+with an existing empty signature field or a new invisible field. It fixes
+`/Type /DocTimeStamp` and `/SubFilter /ETSI.RFC3161`; the engine owns the
+`ByteRange` and `Contents` reservation. Hash `PreparedSignature::bytes_to_digest`
+externally, obtain a timestamp token for that message imprint, and pass the DER
+**token ContentInfo**, not the enclosing TimeStampResp, to `finalize`.
+Preparation returns bytes to digest, not a precomputed digest. Finalization
+validates only the DER envelope and reserved capacity; the caller must validate
+the token's RFC 3161 semantics, message imprint, cryptography and trust.
+
+Timestamp preparation rejects encryption, DocMDP P=1 and applicable FieldMDP
+locks. P=2/P=3 use the existing signing permission checks. No arbitrary catalog
+or content modification exemption is introduced. TSA transport, CMS unsigned
+attributes, DSS policy, PAdES profiles, revocation, renewal and long-term
+validation remain the external application's responsibility.
+
+For an existing timestamp field, every widget must have a valid zero rectangle,
+including unselected widgets. `widget_index` selects a target but does not exempt
+other widgets from this check. Missing or malformed widget rectangles are rejected.
