@@ -1,9 +1,18 @@
+## Corrección #742 — 2026-10-13
+
+- Issue: #742 — fix(metadata): validate XMP dates without Unicode panics or false Date values — https://github.com/bzsanti/oxidizePdf/issues/742
+- Estado: implementada y revisada; integración pendiente; prioridad P1; responsable Codex. OPEN confirmada. Base develop 34220e18; rama fix/issue-742-xmp-dates en /tmp/oxidize-issue742. WIP raíz preservado.
+- Cierre: API pública sin panic Unicode, calendario gregoriano válido, gramática XMP con precisión reducida, fracciones y zona opcional; conservar Text exacto para entrada inválida. RED/GREEN, regresión y QR calidad/seguridad antes de PR a develop.
+- Contrato: https://developer.adobe.com/xmp/docs/xmp-namespaces/xmp-data-types/ y fallback documentado de set_date. Se conserva el rango de años existente 1000–9999; no se amplía la API ni se normaliza la zona ausente.
+- Bloqueantes: cortes UTF8 inseguros, febrero sin regla de bisiestos, sufijo temporal validado sólo por presencia de dos puntos. Evidencia de cierre: pruebas independientes por API pública y controles válidos/invalidos.
+- Última validación: RED siete fallos y dos controles; GREEN nueve nuevas +20 existentes PASS; Clippy all-targets, formato, QR/Kripteia calidad y seguridad completos. Informe docs/reports/2026-10-13-issue-742-review.md. PR #747; merge autorizado. Head original de299161: 30 SUCCESS/2 SKIPPED. Incorporado develop 22c3c099; conflicto sólo en seguimiento, conciliado conservando ambas entradas; fuente y tests XMP revisados sin cambios. Siguiente acción: CI del nuevo head y fusión. Sin release autorizada.
+
 ## Corrección #730 — 2026-10-13
 
 - Issue: #730 — fix(redaction): reject recoverable targets split across text operators — https://github.com/bzsanti/oxidizePdf/issues/730
-- Estado: implementada y validada localmente; integración pendiente; prioridad P1 seguridad; responsable Codex. OPEN confirmada; base develop d66b397a, copia local /tmp/oxidize-issue730, rama fix/issue-730-redaction. WIP raíz preservado.
+- Estado: implementada, revisada y fusionada en develop; prioridad P1 seguridad; responsable Codex. OPEN confirmada; base develop d66b397a, copia local /tmp/oxidize-issue730, rama fix/issue-730-redaction. WIP raíz preservado.
 - Cierre: rechazar salida que conserva objetivo fragmentado Tj/TJ, también entre streams/estados de texto; controles seguro/duplicado completo; Poppler independiente, RED/GREEN, regresiones y revisión calidad/seguridad. Sin cambiar garantías a extracción tolerante ni reparar #737/#742.
-- Última validación: RED ocho fallos previstos; GREEN 41 pruebas y oráculo Poppler/qpdf PASS; Clippy, formato y revisión calidad/seguridad aprobados. Informe docs/reports/2026-10-13-issue-730-review.md. PR #746; integración autorizada. develop 34220e18 incorporado tras #717/#718; conflicto sólo documental conciliado preservando ambas entradas. Siguiente acción: verificar CI del candidato actualizado y fusionar. Guardia conservadora por página; límites y rechazos previos preservados.
+- Última validación: RED ocho fallos previstos; GREEN 41 pruebas y oráculo Poppler/qpdf PASS; Clippy, formato y revisión calidad/seguridad aprobados. Informe docs/reports/2026-10-13-issue-730-review.md. PR #746; integración autorizada. develop 34220e18 incorporado tras #717/#718; conflicto sólo documental conciliado preservando ambas entradas. CI final 30 SUCCESS/2 SKIPPED; MERGED 22c3c099 confirmado. Siguiente acción: ninguna para la fusión de #746. Guardia conservadora por página; límites y rechazos previos preservados.
 - Evidencia: docs/reports/2026-10-13-issue-730-evidence/. Merge de #746 autorizado; release no autorizada.
 
 ## Issue #711 — corrección de revisión 2026-10-13

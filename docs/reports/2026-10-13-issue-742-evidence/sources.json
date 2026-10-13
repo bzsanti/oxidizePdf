@@ -1,0 +1,5 @@
+{
+  "oxidize-pdf-core/src/metadata/xmp.rs": "316d01131b2ef7c451a377a306476fa6c411fc26561287e79cee3d6af7283d38",
+  "oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs": "c1980bdfb8e473e2a9b48b22a6618005851a7accaddb212e8d9d0cb5f7674ad2",
+  "oxidize-pdf-core/tests/issue_742_xmp_dates_test.proptest-regressions": "990f1b875020aa3b84190257ff7dac10a2ae5afbd94d775f3cab36fe4374f8ad"
+}

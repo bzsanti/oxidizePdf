@@ -1,0 +1,17 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue742/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 32.19s
+     Running tests/issue_742_xmp_dates_test.rs (target/debug/deps/issue_742_xmp_dates_test-eaad43dfa6647662)
+
+running 9 tests
+test invalid_calendar_dates_fall_back ... ok
+test invalid_date_text_is_escaped_on_serialization ... ok
+test malformed_structure_and_truncations_fall_back ... ok
+test invalid_time_and_timezone_fall_back ... ok
+test reduced_precision_and_leap_year_controls ... ok
+test unicode_falls_back_without_panicking ... ok
+test packet_import_validates_date_candidates ... ok
+test time_precision_and_timezone_controls ... ok
+test arbitrary_unicode_preserves_input_without_panics ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

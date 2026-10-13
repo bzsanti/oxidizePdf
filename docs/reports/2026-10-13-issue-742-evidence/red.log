@@ -1,0 +1,394 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.45
+   Compiling unicode-ident v1.0.24
+   Compiling cfg-if v1.0.4
+   Compiling libc v0.2.186
+   Compiling syn v2.0.117
+   Compiling stable_deref_trait v1.2.1
+   Compiling version_check v0.9.5
+   Compiling generic-array v0.14.7
+   Compiling shlex v2.0.1
+   Compiling typenum v1.20.1
+   Compiling find-msvc-tools v0.1.9
+   Compiling serde_core v1.0.228
+   Compiling cc v1.2.63
+   Compiling synstructure v0.13.2
+   Compiling zerofrom-derive v0.1.7
+   Compiling zerofrom v0.1.8
+   Compiling yoke-derive v0.8.2
+   Compiling zerovec-derive v0.11.3
+   Compiling yoke v0.8.3
+   Compiling displaydoc v0.2.6
+   Compiling zerovec v0.11.6
+   Compiling once_cell v1.21.4
+   Compiling autocfg v1.5.1
+   Compiling memchr v2.8.1
+   Compiling num-traits v0.2.19
+   Compiling zerocopy v0.8.50
+   Compiling tinystr v0.8.3
+   Compiling zeroize_derive v1.4.3
+   Compiling zerocopy-derive v0.8.50
+   Compiling writeable v0.6.3
+   Compiling litemap v0.8.2
+   Compiling icu_locale_core v2.2.0
+   Compiling zeroize v1.8.2
+   Compiling potential_utf v0.1.5
+   Compiling zerotrie v0.2.4
+   Compiling crypto-common v0.1.7
+   Compiling icu_normalizer_data v2.2.0
+   Compiling bitflags v2.13.0
+   Compiling crossbeam-utils v0.8.21
+   Compiling serde v1.0.228
+   Compiling regex-syntax v0.8.10
+   Compiling getrandom v0.4.2
+   Compiling utf8_iter v1.0.4
+   Compiling icu_properties_data v2.2.0
+   Compiling rand_core v0.10.1
+   Compiling getrandom v0.3.4
+   Compiling icu_collections v2.2.0
+   Compiling icu_provider v2.2.0
+   Compiling aho-corasick v1.1.4
+   Compiling serde_derive v1.0.228
+   Compiling ring v0.17.14
+   Compiling rustix v1.1.4
+   Compiling crc32fast v1.5.0
+   Compiling simd-adler32 v0.3.9
+   Compiling smallvec v1.15.1
+   Compiling regex-automata v0.4.14
+   Compiling rustls-pki-types v1.14.1
+   Compiling block-padding v0.3.3
+   Compiling utf8parse v0.2.2
+   Compiling linux-raw-sys v0.12.1
+   Compiling adler2 v2.0.1
+   Compiling zmij v1.0.21
+   Compiling miniz_oxide v0.8.9
+   Compiling anstyle-parse v1.0.0
+   Compiling inout v0.1.4
+   Compiling rand_core v0.9.5
+   Compiling icu_properties v2.2.0
+   Compiling crossbeam-epoch v0.9.18
+   Compiling icu_normalizer v2.2.0
+   Compiling tracing-core v0.1.36
+   Compiling block-buffer v0.10.4
+   Compiling getrandom v0.2.17
+   Compiling colorchoice v1.0.5
+   Compiling rayon-core v1.13.0
+   Compiling either v1.16.0
+   Compiling anstyle v1.0.14
+   Compiling serde_json v1.0.150
+   Compiling cpufeatures v0.2.17
+   Compiling fastrand v2.4.1
+   Compiling untrusted v0.9.0
+   Compiling anstyle-query v1.1.5
+   Compiling log v0.4.32
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling const-oid v0.9.6
+   Compiling anstream v1.0.0
+   Compiling digest v0.10.7
+   Compiling tempfile v3.27.0
+   Compiling idna_adapter v1.2.2
+   Compiling flate2 v1.1.9
+   Compiling crossbeam-deque v0.8.6
+   Compiling cipher v0.4.4
+   Compiling fdeflate v0.3.7
+   Compiling half v2.7.1
+   Compiling tracing-attributes v0.1.31
+   Compiling alloca v0.4.0
+   Compiling heck v0.5.0
+   Compiling strsim v0.11.1
+   Compiling portable-atomic v1.13.1
+   Compiling clap_lex v1.1.0
+   Compiling ciborium-io v0.2.2
+   Compiling subtle v2.6.1
+   Compiling thiserror v2.0.18
+   Compiling pin-project-lite v0.2.17
+   Compiling rustls v0.23.40
+   Compiling pxfm v0.1.29
+   Compiling winnow v1.0.3
+   Compiling lazy_static v1.5.0
+   Compiling tinyvec_macros v0.1.1
+   Compiling zune-core v0.5.1
+   Compiling plotters-backend v0.3.7
+   Compiling itoa v1.0.18
+   Compiling cpufeatures v0.3.0
+   Compiling percent-encoding v2.3.2
+   Compiling form_urlencoded v1.2.2
+   Compiling chacha20 v0.10.0
+   Compiling moxcms v0.8.1
+   Compiling plotters-svg v0.3.7
+   Compiling zune-jpeg v0.5.15
+   Compiling tinyvec v1.11.0
+   Compiling toml_parser v1.1.2+spec-1.1.0
+   Compiling tracing v0.1.44
+   Compiling ciborium-ll v0.2.2
+   Compiling clap_builder v4.6.0
+   Compiling clap_derive v4.6.1
+   Compiling png v0.18.1
+   Compiling rustls-webpki v0.103.13
+   Compiling idna v1.1.0
+   Compiling itertools v0.13.0
+   Compiling regex v1.12.3
+   Compiling webpki-roots v1.0.7
+   Compiling ppv-lite86 v0.2.21
+   Compiling serde_spanned v1.1.1
+   Compiling toml_datetime v0.7.5+spec-1.1.0
+   Compiling thiserror-impl v2.0.18
+   Compiling wait-timeout v0.2.1
+   Compiling unicode-width v0.2.2
+   Compiling byteorder-lite v0.1.0
+   Compiling winnow v0.7.15
+   Compiling iana-time-zone v0.1.65
+   Compiling bit-vec v0.8.0
+   Compiling same-file v1.0.6
+   Compiling toml_writer v1.1.1+spec-1.1.0
+   Compiling quick-error v1.2.3
+   Compiling bytemuck v1.25.0
+   Compiling cast v0.3.0
+   Compiling fnv v1.0.7
+   Compiling rusty-fork v0.3.1
+   Compiling criterion-plot v0.8.2
+   Compiling toml v0.9.12+spec-1.1.0
+   Compiling image v0.25.10
+   Compiling walkdir v2.5.0
+   Compiling bit-set v0.8.0
+   Compiling chrono v0.4.45
+   Compiling console v0.16.3
+   Compiling rand_chacha v0.9.0
+   Compiling webpki-roots v0.26.11
+   Compiling rayon v1.12.0
+   Compiling url v2.5.8
+   Compiling clap v4.6.1
+   Compiling ciborium v0.2.2
+   Compiling unicode-normalization v0.1.25
+   Compiling plotters v0.3.7
+   Compiling tinytemplate v1.2.1
+   Compiling rand v0.10.1
+   Compiling sharded-slab v0.1.7
+   Compiling aes v0.8.4
+   Compiling cbc v0.1.2
+   Compiling sha2 v0.10.9
+   Compiling tracing-log v0.2.0
+   Compiling rand v0.9.4
+   Compiling rand_xorshift v0.4.0
+   Compiling matchers v0.2.0
+   Compiling quick-xml v0.41.0
+   Compiling page_size v0.6.0
+   Compiling num_cpus v1.17.0
+   Compiling thread_local v1.1.9
+   Compiling anes v0.1.6
+   Compiling oorandom v11.1.5
+   Compiling unarray v0.1.4
+   Compiling unit-prefix v0.5.2
+   Compiling base64 v0.22.1
+   Compiling md5 v0.8.0
+   Compiling nu-ansi-term v0.50.3
+   Compiling ureq v2.12.1
+   Compiling tracing-subscriber v0.3.23
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue742/oxidize-pdf-core)
+   Compiling indicatif v0.18.4
+   Compiling proptest v1.11.0
+   Compiling criterion v0.8.2
+   Compiling sha1 v0.10.6
+   Compiling weezl v0.1.12
+    Finished `test` profile [unoptimized] target(s) in 1m 40s
+     Running tests/issue_742_xmp_dates_test.rs (target/debug/deps/issue_742_xmp_dates_test-eaad43dfa6647662)
+
+running 9 tests
+test invalid_calendar_dates_fall_back ... FAILED
+test invalid_time_and_timezone_fall_back ... FAILED
+test invalid_date_text_is_escaped_on_serialization ... FAILED
+test malformed_structure_and_truncations_fall_back ... FAILED
+test reduced_precision_and_leap_year_controls ... ok
+test packet_import_validates_date_candidates ... FAILED
+test unicode_falls_back_without_panicking ... FAILED
+test time_precision_and_timezone_controls ... ok
+test arbitrary_unicode_preserves_input_without_panics ... FAILED
+
+failures:
+
+---- invalid_calendar_dates_fall_back stdout ----
+
+thread 'invalid_calendar_dates_fall_back' (3276) panicked at oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:9:14:
+wrong classification for "2023-02-29": Date("2023-02-29")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- invalid_time_and_timezone_fall_back stdout ----
+
+thread 'invalid_time_and_timezone_fall_back' (3278) panicked at oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:9:14:
+wrong classification for "2024-01-01Tx:": Date("2024-01-01Tx:")
+
+---- invalid_date_text_is_escaped_on_serialization stdout ----
+
+thread 'invalid_date_text_is_escaped_on_serialization' (3277) panicked at oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:86:5:
+assertion failed: matches!(&xmp.properties()[0].value, XmpValue::Text(s) if s ==
+    "2024-01-01T<&:")
+
+---- malformed_structure_and_truncations_fall_back stdout ----
+
+thread 'malformed_structure_and_truncations_fall_back' (3279) panicked at oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:9:14:
+wrong classification for "2024-+1-01": Date("2024-+1-01")
+
+---- packet_import_validates_date_candidates stdout ----
+
+thread 'packet_import_validates_date_candidates' (3280) panicked at oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:77:27:
+wrong imported classification for 2023-02-29: Date("2023-02-29")
+
+---- unicode_falls_back_without_panicking stdout ----
+
+thread 'unicode_falls_back_without_panicking' (3283) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside 'é' (bytes 3..5 of string)
+
+---- arbitrary_unicode_preserves_input_without_panics stdout ----
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{202e}' (bytes 3..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 3..7 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f0f2b}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{787e6}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{3c443}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{1e272}' (bytes 2..6 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{f189}' (bytes 2..5 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '礕' (bytes 2..5 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '㳛' (bytes 2..5 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside 'Ế' (bytes 2..5 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside '\u{faf}' (bytes 2..5 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside 'ࠨ' (bytes 2..5 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside 'ࠊ' (bytes 2..5 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside 'ࠃ' (bytes 2..5 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside 'ࠁ' (bytes 2..5 of string)
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/src/metadata/xmp.rs:897:35:
+end byte index 4 is not a char boundary; it is inside 'ࠀ' (bytes 2..5 of string)
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+proptest: Saving this and future failures in /tmp/oxidize-issue742/oxidize-pdf-core/tests/issue_742_xmp_dates_test.proptest-regressions
+proptest: If this test was run on a CI system, you may wish to add the following line to your copy of the file. (You may need to create it.)
+cc b51e38b82044bc23eb12337ae3e09ba74ca8e3c0a7c28e712e8bfba8aa848548
+
+thread 'arbitrary_unicode_preserves_input_without_panics' (3275) panicked at oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:57:1:
+Test failed: end byte index 4 is not a char boundary; it is inside 'ࠀ' (bytes 2..5 of string).
+minimal failing input: s = [
+    '¡',
+    'ࠀ',
+]
+	successes: 1
+	local rejects: 0
+	global rejects: 0
+
+
+
+failures:
+    arbitrary_unicode_preserves_input_without_panics
+    invalid_calendar_dates_fall_back
+    invalid_date_text_is_escaped_on_serialization
+    invalid_time_and_timezone_fall_back
+    malformed_structure_and_truncations_fall_back
+    packet_import_validates_date_candidates
+    unicode_falls_back_without_panicking
+
+test result: FAILED. 2 passed; 7 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_742_xmp_dates_test`
