@@ -628,3 +628,121 @@ fn timestamp_preserves_direct_and_indirect_catalog_extensions() {
         assert_eq!(actual, expected);
     }
 }
+
+fn timestamp_widgets_fixture(first_rect: &str, second_rect: &str) -> Vec<u8> {
+    let bodies = [
+        "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>".to_string(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".into(),
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Annots [5 0 R 6 0 R] >>".into(),
+        "<< /FT /Sig /T (stamp) /Kids [5 0 R 6 0 R] >>".into(),
+        format!("<< /Type /Annot /Subtype /Widget /Parent 4 0 R /P 3 0 R {first_rect} >>"),
+        format!("<< /Type /Annot /Subtype /Widget /Parent 4 0 R /P 3 0 R {second_rect} >>"),
+        "[0 0 0 0]".into(),
+    ];
+    let mut out = b"%PDF-1.7\n".to_vec();
+    let mut offsets = vec![];
+    for (i, body) in bodies.iter().enumerate() {
+        offsets.push(out.len());
+        out.extend(format!("{} 0 obj\n{body}\nendobj\n", i + 1).as_bytes());
+    }
+    let xref = out.len();
+    out.extend(b"xref\n0 8\n0000000000 65535 f \n");
+    for offset in offsets {
+        out.extend(format!("{offset:010} 00000 n \n").as_bytes());
+    }
+    out.extend(
+        format!("trailer\n<< /Size 8 /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n").as_bytes(),
+    );
+    out
+}
+
+#[test]
+fn timestamp_rejects_visible_widgets_regardless_of_selected_index() {
+    use oxidize_pdf::signatures::SignatureTarget;
+    let zero = "/Rect [0 0 0 0]";
+    let visible = "/Rect [10 10 110 40]";
+    for (first, second) in [(zero, visible), (visible, zero)] {
+        let source = timestamp_widgets_fixture(first, second);
+        for selected in [0, 1] {
+            let options = DocumentTimestampOptions {
+                target: SignatureTarget::Existing {
+                    field_name: "stamp".into(),
+                    widget_index: Some(selected),
+                    rect: None,
+                },
+                ..DocumentTimestampOptions::existing("stamp")
+            };
+            assert!(
+                prepare_document_timestamp(&source, &options).is_err(),
+                "selected={selected}, first={first}, second={second}"
+            );
+        }
+    }
+}
+
+#[test]
+fn timestamp_accepts_all_invisible_widgets_and_preserves_them() {
+    use oxidize_pdf::signatures::SignatureTarget;
+    let source = timestamp_widgets_fixture("/Rect [0 0 0 0]", "/Rect 7 0 R");
+    for selected in [0, 1] {
+        let options = DocumentTimestampOptions {
+            target: SignatureTarget::Existing {
+                field_name: "stamp".into(),
+                widget_index: Some(selected),
+                rect: None,
+            },
+            ..DocumentTimestampOptions::existing("stamp")
+        };
+        let output = prepare_document_timestamp(&source, &options)
+            .unwrap()
+            .finalize(DER)
+            .unwrap();
+        assert!(output.starts_with(&source));
+        let mut before = PdfReader::new(Cursor::new(&source)).unwrap();
+        let mut after = PdfReader::new(Cursor::new(&output)).unwrap();
+        for number in [5, 6] {
+            assert_eq!(
+                after.get_object(number, 0).unwrap(),
+                before.get_object(number, 0).unwrap()
+            );
+        }
+        let sig = after
+            .get_object(4, 0)
+            .unwrap()
+            .as_dict()
+            .unwrap()
+            .get("V")
+            .unwrap()
+            .as_reference()
+            .unwrap();
+        assert_eq!(
+            after
+                .get_object(sig.0, sig.1)
+                .unwrap()
+                .as_dict()
+                .unwrap()
+                .get_type(),
+            Some("DocTimeStamp")
+        );
+    }
+}
+
+#[test]
+fn timestamp_rejects_malformed_or_missing_sibling_rectangles() {
+    use oxidize_pdf::signatures::SignatureTarget;
+    let options = DocumentTimestampOptions {
+        target: SignatureTarget::Existing {
+            field_name: "stamp".into(),
+            widget_index: Some(0),
+            rect: None,
+        },
+        ..DocumentTimestampOptions::existing("stamp")
+    };
+    for rect in ["", "/Rect null", "/Rect [0 0 0]", "/Rect [0 0 0 (bad)]"] {
+        let source = timestamp_widgets_fixture("/Rect [0 0 0 0]", rect);
+        assert!(
+            prepare_document_timestamp(&source, &options).is_err(),
+            "rect={rect}"
+        );
+    }
+}

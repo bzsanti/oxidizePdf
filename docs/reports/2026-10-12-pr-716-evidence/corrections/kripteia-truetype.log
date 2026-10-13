@@ -1,0 +1,160 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 39 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+/tmp/pr716-fix/oxidize-pdf-core/src/text/fonts/truetype.rs       39     90
+
+--- Worst Offenders ---
+  test_glyph_metrics (/tmp/pr716-fix/oxidize-pdf-core/src/text/fonts/truetype.rs:1780) - Score: 60
+    - Test 'test_glyph_metrics' does not call any production code
+    - Test 'test_glyph_metrics' has no assertions
+  test_font_name_parsing (/tmp/pr716-fix/oxidize-pdf-core/src/text/fonts/truetype.rs:1786) - Score: 60
+    - Test 'test_font_name_parsing' does not call any production code
+    - Test 'test_font_name_parsing' has no assertions
+  test_parse_head_table_too_small (/tmp/pr716-fix/oxidize-pdf-core/src/text/fonts/truetype.rs:1978) - Score: 70
+    - Test 'test_parse_head_table_too_small' has identical neighborhood to 'test_parse_maxp_table_too_small'
+    - Test 'test_parse_head_table_too_small' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+    - Test 'test_parse_head_table_too_small' does not call any production code
+  test_parse_maxp_table_too_small (/tmp/pr716-fix/oxidize-pdf-core/src/text/fonts/truetype.rs:1993) - Score: 70
+    - Test 'test_parse_maxp_table_too_small' has identical neighborhood to 'test_parse_head_table_too_small'
+    i Test 'test_parse_maxp_table_too_small' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_parse_maxp_table_too_small' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+    - Test 'test_parse_maxp_table_too_small' does not call any production code
+  test_get_glyph_data_bounds_checking (/tmp/pr716-fix/oxidize-pdf-core/src/text/fonts/truetype.rs:2206) - Score: 70
+    - Test 'test_get_glyph_data_bounds_checking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_get_glyph_data_bounds_checking' has multiple assertions without diagnostic messages
+    - Test 'test_get_glyph_data_bounds_checking' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+    - Test 'test_get_glyph_data_bounds_checking' does not call any production code
+
+--- Details ---
+/tmp/pr716-fix/oxidize-pdf-core/src/text/fonts/truetype.rs:
+  single_byte_cmap_selection_is_bounded_and_sorted (line 1513) - Score: 100
+    i Test 'single_byte_cmap_selection_is_bounded_and_sorted' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'single_byte_cmap_selection_is_bounded_and_sorted' has multiple assertions without diagnostic messages
+  truncated_directory_and_end_offsets_are_controlled_errors (line 1528) - Score: 100
+    i Test 'truncated_directory_and_end_offsets_are_controlled_errors' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'truncated_directory_and_end_offsets_are_controlled_errors' has multiple assertions without diagnostic messages
+  post_format_2_resolves_standard_and_custom_names (line 1572) - Score: 100
+    i Test 'post_format_2_resolves_standard_and_custom_names' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'post_format_2_resolves_standard_and_custom_names' uses .unwrap() which silently discards error information
+  post_format_2_tolerates_truncated_name_data (line 1582) - Score: 100
+    i Test 'post_format_2_tolerates_truncated_name_data' has multiple assertions without diagnostic messages
+    i Test 'post_format_2_tolerates_truncated_name_data' uses .unwrap() which silently discards error information
+  post_format_1_uses_the_standard_macintosh_order (line 1591) - Score: 100
+    i Test 'post_format_1_uses_the_standard_macintosh_order' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'post_format_1_uses_the_standard_macintosh_order' uses .unwrap() which silently discards error information
+  post_format_3_and_missing_table_have_no_names (line 1601) - Score: 100
+    i Test 'post_format_3_and_missing_table_have_no_names' has multiple assertions without diagnostic messages
+  test_read_helpers (line 1609) - Score: 100
+    i Test 'test_read_helpers' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_read_helpers' has multiple assertions without diagnostic messages
+  test_invalid_font_signatures (line 1622) - Score: 100
+    i Test 'test_invalid_font_signatures' has multiple assertions without diagnostic messages
+  test_cmap_format_0 (line 1635) - Score: 80
+    - Test 'test_cmap_format_0' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_cmap_format_0' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_cmap_format_0' has multiple assertions without diagnostic messages
+    i Test 'test_cmap_format_0' uses .unwrap() which silently discards error information
+    - Test 'test_cmap_format_0' has low assert-to-setup ratio (3%): 4 asserts vs 130 setup lines
+  test_glyph_metrics (line 1780) - Score: 60
+    - Test 'test_glyph_metrics' does not call any production code
+    - Test 'test_glyph_metrics' has no assertions
+  test_font_name_parsing (line 1786) - Score: 60
+    - Test 'test_font_name_parsing' does not call any production code
+    - Test 'test_font_name_parsing' has no assertions
+  test_subset_creation (line 1792) - Score: 90
+    i Test 'test_subset_creation' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_subset_creation' does not call any production code
+  test_table_entry_creation (line 1800) - Score: 90
+    i Test 'test_table_entry_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_table_entry_creation' has multiple assertions without diagnostic messages
+    - Test 'test_table_entry_creation' does not call any production code
+  test_glyph_info_creation (line 1815) - Score: 90
+    i Test 'test_glyph_info_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_glyph_info_creation' has multiple assertions without diagnostic messages
+    - Test 'test_glyph_info_creation' does not call any production code
+  test_cmap_subtable_creation (line 1830) - Score: 100
+    i Test 'test_cmap_subtable_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_cmap_subtable_creation' has multiple assertions without diagnostic messages
+  test_read_u16 (line 1850) - Score: 100
+    i Test 'test_read_u16' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_read_u16' has multiple assertions without diagnostic messages
+  test_read_u32 (line 1862) - Score: 100
+    i Test 'test_read_u32' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_read_u32' has multiple assertions without diagnostic messages
+  test_read_i16 (line 1874) - Score: 100
+    i Test 'test_read_i16' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_read_i16' has multiple assertions without diagnostic messages
+  test_required_tables (line 1887) - Score: 100
+    i Test 'test_required_tables' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_required_tables' has multiple assertions without diagnostic messages
+  test_font_with_zero_tables (line 1925) - Score: 90
+    - Test 'test_font_with_zero_tables' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_get_table_not_found (line 1936) - Score: 90
+    - Test 'test_get_table_not_found' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  test_get_table_found (line 1951) - Score: 90
+    i Test 'test_get_table_found' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_table_found' has multiple assertions without diagnostic messages
+    - Test 'test_get_table_found' has low assert-to-setup ratio (9%): 2 asserts vs 21 setup lines
+  test_parse_head_table_too_small (line 1978) - Score: 70
+    - Test 'test_parse_head_table_too_small' has identical neighborhood to 'test_parse_maxp_table_too_small'
+    - Test 'test_parse_head_table_too_small' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+    - Test 'test_parse_head_table_too_small' does not call any production code
+  test_parse_maxp_table_too_small (line 1993) - Score: 70
+    - Test 'test_parse_maxp_table_too_small' has identical neighborhood to 'test_parse_head_table_too_small'
+    i Test 'test_parse_maxp_table_too_small' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_parse_maxp_table_too_small' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+    - Test 'test_parse_maxp_table_too_small' does not call any production code
+  test_parse_loca_short_format (line 2008) - Score: 80
+    i Test 'test_parse_loca_short_format' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_loca_short_format' has multiple assertions without diagnostic messages
+    - Test 'test_parse_loca_short_format' has low assert-to-setup ratio (10%): 2 asserts vs 18 setup lines
+    - Test 'test_parse_loca_short_format' does not call any production code
+  test_parse_loca_long_format (line 2032) - Score: 80
+    i Test 'test_parse_loca_long_format' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_loca_long_format' has multiple assertions without diagnostic messages
+    - Test 'test_parse_loca_long_format' has low assert-to-setup ratio (9%): 2 asserts vs 20 setup lines
+    - Test 'test_parse_loca_long_format' does not call any production code
+  test_get_glyph_data (line 2058) - Score: 90
+    i Test 'test_get_glyph_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_glyph_data' has multiple assertions without diagnostic messages
+    - Test 'test_get_glyph_data' has low assert-to-setup ratio (7%): 2 asserts vs 26 setup lines
+  test_subset_font_empty (line 2090) - Score: 90
+    - Test 'test_subset_font_empty' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  test_font_metrics (line 2105) - Score: 90
+    i Test 'test_font_metrics' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_metrics' has multiple assertions without diagnostic messages
+    - Test 'test_font_metrics' does not call any production code
+  test_subset_font_data_too_small (line 2121) - Score: 90
+    i Test 'test_subset_font_data_too_small' has multiple assertions without diagnostic messages
+    - Test 'test_subset_font_data_too_small' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  test_subset_with_missing_glyphs (line 2141) - Score: 90
+    - Test 'test_subset_with_missing_glyphs' has low assert-to-setup ratio (4%): 1 asserts vs 26 setup lines
+  test_parse_table_entries_edge_cases (line 2172) - Score: 80
+    i Test 'test_parse_table_entries_edge_cases' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_table_entries_edge_cases' has multiple assertions without diagnostic messages
+    - Test 'test_parse_table_entries_edge_cases' has low assert-to-setup ratio (10%): 2 asserts vs 19 setup lines
+    - Test 'test_parse_table_entries_edge_cases' does not call any production code
+  test_get_glyph_data_bounds_checking (line 2206) - Score: 70
+    - Test 'test_get_glyph_data_bounds_checking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_get_glyph_data_bounds_checking' has multiple assertions without diagnostic messages
+    - Test 'test_get_glyph_data_bounds_checking' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+    - Test 'test_get_glyph_data_bounds_checking' does not call any production code
+  test_loca_format_variations (line 2227) - Score: 80
+    i Test 'test_loca_format_variations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_loca_format_variations' has multiple assertions without diagnostic messages
+    - Test 'test_loca_format_variations' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'test_loca_format_variations' does not call any production code
+  test_required_tables_for_cff (line 2303) - Score: 100
+    i Test 'test_required_tables_for_cff' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

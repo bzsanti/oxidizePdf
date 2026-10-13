@@ -1,10 +1,18 @@
-## Issue #714 — 2026-10-12
+## Correcciones de revisión del PR #716 — 2026-10-12
 
-- Issue: #714 — Expose generic incremental catalog/object updates and external document timestamp preparation — https://github.com/bzsanti/oxidizePdf/issues/714
-- Estado: implementación y QR locales terminados; entrega remota/CI pendientes. P1 por bloqueo de Studio; responsable Codex.
-- Cierre verificable: APIs públicas de objetos/catálogo y DocTimeStamp, conservación incremental, permisos/errores, consumidores externos y regresiones. Cumplido localmente; revisión en docs/reports/2026-10-12-issue-714-review.md.
-- Última validación: 12 pruebas nuevas PASS incluidas interop qpdf/OpenSSL, consumidor externo PASS, 6834 biblioteca PASS/3 ignoradas existentes, regresiones firmas/permisos/anotaciones PASS, formato/Clippy y QR/Kripteia PASS; mutaciones discriminantes DocMDP/Type detectadas.
-- Siguiente acción: PR hacia develop y CI. Publicación de core no autorizada; no afirmar disponibilidad en el registro.
+- Issue: #715 — Text extraction: symbolic simple TrueType without /Encoding returns U+FFFD for every glyph (regression vs 5.2.0) — https://github.com/bzsanti/oxidizePdf/issues/715
+- Estado: implementada y revisada localmente; prioridad P1; responsable Codex. Issue OPEN confirmada. Head original 7b6839f; develop 206b688 integrado en este candidato. Preservada contribución del autor.
+- Cierre verificable local: los tres fallos del QR corregidos y pruebas defensivas/regresión aprobadas. Se mantiene el modo opt-in y la precedencia de los mapas explícitos.
+
+| Requisito | Evidencia final | Estado |
+| --- | --- | --- |
+| Entrada font truncada controlada | Regresiones strict/lenient, ToUnicode/null y lectores acotados | Demostrado |
+| Política coherente con caché | Reutilización false/true/false y controles nuevos | Demostrado |
+| GID válido antes de fallback | Límites numGlyphs, post2/post3, prefijos alternativos y Macintosh | Demostrado |
+| Compatibilidad | 6.918 PASS/0 FAIL/3 ignoradas existentes; 37 fuentes con huellas de mapas iguales; consumidor latino; Clippy/formato/Kripteia/revisión | Demostrado |
+
+- Evidencia e informe: docs/reports/2026-10-12-pr-716-review.md y docs/reports/2026-10-12-pr-716-evidence/corrections/. RED original seis fallos previstos; sin relajar baselines ni modificar corpus.
+- Siguiente acción: publicar candidato y comprobar CI antes de fusionar #716. Sin merge remoto ni release. #719 sigue abierta; caso GID general fuera de este consumidor no se declara resuelto.
 
 ## Issue #712 — permisos DocMDP de notas y resaltados
 
@@ -1248,3 +1256,11 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Restricciones: preservar cambios locales y baselines; #627 permanece pendiente
   y obligatoria. Esta versión conserva C en signatures/bindings por autorización
   explícita de publicar antes de #627. No corregir hallazgos ajenos sin issue.
+
+## Issue #714 — corrección de revisión 2026-10-13
+
+- Issue: #714 — Expose generic incremental catalog/object updates and external document timestamp preparation — https://github.com/bzsanti/oxidizePdf/issues/714
+- Estado: corrección y revisión local completadas; publicación/CI pendientes. Prioridad P1; responsable Codex. develop d66b397a incorporado, conflictos de seguimiento conciliados sin pérdida.
+- Cierre verificable local: todos los widgets del campo timestamp tienen Rect cero válido, independientemente del seleccionado; errores explícitos para hermanos visibles/malformados; controles invisibles conservan prefijo, widgets y DocTimeStamp.
+- Última validación: RED 2 fallos previstos; GREEN/regresión 48 PASS en cuatro targets, incluyendo qpdf/OpenSSL; Clippy all-targets/signatures y formato PASS; Kripteia calidad/seguridad e inspección final terminados. Informe actualizado docs/reports/2026-10-12-issue-714-review.md, evidencias pr717 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
+- Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.

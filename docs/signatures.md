@@ -133,3 +133,7 @@ locks. P=2/P=3 use the existing signing permission checks. No arbitrary catalog
 or content modification exemption is introduced. TSA transport, CMS unsigned
 attributes, DSS policy, PAdES profiles, revocation, renewal and long-term
 validation remain the external application's responsibility.
+
+For an existing timestamp field, every widget must have a valid zero rectangle,
+including unselected widgets. `widget_index` selects a target but does not exempt
+other widgets from this check. Missing or malformed widget rectangles are rejected.

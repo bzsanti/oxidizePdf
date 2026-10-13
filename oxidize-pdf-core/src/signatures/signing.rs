@@ -379,7 +379,7 @@ impl DocumentTimestampOptions {
         }
     }
 
-    /// Use an existing empty signature field, retaining its appearance.
+    /// Use an existing empty signature field whose widgets all have zero rectangles.
     pub fn existing(field_name: impl Into<String>) -> Self {
         let options = SignaturePreparationOptions::existing(field_name);
         Self {
@@ -397,7 +397,8 @@ impl DocumentTimestampOptions {
 ///
 /// Encryption, DocMDP P=1 and applicable FieldMDP locks are rejected. P=2/P=3
 /// use the existing signing permission boundary; this is no exemption for
-/// arbitrary content or catalog edits. Visible timestamp widgets are rejected.
+/// arbitrary content or catalog edits. Every existing widget must have a valid
+/// zero rectangle, including widgets other than the selected one.
 pub fn prepare_document_timestamp(
     base: &[u8],
     options: &DocumentTimestampOptions,
@@ -500,22 +501,7 @@ fn prepare_incremental_signature_inner(
                 return Err(invalid("selected signature field is already signed"));
             }
             if document_timestamp {
-                let widget = select_widget(&mut reader, field, *widget_index)?;
-                let widget = reader
-                    .get_object(widget.0, widget.1)
-                    .map_err(|error| invalid(error.to_string()))?
-                    .as_dict()
-                    .ok_or_else(|| invalid("timestamp widget must be a dictionary"))?;
-                if let Some(rect) = widget.get("Rect") {
-                    let rect = rect
-                        .as_array()
-                        .ok_or_else(|| invalid("timestamp widget Rect must be an array"))?;
-                    if rect.0.len() != 4 || rect.0.iter().any(|v| v.as_real() != Some(0.0)) {
-                        return Err(invalid(
-                            "existing timestamp widget must have a zero rectangle",
-                        ));
-                    }
-                }
+                ensure_timestamp_widgets_invisible(&mut reader, field, *widget_index)?;
             }
             dictionary.insert("V".to_string(), reference(signature_id));
             if rect.is_some() {
@@ -983,6 +969,58 @@ fn select_widget(
         return Err(invalid("selected child is not a widget annotation"));
     }
     Ok(widget)
+}
+
+/// The timestamp value belongs to the field, so every associated widget must
+/// remain invisible regardless of which widget the caller selected.
+fn ensure_timestamp_widgets_invisible(
+    reader: &mut PdfReader<Cursor<&[u8]>>,
+    field: (u32, u16),
+    widget_index: Option<usize>,
+) -> SignatureResult<()> {
+    // Preserve the target-selection contract, including out-of-range indices.
+    let selected = select_widget(reader, field, widget_index)?;
+    let dictionary = resolve_dictionary(reader, &reference(field), "timestamp field")?;
+    let mut widgets = vec![selected];
+    if dictionary
+        .get("Subtype")
+        .and_then(PdfObject::as_name)
+        .is_some_and(|name| name.0 == "Widget")
+        && selected != field
+    {
+        widgets.push(field);
+    }
+    if let Some(kids) = dictionary.get("Kids") {
+        for child in resolve_array(reader, kids, "timestamp field /Kids")? {
+            let child = child
+                .as_reference()
+                .ok_or_else(|| invalid("timestamp widgets must be indirect references"))?;
+            if child != selected {
+                widgets.push(child);
+            }
+        }
+    }
+    for widget in widgets {
+        let widget = resolve_dictionary(reader, &reference(widget), "timestamp widget")?;
+        if widget
+            .get("Subtype")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|name| name.0 != "Widget")
+            || widget.contains_key("Kids")
+        {
+            return Err(invalid(
+                "timestamp field children must be widget annotations",
+            ));
+        }
+        let rect = widget
+            .get("Rect")
+            .ok_or_else(|| invalid("timestamp widget requires a zero rectangle"))?;
+        let rect = resolve_array(reader, rect, "timestamp widget /Rect")?;
+        if rect.len() != 4 || rect.iter().any(|value| value.as_real() != Some(0.0)) {
+            return Err(invalid("every timestamp widget must have a zero rectangle"));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug)]

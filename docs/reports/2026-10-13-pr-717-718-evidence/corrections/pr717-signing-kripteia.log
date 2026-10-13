@@ -1,0 +1,30 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 3 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ize-pr-fixes/oxidize-pdf-core/src/signatures/signing.rs        3     93
+
+--- Worst Offenders ---
+  incremental_signature_ignores_unreferenced_in_use_zero_offset_entry (/tmp/oxidize-pr-fixes/oxidize-pdf-core/src/signatures/signing.rs:1507) - Score: 90
+    - Test 'incremental_signature_ignores_unreferenced_in_use_zero_offset_entry' has identical neighborhood to 'incremental_signature_accepts_free_zero_offset_entry_control'
+  incremental_signature_accepts_free_zero_offset_entry_control (/tmp/oxidize-pr-fixes/oxidize-pdf-core/src/signatures/signing.rs:1517) - Score: 90
+    - Test 'incremental_signature_accepts_free_zero_offset_entry_control' has identical neighborhood to 'incremental_signature_ignores_unreferenced_in_use_zero_offset_entry'
+  incremental_signature_rejects_docmdp_reference_to_zero_offset_entry (/tmp/oxidize-pr-fixes/oxidize-pdf-core/src/signatures/signing.rs:1527) - Score: 100
+
+--- Details ---
+/tmp/oxidize-pr-fixes/oxidize-pdf-core/src/signatures/signing.rs:
+  incremental_signature_ignores_unreferenced_in_use_zero_offset_entry (line 1507) - Score: 90
+    - Test 'incremental_signature_ignores_unreferenced_in_use_zero_offset_entry' has identical neighborhood to 'incremental_signature_accepts_free_zero_offset_entry_control'
+  incremental_signature_accepts_free_zero_offset_entry_control (line 1517) - Score: 90
+    - Test 'incremental_signature_accepts_free_zero_offset_entry_control' has identical neighborhood to 'incremental_signature_ignores_unreferenced_in_use_zero_offset_entry'
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
