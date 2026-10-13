@@ -1,0 +1,92 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-pr-fixes/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 7.68s
+     Running tests/issue_606_signature_layout_test.rs (/tmp/oxidize-pr717-review/target/debug/deps/issue_606_signature_layout_test-a43d2cec3e12f208)
+
+running 7 tests
+test hard_breaks_blank_lines_and_long_tokens_are_preserved ... ok
+test minimum_size_fits_with_descenders_and_rejects_just_too_short ... ok
+test preflight_validates_watermark_encoding_controls_and_finite_dimensions ... ok
+test width_measurement_distinguishes_wide_and_narrow_glyphs ... ok
+test impossible_layout_fails_preflight_and_preparation_before_pdf_access ... ok
+test long_names_and_additional_lines_wrap_without_losing_content ... ok
+test logo_is_centered_behind_text_and_does_not_reserve_a_column ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/issue_714_incremental_primitives_test.rs (/tmp/oxidize-pr717-review/target/debug/deps/issue_714_incremental_primitives_test-1fe258840eac0e40)
+
+running 15 tests
+test rejects_invalid_references_unfilled_reservations_and_structural_overrides ... ok
+test replaces_nonzero_generations_without_renumbering_catalog_or_references ... ok
+test catalog_and_object_updates_preserve_revisions_and_unrelated_entries ... ok
+checking /tmp/.tmp3jvhwr/result.pdf
+PDF Version: 1.7
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+test generic_update_preserves_approval_signature_dictionary ... ok
+test timestamp_accepts_all_invisible_widgets_and_preserves_them ... ok
+test timestamp_rejects_malformed_or_missing_sibling_rectangles ... ok
+test rejects_orphan_certification_and_signature_replacements ... ok
+test timestamp_rejects_visible_widgets_regardless_of_selected_index ... ok
+test timestamp_existing_field_and_fieldmdp_boundaries ... ok
+test timestamp_preserves_direct_and_indirect_catalog_extensions ... ok
+test real_approval_signature_remains_cryptographically_valid ... ok
+test generic_updates_deny_all_certification_levels_and_timestamp_obeys_signing_policy ... ok
+test compressed_objects_and_encryption_are_checked_by_independent_consumer ... ok
+test timestamp_type_subfilter_and_byte_range_are_engine_owned ... ok
+checking result.pdf
+PDF Version: 1.7
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+checking result.pdf
+PDF Version: 1.5
+File is not encrypted
+File is not linearized
+No syntax or stream encoding errors found; the file may still contain
+errors that qpdf cannot detect
+test real_external_timestamp_token_covers_final_pdf_and_survives_later_revision ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.74s
+
+     Running tests/signature_preparation_test.rs (/tmp/oxidize-pr717-review/target/debug/deps/signature_preparation_test-aa11ab9864d02935)
+
+running 10 tests
+test reading_rejects_a_slot_outside_the_page ... ok
+test creation_rejects_rotation_that_reading_cannot_support ... ok
+test completing_preserves_other_field_flags ... ok
+test rejects_invalid_geometry_duplicates_and_empty_or_invalid_strokes ... ok
+test handwritten_completion_has_an_appearance_but_no_digital_signature ... ok
+test slots_survive_reopening_and_preserve_previous_bytes ... ok
+test drawn_slot_can_be_used_by_the_detached_signing_api ... ok
+test rotated_label_appearance_is_escaped_and_does_not_complete_the_slot ... ok
+test list_and_remove_only_the_requested_unsigned_slot ... ok
+test creation_rejects_unreadable_rotation_and_excess_slots ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running tests/text_symbolic_truetype_fallback_test.rs (/tmp/oxidize-pr717-review/target/debug/deps/text_symbolic_truetype_fallback_test-58914d47da20d1b8)
+
+running 16 tests
+test invalid_direct_gid_does_not_hide_a_valid_symbol_prefix ... ok
+test invalid_windows_gids_do_not_hide_valid_macintosh_glyphs ... ok
+test malformed_cmap_ranges_do_not_discard_valid_later_entries ... ok
+test missing_or_unparseable_program_keeps_the_strict_policy ... ok
+test format_6_codes_do_not_wrap_to_byte_codes ... ok
+test codes_the_program_does_not_map_stay_replacement ... ok
+test default_and_disabled_keep_the_strict_replacement_policy ... ok
+test post_glyph_names_take_precedence_over_the_byte ... ok
+test tounicode_does_not_require_a_readable_font_program ... ok
+test tounicode_and_differences_still_win ... ok
+test null_tounicode_keeps_the_same_fallback_as_an_absent_entry ... ok
+test truncated_font_directory_returns_replacements_without_panicking ... ok
+test unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding ... ok
+test unnamed_high_bytes_use_the_selected_subtable_encoding ... ok
+test switching_fallback_rebuilds_cached_font_information ... ok
+test fallback_requires_gids_within_the_declared_glyph_count ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+

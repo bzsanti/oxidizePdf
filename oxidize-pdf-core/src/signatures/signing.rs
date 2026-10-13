@@ -359,12 +359,69 @@ impl PreparedSignature {
     }
 }
 
+/// Options for an external RFC 3161 document timestamp. The caller owns token
+/// acquisition, message-imprint validation, trust and renewal policy.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DocumentTimestampOptions {
+    /// Existing empty signature field or a new invisible field.
+    pub target: SignatureTarget,
+    /// Reserved DER token capacity in bytes (same bounds as CMS signing).
+    pub placeholder_bytes: usize,
+}
+
+impl DocumentTimestampOptions {
+    /// Prepare a new invisible field on the first page.
+    pub fn invisible(field_name: impl Into<String>) -> Self {
+        let options = SignaturePreparationOptions::invisible(field_name);
+        Self {
+            target: options.target,
+            placeholder_bytes: options.placeholder_bytes,
+        }
+    }
+
+    /// Use an existing empty signature field whose widgets all have zero rectangles.
+    pub fn existing(field_name: impl Into<String>) -> Self {
+        let options = SignaturePreparationOptions::existing(field_name);
+        Self {
+            target: options.target,
+            placeholder_bytes: options.placeholder_bytes,
+        }
+    }
+}
+
+/// Prepare `/Type /DocTimeStamp`, `/SubFilter /ETSI.RFC3161` with engine-owned
+/// ByteRange/Contents. Digest [`PreparedSignature::bytes_to_digest`] externally,
+/// obtain a timestamp token for that digest and pass its DER ContentInfo to
+/// [`PreparedSignature::finalize`]. Finalization checks only envelope/capacity,
+/// not RFC 3161 semantics, message imprint, trust or cryptographic validity.
+///
+/// Encryption, DocMDP P=1 and applicable FieldMDP locks are rejected. P=2/P=3
+/// use the existing signing permission boundary; this is no exemption for
+/// arbitrary content or catalog edits. Every existing widget must have a valid
+/// zero rectangle, including widgets other than the selected one.
+pub fn prepare_document_timestamp(
+    base: &[u8],
+    options: &DocumentTimestampOptions,
+) -> SignatureResult<PreparedSignature> {
+    let rect = match &options.target {
+        SignatureTarget::New { rect, .. } | SignatureTarget::Existing { rect, .. } => rect,
+    };
+    if rect.is_some() {
+        return Err(invalid("document timestamps must be invisible"));
+    }
+    let mut signing = SignaturePreparationOptions::invisible("timestamp");
+    signing.target = options.target.clone();
+    signing.placeholder_bytes = options.placeholder_bytes;
+    signing.sub_filter = "ETSI.RFC3161".into();
+    prepare_incremental_signature_inner(base, &signing, None, true)
+}
+
 /// Prepare an incremental revision for an external CMS signer.
 pub fn prepare_incremental_signature(
     base: &[u8],
     options: &SignaturePreparationOptions,
 ) -> SignatureResult<PreparedSignature> {
-    prepare_incremental_signature_inner(base, options, None)
+    prepare_incremental_signature_inner(base, options, None, false)
 }
 
 /// Prepare an incremental revision with generated visible signature artwork.
@@ -377,13 +434,14 @@ pub fn prepare_incremental_signature_with_appearance(
     options: &SignaturePreparationOptions,
     appearance: &SignatureAppearance,
 ) -> SignatureResult<PreparedSignature> {
-    prepare_incremental_signature_inner(base, options, Some(appearance))
+    prepare_incremental_signature_inner(base, options, Some(appearance), false)
 }
 
 fn prepare_incremental_signature_inner(
     base: &[u8],
     options: &SignaturePreparationOptions,
     appearance: Option<&SignatureAppearance>,
+    document_timestamp: bool,
 ) -> SignatureResult<PreparedSignature> {
     let layout = validate_options(options, appearance)?;
     let mut reader =
@@ -408,6 +466,9 @@ fn prepare_incremental_signature_inner(
     let mut update = IncrementalUpdate::from_base(base)?;
     let signature_id = update.allocate_id()?;
     let mut signature = signature_dictionary(options);
+    if document_timestamp {
+        signature.insert("Type".into(), name("DocTimeStamp"));
+    }
     signature.insert(
         "ByteRange".to_string(),
         PdfObject::Array(PdfArray(vec![
@@ -438,6 +499,9 @@ fn prepare_incremental_signature_inner(
                 .ok_or_else(|| invalid("signature field is not a dictionary"))?;
             if dictionary.contains_key("V") {
                 return Err(invalid("selected signature field is already signed"));
+            }
+            if document_timestamp {
+                ensure_timestamp_widgets_invisible(&mut reader, field, *widget_index)?;
             }
             dictionary.insert("V".to_string(), reference(signature_id));
             if rect.is_some() {
@@ -905,6 +969,58 @@ fn select_widget(
         return Err(invalid("selected child is not a widget annotation"));
     }
     Ok(widget)
+}
+
+/// The timestamp value belongs to the field, so every associated widget must
+/// remain invisible regardless of which widget the caller selected.
+fn ensure_timestamp_widgets_invisible(
+    reader: &mut PdfReader<Cursor<&[u8]>>,
+    field: (u32, u16),
+    widget_index: Option<usize>,
+) -> SignatureResult<()> {
+    // Preserve the target-selection contract, including out-of-range indices.
+    let selected = select_widget(reader, field, widget_index)?;
+    let dictionary = resolve_dictionary(reader, &reference(field), "timestamp field")?;
+    let mut widgets = vec![selected];
+    if dictionary
+        .get("Subtype")
+        .and_then(PdfObject::as_name)
+        .is_some_and(|name| name.0 == "Widget")
+        && selected != field
+    {
+        widgets.push(field);
+    }
+    if let Some(kids) = dictionary.get("Kids") {
+        for child in resolve_array(reader, kids, "timestamp field /Kids")? {
+            let child = child
+                .as_reference()
+                .ok_or_else(|| invalid("timestamp widgets must be indirect references"))?;
+            if child != selected {
+                widgets.push(child);
+            }
+        }
+    }
+    for widget in widgets {
+        let widget = resolve_dictionary(reader, &reference(widget), "timestamp widget")?;
+        if widget
+            .get("Subtype")
+            .and_then(PdfObject::as_name)
+            .is_none_or(|name| name.0 != "Widget")
+            || widget.contains_key("Kids")
+        {
+            return Err(invalid(
+                "timestamp field children must be widget annotations",
+            ));
+        }
+        let rect = widget
+            .get("Rect")
+            .ok_or_else(|| invalid("timestamp widget requires a zero rectangle"))?;
+        let rect = resolve_array(reader, rect, "timestamp widget /Rect")?;
+        if rect.len() != 4 || rect.iter().any(|value| value.as_real() != Some(0.0)) {
+            return Err(invalid("every timestamp widget must have a zero rectangle"));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug)]

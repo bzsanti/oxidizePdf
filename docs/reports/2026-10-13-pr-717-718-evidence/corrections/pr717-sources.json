@@ -1,0 +1,9 @@
+{
+  "head_reviewed": "9d56750e4ef8ba0c09f76429e24e47cfd15d477b",
+  "develop": "d66b397aa6653c19134ca7be27ec54df2f9c3443",
+  "sha256": {
+    "oxidize-pdf-core/src/signatures/signing.rs": "155ff1a516e6cf6ac9e5315923f0f0425ba61db91f16c2e27fe10a142ee3e2ee",
+    "oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs": "f370d7027f738b067c5e8c6c40061a1ab0309fbd6b084e196eb5c5b0dc0e5c19",
+    "docs/signatures.md": "9ded3ad7de4a27e8a32fd6e957ecff382fe36ce3530cfff54e1679f0a4069a67"
+  }
+}

@@ -1256,3 +1256,11 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Restricciones: preservar cambios locales y baselines; #627 permanece pendiente
   y obligatoria. Esta versión conserva C en signatures/bindings por autorización
   explícita de publicar antes de #627. No corregir hallazgos ajenos sin issue.
+
+## Issue #714 — corrección de revisión 2026-10-13
+
+- Issue: #714 — Expose generic incremental catalog/object updates and external document timestamp preparation — https://github.com/bzsanti/oxidizePdf/issues/714
+- Estado: corrección y revisión local completadas; publicación/CI pendientes. Prioridad P1; responsable Codex. develop d66b397a incorporado, conflictos de seguimiento conciliados sin pérdida.
+- Cierre verificable local: todos los widgets del campo timestamp tienen Rect cero válido, independientemente del seleccionado; errores explícitos para hermanos visibles/malformados; controles invisibles conservan prefijo, widgets y DocTimeStamp.
+- Última validación: RED 2 fallos previstos; GREEN/regresión 48 PASS en cuatro targets, incluyendo qpdf/OpenSSL; Clippy all-targets/signatures y formato PASS; Kripteia calidad/seguridad e inspección final terminados. Informe actualizado docs/reports/2026-10-12-issue-714-review.md, evidencias pr717 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
+- Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.
