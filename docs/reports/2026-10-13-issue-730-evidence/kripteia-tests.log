@@ -1,0 +1,57 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 11 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...e-pdf-core/tests/issue_730_redaction_boundaries_test.rs       11     90
+
+--- Worst Offenders ---
+  independent_output_oracle (oxidize-pdf-core/tests/issue_730_redaction_boundaries_test.rs:130) - Score: 80
+    - Test 'independent_output_oracle' is marked as #[ignore]
+    i Test 'independent_output_oracle' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'independent_output_oracle' has multiple assertions without diagnostic messages
+    i Test 'independent_output_oracle' uses .unwrap() which silently discards error information
+  split_tj (oxidize-pdf-core/tests/issue_730_redaction_boundaries_test.rs:83) - Score: 90
+    - Test 'split_tj' does not call any production code
+  split_tj_tj_array (oxidize-pdf-core/tests/issue_730_redaction_boundaries_test.rs:87) - Score: 90
+    - Test 'split_tj_tj_array' does not call any production code
+  split_arrays (oxidize-pdf-core/tests/issue_730_redaction_boundaries_test.rs:91) - Score: 90
+    - Test 'split_arrays' does not call any production code
+  split_array_tj (oxidize-pdf-core/tests/issue_730_redaction_boundaries_test.rs:95) - Score: 90
+    - Test 'split_array_tj' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/issue_730_redaction_boundaries_test.rs:
+  split_tj (line 83) - Score: 90
+    - Test 'split_tj' does not call any production code
+  split_tj_tj_array (line 87) - Score: 90
+    - Test 'split_tj_tj_array' does not call any production code
+  split_arrays (line 91) - Score: 90
+    - Test 'split_arrays' does not call any production code
+  split_array_tj (line 95) - Score: 90
+    - Test 'split_array_tj' does not call any production code
+  split_text_states (line 99) - Score: 90
+    - Test 'split_text_states' does not call any production code
+  split_hex_strings (line 103) - Score: 90
+    - Test 'split_hex_strings' does not call any production code
+  unsplit_duplicate (line 107) - Score: 90
+    - Test 'unsplit_duplicate' does not call any production code
+  safe_control (line 111) - Score: 90
+    - Test 'safe_control' does not call any production code
+  independent_output_oracle (line 130) - Score: 80
+    - Test 'independent_output_oracle' is marked as #[ignore]
+    i Test 'independent_output_oracle' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'independent_output_oracle' has multiple assertions without diagnostic messages
+    i Test 'independent_output_oracle' uses .unwrap() which silently discards error information
+  split_content_streams (line 164) - Score: 90
+    - Test 'split_content_streams' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
