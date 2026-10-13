@@ -1,3 +1,12 @@
+## Corrección #721 — 2026-10-13
+
+- Issue: #721 — fix(verification): report unimplemented requirements as unverified instead of passed — https://github.com/bzsanti/oxidizePdf/issues/721
+- Estado: implementada y revisada; publicación/integración pendientes; prioridad P1; responsable Codex. Issue OPEN confirmada; base develop 1087c342. Rama fix/issue-721-unverified-requirements en copia local reutilizada /tmp/oxidize-issue742; WIP raíz preservado.
+- Cierre: identificadores sin comprobación no obtienen passed=true en ningún nivel, incluso con PDF válido o metadata que declara cumplimiento; resultado NotImplemented explícito (0%), distinguible del fallo de un check implementado. Controles positivos/negativos independientes, RED/GREEN, QR calidad/seguridad antes de PR a develop.
+- Bloqueantes: dispatch permite éxito genérico y fallback de contenido true. Corregir disponibilidad antes de ejecutar niveles y eliminar fallback exitoso; evidencia mediante API pública. #722 (estructura) y #729 (validadores externos) conservan alcance propio y siguen bloqueando la recomendación de release; no impiden rechazar requisitos desconocidos.
+- Última validación: RED 3 fallos/4 controles; GREEN 7 contratos +7 integración ISO +149 módulo PASS (163). Dos fixtures independientes aceptados por qpdf. Formato y Clippy all-targets -D warnings PASS; QR/Kripteia calidad y seguridad terminados antes del PR. Informe docs/reports/2026-10-13-issue-721-review.md. Bloqueantes #721 resueltos. Siguiente acción: publicar borrador hacia develop y comprobar CI, sin fusionar.
+- Hallazgo independiente de tests: tests/iso_verification_test.rs:157 ignora fallos de carga. Corrección bloqueada por falta de issue específica; responsable mantenimiento/bzsanti, dependencia externa crear issue, desbloqueo al confirmar OPEN aplicable; restricción no corregir ni recalibrar métricas bajo #721. No bloquea los contratos nuevos independientes de la matriz.
+
 ## Corrección #742 — 2026-10-13
 
 - Issue: #742 — fix(metadata): validate XMP dates without Unicode panics or false Date values — https://github.com/bzsanti/oxidizePdf/issues/742
