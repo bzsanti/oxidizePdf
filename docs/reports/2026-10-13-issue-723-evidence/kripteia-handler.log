@@ -1,0 +1,59 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/forms/signature_handler.rs                   6     98
+
+--- Worst Offenders ---
+  test_signature_handler_creation (oxidize-pdf-core/src/forms/signature_handler.rs:379) - Score: 90
+    i Test 'test_signature_handler_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_signature_handler_creation' has multiple assertions without diagnostic messages
+    - Test 'test_signature_handler_creation' does not call any production code
+  test_add_signature_field (oxidize-pdf-core/src/forms/signature_handler.rs:386) - Score: 100
+    i Test 'test_add_signature_field' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_add_signature_field' has multiple assertions without diagnostic messages
+  test_sign_field (oxidize-pdf-core/src/forms/signature_handler.rs:398) - Score: 100
+    i Test 'test_sign_field' has multiple assertions without diagnostic messages
+    i Test 'test_sign_field' uses .unwrap() which silently discards error information
+  test_validation (oxidize-pdf-core/src/forms/signature_handler.rs:415) - Score: 100
+    i Test 'test_validation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_validation' has multiple assertions without diagnostic messages
+    i Test 'test_validation' uses .unwrap() which silently discards error information
+  test_signing_order (oxidize-pdf-core/src/forms/signature_handler.rs:428) - Score: 100
+    i Test 'test_signing_order' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_signing_order' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/forms/signature_handler.rs:
+  test_signature_handler_creation (line 379) - Score: 90
+    i Test 'test_signature_handler_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_signature_handler_creation' has multiple assertions without diagnostic messages
+    - Test 'test_signature_handler_creation' does not call any production code
+  test_add_signature_field (line 386) - Score: 100
+    i Test 'test_add_signature_field' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_add_signature_field' has multiple assertions without diagnostic messages
+  test_sign_field (line 398) - Score: 100
+    i Test 'test_sign_field' has multiple assertions without diagnostic messages
+    i Test 'test_sign_field' uses .unwrap() which silently discards error information
+  test_validation (line 415) - Score: 100
+    i Test 'test_validation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_validation' has multiple assertions without diagnostic messages
+    i Test 'test_validation' uses .unwrap() which silently discards error information
+  test_signing_order (line 428) - Score: 100
+    i Test 'test_signing_order' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_signing_order' uses .unwrap() which silently discards error information
+  test_summary (line 445) - Score: 100
+    i Test 'test_summary' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_summary' has multiple assertions without diagnostic messages
+    i Test 'test_summary' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

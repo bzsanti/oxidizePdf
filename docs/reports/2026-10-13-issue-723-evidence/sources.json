@@ -1,0 +1,5 @@
+{
+  "oxidize-pdf-core/src/forms/signature_field.rs": "26138411383e4f4a33e66e45e2a412e4ff33eaf36c60a16364642adcc96ff3af",
+  "oxidize-pdf-core/src/forms/signature_handler.rs": "864c33ec30990c6bf9128368dc27eae6db5c8a3dcfa3ade52708a049b54e73f7",
+  "oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs": "76ad8444d0a044459a0abaf770baeb5a0a696a33fb439347d3f7da0a95b1507c"
+}
