@@ -1,0 +1,11 @@
+{
+  "oxidize-pdf-core/src/parser/reader.rs": "ee839c381ee8116249616a8e845e666fe874f409440a27da327ecdfb7a5bb271",
+  "oxidize-pdf-core/src/verification/mod.rs": "ef96f94194a40bff6903c55a085576b3043bf0fed6c7f94f947bcb290ad52679",
+  "oxidize-pdf-core/src/verification/structure.rs": "87cc0bb268fdbd4ae4c42b66f3408e9274efbdbc465fcd4e5cf3d94c219efff6",
+  "oxidize-pdf-core/tests/issue_722_structural_verification_test.rs": "6a572a15120f6a8d511460f0ee8633865bf156b960ea729d7d155c81ba39ec68",
+  "oxidize-pdf-core/tests/fixtures/issue_722_object_stream.pdf": "655fd100ae8480af89b8abf1ce338cca66044aef1afacfba9496239778b7ad96",
+  "oxidize-pdf-core/tests/fixtures/issue_722_nested.pdf": "2039b02b4d4441e6a06540ed1379160e7518dc06c90db452cc85a0a4df894f4e",
+  "oxidize-pdf-core/tests/fixtures/issue_722_README.md": "5998208e8e0a564af7a1828728f87781145e2e3dab0a6cb0cdf004717e308bce",
+  "oxidize-pdf-core/tests/fixtures/issue_722_missing_pages.pdf": "ed75fb49e18cd761b1f51529f7eabdc8a6530d2dc5cc1c2ce959a24103ee8bbd",
+  "oxidize-pdf-core/tests/fixtures/issue_722_tiny.pdf": "acc942fe9ab0d83bf1f751204f80183b8beef8fd7f331c6f31bff4e43b97af10"
+}

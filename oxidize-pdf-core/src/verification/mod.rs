@@ -16,6 +16,7 @@ pub mod curated_matrix;
 pub mod iso_matrix;
 pub mod parser;
 pub mod semantic_comparison;
+mod structure;
 pub mod tagged_pdf;
 pub mod validators;
 
@@ -34,7 +35,7 @@ pub enum VerificationLevel {
     NotImplemented = 0,
     /// Code exists, doesn't crash (25%)
     CodeExists = 1,
-    /// Generates valid PDF (50%)
+    /// Basic xref, catalog and page-tree structure verified (50%), not full conformance.
     GeneratesPdf = 2,
     /// Content verified with parser (75%)
     ContentVerified = 3,
@@ -167,7 +168,9 @@ pub fn verify_iso_requirement(
     }
 }
 
-/// Verify that PDF is generated with basic structure
+/// Verify cross-references, the referenced catalog and the page tree.
+/// Traversal exhaustion is reported as incomplete verification, not invalidity.
+/// This does not validate every resource, content operator or ISO requirement.
 fn verify_pdf_generation(pdf_bytes: &[u8]) -> Result<VerificationResult> {
     if pdf_bytes.is_empty() {
         return Ok(VerificationResult {
@@ -187,19 +190,16 @@ fn verify_pdf_generation(pdf_bytes: &[u8]) -> Result<VerificationResult> {
         });
     }
 
-    if pdf_bytes.len() < 1000 {
-        return Ok(VerificationResult {
-            level: VerificationLevel::GeneratesPdf,
-            passed: false,
-            details: format!("PDF too small: {} bytes", pdf_bytes.len()),
-            external_validation: None,
-        });
-    }
-
+    let outcome = structure::verify(pdf_bytes);
     Ok(VerificationResult {
         level: VerificationLevel::GeneratesPdf,
-        passed: true,
-        details: format!("Valid PDF generated: {} bytes", pdf_bytes.len()),
+        passed: outcome.is_ok(),
+        details: match outcome {
+            Ok(pages) => {
+                format!("PDF structure verified: {pages} pages (not full ISO conformance)")
+            }
+            Err(reason) => reason,
+        },
         external_validation: None,
     })
 }
@@ -357,17 +357,17 @@ mod unit_tests {
         assert!(!result.passed);
         assert!(result.details.contains("PDF header"));
 
-        // Test too small PDF
+        // An incomplete header is not a document, regardless of size
         let small_pdf = b"%PDF-1.4\n%%EOF";
         let result = verify_pdf_generation(small_pdf).unwrap();
         assert!(!result.passed);
-        assert!(result.details.contains("too small"));
+        assert!(result.details.contains("structural check"));
 
-        // Test valid PDF (mock)
+        // Padding a header does not create a valid PDF
         let valid_pdf = format!("%PDF-1.4\n{}\n%%EOF", "x".repeat(1000));
         let result = verify_pdf_generation(valid_pdf.as_bytes()).unwrap();
-        assert!(result.passed);
-        assert!(result.details.contains("Valid PDF generated"));
+        assert!(!result.passed);
+        assert!(result.details.contains("structural check"));
     }
 }
 

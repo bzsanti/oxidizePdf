@@ -1,3 +1,13 @@
+## Corrección #722 — 2026-10-14
+
+- Issue: #722 — fix(verification): replace header and size heuristic with structural PDF validation — https://github.com/bzsanti/oxidizePdf/issues/722
+- Estado: implementada y revisada; publicación/CI pendientes; prioridad P1; responsable Codex. OPEN confirmada; base develop 078386ca. Rama fix/issue-722-structural-verification en /tmp/oxidize-issue742; WIP raíz preservado.
+- Cierre: PDF independiente de 335 bytes aceptado, cabecera de 1.100 bytes rechazada por estructura, límites de recorrido explícitos como verificación incompleta; controles RED/GREEN y QR calidad/seguridad antes de PR.
+- Bloqueantes resueltos: umbral arbitrario, éxito por cabecera, ausencia de recorrido estructural. Parsing estricto xref/trailer, catálogo referenciado, árbol iterativo con Parent/Count/tipos/ciclos y sin reconstruir objetos. Sin nueva API pública/dependencias. Se verifica estructura básica, no todos los recursos ni conformidad ISO completa; límites del árbol no certifican consumo total del parser.
+- Última validación: RED 3 fallos/2 controles; GREEN 9 contratos #722, 7 #721, 7 ISO; biblioteca 6817 PASS/3 ignoradas. Tres fixtures positivos qpdf exit 0; Pages 113 ausente qpdf exit 3 con avisos. Formato/Clippy all-targets PASS; cuatro Kripteia calidad/seguridad y revisión manual completos. Informe docs/reports/2026-10-14-issue-722-review.md; logs en directorio de evidencia asociado.
+- Hallazgo independiente: reader.rs:4559 test_reader_malformed_version sin aserción de resultado; corrección bloqueada sin issue específica, responsable mantenimiento/bzsanti; dependencia externa crear/vincular issue, desbloqueo OPEN confirmada, restricción no corregir bajo #722. #720 y #729 conservan alcance propio.
+- Siguiente acción: publicar PR borrador hacia develop y comprobar CI. Sin fusión ni release autorizadas para esta tarea.
+
 ## Integración autorizada — 2026-10-14
 
 - Issue: #721 — fix(verification): report unimplemented requirements as unverified instead of passed — https://github.com/bzsanti/oxidizePdf/issues/721

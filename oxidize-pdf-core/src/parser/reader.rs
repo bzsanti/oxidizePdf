@@ -139,12 +139,19 @@ pub struct PdfReader<R: Read + Seek> {
     objects_being_reconstructed: std::sync::Mutex<std::collections::HashSet<u32>>,
     /// Maximum reconstruction depth (prevents pathological cases)
     max_reconstruction_depth: u32,
+    /// Verification must not synthesize missing or malformed objects.
+    allow_object_reconstruction: bool,
 }
 
 impl<R: Read + Seek> PdfReader<R> {
     /// Get parsing options
     pub fn options(&self) -> &super::ParseOptions {
         &self.options
+    }
+
+    /// Disable object repair for callers assessing structure rather than recovering it.
+    pub(crate) fn disable_object_reconstruction(&mut self) {
+        self.allow_object_reconstruction = false;
     }
 
     /// Check if the PDF is encrypted
@@ -477,6 +484,7 @@ impl<R: Read + Seek> PdfReader<R> {
                         std::collections::HashSet::new(),
                     ),
                     max_reconstruction_depth: 100,
+                    allow_object_reconstruction: true,
                 };
 
                 // Load encryption dictionary
@@ -533,6 +541,7 @@ impl<R: Read + Seek> PdfReader<R> {
             encryption_handler,
             objects_being_reconstructed: std::sync::Mutex::new(std::collections::HashSet::new()),
             max_reconstruction_depth: 100,
+            allow_object_reconstruction: true,
         })
     }
 
@@ -1457,6 +1466,9 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Check if an object can be manually reconstructed
     fn is_reconstructible_object(&self, obj_num: u32) -> bool {
+        if !self.allow_object_reconstruction {
+            return false;
+        }
         // Known problematic objects for corrupted PDF reconstruction
         if obj_num == 102 || obj_num == 113 || obj_num == 114 {
             return true;
