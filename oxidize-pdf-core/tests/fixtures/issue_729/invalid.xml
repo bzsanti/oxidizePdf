@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<report>
+  <buildInformation>
+    <releaseDetails id="core" version="1.30.3" buildDate="2026-10-07T10:02:00Z"></releaseDetails>
+    <releaseDetails id="validation-model" version="1.30.3" buildDate="2026-10-07T13:44:00Z"></releaseDetails>
+    <releaseDetails id="apps" version="1.30.3" buildDate="2026-10-07T13:52:00Z"></releaseDetails>
+  </buildInformation>
+  <jobs>
+    <job>
+      <item size="335">
+        <name>/tmp/oxidize-issue730/oxidize-pdf-core/tests/fixtures/issue_729/non-pdfa.pdf</name>
+      </item>
+      <validationReport jobEndStatus="normal" profileName="PDF/A-1b validation profile" statement="PDF file is not compliant with Validation Profile requirements." isCompliant="false">
+        <details passedRules="127" failedRules="2" passedChecks="45" failedChecks="2">
+          <rule specification="ISO 19005-1:2005" clause="6.7.2" testNumber="1" status="failed" failedChecks="1">
+            <description>The document catalog dictionary of a conforming file shall contain the Metadata key. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML</description>
+            <object>PDDocument</object>
+            <test>containsMetadata == true</test>
+            <check status="failed">
+              <context>root/document[0]</context>
+              <errorMessage>The document catalog dictionary doesn't contain metadata key or metadata stream dictionary does not contain either entry Type with value /Metadata or entry Subtype with value /XML</errorMessage>
+            </check>
+          </rule>
+          <rule specification="ISO 19005-1:2005" clause="6.1.3" testNumber="1" status="failed" failedChecks="1">
+            <description>The file trailer dictionary shall contain the ID keyword. The file trailer referred to is either the last trailer dictionary in a PDF file, as described in PDF Reference 3.4.4 and 3.4.5, or the first page trailer in a linearized PDF file, as described in PDF Reference F.2</description>
+            <object>CosDocument</object>
+            <test>(isLinearized == true) ? (firstPageID != null) : (lastID != null)</test>
+            <check status="failed">
+              <context>root</context>
+              <errorMessage>Missing ID in the document trailer</errorMessage>
+            </check>
+          </rule>
+        </details>
+      </validationReport>
+      <duration start="1791975649903" finish="1791975650146">00:00:00.243</duration>
+    </job>
+  </jobs>
+  <batchSummary totalJobs="1" failedToParse="0" encrypted="0" outOfMemory="0" veraExceptions="0">
+    <validationReports compliant="0" nonCompliant="1" failedJobs="0">1</validationReports>
+    <featureReports failedJobs="0">0</featureReports>
+    <repairReports failedJobs="0">0</repairReports>
+    <duration start="1791975649853" finish="1791975650184">00:00:00.331</duration>
+  </batchSummary>
+</report>

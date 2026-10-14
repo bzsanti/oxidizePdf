@@ -1,0 +1,20 @@
+{
+  ".github/workflows/interoperability.yml": "ac219162cda6874bd3ca2e8fd198f8e2a3cb7c88db29ec119913e6e38454b836",
+  "oxidize-pdf-core/src/verification/verapdf_report.rs": "66d6104d3af185bb37feb357db379932414ba8bcb521d6298f85f97f819bb3dd",
+  "oxidize-pdf-core/src/verification/iso_matrix.rs": "ba2f7000917cb680d74aab50f1e64f75088d235a80b7ab112f30266009669ad3",
+  "oxidize-pdf-core/src/verification/curated_matrix.rs": "b8afd657598f67043110f389b189afb7b65acff6692ec21c261182eca7d8e1f9",
+  "oxidize-pdf-core/src/verification/tagged_pdf.rs": "7509ca4a187723ec49fef682ab495062e762ff1060a6686bed2c4c9db6ed8c9a",
+  "oxidize-pdf-core/src/verification/validators.rs": "2a1563c8e2fd53148b985d41741155d420a079d5284a7fd15cf2b518d44c8419",
+  "oxidize-pdf-core/src/verification/comparators.rs": "4095da10bfc213919384f66e253ee796be115d1167c53ddb69be7b493ed4dc91",
+  "oxidize-pdf-core/src/verification/compliance_report.rs": "c88800a02d0de0a11d4a591466985786231a7fb68e955eea8793fcb231a530fc",
+  "oxidize-pdf-core/src/verification/parser.rs": "9000efa38c7db3d33a878ac38c9ca770fb8f3fbbe7b5d07b270e0e0bb442ae2e",
+  "oxidize-pdf-core/src/verification/semantic_comparison.rs": "b2c0e1ed9f25c241efbedfaed55cbd78d5941db30cd75fcb37f6e71a969de2ab",
+  "oxidize-pdf-core/src/verification/mod.rs": "e9d71eaf33f15fb2fc9ccacbe1368c7a2fc6ff58bf6093b40f2365c4c1798344",
+  "oxidize-pdf-core/tests/fixtures/issue_729/non-pdfa.pdf": "acc942fe9ab0d83bf1f751204f80183b8beef8fd7f331c6f31bff4e43b97af10",
+  "oxidize-pdf-core/tests/fixtures/issue_729/pdfa-1b.pdf": "df3af98ee28303bb892e1d2c5692cd43465a496ac21ca8587eb4c8f6c9f7c5f6",
+  "oxidize-pdf-core/tests/fixtures/issue_729/valid.xml": "e859d67ed6f585e586669cbba2d70b58a28f7ecd783bdac05396e5cc22904adf",
+  "oxidize-pdf-core/tests/fixtures/issue_729/README.md": "e201efbf5498c19b2afbdda964cdd3facb0903ae2de03b8f2caa8d19d1e8c3d7",
+  "oxidize-pdf-core/tests/fixtures/issue_729/invalid.xml": "c98d735bf0a16e439d1525dfaaea41b5f08497c8eae9b5d10050917bfe997d33",
+  "oxidize-pdf-core/tests/issue_729_external_validators_test.rs": "86f8ca120677fb190ccc7f62f94fc7210d5816cd11558f965ce3cf5f74498635",
+  "tools/verification/verapdf-auto.xml": "82d4d86a1a858f4d209a798aee53400c6b22eff88dc38f84ce5729e84f2a076e"
+}

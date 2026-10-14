@@ -1,0 +1,43 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/verification/verapdf_report.rs               6     95
+
+--- Worst Offenders ---
+  captured_success_with_zero_failures_passes (oxidize-pdf-core/src/verification/verapdf_report.rs:202) - Score: 90
+    - Test 'captured_success_with_zero_failures_passes' does not call any production code
+  captured_noncompliance_is_false_not_execution_error (oxidize-pdf-core/src/verification/verapdf_report.rs:216) - Score: 90
+    - Test 'captured_noncompliance_is_false_not_execution_error' does not call any production code
+  malformed_or_unrelated_reports_cannot_pass (oxidize-pdf-core/src/verification/verapdf_report.rs:220) - Score: 90
+    - Test 'malformed_or_unrelated_reports_cannot_pass' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  escaped_names_and_zero_failed_checks_are_not_failure_words (oxidize-pdf-core/src/verification/verapdf_report.rs:206) - Score: 100
+    i Test 'escaped_names_and_zero_failed_checks_are_not_failure_words' uses .unwrap() which silently discards error information
+  duplicate_attributes_entities_and_mismatched_tags_are_errors (oxidize-pdf-core/src/verification/verapdf_report.rs:231) - Score: 100
+    i Test 'duplicate_attributes_entities_and_mismatched_tags_are_errors' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/verification/verapdf_report.rs:
+  captured_success_with_zero_failures_passes (line 202) - Score: 90
+    - Test 'captured_success_with_zero_failures_passes' does not call any production code
+  escaped_names_and_zero_failed_checks_are_not_failure_words (line 206) - Score: 100
+    i Test 'escaped_names_and_zero_failed_checks_are_not_failure_words' uses .unwrap() which silently discards error information
+  captured_noncompliance_is_false_not_execution_error (line 216) - Score: 90
+    - Test 'captured_noncompliance_is_false_not_execution_error' does not call any production code
+  malformed_or_unrelated_reports_cannot_pass (line 220) - Score: 90
+    - Test 'malformed_or_unrelated_reports_cannot_pass' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  duplicate_attributes_entities_and_mismatched_tags_are_errors (line 231) - Score: 100
+    i Test 'duplicate_attributes_entities_and_mismatched_tags_are_errors' uses .unwrap() which silently discards error information
+  inconsistent_status_counters_or_multiple_reports_are_errors (line 250) - Score: 100
+    i Test 'inconsistent_status_counters_or_multiple_reports_are_errors' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

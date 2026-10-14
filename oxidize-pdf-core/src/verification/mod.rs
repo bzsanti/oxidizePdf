@@ -1,14 +1,9 @@
 //! PDF Verification Module
 //!
-//! This module provides REAL verification of generated PDFs against ISO 32000-1:2008
-//! standards. Unlike superficial tests, this module:
-//!
-//! 1. Parses the actual PDF bytes generated
-//! 2. Verifies internal object structure
-//! 3. Validates with external tools (qpdf, veraPDF)
-//! 4. Compares against ISO reference PDFs
-//!
-//! The goal is to provide HONEST assessment of ISO compliance, not just "API exists".
+//! Provides implemented requirement checks and external-tool results with explicit
+//! scopes. qpdf checks document structure; veraPDF checks the fixed PDF/A-1b
+//! profile. Neither the legacy level percentages nor these checks certify all
+//! requirements of ISO 32000. Unavailable checks must not count as success.
 
 pub mod comparators;
 pub mod compliance_report;
@@ -18,6 +13,7 @@ pub mod parser;
 pub mod semantic_comparison;
 pub mod tagged_pdf;
 pub mod validators;
+mod verapdf_report;
 
 // Disabled vanity ISO compliance tests - these test PDF syntax rather than functionality
 // See CLAUDE.md: "Focus on practical PDF functionality, not compliance metrics"
@@ -38,7 +34,8 @@ pub enum VerificationLevel {
     GeneratesPdf = 2,
     /// Content verified with parser (75%)
     ContentVerified = 3,
-    /// ISO compliant with external validation (100%)
+    /// Legacy highest level (100%): qpdf structure and veraPDF PDF/A-1b pass.
+    /// This does not certify every ISO 32000 requirement.
     IsoCompliant = 4,
 }
 
@@ -78,7 +75,10 @@ pub struct VerificationResult {
     pub external_validation: Option<ExternalValidationResult>,
 }
 
-/// Result from external validation tools
+/// Results from external tools, each with its own scope.
+/// Some(true) is a completed passing check, Some(false) a completed negative
+/// check, None an unavailable/incomplete check described in error_messages.
+/// qpdf checks structure; veraPDF checks PDF/A-1b, not full ISO 32000 conformance.
 #[derive(Debug, Clone)]
 pub struct ExternalValidationResult {
     pub qpdf_passed: Option<bool>,
@@ -232,7 +232,7 @@ fn verify_pdf_content(pdf_bytes: &[u8], check: RequirementCheck) -> Result<Verif
     }
 }
 
-/// Verify full ISO compliance with external validation
+/// Run the required external structural and PDF/A-1b checks.
 fn verify_iso_compliance(pdf_bytes: &[u8], check: RequirementCheck) -> Result<VerificationResult> {
     // First check content verification
     let content_result = verify_pdf_content(pdf_bytes, check)?;
@@ -243,22 +243,27 @@ fn verify_iso_compliance(pdf_bytes: &[u8], check: RequirementCheck) -> Result<Ve
     // Run external validation
     let external_result = validators::validate_external(pdf_bytes)?;
 
-    let all_passed = external_result.qpdf_passed.unwrap_or(false)
-        && external_result.verapdf_passed.unwrap_or(true); // veraPDF optional
+    let all_passed = external_checks_passed(&external_result);
 
     Ok(VerificationResult {
         level: VerificationLevel::IsoCompliant,
         passed: all_passed,
         details: if all_passed {
-            "Passed all external validation checks".to_string()
+            "qpdf structural and veraPDF PDF/A-1b checks passed; not full ISO conformance"
+                .to_string()
         } else {
             format!(
-                "External validation failed: {:?}",
+                "External validation failed or incomplete: {:?}",
                 external_result.error_messages
             )
         },
         external_validation: Some(external_result),
     })
+}
+
+// Missing/failed execution cannot count as optional success at the highest level.
+fn external_checks_passed(result: &ExternalValidationResult) -> bool {
+    result.qpdf_passed == Some(true) && result.verapdf_passed == Some(true)
 }
 
 /// Verify specific requirement content in parsed PDF
@@ -320,6 +325,24 @@ fn verify_requirement_content(
 #[cfg(test)]
 mod unit_tests {
     use super::*;
+
+    #[test]
+    fn external_level_requires_both_completed_positive_checks() {
+        for qpdf in [None, Some(false), Some(true)] {
+            for vera in [None, Some(false), Some(true)] {
+                let result = ExternalValidationResult {
+                    qpdf_passed: qpdf,
+                    verapdf_passed: vera,
+                    adobe_preflight_passed: Some(true),
+                    error_messages: vec![],
+                };
+                assert_eq!(
+                    external_checks_passed(&result),
+                    qpdf == Some(true) && vera == Some(true)
+                );
+            }
+        }
+    }
 
     #[test]
     fn test_verification_level_percentage() {

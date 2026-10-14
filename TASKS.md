@@ -1,3 +1,13 @@
+## Corrección #729 — 2026-10-14
+
+- Issue: #729 — fix(verification): use supported qpdf and veraPDF arguments and parse validation reports — https://github.com/bzsanti/oxidizePdf/issues/729
+- Estado: implementación y revisión local completadas; publicación/CI pendientes. Prioridad P1; responsable Codex. Base develop 078386ca, rama fix/issue-729-external-validators; #750 separado, WIP preservado.
+- Cierre verificable: comandos compatibles; PDF/A independiente aceptado y control no conforme rechazado; XML/estado coherentes; ausencia/ejecución/rechazo distinguibles; qpdf no implica PDF/A ni ISO general; QR calidad/seguridad y CI antes de integrar.
+- Bloqueantes funcionales resueltos: argumentos incompatibles, búsqueda textual de conformidad y agregación que admitía veraPDF ausente. Ambos resultados positivos exigidos para nivel externo.
+- Última validación: RED real 2 FAIL esperados y parser 3 FAIL/1 PASS; GREEN 3 integraciones reales qpdf 11.9.0/veraPDF 1.30.3, 14 contratos #721/ISO, biblioteca 6827 PASS/3 ignoradas; Clippy all-targets -D warnings, formato y QR manual/Kripteia calidad/seguridad PASS. Informe docs/reports/2026-10-14-issue-729-review.md y evidencia adyacente.
+- Residuales bloqueados sin issue: runner sin plazo/captura acotada y test histórico de disponibilidad sin aserción; mantenimiento/bzsanti debe crear/vincular issue OPEN antes de corregir, sin recalibrar métricas. Detalles y límites en informe. Gate de tamaño depende de integrar #750, CI 30 SUCCESS/2 SKIPPED.
+- Siguiente acción: publicar PR borrador a develop y confirmar CI; integrar conjuntamente con #750 conservando ambos cambios. No merge ni release en esta entrega.
+
 ## Integración autorizada — 2026-10-14
 
 - Issue: #721 — fix(verification): report unimplemented requirements as unverified instead of passed — https://github.com/bzsanti/oxidizePdf/issues/721
