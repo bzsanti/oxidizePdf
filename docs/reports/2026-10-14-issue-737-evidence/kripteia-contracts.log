@@ -1,0 +1,50 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_737_visual_mask_pages_test.rs        6     95
+
+--- Worst Offenders ---
+  selected_page_zero_is_rejected (oxidize-pdf-core/tests/issue_737_visual_mask_pages_test.rs:40) - Score: 90
+    - Test 'selected_page_zero_is_rejected' does not call any production code
+  selected_page_beyond_document_is_rejected (oxidize-pdf-core/tests/issue_737_visual_mask_pages_test.rs:49) - Score: 90
+    - Test 'selected_page_beyond_document_is_rejected' does not call any production code
+  mixed_valid_and_invalid_requests_never_return_partial_success (oxidize-pdf-core/tests/issue_737_visual_mask_pages_test.rs:60) - Score: 90
+    - Test 'mixed_valid_and_invalid_requests_never_return_partial_success' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+  first_and_last_pages_are_masked_and_reported_with_visual_risks (oxidize-pdf-core/tests/issue_737_visual_mask_pages_test.rs:113) - Score: 100
+    i Test 'first_and_last_pages_are_masked_and_reported_with_visual_risks' has multiple assertions without diagnostic messages
+    i Test 'first_and_last_pages_are_masked_and_reported_with_visual_risks' uses .unwrap() which silently discards error information
+  unselected_invalid_pages_do_not_reject_or_mask_selected_valid_pages (oxidize-pdf-core/tests/issue_737_visual_mask_pages_test.rs:147) - Score: 100
+    i Test 'unselected_invalid_pages_do_not_reject_or_mask_selected_valid_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unselected_invalid_pages_do_not_reject_or_mask_selected_valid_pages' has multiple assertions without diagnostic messages
+    i Test 'unselected_invalid_pages_do_not_reject_or_mask_selected_valid_pages' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_737_visual_mask_pages_test.rs:
+  selected_page_zero_is_rejected (line 40) - Score: 90
+    - Test 'selected_page_zero_is_rejected' does not call any production code
+  selected_page_beyond_document_is_rejected (line 49) - Score: 90
+    - Test 'selected_page_beyond_document_is_rejected' does not call any production code
+  mixed_valid_and_invalid_requests_never_return_partial_success (line 60) - Score: 90
+    - Test 'mixed_valid_and_invalid_requests_never_return_partial_success' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+  first_and_last_pages_are_masked_and_reported_with_visual_risks (line 113) - Score: 100
+    i Test 'first_and_last_pages_are_masked_and_reported_with_visual_risks' has multiple assertions without diagnostic messages
+    i Test 'first_and_last_pages_are_masked_and_reported_with_visual_risks' uses .unwrap() which silently discards error information
+  unselected_invalid_pages_do_not_reject_or_mask_selected_valid_pages (line 147) - Score: 100
+    i Test 'unselected_invalid_pages_do_not_reject_or_mask_selected_valid_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unselected_invalid_pages_do_not_reject_or_mask_selected_valid_pages' has multiple assertions without diagnostic messages
+    i Test 'unselected_invalid_pages_do_not_reject_or_mask_selected_valid_pages' uses .unwrap() which silently discards error information
+  no_selected_entities_preserves_exact_bytes_and_visual_warning (line 162) - Score: 100
+    i Test 'no_selected_entities_preserves_exact_bytes_and_visual_warning' has multiple assertions without diagnostic messages
+    i Test 'no_selected_entities_preserves_exact_bytes_and_visual_warning' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

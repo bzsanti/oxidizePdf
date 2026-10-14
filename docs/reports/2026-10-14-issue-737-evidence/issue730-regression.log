@@ -1,0 +1,19 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.83s
+     Running tests/issue_730_redaction_boundaries_test.rs (target/debug/deps/issue_730_redaction_boundaries_test-854fcd8f37da3e94)
+
+running 11 tests
+test independent_output_oracle ... ignored, requires installed Poppler and qpdf; run explicitly for security acceptance
+test safe_control ... ok
+test split_array_tj ... ok
+test split_arrays ... ok
+test split_content_streams ... ok
+test same_page_residual_split ... ok
+test split_tj ... ok
+test split_hex_strings ... ok
+test split_text_states ... ok
+test unsplit_duplicate ... ok
+test split_tj_tj_array ... ok
+
+test result: ok. 10 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

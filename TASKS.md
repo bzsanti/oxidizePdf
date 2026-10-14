@@ -1,3 +1,12 @@
+## Corrección #737 — 2026-10-14
+
+- Issue: #737 — fix(redaction): report out-of-range entities in visual masking — https://github.com/bzsanti/oxidizePdf/issues/737
+- Estado: implementación y revisión local completadas; publicación/CI pendientes; prioridad P1; responsable Codex. OPEN confirmada, base develop b657fa09, rama fix/issue-737-visual-mask-pages en /tmp/oxidize-issue730. WIP raíz preservado.
+- Cierre verificable: entidades seleccionadas con página 0 o superior al total producen error sin salida parcial; páginas válidas conservan máscaras e identidad en el informe; tipos no seleccionados se ignoran; VisualMask sigue avisando de contenido recuperable. RED/GREEN por API pública, regresión y revisión de calidad/seguridad antes de PR a develop.
+- Bloqueante: redact agrupa por página y sólo recorre páginas existentes; omite silenciosamente entidades seleccionadas fuera de rango. Corrección prevista: validar todas las páginas seleccionadas antes de reconstruir salida. Sin añadir variante pública de error incompatible ni modificar redacción irreversible.
+- Última validación: RED 3 FAIL esperados/3 controles PASS; GREEN 6 contratos, 31 redactor, 4 RAG, 10 #730 y oráculo externo qpdf/Poppler (52 PASS). Clippy all-targets -D warnings, formato, tres análisis Kripteia calidad/seguridad y revisión manual completados. Informe docs/reports/2026-10-14-issue-737-review.md y evidencia adyacente.
+- Bloqueante resuelto: prevalidación de todas las páginas seleccionadas antes de construir salida. Siguiente acción: publicar PR borrador a develop y comprobar CI. Descarte preexistente de errores de placeholder y pruebas de enum documentados en QR; corrección independiente bloqueada sin issue específica, responsable mantenimiento/bzsanti, desbloqueo al confirmar OPEN. No merge ni release en esta entrega.
+
 ## Corrección #729 — 2026-10-14
 
 - Issue: #729 — fix(verification): use supported qpdf and veraPDF arguments and parse validation reports — https://github.com/bzsanti/oxidizePdf/issues/729
