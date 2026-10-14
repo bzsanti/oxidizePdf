@@ -1,0 +1,38 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 7.77s
+     Running tests/issue_621_tagged_split_test.rs (target/debug/deps/issue_621_tagged_split_test-496827cc4e13ff3d)
+
+running 14 tests
+test corrupt_nonzero_index_is_not_silently_rebuilt ... ok
+test certified_source_is_rejected_before_attempting_tag_repair ... ok
+test broken_structure_parent_is_rejected ... ok
+test missing_index_with_wrong_generation_is_not_repaired ... ok
+test cyclic_structure_fails_without_output ... ok
+test missing_marked_content_is_not_declared_accessible ... ok
+test unrelated_missing_reference_identifies_object_and_publishes_nothing ... ok
+test zero_offset_index_alias_in_metadata_is_not_exempted ... ok
+test invalid_later_part_does_not_publish_earlier_parts ... ok
+test sparse_parent_tree_allocation_is_bounded ... ok
+test tagged_annotation_parent_mapping_is_retained_only_in_its_part ... ok
+test explicit_mcr_and_inherited_page_associations_survive_split ... ok
+test missing_zero_offset_parent_and_id_indexes_are_reconstructed ... ok
+test valid_tagged_twelve_page_split_preserves_each_part ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/text_tagged_xref_recovery_contract_test.rs (target/debug/deps/text_tagged_xref_recovery_contract_test-79854ecfe1b1c2e7)
+
+running 10 tests
+test catalog_reference_to_zero_offset_object_is_not_discarded ... ok
+test missing_object_stream_container_is_not_treated_as_an_unused_object ... ok
+test trailer_reference_to_zero_offset_object_is_not_discarded ... ok
+test latest_live_definition_and_nonzero_corruption_are_not_retired ... ok
+test retirement_preserves_an_existing_free_list ... ok
+test public_reproducer_retires_only_the_unreachable_zero_offset_entry ... ok
+test trailer_aliases_and_nested_references_cannot_hide_live_corruption ... ok
+test nonzero_generation_absent_entry_is_permanently_retired_and_reported_by_source_id ... ok
+test table_stream_and_hybrid_preparation_remain_clean_across_revisions ... ok
+test nested_source_and_each_split_retire_all_four_absent_entries ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.50s
+

@@ -1,0 +1,49 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 84 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/signatures/permissions.rs                    5     84
+
+--- Worst Offenders ---
+  page_tree_reordering_is_forbidden_at_every_permission_level (oxidize-pdf-core/src/signatures/permissions.rs:423) - Score: 80
+    - Test 'page_tree_reordering_is_forbidden_at_every_permission_level' has identical neighborhood to 'ocr_page_content_is_forbidden_at_every_permission_level'
+    - Test 'page_tree_reordering_is_forbidden_at_every_permission_level' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  page_tree_mutations_are_forbidden_at_every_permission_level (oxidize-pdf-core/src/signatures/permissions.rs:436) - Score: 80
+    - Test 'page_tree_mutations_are_forbidden_at_every_permission_level' has identical neighborhood to 'ocr_page_content_is_forbidden_at_every_permission_level'
+    - Test 'page_tree_mutations_are_forbidden_at_every_permission_level' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  ocr_page_content_is_forbidden_at_every_permission_level (oxidize-pdf-core/src/signatures/permissions.rs:449) - Score: 80
+    - Test 'ocr_page_content_is_forbidden_at_every_permission_level' has identical neighborhood to 'page_tree_mutations_are_forbidden_at_every_permission_level'
+    - Test 'ocr_page_content_is_forbidden_at_every_permission_level' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  tagged_structure_edits_are_forbidden_at_every_permission_level (oxidize-pdf-core/src/signatures/permissions.rs:460) - Score: 80
+    - Test 'tagged_structure_edits_are_forbidden_at_every_permission_level' has identical neighborhood to 'ocr_page_content_is_forbidden_at_every_permission_level'
+    - Test 'tagged_structure_edits_are_forbidden_at_every_permission_level' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  permission_levels_classify_reusable_incremental_edits (oxidize-pdf-core/src/signatures/permissions.rs:394) - Score: 100
+    i Test 'permission_levels_classify_reusable_incremental_edits' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/src/signatures/permissions.rs:
+  permission_levels_classify_reusable_incremental_edits (line 394) - Score: 100
+    i Test 'permission_levels_classify_reusable_incremental_edits' has multiple assertions without diagnostic messages
+  page_tree_reordering_is_forbidden_at_every_permission_level (line 423) - Score: 80
+    - Test 'page_tree_reordering_is_forbidden_at_every_permission_level' has identical neighborhood to 'ocr_page_content_is_forbidden_at_every_permission_level'
+    - Test 'page_tree_reordering_is_forbidden_at_every_permission_level' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  page_tree_mutations_are_forbidden_at_every_permission_level (line 436) - Score: 80
+    - Test 'page_tree_mutations_are_forbidden_at_every_permission_level' has identical neighborhood to 'ocr_page_content_is_forbidden_at_every_permission_level'
+    - Test 'page_tree_mutations_are_forbidden_at_every_permission_level' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  ocr_page_content_is_forbidden_at_every_permission_level (line 449) - Score: 80
+    - Test 'ocr_page_content_is_forbidden_at_every_permission_level' has identical neighborhood to 'page_tree_mutations_are_forbidden_at_every_permission_level'
+    - Test 'ocr_page_content_is_forbidden_at_every_permission_level' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  tagged_structure_edits_are_forbidden_at_every_permission_level (line 460) - Score: 80
+    - Test 'tagged_structure_edits_are_forbidden_at_every_permission_level' has identical neighborhood to 'ocr_page_content_is_forbidden_at_every_permission_level'
+    - Test 'tagged_structure_edits_are_forbidden_at_every_permission_level' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

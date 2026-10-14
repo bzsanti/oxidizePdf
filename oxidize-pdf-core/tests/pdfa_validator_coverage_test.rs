@@ -389,20 +389,41 @@ fn open_action_gotoe_is_flagged_external() {
 
 #[test]
 fn dangling_metadata_reference_denies_conformance() {
-    // /Metadata points to an object number that does not exist. The lenient
-    // parser resolves the missing object to an empty placeholder rather than
-    // erroring, so the validator must treat it as missing metadata (fail-safe
-    // denial) — never a silent pass.
-    let pdf = doc("1.4", "/Metadata 99 0 R", "", plain_contents(), &[]);
-    let result =
-        validate_result(&pdf, PdfALevel::A1b).expect("lenient parse resolves to no stream");
-    assert!(
-        result
-            .iter()
-            .any(|e| matches!(e, ValidationError::XmpMetadataMissing)),
-        "a dangling /Metadata reference must be treated as missing metadata, not accepted. got: {:?}",
-        result
-    );
+    // The default reader tolerates streams, not missing object references.
+    // Explicit lenient syntax resolves an absent reference to null; both modes
+    // must deny conformance independently of the missing object's identity.
+    for object in [99, 200] {
+        let pdf = doc(
+            "1.4",
+            &format!("/Metadata {object} 0 R"),
+            "",
+            plain_contents(),
+            &[],
+        );
+        assert!(
+            matches!(
+                validate_result(&pdf, PdfALevel::A1b),
+                Err(oxidize_pdf::pdfa::PdfAError::ParseError(_))
+            ),
+            "default reader must reject missing metadata object {object}"
+        );
+        let mut reader = PdfReader::new_with_options(
+            Cursor::new(pdf),
+            oxidize_pdf::parser::ParseOptions::lenient(),
+        )
+        .unwrap();
+        let report = PdfAValidator::new(PdfALevel::A1b)
+            .validate(&mut reader)
+            .expect("explicit lenient parsing resolves absent references to null");
+        assert!(
+            report
+                .errors()
+                .iter()
+                .any(|error| matches!(error, ValidationError::XmpMetadataMissing)),
+            "missing metadata {object} must deny conformance: {:?}",
+            report.errors()
+        );
+    }
 }
 
 #[test]

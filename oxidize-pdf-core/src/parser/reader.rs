@@ -45,78 +45,6 @@ pub(crate) fn resolve_to_array<R: Read + Seek>(
 /// realistic catalog / pages dictionary (incl. multi-thousand-entry `/Kids`).
 const MANUAL_DICT_WINDOW: usize = 256 * 1024;
 
-/// Check if bytes start with "stream" after optional whitespace
-fn is_immediate_stream_start(data: &[u8]) -> bool {
-    let mut i = 0;
-
-    // Skip whitespace (spaces, tabs, newlines, carriage returns)
-    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r') {
-        i += 1;
-    }
-
-    // Check if the rest starts with "stream"
-    data[i..].starts_with(b"stream")
-}
-
-/// Content between the first `open` byte and the first `close` byte that
-/// **follows** it, both exclusive. `None` when either delimiter is absent, or
-/// when `close` occurs only before `open`.
-///
-/// Searching the closer in the remainder after the opener is what makes this
-/// total: a naive `find(open)` + `find(close)` over the same haystack inverts
-/// the range on input like `/MediaBox ][` and panics. Both delimiters must be
-/// ASCII, so a match can never land inside a multi-byte UTF-8 sequence and the
-/// returned bounds are always char boundaries.
-fn slice_between(haystack: &str, open: u8, close: u8) -> Option<&str> {
-    debug_assert!(open.is_ascii() && close.is_ascii());
-    let open_idx = haystack.as_bytes().iter().position(|&b| b == open)?;
-    let rest = &haystack[open_idx + 1..];
-    let close_idx = rest.as_bytes().iter().position(|&b| b == close)?;
-    Some(&rest[..close_idx])
-}
-
-/// Byte offset, relative to `after`, of the `>>` that closes a dictionary whose
-/// opening `<<` has already been consumed. `None` if it never closes.
-///
-/// `after` is text recovered from arbitrary bytes via `from_utf8_lossy`, so it
-/// routinely holds multi-byte `U+FFFD`. The scan therefore stays in byte space
-/// throughout: `<` and `>` are ASCII and cannot occur inside a multi-byte
-/// sequence, which keeps the returned offset a valid slice bound. Mixing char
-/// indices with byte indices here splits a `U+FFFD` and panics.
-fn find_dict_end(after: &str) -> Option<usize> {
-    let bytes = after.as_bytes();
-    let mut depth = 1usize;
-    let mut i = 0usize;
-
-    while i + 1 < bytes.len() {
-        if bytes[i] == b'<' && bytes[i + 1] == b'<' {
-            depth += 1;
-            i += 2;
-        } else if bytes[i] == b'>' && bytes[i + 1] == b'>' {
-            depth -= 1;
-            if depth == 0 {
-                return Some(i);
-            }
-            i += 2;
-        } else {
-            i += 1;
-        }
-    }
-    None
-}
-
-/// Prefix of `s` of at most `max_bytes`, cut back to the nearest char boundary.
-fn truncate_on_char_boundary(s: &str, max_bytes: usize) -> &str {
-    if s.len() <= max_bytes {
-        return s;
-    }
-    let mut end = max_bytes;
-    while end > 0 && !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    &s[..end]
-}
-
 /// High-level PDF reader
 pub struct PdfReader<R: Read + Seek> {
     reader: BufReader<R>,
@@ -606,7 +534,6 @@ impl<R: Read + Seek> PdfReader<R> {
         };
 
         // Check if we need to attempt reconstruction by examining the object type first
-        let key = (obj_num, gen_num);
         let needs_reconstruction = {
             match self.get_object(obj_num, gen_num) {
                 Ok(catalog) => {
@@ -633,31 +560,6 @@ impl<R: Read + Seek> PdfReader<R> {
                 position: 0,
                 message: format!("Catalog object {} {} is not a dictionary", obj_num, gen_num),
             });
-        }
-
-        // If we reach here, reconstruction is needed
-
-        match self.extract_object_manually(obj_num) {
-            Ok(dict) => {
-                // Cache the reconstructed object
-                let obj = PdfObject::Dictionary(dict);
-                self.object_cache.insert(key, obj);
-
-                // Also add to XRef table so the object can be found later
-                use crate::parser::xref::XRefEntry;
-                let xref_entry = XRefEntry {
-                    offset: 0, // Dummy offset since object is cached
-                    generation: gen_num,
-                    in_use: true,
-                };
-                self.xref.add_entry(obj_num, xref_entry);
-
-                // Return reference to cached dictionary
-                if let Some(PdfObject::Dictionary(ref dict)) = self.object_cache.get(&key) {
-                    return Ok(dict);
-                }
-            }
-            Err(_e) => {}
         }
 
         // Return error if all reconstruction attempts failed
@@ -818,25 +720,28 @@ impl<R: Read + Seek> PdfReader<R> {
                     (entry.offset, entry.generation)
                 }
                 None => {
-                    // Object not found in XRef table
                     if self.is_reconstructible_object(obj_num) {
-                        return self.attempt_manual_object_reconstruction(obj_num, gen_num, 0);
-                    } else {
-                        if self.options.lenient_syntax {
-                            // In lenient mode, return null object instead of failing completely
-                            if self.options.collect_warnings {
-                                tracing::warn!(
-                                    "Object {} {} R not found in XRef, returning null object",
-                                    obj_num,
-                                    gen_num
-                                );
-                            }
-                            self.object_cache.insert(key, PdfObject::Null);
-                            return Ok(&self.object_cache[&key]);
-                        } else {
-                            return Err(ParseError::InvalidReference(obj_num, gen_num));
+                        match self.attempt_manual_object_reconstruction(obj_num, gen_num, 0) {
+                            Ok(_) => return Ok(&self.object_cache[&key]),
+                            // No matching object exists in the bytes. Retain the
+                            // lenient absent-reference policy, but never hide a
+                            // parse failure for an object that actually exists.
+                            Err(ParseError::InvalidReference(_, _)) => {}
+                            Err(error) => return Err(error),
                         }
                     }
+                    if self.options.lenient_syntax {
+                        if self.options.collect_warnings {
+                            tracing::warn!(
+                                "Object {} {} R not found, returning null object",
+                                obj_num,
+                                gen_num
+                            );
+                        }
+                        self.object_cache.insert(key, PdfObject::Null);
+                        return Ok(&self.object_cache[&key]);
+                    }
+                    return Err(ParseError::InvalidReference(obj_num, gen_num));
                 }
             }
         };
@@ -941,7 +846,6 @@ impl<R: Read + Seek> PdfReader<R> {
             Ok(obj) => {
                 self.parse_context.exit();
                 // Debug: Print what object we actually parsed
-                if obj_num == 102 && self.options.collect_warnings {}
                 obj
             }
             Err(e) => {
@@ -1100,9 +1004,15 @@ impl<R: Read + Seek> PdfReader<R> {
                     }
                 }
             } else {
+                if !self.options.lenient_syntax || !self.allow_object_reconstruction {
+                    return Err(ParseError::MissingKey("Pages".into()));
+                }
                 // If Pages is missing, try to find page objects by scanning
-                #[cfg(debug_assertions)]
-                tracing::warn!("Catalog missing Pages entry, attempting recovery");
+                if self.options.collect_warnings {
+                    tracing::warn!(
+                        "Catalog missing Pages entry, attempting recovery from page objects"
+                    );
+                }
 
                 // Look for objects that have Type = Page
                 if let Ok(page_refs) = self.find_page_objects() {
@@ -1290,7 +1200,10 @@ impl<R: Read + Seek> PdfReader<R> {
 
                 Ok(0)
             }
-            Err(_) => {
+            Err(error) => {
+                if !self.options.lenient_syntax || !self.allow_object_reconstruction {
+                    return Err(error);
+                }
                 // If standard method fails, try fallback extraction
                 tracing::debug!("Standard page extraction failed, trying direct extraction");
                 self.page_count_fallback()
@@ -1300,109 +1213,15 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Fallback method to extract page count directly from content for corrupted PDFs
     fn page_count_fallback(&mut self) -> ParseResult<u32> {
-        // Try to extract from linearization info first (object 100 usually)
-        if let Some(count) = self.extract_page_count_from_linearization() {
-            tracing::debug!("Found page count {} from linearization", count);
-            return Ok(count);
-        }
-
         // Fallback: count individual page objects
         if let Some(count) = self.count_page_objects_directly() {
-            tracing::debug!("Found {} pages by counting page objects", count);
+            if self.options.collect_warnings {
+                tracing::warn!(count, "Recovered page count by scanning page objects");
+            }
             return Ok(count);
         }
 
         Ok(0)
-    }
-
-    /// Extract page count from linearization info (object 100 usually)
-    fn extract_page_count_from_linearization(&mut self) -> Option<u32> {
-        // Try to get object 100 which often contains linearization info
-        match self.get_object(100, 0) {
-            Ok(obj) => {
-                tracing::debug!("Found object 100: {:?}", obj);
-                if let Some(dict) = obj.as_dict() {
-                    tracing::debug!("Object 100 is a dictionary with {} keys", dict.0.len());
-                    // Look for /N (number of pages) in linearization dictionary
-                    if let Some(n_obj) = dict.get("N") {
-                        tracing::debug!("Found /N field: {:?}", n_obj);
-                        if let Some(count) = n_obj.as_integer() {
-                            tracing::debug!("Extracted page count from linearization: {}", count);
-                            return Some(count as u32);
-                        }
-                    } else {
-                        tracing::debug!("No /N field found in object 100");
-                        for (key, value) in &dict.0 {
-                            tracing::debug!("  {:?}: {:?}", key, value);
-                        }
-                    }
-                } else {
-                    tracing::debug!("Object 100 is not a dictionary: {:?}", obj);
-                }
-            }
-            Err(e) => {
-                tracing::debug!("Failed to get object 100: {:?}", e);
-                tracing::debug!("Attempting direct content extraction...");
-                // If parser fails, try direct extraction from raw content
-                return self.extract_n_value_from_raw_object_100();
-            }
-        }
-
-        None
-    }
-
-    fn extract_n_value_from_raw_object_100(&mut self) -> Option<u32> {
-        // Find object 100 in the XRef table
-        if let Some(entry) = self.xref.get_entry(100) {
-            // Seek to the object's position
-            if self.reader.seek(SeekFrom::Start(entry.offset)).is_err() {
-                return None;
-            }
-
-            // Read a reasonable chunk of data around the object
-            let mut buffer = vec![0u8; 1024];
-            if let Ok(bytes_read) = self.reader.read(&mut buffer) {
-                if bytes_read == 0 {
-                    return None;
-                }
-
-                // Convert to string for pattern matching
-                let content = String::from_utf8_lossy(&buffer[..bytes_read]);
-                tracing::debug!("Raw content around object 100:\n{}", content);
-
-                // Look for /N followed by a number
-                if let Some(n_pos) = content.find("/N ") {
-                    let after_n = &content[n_pos + 3..];
-                    tracing::debug!(
-                        "Content after /N: {}",
-                        truncate_on_char_boundary(after_n, 50)
-                    );
-
-                    // Extract the number that follows /N
-                    let mut num_str = String::new();
-                    for ch in after_n.chars() {
-                        if ch.is_ascii_digit() {
-                            num_str.push(ch);
-                        } else if !num_str.is_empty() {
-                            // Stop when we hit a non-digit after finding digits
-                            break;
-                        }
-                        // Skip non-digits at the beginning
-                    }
-
-                    if !num_str.is_empty() {
-                        if let Ok(page_count) = num_str.parse::<u32>() {
-                            tracing::debug!(
-                                "Extracted page count from raw content: {}",
-                                page_count
-                            );
-                            return Some(page_count);
-                        }
-                    }
-                }
-            }
-        }
-        None
     }
 
     #[allow(dead_code)]
@@ -1464,836 +1283,80 @@ impl<R: Read + Seek> PdfReader<R> {
         }
     }
 
-    /// Check if an object can be manually reconstructed
-    fn is_reconstructible_object(&self, obj_num: u32) -> bool {
-        if !self.allow_object_reconstruction {
-            return false;
-        }
-        // Known problematic objects for corrupted PDF reconstruction
-        if obj_num == 102 || obj_num == 113 || obj_num == 114 {
-            return true;
-        }
-
-        // Page objects that we found in find_page_objects scan
-        // These are the 44 page objects from the corrupted PDF
-        let page_objects = [
-            1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 30, 34, 37, 39, 42, 44, 46, 49, 52,
-            54, 56, 58, 60, 62, 64, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 104,
-        ];
-
-        // Content stream objects and other critical objects
-        // These are referenced by page objects for content streams
-        let content_objects = [
-            2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 29, 31, 32, 33, 35, 36, 38, 40, 41,
-            43, 45, 47, 48, 50, 51, 53, 55, 57, 59, 61, 63, 65, 66, 68, 70, 72, 74, 76, 78, 80, 82,
-            84, 86, 88, 90, 92, 94, 95, 96, 97, 98, 99, 100, 101, 105, 106, 107, 108, 109, 110,
-            111,
-        ];
-
-        page_objects.contains(&obj_num) || content_objects.contains(&obj_num)
+    /// Recovery is a lenient policy, independent of the object's identity.
+    fn is_reconstructible_object(&self, _obj_num: u32) -> bool {
+        self.allow_object_reconstruction
+            && (self.options.lenient_syntax || self.options.lenient_streams)
     }
 
-    /// Check if an object number is a page object
-    fn is_page_object(&self, obj_num: u32) -> bool {
-        let page_objects = [
-            1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 30, 34, 37, 39, 42, 44, 46, 49, 52,
-            54, 56, 58, 60, 62, 64, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 104,
-        ];
-        page_objects.contains(&obj_num)
-    }
-
-    /// Parse page dictionary content from raw string
-    fn parse_page_dictionary_content(
-        &self,
-        dict_content: &str,
-        result_dict: &mut std::collections::HashMap<
-            crate::parser::objects::PdfName,
-            crate::parser::objects::PdfObject,
-        >,
-        _obj_num: u32,
-    ) -> ParseResult<()> {
-        use crate::parser::objects::{PdfArray, PdfName, PdfObject};
-        use std::collections::HashMap;
-
-        // Parse MediaBox: [ 0 0 612 792 ]
-        if let Some(mediabox_start) = dict_content.find("/MediaBox") {
-            let mediabox_area = &dict_content[mediabox_start..];
-            if let Some(mediabox_content) = slice_between(mediabox_area, b'[', b']') {
-                let values: Vec<f32> = mediabox_content
-                    .split_whitespace()
-                    .filter_map(|s| s.parse().ok())
-                    .collect();
-
-                if values.len() == 4 {
-                    let mediabox = PdfArray(vec![
-                        PdfObject::Integer(values[0] as i64),
-                        PdfObject::Integer(values[1] as i64),
-                        PdfObject::Integer(values[2] as i64),
-                        PdfObject::Integer(values[3] as i64),
-                    ]);
-                    result_dict.insert(PdfName("MediaBox".to_string()), PdfObject::Array(mediabox));
-                }
-            }
-        }
-
-        // Parse Contents reference: /Contents 2 0 R
-        if let Some(contents_match) = dict_content.find("/Contents") {
-            let contents_area = &dict_content[contents_match..];
-            // Look for pattern like "2 0 R"
-            let parts: Vec<&str> = contents_area.split_whitespace().collect();
-            if parts.len() >= 3 {
-                if let (Ok(obj_ref), Ok(gen_ref)) =
-                    (parts[1].parse::<u32>(), parts[2].parse::<u16>())
-                {
-                    if parts.len() > 3 && parts[3] == "R" {
-                        result_dict.insert(
-                            PdfName("Contents".to_string()),
-                            PdfObject::Reference(obj_ref, gen_ref),
-                        );
-                    }
-                }
-            }
-        }
-
-        // Parse Parent reference: /Parent 114 0 R -> change to 113 0 R (our reconstructed Pages object)
-        if dict_content.contains("/Parent") {
-            result_dict.insert(
-                PdfName("Parent".to_string()),
-                PdfObject::Reference(113, 0), // Always point to our reconstructed Pages object
-            );
-        }
-
-        // Parse Resources (improved implementation)
-        if dict_content.contains("/Resources") {
-            if let Ok(parsed_resources) = self.parse_resources_from_content(&dict_content) {
-                result_dict.insert(PdfName("Resources".to_string()), parsed_resources);
-            } else {
-                // Fallback to empty Resources
-                let resources = HashMap::new();
-                result_dict.insert(
-                    PdfName("Resources".to_string()),
-                    PdfObject::Dictionary(crate::parser::objects::PdfDictionary(resources)),
-                );
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Attempt to manually reconstruct an object as a fallback
+    /// The outer get_object owns recursion tracking. Recovery only reads a bounded
+    /// window and never substitutes guessed objects or modifies the xref table.
     fn attempt_manual_object_reconstruction(
         &mut self,
         obj_num: u32,
         gen_num: u16,
         _current_offset: u64,
     ) -> ParseResult<&PdfObject> {
-        // PROTECTION 1: Circular reference detection
-        let is_circular = self
-            .objects_being_reconstructed
-            .lock()
-            .map_err(|_| ParseError::SyntaxError {
-                position: 0,
-                message: "Mutex poisoned during circular reference check".to_string(),
-            })?
-            .contains(&obj_num);
-
-        if is_circular {
-            tracing::debug!(
-                "Warning: Circular reconstruction detected for object {} {} - attempting manual extraction",
-                obj_num, gen_num
-            );
-
-            // Instead of immediately returning Null, try to manually extract the object
-            // This is particularly important for stream objects where /Length creates
-            // a false circular dependency, but the stream data is actually available
-            match self.extract_object_or_stream_manually(obj_num) {
-                Ok(obj) => {
-                    tracing::debug!(
-                        "         Successfully extracted object {} {} manually despite circular reference",
-                        obj_num, gen_num
-                    );
-                    self.object_cache.insert((obj_num, gen_num), obj);
-                    return Ok(&self.object_cache[&(obj_num, gen_num)]);
-                }
-                Err(e) => {
-                    tracing::debug!(
-                        "         Manual extraction failed: {} - breaking cycle with null object",
-                        e
-                    );
-                    // Only return Null if we truly can't reconstruct it
-                    self.object_cache
-                        .insert((obj_num, gen_num), PdfObject::Null);
-                    return Ok(&self.object_cache[&(obj_num, gen_num)]);
-                }
-            }
+        let object = self.extract_object_at_generation(obj_num, gen_num)?;
+        let object = self.decrypt_object_if_needed(object, obj_num, gen_num)?;
+        if self.options.collect_warnings {
+            tracing::warn!(obj_num, gen_num, "Recovered object from scanned PDF bytes");
         }
-
-        // PROTECTION 2: Depth limit check
-        let current_depth = self
-            .objects_being_reconstructed
-            .lock()
-            .map_err(|_| ParseError::SyntaxError {
-                position: 0,
-                message: "Mutex poisoned during depth check".to_string(),
-            })?
-            .len() as u32;
-        if current_depth >= self.max_reconstruction_depth {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: format!(
-                    "Maximum reconstruction depth ({}) exceeded for object {} {}",
-                    self.max_reconstruction_depth, obj_num, gen_num
-                ),
-            });
-        }
-
-        // Mark as being reconstructed (prevents circular references)
-        self.objects_being_reconstructed
-            .lock()
-            .map_err(|_| ParseError::SyntaxError {
-                position: 0,
-                message: "Mutex poisoned while marking object as being reconstructed".to_string(),
-            })?
-            .insert(obj_num);
-
-        // Try multiple reconstruction strategies
-        let reconstructed_obj = match self.smart_object_reconstruction(obj_num, gen_num) {
-            Ok(obj) => obj,
-            Err(_) => {
-                // Fallback to old method
-                match self.extract_object_or_stream_manually(obj_num) {
-                    Ok(obj) => obj,
-                    Err(e) => {
-                        // Last resort: create a null object
-                        if self.options.lenient_syntax {
-                            PdfObject::Null
-                        } else {
-                            // Unmark before returning error (best effort - ignore if mutex poisoned)
-                            if let Ok(mut guard) = self.objects_being_reconstructed.lock() {
-                                guard.remove(&obj_num);
-                            }
-                            return Err(e);
-                        }
-                    }
-                }
-            }
-        };
-
-        // Unmark (reconstruction complete)
-        self.objects_being_reconstructed
-            .lock()
-            .map_err(|_| ParseError::SyntaxError {
-                position: 0,
-                message: "Mutex poisoned while unmarking reconstructed object".to_string(),
-            })?
-            .remove(&obj_num);
-
-        self.object_cache
-            .insert((obj_num, gen_num), reconstructed_obj);
-
-        // Also add to XRef table so the object can be found later
-        use crate::parser::xref::XRefEntry;
-        let xref_entry = XRefEntry {
-            offset: 0, // Dummy offset since object is cached
-            generation: gen_num,
-            in_use: true,
-        };
-        self.xref.add_entry(obj_num, xref_entry);
-
-        self.object_cache
-            .get(&(obj_num, gen_num))
-            .ok_or_else(|| ParseError::SyntaxError {
-                position: 0,
-                message: format!(
-                    "Object {} {} not in cache after reconstruction",
-                    obj_num, gen_num
-                ),
-            })
+        self.object_cache.insert((obj_num, gen_num), object);
+        Ok(&self.object_cache[&(obj_num, gen_num)])
     }
 
-    /// Smart object reconstruction using multiple heuristics
-    fn smart_object_reconstruction(
+    #[cfg(test)]
+    fn extract_object_or_stream_manually(&mut self, obj_num: u32) -> ParseResult<PdfObject> {
+        self.extract_object_at_generation(obj_num, 0)
+    }
+
+    fn extract_object_at_generation(
         &mut self,
         obj_num: u32,
         gen_num: u16,
     ) -> ParseResult<PdfObject> {
-        // Using objects from parent scope
-
-        // Strategy 1: Try to infer object type from context
-        if let Ok(inferred_obj) = self.infer_object_from_context(obj_num) {
-            return Ok(inferred_obj);
-        }
-
-        // Strategy 2: Scan for object patterns in raw data
-        if let Ok(scanned_obj) = self.scan_for_object_patterns(obj_num) {
-            return Ok(scanned_obj);
-        }
-
-        // Strategy 3: Create synthetic object based on common PDF structures
-        if let Ok(synthetic_obj) = self.create_synthetic_object(obj_num) {
-            return Ok(synthetic_obj);
-        }
-
-        Err(ParseError::SyntaxError {
-            position: 0,
-            message: format!("Could not reconstruct object {} {}", obj_num, gen_num),
-        })
-    }
-
-    /// Infer object type from usage context in other objects
-    fn infer_object_from_context(&mut self, obj_num: u32) -> ParseResult<PdfObject> {
-        // Using objects from parent scope
-
-        // Scan existing objects to see how this object is referenced
-        for (_key, obj) in self.object_cache.iter() {
-            if let PdfObject::Dictionary(dict) = obj {
-                for (key, value) in dict.0.iter() {
-                    if let PdfObject::Reference(ref_num, _) = value {
-                        if *ref_num == obj_num {
-                            // This object is referenced as {key}, infer its type
-                            match key.as_str() {
-                                "Font" | "F1" | "F2" | "F3" => {
-                                    return Ok(self.create_font_object(obj_num));
-                                }
-                                "XObject" | "Image" | "Im1" => {
-                                    return Ok(self.create_xobject(obj_num));
-                                }
-                                "Contents" => {
-                                    return Ok(self.create_content_stream(obj_num));
-                                }
-                                "Resources" => {
-                                    return Ok(self.create_resources_dict(obj_num));
-                                }
-                                _ => continue,
-                            }
-                        }
-                    }
-                }
+        use super::lexer::{Lexer, Token};
+        let original_pos = self.reader.stream_position()?;
+        let result = (|| {
+            let (offset, window) =
+                read_object_window(&mut self.reader, obj_num, MANUAL_DICT_WINDOW)?
+                    .ok_or(ParseError::InvalidReference(obj_num, gen_num))?;
+            let options = self.options.clone();
+            let mut lexer = Lexer::new_with_options(std::io::Cursor::new(&window), options.clone());
+            if lexer.next_token()? != Token::Integer(i64::from(obj_num))
+                || lexer.next_token()? != Token::Integer(i64::from(gen_num))
+            {
+                return Err(ParseError::InvalidReference(obj_num, gen_num));
             }
-        }
-
-        Err(ParseError::SyntaxError {
-            position: 0,
-            message: "Cannot infer object type from context".to_string(),
-        })
-    }
-
-    /// Scan raw PDF data for object patterns
-    fn scan_for_object_patterns(&mut self, obj_num: u32) -> ParseResult<PdfObject> {
-        // This would scan the raw PDF bytes for patterns like "obj_num 0 obj"
-        // and try to extract whatever follows, with better error recovery
-        self.extract_object_or_stream_manually(obj_num)
-    }
-
-    /// Create synthetic objects for common PDF structures
-    fn create_synthetic_object(&mut self, obj_num: u32) -> ParseResult<PdfObject> {
-        use super::objects::{PdfDictionary, PdfName, PdfObject};
-
-        // Common object numbers and their likely types
-        match obj_num {
-            1..=10 => {
-                // Usually structural objects (catalog, pages, etc.)
-                let mut dict = PdfDictionary::new();
-                dict.insert(
-                    "Type".to_string(),
-                    PdfObject::Name(PdfName("Null".to_string())),
-                );
-                Ok(PdfObject::Dictionary(dict))
-            }
-            _ => {
-                // Generic null object
-                Ok(PdfObject::Null)
-            }
-        }
-    }
-
-    fn create_font_object(&self, _obj_num: u32) -> PdfObject {
-        use super::objects::{PdfDictionary, PdfName, PdfObject};
-        let mut font_dict = PdfDictionary::new();
-        font_dict.insert(
-            "Type".to_string(),
-            PdfObject::Name(PdfName("Font".to_string())),
-        );
-        font_dict.insert(
-            "Subtype".to_string(),
-            PdfObject::Name(PdfName("Type1".to_string())),
-        );
-        font_dict.insert(
-            "BaseFont".to_string(),
-            PdfObject::Name(PdfName("Helvetica".to_string())),
-        );
-        PdfObject::Dictionary(font_dict)
-    }
-
-    fn create_xobject(&self, _obj_num: u32) -> PdfObject {
-        use super::objects::{PdfDictionary, PdfName, PdfObject};
-        let mut xobj_dict = PdfDictionary::new();
-        xobj_dict.insert(
-            "Type".to_string(),
-            PdfObject::Name(PdfName("XObject".to_string())),
-        );
-        xobj_dict.insert(
-            "Subtype".to_string(),
-            PdfObject::Name(PdfName("Form".to_string())),
-        );
-        PdfObject::Dictionary(xobj_dict)
-    }
-
-    fn create_content_stream(&self, _obj_num: u32) -> PdfObject {
-        use super::objects::{PdfDictionary, PdfObject, PdfStream};
-        let mut stream_dict = PdfDictionary::new();
-        stream_dict.insert("Length".to_string(), PdfObject::Integer(0));
-
-        let stream = PdfStream {
-            dict: stream_dict,
-            data: Vec::new(),
-        };
-        PdfObject::Stream(stream)
-    }
-
-    fn create_resources_dict(&self, _obj_num: u32) -> PdfObject {
-        use super::objects::{PdfArray, PdfDictionary, PdfObject};
-        let mut res_dict = PdfDictionary::new();
-        res_dict.insert("ProcSet".to_string(), PdfObject::Array(PdfArray::new()));
-        PdfObject::Dictionary(res_dict)
-    }
-
-    fn extract_object_manually(
-        &mut self,
-        obj_num: u32,
-    ) -> ParseResult<crate::parser::objects::PdfDictionary> {
-        use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject};
-        use std::collections::HashMap;
-
-        // Save current position
-        let original_pos = self.reader.stream_position().unwrap_or(0);
-
-        // Issue #339: locate the object header via the bounded chunked scanner and
-        // read only a bounded window at its offset, instead of buffering the whole
-        // file. Peak memory stays O(window) regardless of file size.
-        let window = match read_object_window(&mut self.reader, obj_num, MANUAL_DICT_WINDOW) {
-            Ok(Some((_, w))) => w,
-            Ok(None) => {
-                self.reader.seek(SeekFrom::Start(original_pos)).ok();
+            lexer.expect_keyword("obj")?;
+            if lexer.next_token()? != Token::DictStart {
                 return Err(ParseError::SyntaxError {
-                    position: 0,
-                    message: format!("Object {obj_num} not found in manual extraction"),
+                    position: offset as usize,
+                    message: "Recovery requires an object dictionary".into(),
                 });
             }
-            Err(_) => {
-                self.reader.seek(SeekFrom::Start(original_pos)).ok();
-                return Err(ParseError::SyntaxError {
-                    position: 0,
-                    message: "Failed to read file for manual extraction".to_string(),
-                });
+            // Use PDF tokens, not bracket/string searches: literal strings and
+            // nested dictionaries must not truncate or move the object boundary.
+            let dict = PdfObject::parse_dictionary_inner_with_options(&mut lexer, &options)?;
+            let mut next = lexer.next_token()?;
+            while matches!(next, Token::Comment(_)) {
+                next = lexer.next_token()?;
             }
-        };
-
-        let content = String::from_utf8_lossy(&window);
-
-        // Find the object content based on object number
-        let pattern = format!("{} 0 obj", obj_num);
-        if let Some(start) = content.find(&pattern) {
-            let search_area = &content[start..];
-            if let Some(dict_start) = search_area.find("<<") {
-                let after_bracket = &search_area[dict_start + 2..];
-
-                if let Some(dict_end) = find_dict_end(after_bracket) {
-                    let dict_content = &after_bracket[..dict_end];
-
-                    // Manually parse the object content based on object number
-                    let mut result_dict = HashMap::new();
-
-                    // FIX for Issue #83: Generic catalog parsing for ANY object number
-                    // Check if this is a Catalog object (regardless of object number)
-                    if dict_content.contains("/Type/Catalog")
-                        || dict_content.contains("/Type /Catalog")
-                    {
-                        result_dict.insert(
-                            PdfName("Type".to_string()),
-                            PdfObject::Name(PdfName("Catalog".to_string())),
-                        );
-
-                        // Parse /Pages reference using regex-like pattern matching
-                        // Pattern: /Pages <number> <gen> R
-                        // Note: PDF can have compact format like "/Pages 13 0 R" or "/Pages13 0 R"
-                        if let Some(pages_start) = dict_content.find("/Pages") {
-                            let after_pages = &dict_content[pages_start + 6..]; // Skip "/Pages"
-                                                                                // Trim any leading whitespace, then extract numbers
-                            let trimmed = after_pages.trim_start();
-                            // Split by whitespace to get object number, generation, and "R"
-                            let parts: Vec<&str> = trimmed.split_whitespace().collect();
-                            if parts.len() >= 3 {
-                                // parts[0] should be the object number
-                                // parts[1] should be the generation
-                                // parts[2] should be "R" or "R/..." (compact format)
-                                if let (Ok(obj), Ok(gen)) =
-                                    (parts[0].parse::<u32>(), parts[1].parse::<u16>())
-                                {
-                                    if parts[2] == "R" || parts[2].starts_with('R') {
-                                        result_dict.insert(
-                                            PdfName("Pages".to_string()),
-                                            PdfObject::Reference(obj, gen),
-                                        );
-                                    }
-                                }
-                            }
-                        }
-
-                        // Parse other common catalog entries
-                        // /Version
-                        if let Some(ver_start) = dict_content.find("/Version") {
-                            let after_ver = &dict_content[ver_start + 8..];
-                            if let Some(ver_end) = after_ver.find(|c: char| c == '/' || c == '>') {
-                                let version_str = after_ver[..ver_end].trim();
-                                result_dict.insert(
-                                    PdfName("Version".to_string()),
-                                    PdfObject::Name(PdfName(
-                                        version_str.trim_start_matches('/').to_string(),
-                                    )),
-                                );
-                            }
-                        }
-
-                        // /Metadata reference
-                        if let Some(meta_start) = dict_content.find("/Metadata") {
-                            let after_meta = &dict_content[meta_start + 9..];
-                            let parts: Vec<&str> = after_meta.split_whitespace().collect();
-                            if parts.len() >= 3 {
-                                if let (Ok(obj), Ok(gen)) =
-                                    (parts[0].parse::<u32>(), parts[1].parse::<u16>())
-                                {
-                                    if parts[2] == "R" {
-                                        result_dict.insert(
-                                            PdfName("Metadata".to_string()),
-                                            PdfObject::Reference(obj, gen),
-                                        );
-                                    }
-                                }
-                            }
-                        }
-
-                        // /AcroForm reference
-                        if let Some(acro_start) = dict_content.find("/AcroForm") {
-                            let after_acro = &dict_content[acro_start + 9..];
-                            // Check if it's a reference or dictionary
-                            if after_acro.trim_start().starts_with("<<") {
-                                // It's an inline dictionary, skip for now (too complex)
-                            } else {
-                                let parts: Vec<&str> = after_acro.split_whitespace().collect();
-                                if parts.len() >= 3 {
-                                    if let (Ok(obj), Ok(gen)) =
-                                        (parts[0].parse::<u32>(), parts[1].parse::<u16>())
-                                    {
-                                        if parts[2] == "R" {
-                                            result_dict.insert(
-                                                PdfName("AcroForm".to_string()),
-                                                PdfObject::Reference(obj, gen),
-                                            );
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else if obj_num == 102 {
-                        // Verify this is actually a catalog before reconstructing
-                        if dict_content.contains("/Type /Catalog") {
-                            // Parse catalog object
-                            result_dict.insert(
-                                PdfName("Type".to_string()),
-                                PdfObject::Name(PdfName("Catalog".to_string())),
-                            );
-
-                            // Parse "/Dests 139 0 R"
-                            if dict_content.contains("/Dests 139 0 R") {
-                                result_dict.insert(
-                                    PdfName("Dests".to_string()),
-                                    PdfObject::Reference(139, 0),
-                                );
-                            }
-
-                            // Parse "/Pages 113 0 R"
-                            if dict_content.contains("/Pages 113 0 R") {
-                                result_dict.insert(
-                                    PdfName("Pages".to_string()),
-                                    PdfObject::Reference(113, 0),
-                                );
-                            }
-                        } else {
-                            // This object 102 is not a catalog, don't reconstruct it
-                            // Restore original position
-                            self.reader.seek(SeekFrom::Start(original_pos)).ok();
-                            return Err(ParseError::SyntaxError {
-                                position: 0,
-                                message:
-                                    "Object 102 is not a corrupted catalog, cannot reconstruct"
-                                        .to_string(),
-                            });
-                        }
-                    } else if obj_num == 113 {
-                        // Object 113 is the main Pages object - need to find all Page objects
-
-                        result_dict.insert(
-                            PdfName("Type".to_string()),
-                            PdfObject::Name(PdfName("Pages".to_string())),
-                        );
-
-                        // Find all Page objects in the PDF
-                        let page_refs = match self.find_page_objects() {
-                            Ok(refs) => refs,
-                            Err(_e) => {
-                                vec![]
-                            }
-                        };
-
-                        // Set count based on actual found pages
-                        let page_count = if page_refs.is_empty() {
-                            44
-                        } else {
-                            page_refs.len() as i64
-                        };
-                        result_dict
-                            .insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
-
-                        // Create Kids array with real page object references
-                        let kids_array: Vec<PdfObject> = page_refs
-                            .into_iter()
-                            .map(|(obj_num, gen_num)| PdfObject::Reference(obj_num, gen_num))
-                            .collect();
-
-                        result_dict.insert(
-                            PdfName("Kids".to_string()),
-                            PdfObject::Array(PdfArray(kids_array)),
-                        );
-                    } else if obj_num == 114 {
-                        // Parse object 114 - this should be a Pages object based on the string output
-
-                        result_dict.insert(
-                            PdfName("Type".to_string()),
-                            PdfObject::Name(PdfName("Pages".to_string())),
-                        );
-
-                        // Find all Page objects in the PDF
-                        let page_refs = match self.find_page_objects() {
-                            Ok(refs) => refs,
-                            Err(_e) => {
-                                vec![]
-                            }
-                        };
-
-                        // Set count based on actual found pages
-                        let page_count = if page_refs.is_empty() {
-                            44
-                        } else {
-                            page_refs.len() as i64
-                        };
-                        result_dict
-                            .insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
-
-                        // Create Kids array with real page object references
-                        let kids_array: Vec<PdfObject> = page_refs
-                            .into_iter()
-                            .map(|(obj_num, gen_num)| PdfObject::Reference(obj_num, gen_num))
-                            .collect();
-
-                        result_dict.insert(
-                            PdfName("Kids".to_string()),
-                            PdfObject::Array(PdfArray(kids_array)),
-                        );
-                    } else if self.is_page_object(obj_num) {
-                        // This is a page object - parse the page dictionary
-
-                        result_dict.insert(
-                            PdfName("Type".to_string()),
-                            PdfObject::Name(PdfName("Page".to_string())),
-                        );
-
-                        // Parse standard page entries from the found dictionary content
-                        self.parse_page_dictionary_content(
-                            &dict_content,
-                            &mut result_dict,
-                            obj_num,
-                        )?;
-                    }
-
-                    // Restore original position
-                    self.reader.seek(SeekFrom::Start(original_pos)).ok();
-
-                    return Ok(PdfDictionary(result_dict));
+            match next {
+                Token::Stream if self.options.lenient_streams => {
+                    lexer.read_newline()?;
+                    self.reconstruct_stream_object_bounded(dict, offset + lexer.position() as u64)
                 }
+                Token::EndObj if self.options.lenient_syntax => Ok(PdfObject::Dictionary(dict)),
+                token => Err(ParseError::UnexpectedToken {
+                    expected: "stream or endobj".into(),
+                    found: format!("{token:?}"),
+                }),
             }
-        }
-
-        // Restore original position
-        self.reader.seek(SeekFrom::Start(original_pos)).ok();
-
-        // Special case: if object 113 or 114 was not found in PDF, create fallback objects
-        if obj_num == 113 {
-            let mut result_dict = HashMap::new();
-            result_dict.insert(
-                PdfName("Type".to_string()),
-                PdfObject::Name(PdfName("Pages".to_string())),
-            );
-
-            // Find all Page objects in the PDF
-            let page_refs = match self.find_page_objects() {
-                Ok(refs) => refs,
-                Err(_e) => {
-                    vec![]
-                }
-            };
-
-            // Set count based on actual found pages
-            let page_count = if page_refs.is_empty() {
-                44
-            } else {
-                page_refs.len() as i64
-            };
-            result_dict.insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
-
-            // Create Kids array with real page object references
-            let kids_array: Vec<PdfObject> = page_refs
-                .into_iter()
-                .map(|(obj_num, gen_num)| PdfObject::Reference(obj_num, gen_num))
-                .collect();
-
-            result_dict.insert(
-                PdfName("Kids".to_string()),
-                PdfObject::Array(PdfArray(kids_array)),
-            );
-
-            return Ok(PdfDictionary(result_dict));
-        } else if obj_num == 114 {
-            let mut result_dict = HashMap::new();
-            result_dict.insert(
-                PdfName("Type".to_string()),
-                PdfObject::Name(PdfName("Pages".to_string())),
-            );
-
-            // Find all Page objects in the PDF
-            let page_refs = match self.find_page_objects() {
-                Ok(refs) => refs,
-                Err(_e) => {
-                    vec![]
-                }
-            };
-
-            // Set count based on actual found pages
-            let page_count = if page_refs.is_empty() {
-                44
-            } else {
-                page_refs.len() as i64
-            };
-            result_dict.insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
-
-            // Create Kids array with real page object references
-            let kids_array: Vec<PdfObject> = page_refs
-                .into_iter()
-                .map(|(obj_num, gen_num)| PdfObject::Reference(obj_num, gen_num))
-                .collect();
-
-            result_dict.insert(
-                PdfName("Kids".to_string()),
-                PdfObject::Array(PdfArray(kids_array)),
-            );
-
-            return Ok(PdfDictionary(result_dict));
-        }
-
-        Err(ParseError::SyntaxError {
-            position: 0,
-            message: "Could not find catalog dictionary in manual extraction".to_string(),
-        })
-    }
-
-    /// Extract object manually, detecting whether it's a dictionary or stream
-    fn extract_object_or_stream_manually(&mut self, obj_num: u32) -> ParseResult<PdfObject> {
-        use crate::parser::objects::PdfObject;
-
-        // Save current position
-        let original_pos = self.reader.stream_position().unwrap_or(0);
-
-        // Issue #339: locate the object via the bounded early-stopping scan and read
-        // only a bounded window at its offset, instead of buffering the whole file.
-        // The stream body (which can be large, e.g. XMP metadata) is read separately,
-        // bounded by its /Length.
-        let (obj_offset, window) =
-            match read_object_window(&mut self.reader, obj_num, MANUAL_DICT_WINDOW) {
-                Ok(Some(v)) => v,
-                Ok(None) => {
-                    self.reader.seek(SeekFrom::Start(original_pos)).ok();
-                    return Err(ParseError::SyntaxError {
-                        position: 0,
-                        message: format!("Could not manually extract object {obj_num}"),
-                    });
-                }
-                Err(_) => {
-                    self.reader.seek(SeekFrom::Start(original_pos)).ok();
-                    return Err(ParseError::SyntaxError {
-                        position: 0,
-                        message: "Failed to read file for manual extraction".to_string(),
-                    });
-                }
-            };
-
-        // The window starts at the "N G obj" header; the object dictionary is the
-        // first "<<" that follows.
-        if let Some(dict_start) = find_byte_pattern(&window, b"<<") {
-            // Handle nested dictionaries properly by counting brackets
-            let mut bracket_count = 1;
-            let mut pos = dict_start + 2;
-            let mut dict_end = None;
-
-            while pos < window.len().saturating_sub(1) && bracket_count > 0 {
-                if window[pos] == b'<' && window[pos + 1] == b'<' {
-                    bracket_count += 1;
-                    pos += 2;
-                } else if window[pos] == b'>' && window[pos + 1] == b'>' {
-                    bracket_count -= 1;
-                    if bracket_count == 0 {
-                        dict_end = Some(pos);
-                        break;
-                    }
-                    pos += 2;
-                } else {
-                    pos += 1;
-                }
-            }
-
-            if let Some(dict_end_pos) = dict_end {
-                let dict_content = String::from_utf8_lossy(&window[dict_start + 2..dict_end_pos]);
-                // Full `<<...>>` slice, for generic re-parsing of the dictionary.
-                let dict_bytes = &window[dict_start..dict_end_pos + 2];
-
-                // Is the dictionary immediately followed by stream data?
-                let after_dict = &window[dict_end_pos + 2..];
-                if is_immediate_stream_start(after_dict) {
-                    // Absolute file offset of after_dict[0].
-                    let after_dict_abs = obj_offset + (dict_end_pos + 2) as u64;
-                    return self.reconstruct_stream_object_bounded(
-                        obj_num,
-                        dict_bytes,
-                        &dict_content,
-                        after_dict_abs,
-                        after_dict,
-                    );
-                } else {
-                    // Plain dictionary object - reuse the bounded dict extractor.
-                    self.reader.seek(SeekFrom::Start(original_pos)).ok();
-                    return self
-                        .extract_object_manually(obj_num)
-                        .map(PdfObject::Dictionary);
-                }
-            }
-        }
-
-        // Restore original position
-        self.reader.seek(SeekFrom::Start(original_pos)).ok();
-
-        Err(ParseError::SyntaxError {
-            position: 0,
-            message: format!("Could not manually extract object {obj_num}"),
-        })
+        })();
+        self.reader.seek(SeekFrom::Start(original_pos))?;
+        result
     }
 
     /// Reconstruct a stream object using bounded reads (Issue #339).
@@ -2301,80 +1364,41 @@ impl<R: Read + Seek> PdfReader<R> {
     /// The dictionary was already parsed from a bounded window; the stream body is
     /// read directly at its absolute file offset, bounded by `/Length` (or, if
     /// `/Length` is indirect, by resolving that length object; or, if absent, by a
-    /// bounded scan to `endstream`). `after_dict_abs` is the absolute file offset of
-    /// `after_dict[0]` — the bytes immediately following the dictionary's `>>`.
+    /// bounded scan to `endstream`). `data_abs` follows the parsed stream newline.
     fn reconstruct_stream_object_bounded(
         &mut self,
-        obj_num: u32,
-        dict_bytes: &[u8],
-        dict_content: &str,
-        after_dict_abs: u64,
-        after_dict: &[u8],
+        dictionary: PdfDictionary,
+        data_abs: u64,
     ) -> ParseResult<PdfObject> {
-        use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
-        use std::collections::HashMap;
-
-        // Issue #351: reconstruct the FULL stream dictionary by re-parsing the
-        // already-in-memory `<<...>>` bytes with the real object parser, rather than
-        // recognizing only the single hardcoded `/Filter /FlateDecode` form. This
-        // preserves every entry generically — non-Flate filters (`/DCTDecode`,
-        // `/LZWDecode`), filter arrays, `/DecodeParms`, `/Subtype`, `/ColorSpace`,
-        // etc. — which the manual fallback previously dropped, silently corrupting
-        // downstream decoding. The stream body is still read separately and bounded
-        // (Issue #339); only the dictionary construction changed.
-        let opts = self.options.clone();
-        let mut dict: HashMap<PdfName, PdfObject> = {
-            let mut lexer = super::lexer::Lexer::new_with_options(
-                std::io::Cursor::new(dict_bytes),
-                opts.clone(),
-            );
-            match PdfObject::parse_with_options(&mut lexer, &opts) {
-                Ok(PdfObject::Dictionary(d)) => d.0,
-                // The slice ends at `>>`, so no stream body is available here; if the
-                // parser still reports a stream, keep its dictionary.
-                Ok(PdfObject::Stream(s)) => s.dict.0,
-                // Parse failure: fall back to the legacy minimal behavior so this
-                // repair path never regresses below what it preserved before.
-                _ => {
-                    let mut d = HashMap::new();
-                    if dict_content.contains("/Filter /FlateDecode") {
-                        d.insert(
-                            PdfName("Filter".to_string()),
-                            PdfObject::Name(PdfName("FlateDecode".to_string())),
-                        );
-                    }
-                    d
-                }
-            }
+        use crate::parser::objects::{PdfName, PdfStream};
+        // Only dictionaries successfully parsed from actual bytes reach here.
+        let length = match dictionary.get("Length") {
+            Some(PdfObject::Integer(n)) => usize::try_from(*n).ok(),
+            Some(PdfObject::Reference(n, g)) => self.resolve_length_object(*n, *g)?,
+            _ => None,
         };
-
-        // Resolve the stream length: direct integer, indirect reference, or unknown.
-        let length = self.parse_stream_length(dict_content)?;
-
-        // Locate "stream" within the bounded window and the first byte of the data.
-        let Some(stream_kw) = find_byte_pattern(after_dict, b"stream") else {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: format!("Could not reconstruct stream for object {obj_num}"),
-            });
-        };
-        let after_kw = stream_kw + 6; // "stream".len()
-        let data_rel = match after_dict.get(after_kw) {
-            Some(b'\r') if after_dict.get(after_kw + 1) == Some(&b'\n') => after_kw + 2,
-            Some(b'\r') | Some(b'\n') => after_kw + 1,
-            _ => after_kw,
-        };
-        let data_abs = after_dict_abs + data_rel as u64;
+        let mut dict = dictionary.0;
 
         // Read the stream body, bounded by its real size rather than the whole file.
         let data = match length {
             Some(len) => {
-                // Trust /Length (ISO 32000 §7.3.8.1): read exactly `len` bytes. This
-                // is correct for binary streams whose bytes may contain "endstream",
-                // which an endstream-search would mistakenly truncate at. Accepted
-                // tradeoff on this repair path: a stale-too-large /Length would read
-                // past endstream, but that is rarer than binary data containing the
-                // marker, and trusting /Length is the ISO-correct behavior.
+                // Validate against storage before allocating from an untrusted /Length.
+                let file_end = self.reader.seek(SeekFrom::End(0))?;
+                if len as u64 > file_end.saturating_sub(data_abs) {
+                    return Err(ParseError::SyntaxError {
+                        position: data_abs as usize,
+                        message: "Recovered stream length exceeds available file bytes".into(),
+                    });
+                }
+                let tail = read_window_at(&mut self.reader, data_abs + len as u64, 256)?;
+                let mut end = super::lexer::Lexer::new(std::io::Cursor::new(tail));
+                if end.next_token()? != super::lexer::Token::EndStream {
+                    return Err(ParseError::SyntaxError {
+                        position: data_abs as usize,
+                        message: "Recovered stream length does not end at endstream".into(),
+                    });
+                }
+                // Exact length preserves binary payloads containing endstream.
                 let body = read_window_at(&mut self.reader, data_abs, len)?;
                 dict.insert(
                     PdfName("Length".to_string()),
@@ -2404,49 +1428,29 @@ impl<R: Read + Seek> PdfReader<R> {
         }))
     }
 
-    /// Parse a stream's `/Length` from its dictionary text, resolving an indirect
-    /// reference via a bounded lookup. Returns `None` if absent or unresolvable, in
-    /// which case the caller scans to `endstream`.
-    fn parse_stream_length(&mut self, dict_content: &str) -> ParseResult<Option<usize>> {
-        let Some(idx) = dict_content.find("/Length") else {
-            return Ok(None);
-        };
-        let rest = dict_content[idx + "/Length".len()..].trim_start();
-        let tokens: Vec<&str> = rest.split_whitespace().collect();
-
-        // Indirect reference: "N G R" (e.g. "42 0 R" — object number, generation, keyword).
-        if tokens.len() >= 3 && tokens[2] == "R" {
-            if let Ok(len_obj) = tokens[0].parse::<u32>() {
-                return self.resolve_length_object(len_obj);
-            }
-        }
-
-        // Direct integer.
-        if let Some(tok) = tokens.first() {
-            if let Ok(n) = tok.parse::<i64>() {
-                if n >= 0 {
-                    return Ok(Some(n as usize));
-                }
-            }
-        }
-        Ok(None)
-    }
-
     /// Resolve an indirect `/Length` object value via a small bounded window. The
     /// length object is a bare integer (`N G obj <int> endobj`), so a tiny read at
     /// its offset suffices — no recursion through `get_object`, avoiding the false
     /// circular dependency this manual path exists to break.
-    fn resolve_length_object(&mut self, len_obj: u32) -> ParseResult<Option<usize>> {
+    fn resolve_length_object(
+        &mut self,
+        len_obj: u32,
+        generation: u16,
+    ) -> ParseResult<Option<usize>> {
         let Some((_, window)) = read_object_window(&mut self.reader, len_obj, 4096)? else {
             return Ok(None);
         };
-        let text = String::from_utf8_lossy(&window);
-        // Skip the "N G obj" header; the first "obj" is the header keyword.
-        if let Some(obj_pos) = text.find("obj") {
-            let after = text[obj_pos + 3..].trim_start();
-            let digits: String = after.chars().take_while(|c| c.is_ascii_digit()).collect();
-            if let Ok(n) = digits.parse::<usize>() {
-                return Ok(Some(n));
+        use super::lexer::{Lexer, Token};
+        let mut lexer = Lexer::new(std::io::Cursor::new(window));
+        if lexer.next_token()? != Token::Integer(i64::from(len_obj))
+            || lexer.next_token()? != Token::Integer(i64::from(generation))
+        {
+            return Ok(None);
+        }
+        lexer.expect_keyword("obj")?;
+        if let Token::Integer(n) = lexer.next_token()? {
+            if lexer.next_token()? == Token::EndObj {
+                return Ok(usize::try_from(n).ok());
             }
         }
         Ok(None)
@@ -2465,7 +1469,10 @@ impl<R: Read + Seek> PdfReader<R> {
         loop {
             let chunk = read_window_at(&mut self.reader, offset, WIN)?;
             if chunk.is_empty() {
-                break; // EOF without endstream
+                return Err(ParseError::SyntaxError {
+                    position: data_abs as usize,
+                    message: "Recovered stream has no endstream marker".into(),
+                });
             }
             acc.extend_from_slice(&chunk);
 
@@ -2480,17 +1487,16 @@ impl<R: Read + Seek> PdfReader<R> {
             offset += chunk.len() as u64;
 
             if chunk.len() < WIN {
-                break; // EOF before endstream
+                return Err(ParseError::SyntaxError {
+                    position: data_abs as usize,
+                    message: "Recovered stream has no endstream marker".into(),
+                });
             }
             if acc.len() > MAX_STREAM {
-                // Runaway guard: surface the truncation so a downstream decode
-                // failure on the incomplete body is traceable to here rather than
-                // appearing as a cryptic error.
-                tracing::warn!(
-                    "stream body exceeds {} MiB runaway guard without endstream; truncating",
-                    MAX_STREAM / (1024 * 1024)
-                );
-                break;
+                return Err(ParseError::SyntaxError {
+                    position: data_abs as usize,
+                    message: "Recovered stream exceeds 64 MiB without endstream".into(),
+                });
             }
         }
 
@@ -2504,85 +1510,6 @@ impl<R: Read + Seek> PdfReader<R> {
             acc.pop();
         }
         Ok(acc)
-    }
-
-    /// Parse Resources from PDF content string
-    fn parse_resources_from_content(&self, dict_content: &str) -> ParseResult<PdfObject> {
-        use crate::parser::objects::{PdfDictionary, PdfName, PdfObject};
-        use std::collections::HashMap;
-
-        // Find the Resources section
-        if let Some(resources_start) = dict_content.find("/Resources") {
-            // Find the opening bracket
-            if let Some(bracket_start) = dict_content[resources_start..].find("<<") {
-                let abs_bracket_start = resources_start + bracket_start + 2;
-
-                // Find the matching `>>`, counting nesting. Offset is relative
-                // to the text after the opening `<<`.
-                let after_bracket = &dict_content[abs_bracket_start..];
-                if let Some(end_rel) = find_dict_end(after_bracket) {
-                    let resources_content = &after_bracket[..end_rel];
-
-                    // Parse basic Resources structure
-                    let mut resources_dict = HashMap::new();
-
-                    // Look for Font dictionary
-                    if let Some(font_start) = resources_content.find("/Font") {
-                        if let Some(font_bracket) = resources_content[font_start..].find("<<") {
-                            let abs_font_start = font_start + font_bracket + 2;
-
-                            // Simple font parsing - look for font references
-                            let mut font_dict = HashMap::new();
-
-                            // Look for font entries like /F1 123 0 R
-                            let font_section = &resources_content[abs_font_start..];
-                            let mut pos = 0;
-                            while let Some(f_pos) = font_section[pos..].find("/F") {
-                                let abs_f_pos = pos + f_pos;
-                                if let Some(space_pos) = font_section[abs_f_pos..].find(" ") {
-                                    let font_name = &font_section[abs_f_pos..abs_f_pos + space_pos];
-
-                                    // Look for object reference after the font name
-                                    let after_name = &font_section[abs_f_pos + space_pos..];
-                                    if let Some(r_pos) = after_name.find(" R") {
-                                        let ref_part = after_name[..r_pos].trim();
-                                        if let Some(parts) = ref_part
-                                            .split_whitespace()
-                                            .collect::<Vec<&str>>()
-                                            .get(0..2)
-                                        {
-                                            if let (Ok(obj_num), Ok(gen_num)) =
-                                                (parts[0].parse::<u32>(), parts[1].parse::<u16>())
-                                            {
-                                                font_dict.insert(
-                                                    PdfName(font_name[1..].to_string()), // Remove leading /
-                                                    PdfObject::Reference(obj_num, gen_num),
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                                pos = abs_f_pos + 1;
-                            }
-
-                            if !font_dict.is_empty() {
-                                resources_dict.insert(
-                                    PdfName("Font".to_string()),
-                                    PdfObject::Dictionary(PdfDictionary(font_dict)),
-                                );
-                            }
-                        }
-                    }
-
-                    return Ok(PdfObject::Dictionary(PdfDictionary(resources_dict)));
-                }
-            }
-        }
-
-        Err(ParseError::SyntaxError {
-            position: 0,
-            message: "Could not parse Resources".to_string(),
-        })
     }
 
     #[allow(dead_code)]
@@ -3335,85 +2262,6 @@ mod tests {
     // The contract under test is totality: a wrong answer is acceptable on
     // garbage, a panic is not.
 
-    #[test]
-    fn slice_between_extracts_delimited_content() {
-        assert_eq!(
-            slice_between("/MediaBox [0 0 612 792] /X", b'[', b']'),
-            Some("0 0 612 792")
-        );
-        assert_eq!(slice_between("[]", b'[', b']'), Some(""));
-    }
-
-    #[test]
-    fn slice_between_searches_the_closer_after_the_opener() {
-        // A closer that only appears BEFORE the opener must not produce an
-        // inverted range. Mutated `/MediaBox ][` reached `&area[start+1..end]`
-        // with start > end and panicked ("byte range starts at 26 but ends at
-        // 22"); the closer is now searched in the remainder after the opener.
-        assert_eq!(slice_between("/MediaBox ][", b'[', b']'), None);
-        assert_eq!(slice_between("] a [ b ] c", b'[', b']'), Some(" b "));
-    }
-
-    #[test]
-    fn slice_between_returns_none_when_a_delimiter_is_missing() {
-        assert_eq!(slice_between("/MediaBox 0 0 612 792", b'[', b']'), None);
-        assert_eq!(slice_between("/MediaBox [0 0 612 792", b'[', b']'), None);
-        assert_eq!(slice_between("", b'[', b']'), None);
-    }
-
-    #[test]
-    fn slice_between_never_splits_a_multibyte_char() {
-        // U+FFFD is what from_utf8_lossy leaves behind for every invalid byte,
-        // so multi-byte content is the norm here, not an edge case.
-        assert_eq!(
-            slice_between("[\u{FFFD}\u{20AC}]", b'[', b']'),
-            Some("\u{FFFD}\u{20AC}")
-        );
-        // Delimiters are ASCII: they can never match a continuation byte of a
-        // multi-byte sequence, so the bounds always land on char boundaries.
-        assert_eq!(slice_between("\u{20AC}[x]\u{20AC}", b'[', b']'), Some("x"));
-    }
-
-    #[test]
-    fn find_dict_end_locates_the_closing_marker() {
-        // Offset is relative to the text after the opening `<<`, and points at
-        // the `>` of the matching `>>`.
-        assert_eq!(find_dict_end(" /A 1 >>"), Some(6));
-        assert_eq!(find_dict_end(">>"), Some(0));
-    }
-
-    #[test]
-    fn find_dict_end_matches_nesting() {
-        assert_eq!(find_dict_end(" /A << /B 1 >> >> tail"), Some(15));
-    }
-
-    #[test]
-    fn find_dict_end_returns_none_when_unbalanced() {
-        assert_eq!(find_dict_end(" /A 1"), None);
-        assert_eq!(find_dict_end(" /A << /B 1 >>"), None);
-        assert_eq!(find_dict_end(""), None);
-        assert_eq!(find_dict_end(">"), None);
-    }
-
-    #[test]
-    fn find_dict_end_offset_is_a_char_boundary_with_multibyte_content() {
-        // The scan is byte-level; `<`/`>` are ASCII and cannot occur inside a
-        // multi-byte sequence, so the returned offset is always sliceable.
-        let after = " /Font \u{FFFD} >> tail";
-        let end = find_dict_end(after).expect("closes");
-        assert_eq!(&after[..end], " /Font \u{FFFD} ");
-    }
-
-    #[test]
-    fn truncate_on_char_boundary_cuts_without_splitting() {
-        assert_eq!(truncate_on_char_boundary("abc", 10), "abc");
-        assert_eq!(truncate_on_char_boundary("abcdef", 3), "abc");
-        // Cutting at 1 would land inside the 3-byte U+FFFD: back off to 0.
-        assert_eq!(truncate_on_char_boundary("\u{FFFD}x", 1), "");
-        assert_eq!(truncate_on_char_boundary("\u{FFFD}x", 3), "\u{FFFD}");
-        assert_eq!(truncate_on_char_boundary("", 5), "");
-    }
-
     /// Reader instrumented with two shared counters so a test can reset them after
     /// `PdfReader::new` and observe only the reads done by the method under test:
     /// - `total_read`: total bytes consumed — distinguishes a bounded locate that
@@ -3561,6 +2409,132 @@ mod tests {
     }
 
     #[test]
+    fn test_issue720_recovery_uses_bytes_and_reports_repair() {
+        use std::sync::{Arc, Mutex};
+        #[derive(Clone)]
+        struct Capture(Arc<Mutex<Vec<u8>>>);
+        impl std::io::Write for Capture {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                self.0.lock().unwrap().extend_from_slice(bytes);
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        for id in [4, 113, 200] {
+            let bytes =
+                build_manual_stream_pdf(" /Length 3 /Parent 2 0 R /Vendor (keep >> text) ", b"abc");
+            let bytes = String::from_utf8(bytes)
+                .unwrap()
+                .replace("4 0 obj", &format!("{id} 0 obj"));
+            let mut reader = PdfReader::new_with_options(
+                Cursor::new(bytes.into_bytes()),
+                ParseOptions::lenient(),
+            )
+            .unwrap();
+            // Force the missing-xref boundary even if constructor scanning repaired it.
+            reader.xref = XRefTable::new();
+            reader.object_cache.clear();
+            let captured = Capture(Arc::new(Mutex::new(Vec::new())));
+            let output = captured.clone();
+            let subscriber = tracing_subscriber::fmt()
+                .without_time()
+                .with_ansi(false)
+                .with_max_level(tracing::Level::WARN)
+                .with_writer(move || output.clone())
+                .finish();
+            let _guard = tracing::subscriber::set_default(subscriber);
+            let stream = reader.get_object(id, 0).unwrap().as_stream().unwrap();
+            assert_eq!(stream.data, b"abc");
+            assert_eq!(
+                stream.dict.get("Parent").unwrap().as_reference(),
+                Some((2, 0))
+            );
+            assert_eq!(
+                stream
+                    .dict
+                    .get("Vendor")
+                    .unwrap()
+                    .as_string()
+                    .unwrap()
+                    .as_bytes(),
+                b"keep >> text"
+            );
+            assert!(String::from_utf8(captured.0.lock().unwrap().clone())
+                .unwrap()
+                .contains("Recovered object from scanned PDF bytes"));
+            assert!(
+                reader.xref.get_entry(id).is_none(),
+                "recovery must not fabricate xref storage"
+            );
+        }
+    }
+
+    #[test]
+    fn test_issue720_stream_length_cannot_allocate_beyond_file() {
+        let data = build_manual_stream_pdf(" /Length 9223372036854775807 ", b"abc");
+        let mut reader =
+            PdfReader::new_with_options(Cursor::new(data), ParseOptions::lenient()).unwrap();
+        let error = reader.extract_object_or_stream_manually(4).unwrap_err();
+        assert!(matches!(error, ParseError::SyntaxError { .. }));
+    }
+
+    #[test]
+    fn test_issue720_stream_recovery_rejects_stale_length_within_file() {
+        let data = build_manual_stream_pdf(" /Length 5 ", b"abc");
+        let mut reader =
+            PdfReader::new_with_options(Cursor::new(data), ParseOptions::lenient()).unwrap();
+        assert!(reader.extract_object_or_stream_manually(4).is_err());
+    }
+
+    #[test]
+    fn test_issue720_stream_and_dictionary_recovery_have_independent_permissions() {
+        for (syntax, streams) in [(false, false), (false, true), (true, false), (true, true)] {
+            let data = build_manual_stream_pdf(" /Length 3 ", b"abc");
+            let mut options = ParseOptions::default();
+            options.lenient_syntax = syntax;
+            options.lenient_streams = streams;
+            let mut reader = PdfReader::new_with_options(Cursor::new(data), options).unwrap();
+            // Both objects have real bytes; force recovery rather than normal loading.
+            reader.xref = XRefTable::new();
+            reader.object_cache.clear();
+            let dictionary = reader.get_object(2, 0);
+            assert_eq!(
+                dictionary.is_ok(),
+                syntax,
+                "dictionary permission: {syntax}/{streams}"
+            );
+            if let Ok(object) = dictionary {
+                assert_eq!(
+                    object.as_dict().unwrap().get("Count").unwrap().as_integer(),
+                    Some(0)
+                );
+            }
+            let stream = reader.get_object(4, 0);
+            assert_eq!(
+                stream.is_ok(),
+                streams,
+                "stream permission: {syntax}/{streams}"
+            );
+            if let Ok(object) = stream {
+                assert_eq!(object.as_stream().unwrap().data, b"abc");
+            }
+        }
+    }
+
+    #[test]
+    fn test_issue720_disabled_reconstruction_preserves_verification_boundary() {
+        let data = build_manual_stream_pdf(" /Length 3 ", b"abc");
+        let mut reader =
+            PdfReader::new_with_options(Cursor::new(data), ParseOptions::lenient()).unwrap();
+        reader.xref = XRefTable::new();
+        reader.object_cache.clear();
+        reader.disable_object_reconstruction();
+        assert!(reader.get_object(4, 0).unwrap().is_null());
+    }
+
+    #[test]
     fn test_reconstruct_preserves_non_flate_filter() {
         use crate::parser::objects::PdfObject;
 
@@ -3655,38 +2629,18 @@ mod tests {
     }
 
     #[test]
-    fn test_reconstruct_malformed_dict_falls_back_without_panic() {
-        use crate::parser::objects::PdfObject;
-
-        // Issue #351: when the generic dict parse fails (a dictionary the bracket
-        // counter accepted as balanced `<<...>>` but the lexer rejects — here a
-        // dangling key with no value), the reconstruction must not panic and must
-        // still recover the stream via the legacy minimal path. /Length is honored
-        // for the bounded body read; the body must come back intact.
-        let payload = b"0123456789";
-        let len = payload.len();
-        // `/BadKey` has no value before `>>` → parse_with_options errors → fallback.
-        let dict_body = format!(" /Length {len} /BadKey ");
-        let data = build_manual_stream_pdf(&dict_body, payload);
-
-        let mut pdf = PdfReader::new_with_options(Cursor::new(data), ParseOptions::tolerant())
-            .expect("minimal PDF must parse");
-        let obj = pdf
-            .extract_object_or_stream_manually(4)
-            .expect("malformed-dict stream must still be reconstructed via fallback");
-        let stream = match &obj {
-            PdfObject::Stream(s) => s,
-            other => panic!("expected a stream, got {other:?}"),
-        };
-
-        assert_eq!(
-            stream.data, payload,
-            "fallback path must still read the bounded body intact"
-        );
-        // Legacy fallback dict carries no /Filter (none was the Flate literal form).
+    fn test_reconstruct_malformed_dict_rejects_instead_of_discarding_keys() {
+        // #720: an incomplete value provides no evidence for an empty dictionary.
+        let data =
+            build_manual_stream_pdf(" /Length 10 /Filter /DCTDecode /BadKey ", b"0123456789");
+        let mut pdf =
+            PdfReader::new_with_options(Cursor::new(data), ParseOptions::tolerant()).unwrap();
+        assert!(pdf.extract_object_or_stream_manually(4).is_err());
+        pdf.xref = XRefTable::new();
+        pdf.object_cache.clear();
         assert!(
-            stream.dict.get("Filter").is_none(),
-            "fallback dict must not invent a /Filter"
+            pdf.get_object(4, 0).is_err(),
+            "existing malformed bytes must not become null"
         );
     }
 
@@ -5046,33 +4000,6 @@ startxref
             let needle = b"Hello";
             let pos = find_byte_pattern(haystack, needle);
             assert_eq!(pos, Some(0), "Must find at position 0");
-        }
-
-        #[test]
-        fn test_is_immediate_stream_start_with_stream() {
-            let data = b"stream\ndata";
-            assert!(
-                is_immediate_stream_start(data),
-                "Must detect 'stream' at start"
-            );
-        }
-
-        #[test]
-        fn test_is_immediate_stream_start_with_whitespace() {
-            let data = b"  \n\tstream\ndata";
-            assert!(
-                is_immediate_stream_start(data),
-                "Must detect 'stream' after whitespace"
-            );
-        }
-
-        #[test]
-        fn test_is_immediate_stream_start_no_stream() {
-            let data = b"endobj";
-            assert!(
-                !is_immediate_stream_start(data),
-                "Must return false when 'stream' absent"
-            );
         }
     }
 }
