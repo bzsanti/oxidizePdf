@@ -1,3 +1,21 @@
+## Integración autorizada — 2026-10-14
+
+- Issue: #721 — fix(verification): report unimplemented requirements as unverified instead of passed — https://github.com/bzsanti/oxidizePdf/issues/721
+- Issue: #723 — fix(forms): stop legacy signature verification from accepting fabricated signature values — https://github.com/bzsanti/oxidizePdf/issues/723
+- Estado: integración en curso; prioridad P1; responsable Codex. Ambas issues OPEN confirmadas antes de activar. Usuario autoriza fusionar los PR pendientes de ayer; sustituye las reservas históricas de merge de estas dos tareas.
+- Cierre: PR #748 y #749 MERGED en develop, con heads revisados, CI aprobada y seguimiento conservado.
+- Última validación: ambos heads originales con 30 SUCCESS/2 SKIPPED; QR previo de calidad y seguridad reutilizado. #748 fusionado como a4626905ba27b4f4b3567f6f138d8efced0b590a. #749 incorpora ese develop; único conflicto TASKS.md, conciliado conservando las dos entradas. Producto y tests de cada corrección sin cambios respecto a sus heads revisados.
+- Siguiente acción: publicar conciliación #749, comprobar CI del nuevo head y fusionar en develop. #658 conserva bloqueo de aceptación de seguridad; release fuera de esta petición.
+
+## Corrección #721 — 2026-10-13
+
+- Issue: #721 — fix(verification): report unimplemented requirements as unverified instead of passed — https://github.com/bzsanti/oxidizePdf/issues/721
+- Estado: implementada y revisada; publicación/integración pendientes; prioridad P1; responsable Codex. Issue OPEN confirmada; base develop 1087c342. Rama fix/issue-721-unverified-requirements en copia local reutilizada /tmp/oxidize-issue742; WIP raíz preservado.
+- Cierre: identificadores sin comprobación no obtienen passed=true en ningún nivel, incluso con PDF válido o metadata que declara cumplimiento; resultado NotImplemented explícito (0%), distinguible del fallo de un check implementado. Controles positivos/negativos independientes, RED/GREEN, QR calidad/seguridad antes de PR a develop.
+- Bloqueantes: dispatch permite éxito genérico y fallback de contenido true. Corregir disponibilidad antes de ejecutar niveles y eliminar fallback exitoso; evidencia mediante API pública. #722 (estructura) y #729 (validadores externos) conservan alcance propio y siguen bloqueando la recomendación de release; no impiden rechazar requisitos desconocidos.
+- Última validación: RED 3 fallos/4 controles; GREEN 7 contratos +7 integración ISO +149 módulo PASS (163). Dos fixtures independientes aceptados por qpdf. Formato y Clippy all-targets -D warnings PASS; QR/Kripteia calidad y seguridad terminados antes del PR. Informe docs/reports/2026-10-13-issue-721-review.md. Bloqueantes #721 resueltos. Siguiente acción: publicar borrador hacia develop y comprobar CI, sin fusionar.
+- Hallazgo independiente de tests: tests/iso_verification_test.rs:157 ignora fallos de carga. Corrección bloqueada por falta de issue específica; responsable mantenimiento/bzsanti, dependencia externa crear issue, desbloqueo al confirmar OPEN aplicable; restricción no corregir ni recalibrar métricas bajo #721. No bloquea los contratos nuevos independientes de la matriz.
+
 ## Corrección #723 — 2026-10-13
 
 - Issue: #723 — fix(forms): stop legacy signature verification from accepting fabricated signature values — https://github.com/bzsanti/oxidizePdf/issues/723

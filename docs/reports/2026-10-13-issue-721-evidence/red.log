@@ -1,0 +1,42 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue742/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.48s
+     Running tests/issue_721_unverified_requirements_test.rs (target/debug/deps/issue_721_unverified_requirements_test-7f0025529f643be5)
+
+running 7 tests
+test implemented_requirement_can_still_be_requested_as_not_implemented ... ok
+test unavailable_check_is_distinct_from_invalid_input ... FAILED
+test unknown_requirements_are_unverified_at_every_requested_level ... FAILED
+test implemented_catalog_check_still_passes_valid_pdf ... ok
+test implemented_checks_fail_when_required_content_is_absent ... ok
+test unknown_content_check_cannot_pass_a_valid_pdf ... FAILED
+test implemented_color_and_font_checks_still_pass_present_content ... ok
+
+failures:
+
+---- unavailable_check_is_distinct_from_invalid_input stdout ----
+
+thread 'unavailable_check_is_distinct_from_invalid_input' (64) panicked at oxidize-pdf-core/tests/issue_721_unverified_requirements_test.rs:38:9:
+assertion `left == right` failed
+  left: GeneratesPdf
+ right: NotImplemented
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- unknown_requirements_are_unverified_at_every_requested_level stdout ----
+
+thread 'unknown_requirements_are_unverified_at_every_requested_level' (66) panicked at oxidize-pdf-core/tests/issue_721_unverified_requirements_test.rs:23:13:
+"unimplemented-audit-requirement" at CodeExists: VerificationResult { level: CodeExists, passed: true, details: "Code exists and executes without crash", external_validation: None }
+
+---- unknown_content_check_cannot_pass_a_valid_pdf stdout ----
+
+thread 'unknown_content_check_cannot_pass_a_valid_pdf' (65) panicked at oxidize-pdf-core/tests/issue_721_unverified_requirements_test.rs:75:5:
+VerificationResult { level: ContentVerified, passed: true, details: "Content verification not yet implemented for unimplemented-audit-requirement", external_validation: None }
+
+
+failures:
+    unavailable_check_is_distinct_from_invalid_input
+    unknown_content_check_cannot_pass_a_valid_pdf
+    unknown_requirements_are_unverified_at_every_requested_level
+
+test result: FAILED. 4 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_721_unverified_requirements_test`

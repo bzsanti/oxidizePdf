@@ -1,0 +1,55 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 88 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/iso_verification_test.rs                   7     88
+
+--- Worst Offenders ---
+  test_compliance_matrix_loading (oxidize-pdf-core/tests/iso_verification_test.rs:124) - Score: 65
+    - Test 'test_compliance_matrix_loading' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_compliance_matrix_loading' executes production code without asserting on its behaviour
+  test_real_iso_verification_system (oxidize-pdf-core/tests/iso_verification_test.rs:19) - Score: 90
+    - Test 'test_real_iso_verification_system' has low assert-to-setup ratio (9%): 4 asserts vs 42 setup lines
+  test_compliance_report_generation (oxidize-pdf-core/tests/iso_verification_test.rs:168) - Score: 90
+    i Test 'test_compliance_report_generation' has multiple assertions without diagnostic messages
+    - Test 'test_compliance_report_generation' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+  test_pdf_comparison_system (oxidize-pdf-core/tests/iso_verification_test.rs:201) - Score: 90
+    i Test 'test_pdf_comparison_system' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pdf_comparison_system' has low assert-to-setup ratio (5%): 2 asserts vs 39 setup lines
+  test_verification_levels (oxidize-pdf-core/tests/iso_verification_test.rs:255) - Score: 90
+    - Test 'test_verification_levels' has low assert-to-setup ratio (1%): 1 asserts vs 70 setup lines
+
+--- Details ---
+oxidize-pdf-core/tests/iso_verification_test.rs:
+  test_real_iso_verification_system (line 19) - Score: 90
+    - Test 'test_real_iso_verification_system' has low assert-to-setup ratio (9%): 4 asserts vs 42 setup lines
+  test_compliance_matrix_loading (line 124) - Score: 65
+    - Test 'test_compliance_matrix_loading' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_compliance_matrix_loading' executes production code without asserting on its behaviour
+  test_compliance_report_generation (line 168) - Score: 90
+    i Test 'test_compliance_report_generation' has multiple assertions without diagnostic messages
+    - Test 'test_compliance_report_generation' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+  test_pdf_comparison_system (line 201) - Score: 90
+    i Test 'test_pdf_comparison_system' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pdf_comparison_system' has low assert-to-setup ratio (5%): 2 asserts vs 39 setup lines
+  test_verification_levels (line 255) - Score: 90
+    - Test 'test_verification_levels' has low assert-to-setup ratio (1%): 1 asserts vs 70 setup lines
+  test_requirement_status_handling (line 411) - Score: 100
+    i Test 'test_requirement_status_handling' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_requirement_status_handling' has multiple assertions without diagnostic messages
+    i Test 'test_requirement_status_handling' uses .unwrap() which silently discards error information
+  test_compliance_system_dual_file_architecture (line 491) - Score: 90
+    i Test 'test_compliance_system_dual_file_architecture' has multiple assertions without diagnostic messages
+    i Test 'test_compliance_system_dual_file_architecture' uses .unwrap() which silently discards error information
+    - Test 'test_compliance_system_dual_file_architecture' has low assert-to-setup ratio (9%): 8 asserts vs 85 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

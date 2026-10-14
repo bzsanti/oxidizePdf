@@ -65,7 +65,11 @@ impl VerificationLevel {
     }
 }
 
-/// Result of PDF verification
+/// Result of PDF verification.
+///
+/// `NotImplemented` with `passed == false` means verification is unavailable,
+/// not that the PDF failed an implemented check. Other levels with `passed == false`
+/// indicate a failed check. A successful lower level is not full ISO compliance.
 #[derive(Debug, Clone)]
 pub struct VerificationResult {
     pub level: VerificationLevel,
@@ -97,11 +101,49 @@ pub struct IsoRequirement {
     pub notes: String,
 }
 
-/// Complete verification of a PDF against an ISO requirement
+// Resolve availability once, before any generic or external checks. An exhaustive
+// enum keeps dispatch and content checking in sync without a successful fallback.
+#[derive(Clone, Copy)]
+enum RequirementCheck {
+    Catalog,
+    DeviceRgb,
+    StandardFonts,
+}
+
+impl RequirementCheck {
+    fn for_id(id: &str) -> Option<Self> {
+        match id {
+            "7.5.2.1" => Some(Self::Catalog),
+            "8.6.3.1" => Some(Self::DeviceRgb),
+            "9.7.1.1" => Some(Self::StandardFonts),
+            _ => None,
+        }
+    }
+}
+
+/// Verify a PDF against an ISO requirement at the requested level.
+///
+/// Requirements without an implemented check return `NotImplemented`, `passed=false`
+/// and no external validation, regardless of the requested level or caller-supplied
+/// implementation/verified metadata. This result contributes no verified compliance.
+/// Supported checks currently cover catalog presence, DeviceRGB usage and standard
+/// font presence; they are not a complete structural or ISO conformance validator.
 pub fn verify_iso_requirement(
     pdf_bytes: &[u8],
     requirement: &IsoRequirement,
 ) -> Result<VerificationResult> {
+    let Some(check) = RequirementCheck::for_id(&requirement.id) else {
+        return Ok(VerificationResult {
+            level: VerificationLevel::NotImplemented,
+            passed: false,
+            details: format!(
+                "Requirement verification not implemented for {}",
+                requirement.id
+            ),
+            external_validation: None,
+        });
+    };
+
     match requirement.level {
         VerificationLevel::NotImplemented => Ok(VerificationResult {
             level: VerificationLevel::NotImplemented,
@@ -120,8 +162,8 @@ pub fn verify_iso_requirement(
             })
         }
         VerificationLevel::GeneratesPdf => verify_pdf_generation(pdf_bytes),
-        VerificationLevel::ContentVerified => verify_pdf_content(pdf_bytes, requirement),
-        VerificationLevel::IsoCompliant => verify_iso_compliance(pdf_bytes, requirement),
+        VerificationLevel::ContentVerified => verify_pdf_content(pdf_bytes, check),
+        VerificationLevel::IsoCompliant => verify_iso_compliance(pdf_bytes, check),
     }
 }
 
@@ -163,10 +205,7 @@ fn verify_pdf_generation(pdf_bytes: &[u8]) -> Result<VerificationResult> {
 }
 
 /// Verify PDF content structure with internal parser
-fn verify_pdf_content(
-    pdf_bytes: &[u8],
-    requirement: &IsoRequirement,
-) -> Result<VerificationResult> {
+fn verify_pdf_content(pdf_bytes: &[u8], check: RequirementCheck) -> Result<VerificationResult> {
     // First check basic generation
     let gen_result = verify_pdf_generation(pdf_bytes)?;
     if !gen_result.passed {
@@ -176,7 +215,7 @@ fn verify_pdf_content(
     // Parse PDF and verify content
     match parser::parse_pdf(pdf_bytes) {
         Ok(parsed_pdf) => {
-            let content_check = verify_requirement_content(&parsed_pdf, requirement);
+            let content_check = verify_requirement_content(&parsed_pdf, check);
             Ok(VerificationResult {
                 level: VerificationLevel::ContentVerified,
                 passed: content_check.0,
@@ -194,12 +233,9 @@ fn verify_pdf_content(
 }
 
 /// Verify full ISO compliance with external validation
-fn verify_iso_compliance(
-    pdf_bytes: &[u8],
-    requirement: &IsoRequirement,
-) -> Result<VerificationResult> {
+fn verify_iso_compliance(pdf_bytes: &[u8], check: RequirementCheck) -> Result<VerificationResult> {
     // First check content verification
-    let content_result = verify_pdf_content(pdf_bytes, requirement)?;
+    let content_result = verify_pdf_content(pdf_bytes, check)?;
     if !content_result.passed {
         return Ok(content_result);
     }
@@ -228,13 +264,13 @@ fn verify_iso_compliance(
 /// Verify specific requirement content in parsed PDF
 fn verify_requirement_content(
     parsed_pdf: &parser::ParsedPdf,
-    requirement: &IsoRequirement,
+    check: RequirementCheck,
 ) -> (bool, String) {
     // This is where we implement specific verification logic for each ISO requirement
     // For now, we'll implement a few key ones and expand over time
 
-    match requirement.id.as_str() {
-        "7.5.2.1" => {
+    match check {
+        RequirementCheck::Catalog => {
             // Document catalog must have /Type /Catalog
             if let Some(catalog) = &parsed_pdf.catalog {
                 if catalog.contains_key("Type") {
@@ -246,7 +282,7 @@ fn verify_requirement_content(
                 (false, "No document catalog found".to_string())
             }
         }
-        "8.6.3.1" => {
+        RequirementCheck::DeviceRgb => {
             // DeviceRGB color space verification
             if parsed_pdf.uses_device_rgb {
                 (true, "PDF uses DeviceRGB color space correctly".to_string())
@@ -257,7 +293,7 @@ fn verify_requirement_content(
                 )
             }
         }
-        "9.7.1.1" => {
+        RequirementCheck::StandardFonts => {
             // Standard 14 fonts verification
             let standard_fonts = &[
                 "Helvetica",
@@ -277,16 +313,6 @@ fn verify_requirement_content(
             } else {
                 (false, "No standard fonts found".to_string())
             }
-        }
-        _ => {
-            // For requirements we haven't implemented specific verification yet
-            (
-                true,
-                format!(
-                    "Content verification not yet implemented for {}",
-                    requirement.id
-                ),
-            )
         }
     }
 }
