@@ -204,6 +204,13 @@ impl SemanticRedactor {
     /// # Returns
     ///
     /// A tuple of (modified PDF bytes, redaction report).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SemanticRedactorError::PageReconstructionFailed`] without output
+    /// if any selected entity's 1-indexed page is zero or exceeds the document's
+    /// page count. Entities of unselected types are ignored, including their pages.
+    /// Parsing, page reconstruction, and output writing failures are also returned.
     pub fn redact(
         pdf_bytes: &[u8],
         entities: &[SemanticEntity],
@@ -246,6 +253,17 @@ impl SemanticRedactor {
         let page_count = document
             .page_count()
             .map_err(|e| SemanticRedactorError::PageReconstructionFailed(e.to_string()))?;
+
+        // Check every selected entity before constructing any output. Iterating
+        // only existing pages would silently omit out-of-range requests.
+        for entity in &to_redact {
+            let page = entity.bounds.page;
+            if page == 0 || page > page_count {
+                return Err(SemanticRedactorError::PageReconstructionFailed(format!(
+                    "selected entity page {page} is out of range for a document with {page_count} pages (1-indexed)"
+                )));
+            }
+        }
 
         let mut output_doc = crate::document::Document::new();
         let mut report_entries = Vec::new();

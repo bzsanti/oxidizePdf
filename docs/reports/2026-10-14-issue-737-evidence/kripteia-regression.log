@@ -1,0 +1,106 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 31 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/semantic_redactor_test.rs                 31     96
+
+--- Worst Offenders ---
+  irreversible_redaction_rejects_target_spanning_part_of_tj_array (oxidize-pdf-core/tests/semantic_redactor_test.rs:685) - Score: 80
+    - Test 'irreversible_redaction_rejects_target_spanning_part_of_tj_array' has identical neighborhood to 'irreversible_redaction_rejects_marked_content'
+    - Test 'irreversible_redaction_rejects_target_spanning_part_of_tj_array' only exercises the happy path — no None, Err, or edge-case inputs
+  irreversible_redaction_rejects_unaudited_shading_resource_path (oxidize-pdf-core/tests/semantic_redactor_test.rs:723) - Score: 80
+    - Test 'irreversible_redaction_rejects_unaudited_shading_resource_path' has identical neighborhood to 'irreversible_redaction_rejects_marked_content'
+    - Test 'irreversible_redaction_rejects_unaudited_shading_resource_path' only exercises the happy path — no None, Err, or edge-case inputs
+  irreversible_redaction_rejects_marked_content (oxidize-pdf-core/tests/semantic_redactor_test.rs:769) - Score: 80
+    - Test 'irreversible_redaction_rejects_marked_content' has identical neighborhood to 'irreversible_redaction_rejects_target_spanning_part_of_tj_array'
+    - Test 'irreversible_redaction_rejects_marked_content' only exercises the happy path — no None, Err, or edge-case inputs
+  test_redaction_style_black_box_is_default (oxidize-pdf-core/tests/semantic_redactor_test.rs:186) - Score: 90
+    - Test 'test_redaction_style_black_box_is_default' does not call any production code
+  test_redaction_style_placeholder_stores_text (oxidize-pdf-core/tests/semantic_redactor_test.rs:197) - Score: 90
+    - Test 'test_redaction_style_placeholder_stores_text' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_redaction_style_placeholder_stores_text' asserts against a hardcoded constant instead of a computed expected value
+
+--- Details ---
+oxidize-pdf-core/tests/semantic_redactor_test.rs:
+  test_redact_produces_valid_pdf (line 115) - Score: 100
+    i Test 'test_redact_produces_valid_pdf' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_redact_produces_valid_pdf' has multiple assertions without diagnostic messages
+  test_redaction_config_default_redacts_nothing (line 143) - Score: 100
+    i Test 'test_redaction_config_default_redacts_nothing' asserts against a hardcoded constant instead of a computed expected value
+  test_redaction_config_with_entity_types (line 173) - Score: 100
+    i Test 'test_redaction_config_with_entity_types' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_redaction_config_with_entity_types' has multiple assertions without diagnostic messages
+  test_redaction_style_black_box_is_default (line 186) - Score: 90
+    - Test 'test_redaction_style_black_box_is_default' does not call any production code
+  test_redaction_style_placeholder_stores_text (line 197) - Score: 90
+    - Test 'test_redaction_style_placeholder_stores_text' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_redaction_style_placeholder_stores_text' asserts against a hardcoded constant instead of a computed expected value
+  test_redact_no_entities_returns_original (line 209) - Score: 100
+    i Test 'test_redact_no_entities_returns_original' asserts against a hardcoded constant instead of a computed expected value
+  test_redact_filters_by_entity_type (line 225) - Score: 100
+    i Test 'test_redact_filters_by_entity_type' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_redact_filters_by_entity_type' has multiple assertions without diagnostic messages
+  test_redaction_report_count (line 258) - Score: 100
+    i Test 'test_redaction_report_count' asserts against a hardcoded constant instead of a computed expected value
+  test_redaction_report_by_type (line 279) - Score: 100
+    i Test 'test_redaction_report_by_type' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_redaction_report_by_type' has multiple assertions without diagnostic messages
+  test_semantic_redactor_error_messages (line 321) - Score: 90
+    i Test 'test_semantic_redactor_error_messages' has multiple assertions without diagnostic messages
+    - Test 'test_semantic_redactor_error_messages' has low assert-to-setup ratio (11%): 2 asserts vs 17 setup lines
+  test_redact_entity_page_1_indexed_to_0_indexed (line 355) - Score: 100
+    i Test 'test_redact_entity_page_1_indexed_to_0_indexed' asserts against a hardcoded constant instead of a computed expected value
+  test_redact_multiple_entities_same_page (line 384) - Score: 100
+    i Test 'test_redact_multiple_entities_same_page' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_redact_multiple_entities_same_page' has multiple assertions without diagnostic messages
+  visual_mask_report_never_claims_irreversible_redaction (line 445) - Score: 100
+    i Test 'visual_mask_report_never_claims_irreversible_redaction' has multiple assertions without diagnostic messages
+    i Test 'visual_mask_report_never_claims_irreversible_redaction' uses .unwrap() which silently discards error information
+  irreversible_redaction_removes_exact_direct_text_and_reports_success (line 474) - Score: 100
+    i Test 'irreversible_redaction_removes_exact_direct_text_and_reports_success' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'irreversible_redaction_removes_exact_direct_text_and_reports_success' has multiple assertions without diagnostic messages
+    i Test 'irreversible_redaction_removes_exact_direct_text_and_reports_success' uses .unwrap() which silently discards error information
+  irreversible_redaction_rejects_partial_text_operand_match (line 505) - Score: 100
+    i Test 'irreversible_redaction_rejects_partial_text_operand_match' has multiple assertions without diagnostic messages
+  irreversible_redaction_rejects_symbol_font_even_when_operand_bytes_match (line 540) - Score: 100
+    i Test 'irreversible_redaction_rejects_symbol_font_even_when_operand_bytes_match' uses .unwrap() which silently discards error information
+  irreversible_redaction_drops_document_metadata_copy_of_target (line 565) - Score: 100
+    i Test 'irreversible_redaction_drops_document_metadata_copy_of_target' has multiple assertions without diagnostic messages
+    i Test 'irreversible_redaction_drops_document_metadata_copy_of_target' uses .unwrap() which silently discards error information
+  irreversible_redaction_removes_complete_tj_array (line 617) - Score: 90
+    - Test 'irreversible_redaction_removes_complete_tj_array' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'irreversible_redaction_removes_complete_tj_array' has multiple assertions without diagnostic messages
+    i Test 'irreversible_redaction_removes_complete_tj_array' uses .unwrap() which silently discards error information
+  irreversible_tj_redaction_preserves_following_text_position (line 635) - Score: 90
+    - Test 'irreversible_tj_redaction_preserves_following_text_position' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'irreversible_tj_redaction_preserves_following_text_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'irreversible_tj_redaction_preserves_following_text_position' has multiple assertions without diagnostic messages
+    i Test 'irreversible_tj_redaction_preserves_following_text_position' uses .unwrap() which silently discards error information
+  irreversible_tj_redaction_preserves_character_and_word_spacing_advance (line 662) - Score: 90
+    - Test 'irreversible_tj_redaction_preserves_character_and_word_spacing_advance' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'irreversible_tj_redaction_preserves_character_and_word_spacing_advance' uses .unwrap() which silently discards error information
+  irreversible_redaction_rejects_target_spanning_part_of_tj_array (line 685) - Score: 80
+    - Test 'irreversible_redaction_rejects_target_spanning_part_of_tj_array' has identical neighborhood to 'irreversible_redaction_rejects_marked_content'
+    - Test 'irreversible_redaction_rejects_target_spanning_part_of_tj_array' only exercises the happy path — no None, Err, or edge-case inputs
+  irreversible_tj_redaction_preserves_tj_advance (line 706) - Score: 90
+    - Test 'irreversible_tj_redaction_preserves_tj_advance' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'irreversible_tj_redaction_preserves_tj_advance' uses .unwrap() which silently discards error information
+  irreversible_redaction_rejects_unaudited_shading_resource_path (line 723) - Score: 80
+    - Test 'irreversible_redaction_rejects_unaudited_shading_resource_path' has identical neighborhood to 'irreversible_redaction_rejects_marked_content'
+    - Test 'irreversible_redaction_rejects_unaudited_shading_resource_path' only exercises the happy path — no None, Err, or edge-case inputs
+  irreversible_redaction_rejects_annotations (line 744) - Score: 100
+    i Test 'irreversible_redaction_rejects_annotations' uses .unwrap() which silently discards error information
+  irreversible_redaction_rejects_marked_content (line 769) - Score: 80
+    - Test 'irreversible_redaction_rejects_marked_content' has identical neighborhood to 'irreversible_redaction_rejects_target_spanning_part_of_tj_array'
+    - Test 'irreversible_redaction_rejects_marked_content' only exercises the happy path — no None, Err, or edge-case inputs
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

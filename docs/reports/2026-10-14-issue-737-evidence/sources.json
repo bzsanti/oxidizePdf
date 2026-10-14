@@ -1,0 +1,7 @@
+{
+  "oxidize-pdf-core/src/operations/semantic_redactor.rs": "382bb9d6a612ee414d6b9ed0f0bbfc0700ef4cb6378b5abe6369a6fe5fc0dbcd",
+  "oxidize-pdf-core/tests/issue_737_visual_mask_pages_test.rs": "c5dc8d55087740baf07c97e2edc1941f0157a94ec04b2f98534e69a0e7ca1de5",
+  "oxidize-pdf-core/tests/fixtures/issue_737_two_pages.pdf": "afc421a5216f165a3567d8bed905e53e648a9e30f8ea100366ece6ca7e2a20de",
+  "oxidize-pdf-core/tests/semantic_redactor_test.rs": "ca75e557d293c282929f7c0cbd5a2fd2395fe1100b4dc4f81c9954fba4703ed8",
+  "oxidize-pdf-core/tests/issue_730_redaction_boundaries_test.rs": "7dfffda9e0418b0428c5dabd539bf5a8f0d6cee4a1bde45d1c50525ca27b5fba"
+}
