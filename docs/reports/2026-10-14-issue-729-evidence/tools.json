@@ -1,0 +1,21 @@
+{
+  "qpdf": {
+    "exit": 0,
+    "stdout": "qpdf version 11.9.0\nRun qpdf --copyright to see copyright and license information.\n",
+    "stderr": ""
+  },
+  "verapdf": {
+    "exit": 0,
+    "stdout": "veraPDF 1.30.3\nBuilt: Wed Oct 07 13:52:00 UTC 2026\nDeveloped and released by the veraPDF Consortium.\nFunded by the PREFORMA project.\nReleased under the GNU General Public License v3\nand the Mozilla Public License v2 or later.\n\n",
+    "stderr": ""
+  },
+  "java": {
+    "exit": 0,
+    "stdout": "",
+    "stderr": "openjdk version \"21.0.12.1\" 2026-08-18\nOpenJDK Runtime Environment (build 21.0.12.1+1-1-24.04.4-Ubuntu)\nOpenJDK 64-Bit Server VM (build 21.0.12.1+1-1-24.04.4-Ubuntu, mixed mode, sharing)\n"
+  },
+  "download": {
+    "url": "https://software.verapdf.org/releases/1.30/verapdf-greenfield-1.30.3-installer.zip",
+    "sha256": "b512bf24945503a33fc10738ecffc1f2dccaaf8593a448e94ee9ac86a9559a59"
+  }
+}

@@ -1,0 +1,37 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 59.18s
+     Running unittests src/lib.rs (target/debug/deps/oxidize_pdf-ff79de59d27c30be)
+
+running 4 tests
+test verification::verapdf_report::tests::captured_success_with_zero_failures_passes ... FAILED
+test verification::verapdf_report::tests::captured_noncompliance_is_false_not_execution_error ... FAILED
+test verification::verapdf_report::tests::malformed_or_unrelated_reports_cannot_pass ... FAILED
+test verification::verapdf_report::tests::inconsistent_status_counters_or_multiple_reports_are_errors ... ok
+
+failures:
+
+---- verification::verapdf_report::tests::captured_success_with_zero_failures_passes stdout ----
+
+thread 'verification::verapdf_report::tests::captured_success_with_zero_failures_passes' (294) panicked at oxidize-pdf-core/src/verification/verapdf_report.rs:20:37:
+called `Result::unwrap()` on an `Err` value: ExternalValidationError("veraPDF validation failed")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- verification::verapdf_report::tests::captured_noncompliance_is_false_not_execution_error stdout ----
+
+thread 'verification::verapdf_report::tests::captured_noncompliance_is_false_not_execution_error' (293) panicked at oxidize-pdf-core/src/verification/verapdf_report.rs:24:40:
+called `Result::unwrap()` on an `Err` value: ExternalValidationError("veraPDF validation failed")
+
+---- verification::verapdf_report::tests::malformed_or_unrelated_reports_cannot_pass stdout ----
+
+thread 'verification::verapdf_report::tests::malformed_or_unrelated_reports_cannot_pass' (296) panicked at oxidize-pdf-core/src/verification/verapdf_report.rs:29:13:
+[86, 97, 108, 105, 100, 97, 116, 105, 111, 110, 80, 114, 111, 102, 105, 108, 101]
+
+
+failures:
+    verification::verapdf_report::tests::captured_noncompliance_is_false_not_execution_error
+    verification::verapdf_report::tests::captured_success_with_zero_failures_passes
+    verification::verapdf_report::tests::malformed_or_unrelated_reports_cannot_pass
+
+test result: FAILED. 1 passed; 3 failed; 0 ignored; 0 measured; 6819 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --lib`

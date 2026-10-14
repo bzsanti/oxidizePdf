@@ -1,0 +1,45 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 4 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/verification/mod.rs                          4     93
+
+--- Worst Offenders ---
+  external_level_requires_both_completed_positive_checks (oxidize-pdf-core/src/verification/mod.rs:335) - Score: 80
+    - Test 'external_level_requires_both_completed_positive_checks' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+    - Test 'external_level_requires_both_completed_positive_checks' does not call any production code
+  test_pdf_generation_verification (oxidize-pdf-core/src/verification/mod.rs:375) - Score: 90
+    - Test 'test_pdf_generation_verification' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_pdf_generation_verification' has multiple assertions without diagnostic messages
+    i Test 'test_pdf_generation_verification' uses .unwrap() which silently discards error information
+  test_verification_level_percentage (oxidize-pdf-core/src/verification/mod.rs:353) - Score: 100
+    i Test 'test_verification_level_percentage' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_verification_level_percentage' has multiple assertions without diagnostic messages
+  test_verification_level_from_u8 (oxidize-pdf-core/src/verification/mod.rs:362) - Score: 100
+    i Test 'test_verification_level_from_u8' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/src/verification/mod.rs:
+  external_level_requires_both_completed_positive_checks (line 335) - Score: 80
+    - Test 'external_level_requires_both_completed_positive_checks' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+    - Test 'external_level_requires_both_completed_positive_checks' does not call any production code
+  test_verification_level_percentage (line 353) - Score: 100
+    i Test 'test_verification_level_percentage' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_verification_level_percentage' has multiple assertions without diagnostic messages
+  test_verification_level_from_u8 (line 362) - Score: 100
+    i Test 'test_verification_level_from_u8' has multiple assertions without diagnostic messages
+  test_pdf_generation_verification (line 375) - Score: 90
+    - Test 'test_pdf_generation_verification' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_pdf_generation_verification' has multiple assertions without diagnostic messages
+    i Test 'test_pdf_generation_verification' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -33,6 +33,30 @@ jobs:
           sudo apt-get update -o Acquire::Retries=3
           sudo apt-get install -y --no-install-recommends qpdf poppler-utils
 
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install pinned veraPDF
+        timeout-minutes: 5
+        run: |
+          curl --fail --location --retry 3 https://software.verapdf.org/releases/1.30/verapdf-greenfield-1.30.3-installer.zip -o "$RUNNER_TEMP/verapdf.zip"
+          echo "b512bf24945503a33fc10738ecffc1f2dccaaf8593a448e94ee9ac86a9559a59  $RUNNER_TEMP/verapdf.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/verapdf.zip" -d "$RUNNER_TEMP/verapdf-installer"
+          python3 - <<'PYINSTALL'
+          import os
+          from pathlib import Path
+          temp = Path(os.environ["RUNNER_TEMP"])
+          template = Path("tools/verification/verapdf-auto.xml").read_text()
+          (temp / "verapdf-auto.xml").write_text(template.replace("@INSTALL_PATH@", str(temp / "verapdf")))
+          PYINSTALL
+          java -jar "$RUNNER_TEMP/verapdf-installer/verapdf-greenfield-1.30.3/verapdf-izpack-installer-1.30.3.jar" "$RUNNER_TEMP/verapdf-auto.xml"
+          echo "$RUNNER_TEMP/verapdf" >> "$GITHUB_PATH"
+
+      - name: Verify external validator wrappers with real qpdf and veraPDF
+        run: cargo test --locked -p oxidize-pdf --test issue_729_external_validators_test -- --ignored
+
       - name: Validate semantic comparison differentially
         env:
           OXIDIZE_PDF_REQUIRE_DIFFERENTIAL_TOOLS: "1"

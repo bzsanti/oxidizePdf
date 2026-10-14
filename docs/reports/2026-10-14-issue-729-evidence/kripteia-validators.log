@@ -1,0 +1,95 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 22 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/verification/validators.rs                  22     93
+
+--- Worst Offenders ---
+  test_check_available_validators (oxidize-pdf-core/src/verification/validators.rs:320) - Score: 65
+    - Test 'test_check_available_validators' does not call any production code
+    - Test 'test_check_available_validators' executes production code without asserting on its behaviour
+  test_validate_external_with_mock_pdf (oxidize-pdf-core/src/verification/validators.rs:359) - Score: 80
+    - Test 'test_validate_external_with_mock_pdf' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_validate_external_with_mock_pdf' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_check_available_validators_returns_vec (oxidize-pdf-core/src/verification/validators.rs:329) - Score: 90
+    - Test 'test_check_available_validators_returns_vec' does not call any production code
+  test_get_install_instructions_verapdf_content (oxidize-pdf-core/src/verification/validators.rs:347) - Score: 90
+    - Test 'test_get_install_instructions_verapdf_content' has identical neighborhood to 'test_get_install_instructions_pdftk_content'
+  test_get_install_instructions_pdftk_content (oxidize-pdf-core/src/verification/validators.rs:353) - Score: 90
+    - Test 'test_get_install_instructions_pdftk_content' has identical neighborhood to 'test_get_install_instructions_verapdf_content'
+
+--- Details ---
+oxidize-pdf-core/src/verification/validators.rs:
+  test_check_available_validators (line 320) - Score: 65
+    - Test 'test_check_available_validators' does not call any production code
+    - Test 'test_check_available_validators' executes production code without asserting on its behaviour
+  test_check_available_validators_returns_vec (line 329) - Score: 90
+    - Test 'test_check_available_validators_returns_vec' does not call any production code
+  test_get_install_instructions (line 338) - Score: 100
+    i Test 'test_get_install_instructions' has multiple assertions without diagnostic messages
+  test_get_install_instructions_verapdf_content (line 347) - Score: 90
+    - Test 'test_get_install_instructions_verapdf_content' has identical neighborhood to 'test_get_install_instructions_pdftk_content'
+  test_get_install_instructions_pdftk_content (line 353) - Score: 90
+    - Test 'test_get_install_instructions_pdftk_content' has identical neighborhood to 'test_get_install_instructions_verapdf_content'
+  test_validate_external_with_mock_pdf (line 359) - Score: 80
+    - Test 'test_validate_external_with_mock_pdf' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_validate_external_with_mock_pdf' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_validate_external_result_structure (line 384) - Score: 100
+    i Test 'test_validate_external_result_structure' uses .unwrap() which silently discards error information
+  test_validate_with_qpdf_valid_pdf (line 398) - Score: 90
+    - Test 'test_validate_with_qpdf_valid_pdf' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_validate_with_qpdf_valid_pdf' has multiple assertions without diagnostic messages
+    i Test 'test_validate_with_qpdf_valid_pdf' uses .unwrap() which silently discards error information
+  test_validate_with_qpdf_invalid_pdf (line 423) - Score: 90
+    - Test 'test_validate_with_qpdf_invalid_pdf' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_validate_with_qpdf_invalid_pdf' has multiple assertions without diagnostic messages
+    i Test 'test_validate_with_qpdf_invalid_pdf' uses .unwrap() which silently discards error information
+  test_validate_with_qpdf_truncated_pdf (line 445) - Score: 90
+    - Test 'test_validate_with_qpdf_truncated_pdf' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_validate_with_qpdf_truncated_pdf' has multiple assertions without diagnostic messages
+    i Test 'test_validate_with_qpdf_truncated_pdf' uses .unwrap() which silently discards error information
+  test_validate_with_qpdf_nonexistent_file (line 466) - Score: 100
+    i Test 'test_validate_with_qpdf_nonexistent_file' has multiple assertions without diagnostic messages
+  test_validate_with_verapdf_not_available (line 481) - Score: 90
+    - Test 'test_validate_with_verapdf_not_available' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_validate_with_verapdf_not_available' has multiple assertions without diagnostic messages
+    i Test 'test_validate_with_verapdf_not_available' uses .unwrap() which silently discards error information
+  test_validate_with_adobe_preflight_not_available (line 506) - Score: 90
+    - Test 'test_validate_with_adobe_preflight_not_available' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_validate_with_adobe_preflight_not_available' uses .unwrap() which silently discards error information
+  test_validate_with_pdftk_not_available (line 533) - Score: 90
+    - Test 'test_validate_with_pdftk_not_available' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_validate_with_pdftk_not_available' uses .unwrap() which silently discards error information
+  test_validate_external_empty_pdf (line 566) - Score: 100
+    i Test 'test_validate_external_empty_pdf' has multiple assertions without diagnostic messages
+    i Test 'test_validate_external_empty_pdf' uses .unwrap() which silently discards error information
+  test_external_validation_result_fields (line 578) - Score: 90
+    i Test 'test_external_validation_result_fields' uses .unwrap() which silently discards error information
+    - Test 'test_external_validation_result_fields' does not call any production code
+  test_install_instructions_completeness (line 590) - Score: 100
+    i Test 'test_install_instructions_completeness' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_install_instructions_completeness' has multiple assertions without diagnostic messages
+  missing_tool_and_missing_input_are_distinct_errors (line 626) - Score: 100
+    i Test 'missing_tool_and_missing_input_are_distinct_errors' has multiple assertions without diagnostic messages
+    i Test 'missing_tool_and_missing_input_are_distinct_errors' uses .unwrap() which silently discards error information
+  verapdf_checks_arguments_exit_and_report_separately (line 656) - Score: 90
+    - Test 'verapdf_checks_arguments_exit_and_report_separately' has a match arm with empty body, ignoring potential error cases
+    i Test 'verapdf_checks_arguments_exit_and_report_separately' has multiple assertions without diagnostic messages
+    i Test 'verapdf_checks_arguments_exit_and_report_separately' uses .unwrap() which silently discards error information
+  qpdf_statuses_and_arguments_are_structural_only (line 691) - Score: 100
+    i Test 'qpdf_statuses_and_arguments_are_structural_only' has multiple assertions without diagnostic messages
+    i Test 'qpdf_statuses_and_arguments_are_structural_only' uses .unwrap() which silently discards error information
+  nonexecutable_tool_is_execution_error_not_unavailable (line 714) - Score: 100
+    i Test 'nonexecutable_tool_is_execution_error_not_unavailable' has multiple assertions without diagnostic messages
+    i Test 'nonexecutable_tool_is_execution_error_not_unavailable' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

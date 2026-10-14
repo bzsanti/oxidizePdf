@@ -1,23 +1,28 @@
 //! External PDF Validators
 //!
 //! This module integrates with external PDF validation tools to provide
-//! REAL verification of ISO compliance. These tools are industry-standard
-//! and provide the ground truth for PDF validity.
+//! distinct structural (qpdf) and PDF/A-1b (veraPDF) checks. Passing these checks
+//! is not a certificate of full ISO 32000 conformance.
 
 use crate::error::{PdfError, Result};
 use crate::verification::ExternalValidationResult;
 use std::io::Write;
 use std::process::Command;
+#[cfg(test)]
 use tempfile::NamedTempFile;
 
 /// Validate PDF with external tools
 pub fn validate_external(pdf_bytes: &[u8]) -> Result<ExternalValidationResult> {
     // Create temporary file for validation
-    let mut temp_file = NamedTempFile::new().map_err(PdfError::Io)?;
+    let mut temp_file = tempfile::Builder::new()
+        .suffix(".pdf")
+        .tempfile()
+        .map_err(PdfError::Io)?;
 
     temp_file.write_all(pdf_bytes).map_err(PdfError::Io)?;
 
-    let temp_path = temp_file.path();
+    // Close the file before launching tools (including Windows file sharing).
+    let temp_path = temp_file.into_temp_path();
 
     let mut result = ExternalValidationResult {
         qpdf_passed: None,
@@ -29,13 +34,27 @@ pub fn validate_external(pdf_bytes: &[u8]) -> Result<ExternalValidationResult> {
     // Validate with qpdf (most important)
     if let Some(path_str) = temp_path.to_str() {
         match validate_with_qpdf(path_str) {
-            Ok(passed) => result.qpdf_passed = Some(passed),
+            Ok(passed) => {
+                result.qpdf_passed = Some(passed);
+                if !passed {
+                    result.error_messages.push(
+                        "qpdf structural check did not pass (input errors or warnings)".into(),
+                    );
+                }
+            }
             Err(e) => result.error_messages.push(format!("qpdf error: {}", e)),
         }
 
         // Validate with veraPDF if available
         match validate_with_verapdf(path_str) {
-            Ok(passed) => result.verapdf_passed = Some(passed),
+            Ok(passed) => {
+                result.verapdf_passed = Some(passed);
+                if !passed {
+                    result
+                        .error_messages
+                        .push("veraPDF PDF/A-1b validation: noncompliant".into());
+                }
+            }
             Err(e) => result.error_messages.push(format!("veraPDF error: {}", e)),
         }
 
@@ -59,81 +78,95 @@ pub fn validate_external(pdf_bytes: &[u8]) -> Result<ExternalValidationResult> {
     Ok(result)
 }
 
-/// Validate PDF with qpdf
-/// qpdf is the most reliable open-source PDF validator
+/// Check PDF structure with qpdf, not PDF/A or full ISO conformance.
+/// Returns true only for exit 0; errors/warnings (2/3) return false. Missing
+/// tools, inaccessible input, abnormal exits and execution failures return Err
+/// with distinct diagnostics. A false result does not identify the cause of a
+/// qpdf input-processing error; consult qpdf directly for detailed diagnostics.
 pub fn validate_with_qpdf(pdf_path: &str) -> Result<bool> {
-    let output = Command::new("qpdf")
-        .arg("--check")
-        .arg("--show-all-pages")
-        .arg(pdf_path)
-        .output();
+    run_qpdf(std::ffi::OsStr::new("qpdf"), std::path::Path::new(pdf_path))
+}
 
-    match output {
-        Ok(output) => {
-            if output.status.success() {
-                Ok(true)
-            } else {
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                Err(PdfError::ExternalValidationError(format!(
-                    "qpdf validation failed: {}",
-                    stderr
-                )))
-            }
-        }
-        Err(e) => {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                Err(PdfError::ExternalValidationError(
-                    "qpdf not found. Install with: brew install qpdf".to_string(),
-                ))
-            } else {
-                Err(PdfError::ExternalValidationError(format!(
-                    "Failed to run qpdf: {}",
-                    e
-                )))
-            }
-        }
+fn input_path(path: &std::path::Path) -> Result<std::path::PathBuf> {
+    // Absolute paths also prevent leading '-' or '@' from being interpreted as
+    // CLI options/response files. No shell interpolation is used.
+    let path = path
+        .canonicalize()
+        .map_err(|e| PdfError::ExternalValidationError(format!("validator input error: {e}")))?;
+    let file = std::fs::File::open(&path)
+        .map_err(|e| PdfError::ExternalValidationError(format!("validator input error: {e}")))?;
+    if !file.metadata().map_err(PdfError::Io)?.is_file() {
+        return Err(PdfError::ExternalValidationError(
+            "validator input error: not a regular file".into(),
+        ));
+    }
+    Ok(path)
+}
+
+fn execute(command: &mut Command, tool: &str) -> Result<std::process::Output> {
+    command.output().map_err(|e| {
+        let kind = if e.kind() == std::io::ErrorKind::NotFound {
+            "unavailable (not found)"
+        } else {
+            "execution error"
+        };
+        PdfError::ExternalValidationError(format!("{tool} {kind}: {e}"))
+    })
+}
+
+fn execution_error(tool: &str, output: &std::process::Output) -> PdfError {
+    PdfError::ExternalValidationError(format!(
+        "{tool} execution error ({}): {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    ))
+}
+
+fn run_qpdf(executable: &std::ffi::OsStr, path: &std::path::Path) -> Result<bool> {
+    let path = input_path(path)?;
+    let output = execute(Command::new(executable).arg("--check").arg(path), "qpdf")?;
+    match output.status.code() {
+        Some(0) => Ok(true),
+        // qpdf uses 2 for input processing errors and 3 for warnings. Neither
+        // establishes a clean structural check. Other statuses are execution errors.
+        Some(2 | 3) => Ok(false),
+        _ => Err(execution_error("qpdf", &output)),
     }
 }
 
-/// Validate PDF with veraPDF
-/// veraPDF is specifically designed for PDF/A validation
+/// Check PDF/A-1b with veraPDF 1.24+ XML reports.
+/// Returns true/false for a completed, coherent compliance report. Unavailable
+/// tools, execution failures and malformed/incomplete reports return Err with
+/// distinct diagnostics. This is not a full ISO 32000 conformance certificate.
 pub fn validate_with_verapdf(pdf_path: &str) -> Result<bool> {
-    let output = Command::new("verapdf")
-        .arg("--format")
-        .arg("pdf")
-        .arg("--flavour")
-        .arg("1b") // PDF/A-1b validation
-        .arg(pdf_path)
-        .output();
+    run_verapdf(
+        std::ffi::OsStr::new("verapdf"),
+        std::path::Path::new(pdf_path),
+    )
+}
 
-    match output {
-        Ok(output) => {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-
-            // veraPDF returns success even for invalid PDFs, so check output
-            if stdout.contains("ValidationProfile") && !stdout.contains("failed") {
-                Ok(true)
-            } else {
-                Err(PdfError::ExternalValidationError(format!(
-                    "veraPDF validation failed: {}",
-                    stderr
-                )))
-            }
-        }
-        Err(e) => {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                Err(PdfError::ExternalValidationError(
-                    "veraPDF not found. Download from: https://verapdf.org/".to_string(),
-                ))
-            } else {
-                Err(PdfError::ExternalValidationError(format!(
-                    "Failed to run veraPDF: {}",
-                    e
-                )))
-            }
-        }
+fn run_verapdf(executable: &std::ffi::OsStr, path: &std::path::Path) -> Result<bool> {
+    let path = input_path(path)?;
+    let output = execute(
+        Command::new(executable)
+            .args(["--format", "xml", "--flavour", "1b", "--nonpdfext"])
+            .arg(path),
+        "veraPDF",
+    )?;
+    // veraPDF CLI: 0 = conforming, 1 = nonconforming; other codes are
+    // execution/processing failures (CliConstants.ExitCodes, veraPDF 1.30.3).
+    let exit_compliant = match output.status.code() {
+        Some(0) => true,
+        Some(1) => false,
+        _ => return Err(execution_error("veraPDF", &output)),
+    };
+    let report_compliant = super::verapdf_report::parse_report(&output.stdout)?;
+    if report_compliant != exit_compliant {
+        return Err(PdfError::ExternalValidationError(
+            "veraPDF execution error: exit status and report disagree".into(),
+        ));
     }
+    Ok(report_compliant)
 }
 
 /// Validate PDF with Adobe Preflight (if available)
@@ -210,12 +243,20 @@ pub fn check_available_validators() -> Vec<String> {
     let mut available = Vec::new();
 
     // Check qpdf
-    if Command::new("qpdf").arg("--version").output().is_ok() {
+    if Command::new("qpdf")
+        .arg("--version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+    {
         available.push("qpdf".to_string());
     }
 
     // Check veraPDF
-    if Command::new("verapdf").arg("--version").output().is_ok() {
+    if Command::new("verapdf")
+        .arg("--version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+    {
         available.push("verapdf".to_string());
     }
 
@@ -262,46 +303,7 @@ mod tests {
     use std::io::Write;
 
     fn create_minimal_pdf() -> Vec<u8> {
-        // Create a minimal valid PDF for testing
-        let pdf_content = r#"%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
->>
-endobj
-
-xref
-0 4
-0000000000 65535 f
-0000000010 00000 n
-0000000079 00000 n
-0000000173 00000 n
-trailer
-<<
-/Size 4
-/Root 1 0 R
->>
-startxref
-256
-%%EOF"#;
-        pdf_content.as_bytes().to_vec()
+        include_bytes!("../../tests/fixtures/issue_729/non-pdfa.pdf").to_vec()
     }
 
     fn create_invalid_pdf() -> Vec<u8> {
@@ -409,7 +411,7 @@ startxref
                 // qpdf not installed - verify error message
                 let err_str = e.to_string();
                 assert!(
-                    err_str.contains("not found") || err_str.contains("validation failed"),
+                    err_str.contains("unavailable (not found)"),
                     "Unexpected error: {}",
                     err_str
                 );
@@ -426,14 +428,12 @@ startxref
         let path = temp_file.path().to_str().unwrap();
 
         match validate_with_qpdf(path) {
-            Ok(_) => {
-                // qpdf might still "pass" on some invalid PDFs
-            }
+            Ok(passed) => assert!(!passed),
             Err(e) => {
                 // Expected: qpdf rejects invalid PDF or qpdf not installed
                 let err_str = e.to_string();
                 assert!(
-                    err_str.contains("validation failed") || err_str.contains("not found"),
+                    err_str.contains("unavailable (not found)"),
                     "Unexpected error: {}",
                     err_str
                 );
@@ -450,13 +450,11 @@ startxref
         let path = temp_file.path().to_str().unwrap();
 
         match validate_with_qpdf(path) {
-            Ok(_) => {
-                // Truncated PDFs might pass basic validation
-            }
+            Ok(passed) => assert!(!passed),
             Err(e) => {
                 let err_str = e.to_string();
                 assert!(
-                    err_str.contains("validation failed") || err_str.contains("not found"),
+                    err_str.contains("unavailable (not found)"),
                     "Unexpected error: {}",
                     err_str
                 );
@@ -473,7 +471,7 @@ startxref
         let err_str = result.unwrap_err().to_string();
         // Either qpdf not found or file not found error
         assert!(
-            err_str.contains("not found") || err_str.contains("failed"),
+            err_str.contains("not found") || err_str.contains("input error"),
             "Unexpected error: {}",
             err_str
         );
@@ -489,14 +487,14 @@ startxref
 
         match validate_with_verapdf(path) {
             Ok(passed) => {
-                // veraPDF is available - verify it returns a boolean
-                let _ = passed;
+                // Structurally valid fixture lacks PDF/A metadata.
+                assert!(!passed);
             }
             Err(e) => {
                 // Expected: veraPDF not installed
                 let err_str = e.to_string();
                 assert!(
-                    err_str.contains("not found") || err_str.contains("validation failed"),
+                    err_str.contains("unavailable (not found)"),
                     "Unexpected error: {}",
                     err_str
                 );
@@ -608,5 +606,120 @@ startxref
                 name
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod process_contracts {
+    use super::*;
+
+    fn input() -> NamedTempFile {
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(include_bytes!(
+            "../../tests/fixtures/issue_729/non-pdfa.pdf"
+        ))
+        .unwrap();
+        file
+    }
+
+    #[test]
+    fn missing_tool_and_missing_input_are_distinct_errors() {
+        let file = input();
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("absent-validator");
+        let error = run_verapdf(missing.as_os_str(), file.path())
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("unavailable (not found)"), "{error}");
+        let error = run_qpdf(missing.as_os_str(), file.path())
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("unavailable (not found)"), "{error}");
+        let error = run_qpdf(missing.as_os_str(), &dir.path().join("absent.pdf"))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("input error"), "{error}");
+        assert!(!error.contains("unavailable"));
+    }
+
+    #[cfg(unix)]
+    fn script(dir: &std::path::Path, content: &str) -> std::path::PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let path = dir.join("validator");
+        std::fs::write(&path, format!("#!/bin/sh\n{content}\n")).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+        path
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn verapdf_checks_arguments_exit_and_report_separately() {
+        let file = input();
+        let dir = tempfile::tempdir().unwrap();
+        let xml = include_str!("../../tests/fixtures/issue_729/valid.xml");
+        let invalid = include_str!("../../tests/fixtures/issue_729/invalid.xml");
+        for (status, report, expected) in [
+            (0, xml, Some(true)),
+            (1, invalid, Some(false)),
+            (1, xml, None),
+            (7, xml, None),
+            (0, "ValidationProfile", None),
+        ] {
+            let script = script(dir.path(), &format!(
+                "[ \"$#\" -eq 6 ] && [ \"$1\" = --format ] && [ \"$2\" = xml ] && [ \"$3\" = --flavour ] && [ \"$4\" = 1b ] && [ \"$5\" = --nonpdfext ] || exit 9\ncat <<'REPORT'\n{report}\nREPORT\nexit {status}"
+            ));
+            let result = run_verapdf(script.as_os_str(), file.path());
+            match expected {
+                Some(passed) => assert_eq!(result.unwrap(), passed),
+                None => {
+                    let message = result.unwrap_err().to_string();
+                    assert!(
+                        message.contains(if status == 0 {
+                            "report error"
+                        } else {
+                            "execution error"
+                        }),
+                        "{message}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn qpdf_statuses_and_arguments_are_structural_only() {
+        let file = input();
+        let dir = tempfile::tempdir().unwrap();
+        for (status, expected) in [
+            (0, Some(true)),
+            (2, Some(false)),
+            (3, Some(false)),
+            (9, None),
+        ] {
+            let script = script(dir.path(), &format!(
+                "[ \"$#\" -eq 2 ] && [ \"$1\" = --check ] && [ \"${{2#/}}\" != \"$2\" ] || exit 9\nexit {status}"
+            ));
+            let result = run_qpdf(script.as_os_str(), file.path());
+            if let Some(passed) = expected {
+                assert_eq!(result.unwrap(), passed);
+            } else {
+                assert!(result.unwrap_err().to_string().contains("execution error"));
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn nonexecutable_tool_is_execution_error_not_unavailable() {
+        let file = input();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("not-executable");
+        std::fs::write(&path, "not executable").unwrap();
+        let message = run_verapdf(path.as_os_str(), file.path())
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("execution error"), "{message}");
+        assert!(!message.contains("unavailable"));
     }
 }
