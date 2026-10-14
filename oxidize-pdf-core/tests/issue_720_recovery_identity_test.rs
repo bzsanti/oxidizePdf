@@ -159,3 +159,47 @@ fn strict_page_count_propagates_malformed_tree() {
     .unwrap();
     assert!(reader.page_count().is_err());
 }
+
+#[test]
+fn default_reader_retains_lenient_stream_recovery_under_every_identity() {
+    for id in [3, 113, 200] {
+        let bytes = fixture(id, b"<< /Length -100 >>\nstream\nabc\nendstream", true);
+        let mut reader = PdfReader::new(Cursor::new(bytes)).unwrap();
+        let stream = reader.get_object(id, 0).unwrap().as_stream().unwrap();
+        assert_eq!(stream.data, b"abc", "recovered bytes for {id}");
+    }
+}
+
+#[test]
+fn default_reader_does_not_invent_malformed_dictionaries() {
+    for id in [3, 113, 200] {
+        let bytes = fixture(id, b"<< /Type /Unrelated /Broken [ >>", true);
+        let mut reader = PdfReader::new(Cursor::new(bytes)).unwrap();
+        assert!(
+            reader.get_object(id, 0).is_err(),
+            "fabricated dictionary {id}"
+        );
+    }
+}
+
+#[test]
+fn lenient_absent_references_remain_null_independently_of_identity() {
+    for id in [4, 113, 200] {
+        let bytes = fixture(3, b"null", true);
+        let mut reader =
+            PdfReader::new_with_options(Cursor::new(bytes), ParseOptions::lenient()).unwrap();
+        assert!(
+            reader.get_object(id, 0).unwrap().is_null(),
+            "absent reference {id}"
+        );
+    }
+}
+
+#[test]
+fn default_reader_rejects_absent_references_independently_of_identity() {
+    for id in [4, 99, 113, 200] {
+        let bytes = fixture(3, b"null", true);
+        let mut reader = PdfReader::new(Cursor::new(bytes)).unwrap();
+        assert!(reader.get_object(id, 0).is_err(), "absent reference {id}");
+    }
+}

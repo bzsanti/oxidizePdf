@@ -1,0 +1,60 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 12 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs       12    100
+
+--- Worst Offenders ---
+  strict_rejects_malformed_dictionary_under_every_identity (oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:34) - Score: 100
+    i Test 'strict_rejects_malformed_dictionary_under_every_identity' uses .unwrap() which silently discards error information
+  lenient_rejects_unrepairable_dictionary_under_every_identity (oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:45) - Score: 100
+    i Test 'lenient_rejects_unrepairable_dictionary_under_every_identity' uses .unwrap() which silently discards error information
+  valid_dictionary_preserves_parent_fractional_geometry_and_unknown_keys (oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:56) - Score: 100
+    i Test 'valid_dictionary_preserves_parent_fractional_geometry_and_unknown_keys' has multiple assertions without diagnostic messages
+    i Test 'valid_dictionary_preserves_parent_fractional_geometry_and_unknown_keys' uses .unwrap() which silently discards error information
+  lenient_recovers_real_unindexed_dictionary_independently_of_identity (oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:74) - Score: 100
+    i Test 'lenient_recovers_real_unindexed_dictionary_independently_of_identity' has multiple assertions without diagnostic messages
+    i Test 'lenient_recovers_real_unindexed_dictionary_independently_of_identity' uses .unwrap() which silently discards error information
+  strict_does_not_repair_unindexed_objects (oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:102) - Score: 100
+    i Test 'strict_does_not_repair_unindexed_objects' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:
+  strict_rejects_malformed_dictionary_under_every_identity (line 34) - Score: 100
+    i Test 'strict_rejects_malformed_dictionary_under_every_identity' uses .unwrap() which silently discards error information
+  lenient_rejects_unrepairable_dictionary_under_every_identity (line 45) - Score: 100
+    i Test 'lenient_rejects_unrepairable_dictionary_under_every_identity' uses .unwrap() which silently discards error information
+  valid_dictionary_preserves_parent_fractional_geometry_and_unknown_keys (line 56) - Score: 100
+    i Test 'valid_dictionary_preserves_parent_fractional_geometry_and_unknown_keys' has multiple assertions without diagnostic messages
+    i Test 'valid_dictionary_preserves_parent_fractional_geometry_and_unknown_keys' uses .unwrap() which silently discards error information
+  lenient_recovers_real_unindexed_dictionary_independently_of_identity (line 74) - Score: 100
+    i Test 'lenient_recovers_real_unindexed_dictionary_independently_of_identity' has multiple assertions without diagnostic messages
+    i Test 'lenient_recovers_real_unindexed_dictionary_independently_of_identity' uses .unwrap() which silently discards error information
+  strict_does_not_repair_unindexed_objects (line 102) - Score: 100
+    i Test 'strict_does_not_repair_unindexed_objects' uses .unwrap() which silently discards error information
+  malformed_stream_dictionary_is_not_replaced_with_an_empty_one (line 114) - Score: 100
+    i Test 'malformed_stream_dictionary_is_not_replaced_with_an_empty_one' uses .unwrap() which silently discards error information
+  unrelated_n_entry_cannot_become_a_page_count (line 131) - Score: 100
+    i Test 'unrelated_n_entry_cannot_become_a_page_count' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unrelated_n_entry_cannot_become_a_page_count' uses .unwrap() which silently discards error information
+  strict_page_count_propagates_malformed_tree (line 150) - Score: 100
+    i Test 'strict_page_count_propagates_malformed_tree' uses .unwrap() which silently discards error information
+  default_reader_retains_lenient_stream_recovery_under_every_identity (line 164) - Score: 100
+    i Test 'default_reader_retains_lenient_stream_recovery_under_every_identity' uses .unwrap() which silently discards error information
+  default_reader_does_not_invent_malformed_dictionaries (line 174) - Score: 100
+    i Test 'default_reader_does_not_invent_malformed_dictionaries' uses .unwrap() which silently discards error information
+  lenient_absent_references_remain_null_independently_of_identity (line 186) - Score: 100
+    i Test 'lenient_absent_references_remain_null_independently_of_identity' uses .unwrap() which silently discards error information
+  default_reader_rejects_absent_references_independently_of_identity (line 199) - Score: 100
+    i Test 'default_reader_rejects_absent_references_independently_of_identity' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

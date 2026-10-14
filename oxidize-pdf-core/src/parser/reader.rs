@@ -720,25 +720,28 @@ impl<R: Read + Seek> PdfReader<R> {
                     (entry.offset, entry.generation)
                 }
                 None => {
-                    // Object not found in XRef table
                     if self.is_reconstructible_object(obj_num) {
-                        return self.attempt_manual_object_reconstruction(obj_num, gen_num, 0);
-                    } else {
-                        if self.options.lenient_syntax {
-                            // In lenient mode, return null object instead of failing completely
-                            if self.options.collect_warnings {
-                                tracing::warn!(
-                                    "Object {} {} R not found in XRef, returning null object",
-                                    obj_num,
-                                    gen_num
-                                );
-                            }
-                            self.object_cache.insert(key, PdfObject::Null);
-                            return Ok(&self.object_cache[&key]);
-                        } else {
-                            return Err(ParseError::InvalidReference(obj_num, gen_num));
+                        match self.attempt_manual_object_reconstruction(obj_num, gen_num, 0) {
+                            Ok(_) => return Ok(&self.object_cache[&key]),
+                            // No matching object exists in the bytes. Retain the
+                            // lenient absent-reference policy, but never hide a
+                            // parse failure for an object that actually exists.
+                            Err(ParseError::InvalidReference(_, _)) => {}
+                            Err(error) => return Err(error),
                         }
                     }
+                    if self.options.lenient_syntax {
+                        if self.options.collect_warnings {
+                            tracing::warn!(
+                                "Object {} {} R not found, returning null object",
+                                obj_num,
+                                gen_num
+                            );
+                        }
+                        self.object_cache.insert(key, PdfObject::Null);
+                        return Ok(&self.object_cache[&key]);
+                    }
+                    return Err(ParseError::InvalidReference(obj_num, gen_num));
                 }
             }
         };
@@ -1282,7 +1285,8 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Recovery is a lenient policy, independent of the object's identity.
     fn is_reconstructible_object(&self, _obj_num: u32) -> bool {
-        self.allow_object_reconstruction && self.options.lenient_syntax
+        self.allow_object_reconstruction
+            && (self.options.lenient_syntax || self.options.lenient_streams)
     }
 
     /// The outer get_object owns recursion tracking. Recovery only reads a bounded
@@ -1340,11 +1344,11 @@ impl<R: Read + Seek> PdfReader<R> {
                 next = lexer.next_token()?;
             }
             match next {
-                Token::Stream => {
+                Token::Stream if self.options.lenient_streams => {
                     lexer.read_newline()?;
                     self.reconstruct_stream_object_bounded(dict, offset + lexer.position() as u64)
                 }
-                Token::EndObj => Ok(PdfObject::Dictionary(dict)),
+                Token::EndObj if self.options.lenient_syntax => Ok(PdfObject::Dictionary(dict)),
                 token => Err(ParseError::UnexpectedToken {
                     expected: "stream or endobj".into(),
                     found: format!("{token:?}"),
@@ -2485,6 +2489,41 @@ mod tests {
     }
 
     #[test]
+    fn test_issue720_stream_and_dictionary_recovery_have_independent_permissions() {
+        for (syntax, streams) in [(false, false), (false, true), (true, false), (true, true)] {
+            let data = build_manual_stream_pdf(" /Length 3 ", b"abc");
+            let mut options = ParseOptions::default();
+            options.lenient_syntax = syntax;
+            options.lenient_streams = streams;
+            let mut reader = PdfReader::new_with_options(Cursor::new(data), options).unwrap();
+            // Both objects have real bytes; force recovery rather than normal loading.
+            reader.xref = XRefTable::new();
+            reader.object_cache.clear();
+            let dictionary = reader.get_object(2, 0);
+            assert_eq!(
+                dictionary.is_ok(),
+                syntax,
+                "dictionary permission: {syntax}/{streams}"
+            );
+            if let Ok(object) = dictionary {
+                assert_eq!(
+                    object.as_dict().unwrap().get("Count").unwrap().as_integer(),
+                    Some(0)
+                );
+            }
+            let stream = reader.get_object(4, 0);
+            assert_eq!(
+                stream.is_ok(),
+                streams,
+                "stream permission: {syntax}/{streams}"
+            );
+            if let Ok(object) = stream {
+                assert_eq!(object.as_stream().unwrap().data, b"abc");
+            }
+        }
+    }
+
+    #[test]
     fn test_issue720_disabled_reconstruction_preserves_verification_boundary() {
         let data = build_manual_stream_pdf(" /Length 3 ", b"abc");
         let mut reader =
@@ -2597,6 +2636,12 @@ mod tests {
         let mut pdf =
             PdfReader::new_with_options(Cursor::new(data), ParseOptions::tolerant()).unwrap();
         assert!(pdf.extract_object_or_stream_manually(4).is_err());
+        pdf.xref = XRefTable::new();
+        pdf.object_cache.clear();
+        assert!(
+            pdf.get_object(4, 0).is_err(),
+            "existing malformed bytes must not become null"
+        );
     }
 
     #[test]

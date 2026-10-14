@@ -1,0 +1,87 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 24.47s
+     Running tests/issue_621_tagged_split_test.rs (target/debug/deps/issue_621_tagged_split_test-496827cc4e13ff3d)
+
+running 14 tests
+test corrupt_nonzero_index_is_not_silently_rebuilt ... ok
+test certified_source_is_rejected_before_attempting_tag_repair ... ok
+test missing_index_with_wrong_generation_is_not_repaired ... ok
+test cyclic_structure_fails_without_output ... ok
+test broken_structure_parent_is_rejected ... ok
+test missing_marked_content_is_not_declared_accessible ... ok
+test unrelated_missing_reference_identifies_object_and_publishes_nothing ... ok
+test zero_offset_index_alias_in_metadata_is_not_exempted ... ok
+test invalid_later_part_does_not_publish_earlier_parts ... ok
+test sparse_parent_tree_allocation_is_bounded ... ok
+test tagged_annotation_parent_mapping_is_retained_only_in_its_part ... ok
+test missing_zero_offset_parent_and_id_indexes_are_reconstructed ... ok
+test explicit_mcr_and_inherited_page_associations_survive_split ... ok
+test valid_tagged_twelve_page_split_preserves_each_part ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+
+     Running tests/issue_720_recovery_identity_test.rs (target/debug/deps/issue_720_recovery_identity_test-7c4d2c62aa0750bb)
+
+running 10 tests
+test strict_page_count_propagates_malformed_tree ... ok
+test strict_does_not_repair_unindexed_objects ... ok
+test lenient_recovers_real_unindexed_dictionary_independently_of_identity ... ok
+test default_reader_does_not_invent_malformed_dictionaries ... ok
+test default_reader_retains_lenient_stream_recovery_under_every_identity ... ok
+test strict_rejects_malformed_dictionary_under_every_identity ... ok
+test malformed_stream_dictionary_is_not_replaced_with_an_empty_one ... ok
+test lenient_rejects_unrepairable_dictionary_under_every_identity ... ok
+test valid_dictionary_preserves_parent_fractional_geometry_and_unknown_keys ... ok
+test unrelated_n_entry_cannot_become_a_page_count ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/parser_malformed_comprehensive_test.rs (target/debug/deps/parser_malformed_comprehensive_test-34d000ed216cad8b)
+
+running 27 tests
+test test_corrupted_encryption_dict ... ok
+test test_dictionary_duplicate_keys ... ok
+test test_incremental_update_invalid_prev ... ok
+test test_array_mismatched_brackets ... ok
+test test_circular_colorspace ... ok
+test test_font_invalid_encoding ... ok
+test test_invalid_filter_chain ... ok
+test test_form_xobject_recursive ... ok
+test test_invalid_generation_reference ... ok
+test test_linearized_corrupted_hint ... ok
+test test_multiple_eof_markers ... ok
+test test_malformed_hex_strings ... ok
+test test_name_invalid_characters ... ok
+test test_null_in_required_fields ... ok
+test test_missing_decode_params ... ok
+test test_object_stream_corrupted_index ... ok
+test test_page_tree_missing_fields ... ok
+test test_objstm_self_reference ... ok
+test test_stream_excessive_length ... ok
+test test_stream_missing_endstream ... ok
+test test_stream_negative_length_recovers_data_lenient ... ok
+test test_page_invalid_rotation ... ok
+test test_stream_negative_length ... ok
+test tests::test_all_edge_cases_no_panic ... ok
+test test_string_unbalanced_parens ... ok
+test test_xref_invalid_subsection ... ok
+test test_xref_stream_invalid_predictor ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_tagged_xref_recovery_contract_test.rs (target/debug/deps/text_tagged_xref_recovery_contract_test-79854ecfe1b1c2e7)
+
+running 10 tests
+test catalog_reference_to_zero_offset_object_is_not_discarded ... ok
+test missing_object_stream_container_is_not_treated_as_an_unused_object ... ok
+test retirement_preserves_an_existing_free_list ... ok
+test trailer_reference_to_zero_offset_object_is_not_discarded ... ok
+test public_reproducer_retires_only_the_unreachable_zero_offset_entry ... ok
+test latest_live_definition_and_nonzero_corruption_are_not_retired ... ok
+test trailer_aliases_and_nested_references_cannot_hide_live_corruption ... ok
+test nonzero_generation_absent_entry_is_permanently_retired_and_reported_by_source_id ... ok
+test table_stream_and_hybrid_preparation_remain_clean_across_revisions ... ok
+test nested_source_and_each_split_retire_all_four_absent_entries ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.29s
+
