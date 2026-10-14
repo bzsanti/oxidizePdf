@@ -1,0 +1,113 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 27 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/verification/tagged_pdf.rs                  27     96
+
+--- Worst Offenders ---
+  resolves_mcid_from_a_resource_property_list (oxidize-pdf-core/src/verification/tagged_pdf.rs:1824) - Score: 80
+    i Test 'resolves_mcid_from_a_resource_property_list' uses .unwrap() which silently discards error information
+    - Test 'resolves_mcid_from_a_resource_property_list' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+    - Test 'resolves_mcid_from_a_resource_property_list' does not call any production code
+  validates_objr_through_struct_parent (oxidize-pdf-core/src/verification/tagged_pdf.rs:1839) - Score: 80
+    i Test 'validates_objr_through_struct_parent' uses .unwrap() which silently discards error information
+    - Test 'validates_objr_through_struct_parent' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+    - Test 'validates_objr_through_struct_parent' does not call any production code
+  reports_untagged_document_without_failing_parse (oxidize-pdf-core/src/verification/tagged_pdf.rs:1743) - Score: 90
+    i Test 'reports_untagged_document_without_failing_parse' has multiple assertions without diagnostic messages
+    i Test 'reports_untagged_document_without_failing_parse' uses .unwrap() which silently discards error information
+    - Test 'reports_untagged_document_without_failing_parse' does not call any production code
+  reports_skipped_heading_levels_in_structure_order (oxidize-pdf-core/src/verification/tagged_pdf.rs:1921) - Score: 90
+    i Test 'reports_skipped_heading_levels_in_structure_order' uses .unwrap() which silently discards error information
+    - Test 'reports_skipped_heading_levels_in_structure_order' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  numbered_headings_must_start_at_h1_and_not_mix_with_h (oxidize-pdf-core/src/verification/tagged_pdf.rs:2006) - Score: 90
+    i Test 'numbered_headings_must_start_at_h1_and_not_mix_with_h' uses .unwrap() which silently discards error information
+    - Test 'numbered_headings_must_start_at_h1_and_not_mix_with_h' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+
+--- Details ---
+oxidize-pdf-core/src/verification/tagged_pdf.rs:
+  validates_bidirectional_tagged_structure (line 1687) - Score: 100
+    i Test 'validates_bidirectional_tagged_structure' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'validates_bidirectional_tagged_structure' uses .unwrap() which silently discards error information
+  reports_parent_tree_owner_mismatch (line 1706) - Score: 100
+    i Test 'reports_parent_tree_owner_mismatch' has multiple assertions without diagnostic messages
+    i Test 'reports_parent_tree_owner_mismatch' uses .unwrap() which silently discards error information
+  rejects_structure_cycles_without_recursing_forever (line 1725) - Score: 100
+    i Test 'rejects_structure_cycles_without_recursing_forever' has multiple assertions without diagnostic messages
+    i Test 'rejects_structure_cycles_without_recursing_forever' uses .unwrap() which silently discards error information
+  reports_untagged_document_without_failing_parse (line 1743) - Score: 90
+    i Test 'reports_untagged_document_without_failing_parse' has multiple assertions without diagnostic messages
+    i Test 'reports_untagged_document_without_failing_parse' uses .unwrap() which silently discards error information
+    - Test 'reports_untagged_document_without_failing_parse' does not call any production code
+  rejects_direct_structure_elements (line 1770) - Score: 100
+    i Test 'rejects_direct_structure_elements' has multiple assertions without diagnostic messages
+    i Test 'rejects_direct_structure_elements' uses .unwrap() which silently discards error information
+  rejects_cyclic_role_maps (line 1787) - Score: 100
+    i Test 'rejects_cyclic_role_maps' has multiple assertions without diagnostic messages
+    i Test 'rejects_cyclic_role_maps' uses .unwrap() which silently discards error information
+  rejects_an_mcid_absent_from_page_content (line 1805) - Score: 100
+    i Test 'rejects_an_mcid_absent_from_page_content' has multiple assertions without diagnostic messages
+    i Test 'rejects_an_mcid_absent_from_page_content' uses .unwrap() which silently discards error information
+  resolves_mcid_from_a_resource_property_list (line 1824) - Score: 80
+    i Test 'resolves_mcid_from_a_resource_property_list' uses .unwrap() which silently discards error information
+    - Test 'resolves_mcid_from_a_resource_property_list' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+    - Test 'resolves_mcid_from_a_resource_property_list' does not call any production code
+  validates_objr_through_struct_parent (line 1839) - Score: 80
+    i Test 'validates_objr_through_struct_parent' uses .unwrap() which silently discards error information
+    - Test 'validates_objr_through_struct_parent' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+    - Test 'validates_objr_through_struct_parent' does not call any production code
+  rejects_malformed_number_tree_order_and_limits (line 1854) - Score: 100
+    i Test 'rejects_malformed_number_tree_order_and_limits' has multiple assertions without diagnostic messages
+    i Test 'rejects_malformed_number_tree_order_and_limits' uses .unwrap() which silently discards error information
+  reports_missing_language_for_tagged_documents (line 1887) - Score: 100
+    i Test 'reports_missing_language_for_tagged_documents' uses .unwrap() which silently discards error information
+  reports_figure_without_text_alternative (line 1904) - Score: 100
+    i Test 'reports_figure_without_text_alternative' uses .unwrap() which silently discards error information
+  reports_skipped_heading_levels_in_structure_order (line 1921) - Score: 90
+    i Test 'reports_skipped_heading_levels_in_structure_order' uses .unwrap() which silently discards error information
+    - Test 'reports_skipped_heading_levels_in_structure_order' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  rejects_a_direct_structure_tree_root (line 1939) - Score: 100
+    i Test 'rejects_a_direct_structure_tree_root' uses .unwrap() which silently discards error information
+  reports_malformed_role_and_class_maps (line 1952) - Score: 100
+    i Test 'reports_malformed_role_and_class_maps' has multiple assertions without diagnostic messages
+    i Test 'reports_malformed_role_and_class_maps' uses .unwrap() which silently discards error information
+  element_language_does_not_replace_catalog_language (line 1972) - Score: 100
+    i Test 'element_language_does_not_replace_catalog_language' uses .unwrap() which silently discards error information
+  applies_semantic_rules_after_role_mapping (line 1989) - Score: 100
+    i Test 'applies_semantic_rules_after_role_mapping' uses .unwrap() which silently discards error information
+  numbered_headings_must_start_at_h1_and_not_mix_with_h (line 2006) - Score: 90
+    i Test 'numbered_headings_must_start_at_h1_and_not_mix_with_h' uses .unwrap() which silently discards error information
+    - Test 'numbered_headings_must_start_at_h1_and_not_mix_with_h' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  rejects_overlapping_parent_tree_child_ranges (line 2028) - Score: 90
+    i Test 'rejects_overlapping_parent_tree_child_ranges' uses .unwrap() which silently discards error information
+    - Test 'rejects_overlapping_parent_tree_child_ranges' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  rejects_direct_mcr_stream_associations (line 2046) - Score: 90
+    i Test 'rejects_direct_mcr_stream_associations' uses .unwrap() which silently discards error information
+    - Test 'rejects_direct_mcr_stream_associations' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  inventories_artifact_markers_and_subtypes (line 2064) - Score: 100
+    i Test 'inventories_artifact_markers_and_subtypes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'inventories_artifact_markers_and_subtypes' has multiple assertions without diagnostic messages
+    i Test 'inventories_artifact_markers_and_subtypes' uses .unwrap() which silently discards error information
+  validates_table_list_and_link_structure (line 2079) - Score: 90
+    i Test 'validates_table_list_and_link_structure' uses .unwrap() which silently discards error information
+    - Test 'validates_table_list_and_link_structure' has low assert-to-setup ratio (13%): 2 asserts vs 13 setup lines
+  rejects_duplicate_content_mcids (line 2107) - Score: 90
+    i Test 'rejects_duplicate_content_mcids' uses .unwrap() which silently discards error information
+    - Test 'rejects_duplicate_content_mcids' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  rejects_logical_order_that_reverses_page_content (line 2125) - Score: 90
+    i Test 'rejects_logical_order_that_reverses_page_content' uses .unwrap() which silently discards error information
+    - Test 'rejects_logical_order_that_reverses_page_content' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  validates_table_header_attributes_and_link_annotation_semantics (line 2144) - Score: 100
+    i Test 'validates_table_header_attributes_and_link_annotation_semantics' has multiple assertions without diagnostic messages
+    i Test 'validates_table_header_attributes_and_link_annotation_semantics' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

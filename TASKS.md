@@ -1,3 +1,11 @@
+## Corrección #720 — 2026-10-14
+
+- Issue: #720 — fix(parser): remove object-number-specific recovery that fabricates page trees — https://github.com/bzsanti/oxidizePdf/issues/720
+- Estado: implementación y QR local completados; publicación pendiente, issue OPEN confirmada; prioridad P1; responsable Codex; base develop a020d44e; rama fix/issue-720-parser-recovery en /tmp/oxidize-issue730. WIP raíz preservado.
+- Criterio de cierre: renumerar objetos no altera aceptación ni contenido; strict rechaza diccionarios malformados; recuperación lenient basada en bytes reales, con aviso y lecturas acotadas. RED independiente, controles positivos, regresión parser y QR calidad/seguridad.
+- Bloqueantes finitos: eliminar identidades/conteos/padres literales y objetos sintéticos sin evidencia; respetar strict y desactivación de reconstrucción; preservar diccionarios completos y recuperación acotada. Evidencia de cierre: contratos públicos y pruebas instrumentadas #339/#351.
+- Última validación: RED 6 FAIL/2 PASS; fuente final biblioteca 6820 PASS/3 ignorados preexistentes, lector 85 PASS, contratos públicos 8 PASS y #722 9 PASS; Clippy all-targets, formato y diff --check PASS. QR manual y Kripteia calidad/seguridad completos; informe docs/reports/2026-10-14-issue-720-review.md y evidencia adyacente. Bloqueantes resueltos. Siguiente acción: publicar PR contra develop y revisar CI; cerrar #720 solo tras fusión. #709 conserva su investigación específica; no se atribuyen todos sus síntomas a #720.
+
 ## Corrección #735 — 2026-10-14
 
 - Issue: #735 — fix(images): check dimension multiplication before validating raw image buffers — https://github.com/bzsanti/oxidizePdf/issues/735

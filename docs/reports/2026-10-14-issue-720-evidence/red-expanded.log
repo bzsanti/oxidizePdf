@@ -1,0 +1,61 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 12.70s
+     Running tests/issue_720_recovery_identity_test.rs (target/debug/deps/issue_720_recovery_identity_test-f5e7f7ff947d9189)
+
+running 8 tests
+test strict_does_not_repair_unindexed_objects ... FAILED
+test malformed_stream_dictionary_is_not_replaced_with_an_empty_one ... FAILED
+test lenient_rejects_unrepairable_dictionary_under_every_identity ... FAILED
+test lenient_recovers_real_unindexed_dictionary_independently_of_identity ... ok
+test strict_page_count_propagates_malformed_tree ... FAILED
+test strict_rejects_malformed_dictionary_under_every_identity ... FAILED
+test unrelated_n_entry_cannot_become_a_page_count ... FAILED
+test valid_dictionary_preserves_parent_fractional_geometry_and_unknown_keys ... ok
+
+failures:
+
+---- strict_does_not_repair_unindexed_objects stdout ----
+
+thread 'strict_does_not_repair_unindexed_objects' (343) panicked at oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:67:9:
+strict repaired 3
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- malformed_stream_dictionary_is_not_replaced_with_an_empty_one stdout ----
+
+thread 'malformed_stream_dictionary_is_not_replaced_with_an_empty_one' (342) panicked at oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:76:9:
+discarded dictionary of 4
+
+---- lenient_rejects_unrepairable_dictionary_under_every_identity stdout ----
+
+thread 'lenient_rejects_unrepairable_dictionary_under_every_identity' (341) panicked at oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:38:9:
+fabricated object 3
+
+---- strict_page_count_propagates_malformed_tree stdout ----
+
+thread 'strict_page_count_propagates_malformed_tree' (344) panicked at oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:95:5:
+assertion failed: reader.page_count().is_err()
+
+---- strict_rejects_malformed_dictionary_under_every_identity stdout ----
+
+thread 'strict_rejects_malformed_dictionary_under_every_identity' (345) panicked at oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:31:9:
+fabricated object 3
+
+---- unrelated_n_entry_cannot_become_a_page_count stdout ----
+
+thread 'unrelated_n_entry_cannot_become_a_page_count' (346) panicked at oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs:87:9:
+assertion `left == right` failed: unrelated /N in object 100
+  left: 44
+ right: 0
+
+
+failures:
+    lenient_rejects_unrepairable_dictionary_under_every_identity
+    malformed_stream_dictionary_is_not_replaced_with_an_empty_one
+    strict_does_not_repair_unindexed_objects
+    strict_page_count_propagates_malformed_tree
+    strict_rejects_malformed_dictionary_under_every_identity
+    unrelated_n_entry_cannot_become_a_page_count
+
+test result: FAILED. 2 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_720_recovery_identity_test`
