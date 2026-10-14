@@ -1,7 +1,10 @@
 //! Digital signature fields implementation according to ISO 32000-1 Section 12.7.4.5
 //!
 //! This module provides signature field support including visual representation,
-//! signature metadata, and lock fields after signing.
+//! signature metadata, and field-lock declarations. It does not perform
+//! cryptographic signing or verification. Use the document-level `signatures`
+//! APIs (with the `signatures` feature) for cryptographic operations.
+//! A supplied signature value or appearance is not proof of a valid signature.
 
 use crate::error::PdfError;
 use crate::graphics::Color;
@@ -203,47 +206,47 @@ impl SignatureField {
         self
     }
 
-    /// Check if field is signed
+    /// Check whether signature metadata is present, not whether it is valid.
     pub fn is_signed(&self) -> bool {
         self.signature_value.is_some()
     }
 
-    /// Sign the field (placeholder implementation)
-    pub fn sign(&mut self, signer: SignerInfo, reason: Option<String>) -> Result<(), PdfError> {
+    /// Legacy signing entry point; cryptographic signing is not supported here.
+    ///
+    /// This method never fabricates a signature or changes field state. Use the
+    /// document-level `signatures` APIs for actual signing.
+    ///
+    /// # Errors
+    /// Always returns `PdfError::InvalidOperation` because this API has no
+    /// document bytes or signing key with which to create a signature.
+    pub fn sign(&mut self, _signer: SignerInfo, _reason: Option<String>) -> Result<(), PdfError> {
         if self.is_signed() {
             return Err(PdfError::InvalidOperation(
-                "Field is already signed".to_string(),
+                "Field already contains a signature value".to_string(),
             ));
         }
-
-        // Create signature value (placeholder)
-        let signature_value = SignatureValue {
-            timestamp: Utc::now(),
-            document_hash: vec![0; 32], // Placeholder hash
-            algorithm: SignatureAlgorithm::RsaSha256,
-            certificates: vec![],
-            signature_bytes: vec![0; 256], // Placeholder signature
-        };
-
-        self.signer = Some(signer);
-        if let Some(r) = reason {
-            self.reason = Some(r);
-        }
-        self.signature_value = Some(signature_value);
-
-        Ok(())
+        Err(PdfError::InvalidOperation(
+            "Legacy form signing is not supported; use the document-level signatures API"
+                .to_string(),
+        ))
     }
 
-    /// Verify signature (placeholder implementation)
+    /// Check a legacy signature field without claiming cryptographic validity.
+    ///
+    /// Returns `Ok(false)` when no signature value is present. A present value
+    /// cannot be verified here, even if it includes certificate metadata.
+    ///
+    /// # Errors
+    /// Returns `PdfError::InvalidOperation` for a present signature value. Use
+    /// the document-level `signatures` APIs with the original PDF for verification.
     pub fn verify(&self) -> Result<bool, PdfError> {
         if !self.is_signed() {
             return Ok(false);
         }
-
-        // Placeholder verification - always returns true for now
-        // In a real implementation, this would verify the signature
-        // against the document hash and certificate chain
-        Ok(true)
+        Err(PdfError::InvalidOperation(
+            "Legacy form signature verification is not supported; use the document-level signatures API"
+                .to_string(),
+        ))
     }
 
     /// Generate appearance stream for the signature field
@@ -485,18 +488,15 @@ mod tests {
     }
 
     #[test]
-    fn test_sign_field() {
+    fn test_sign_field_refuses_without_creating_a_value() {
         let mut field = SignatureField::new("sig1");
-        let signer = SignerInfo::new("Jane Smith");
-
-        assert!(field
-            .sign(signer.clone(), Some("Approval".to_string()))
-            .is_ok());
-        assert!(field.is_signed());
-        assert_eq!(field.reason, Some("Approval".to_string()));
-
-        // Cannot sign twice
-        assert!(field.sign(signer, None).is_err());
+        assert!(matches!(
+            field.sign(SignerInfo::new("Jane Smith"), Some("Approval".to_string())),
+            Err(PdfError::InvalidOperation(_))
+        ));
+        assert!(!field.is_signed());
+        assert!(field.signer.is_none());
+        assert!(field.reason.is_none());
     }
 
     #[test]

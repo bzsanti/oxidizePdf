@@ -1,7 +1,9 @@
 //! Signature handler for managing signature fields and signing process
 //!
 //! This module provides the integration between signature fields and the PDF document,
-//! handling the signing process, field locking, and signature validation.
+//! handling field presence and lock declarations. Cryptographic operations in
+//! this legacy API are unsupported; supplied values do not establish validity.
+//! Use the document-level `signatures` APIs for signing and verification.
 
 use crate::error::PdfError;
 use crate::forms::signature_field::{SignatureAlgorithm, SignatureField, SignerInfo};
@@ -51,7 +53,7 @@ impl Default for SignatureSettings {
 pub struct ValidationResult {
     /// Field name
     pub field_name: String,
-    /// Whether signature is valid
+    /// Whether cryptographic validity was established; false also covers unverified errors.
     pub is_valid: bool,
     /// Signer information
     pub signer: Option<SignerInfo>,
@@ -112,7 +114,8 @@ impl SignatureHandler {
         self.signature_fields.get_mut(name)
     }
 
-    /// Sign a field
+    /// Attempt legacy signing, propagating its unsupported-operation error.
+    /// No fields are locked and no metadata is changed when signing fails.
     pub fn sign_field(
         &mut self,
         field_name: &str,
@@ -151,7 +154,8 @@ impl SignatureHandler {
         Ok(())
     }
 
-    /// Validate all signatures in the document
+    /// Validate all signature fields without promoting presence to validity.
+    /// Unsupported verification is reported in `errors` with `is_valid = false`.
     pub fn validate_all(&self) -> Vec<ValidationResult> {
         let mut results = Vec::new();
 
@@ -184,7 +188,7 @@ impl SignatureHandler {
             return result;
         }
 
-        // Perform validation (placeholder - always succeeds for now)
+        // Preserve unsupported verification as an error, never a valid signature.
         match field.verify() {
             Ok(valid) => {
                 result.is_valid = valid;
@@ -199,7 +203,7 @@ impl SignatureHandler {
             }
         }
 
-        // Check certificate validity (placeholder)
+        // Report missing metadata; presence is not certificate-chain verification.
         if let Some(ref sig_value) = field.signature_value {
             // In a real implementation, check certificate chain
             if sig_value.certificates.is_empty() {
@@ -226,7 +230,8 @@ impl SignatureHandler {
             .collect()
     }
 
-    /// Check if all required signatures are present
+    /// Check if all required signature values are present.
+    /// This is a presence check, not cryptographic verification.
     pub fn all_required_signed(&self) -> bool {
         self.get_unsigned_required_fields().is_empty()
     }
@@ -270,7 +275,7 @@ impl SignatureHandler {
         dict
     }
 
-    /// Create a signature summary report
+    /// Create a presence summary, not a cryptographic verification report.
     pub fn generate_summary(&self) -> SignatureSummary {
         let total = self.signature_fields.len();
         let signed = self
@@ -302,7 +307,8 @@ impl SignatureHandler {
     }
 }
 
-/// Summary of signature status in document
+/// Summary of signature-value presence in a document.
+/// Counts and completion do not indicate cryptographic validity.
 #[derive(Debug, Clone)]
 pub struct SignatureSummary {
     /// Total number of signature fields
@@ -333,7 +339,7 @@ impl SignatureSummary {
         }
     }
 
-    /// Check if document is ready (all required signed)
+    /// Check if all required values are present, without asserting their validity.
     pub fn is_ready(&self) -> bool {
         self.all_required_complete
     }
@@ -341,7 +347,7 @@ impl SignatureSummary {
     /// Generate a text report
     pub fn to_report(&self) -> String {
         format!(
-            "Signature Summary:\n\
+            "Signature Presence Summary (not cryptographically verified):\n\
              - Total fields: {}\n\
              - Signed: {} ({:.1}%)\n\
              - Unsigned: {}\n\
@@ -397,12 +403,12 @@ mod tests {
         handler.add_signature_field(field).unwrap();
 
         let signer = SignerInfo::new("John Doe");
-        assert!(handler
-            .sign_field("sig1", signer, Some("Approved".to_string()))
-            .is_ok());
-
-        // Check that field1 is now locked
-        assert!(handler.is_field_locked("field1"));
+        assert!(matches!(
+            handler.sign_field("sig1", signer, Some("Approved".to_string())),
+            Err(PdfError::InvalidOperation(_))
+        ));
+        assert!(!handler.is_field_locked("field1"));
+        assert!(!handler.get_field("sig1").unwrap().is_signed());
     }
 
     #[test]
@@ -452,13 +458,12 @@ mod tests {
         assert_eq!(summary.signed_fields, 0);
         assert!(!summary.is_ready());
 
-        // Sign the required field
-        handler
+        // An unsuccessful signing attempt cannot complete the required field.
+        assert!(handler
             .sign_field("sig1", SignerInfo::new("Signer"), None)
-            .unwrap();
-
+            .is_err());
         let summary = handler.generate_summary();
-        assert_eq!(summary.signed_fields, 1);
-        assert!(summary.is_ready());
+        assert_eq!(summary.signed_fields, 0);
+        assert!(!summary.is_ready());
     }
 }
