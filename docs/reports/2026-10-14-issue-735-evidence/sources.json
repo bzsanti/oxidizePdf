@@ -1,0 +1,7 @@
+{
+  "oxidize-pdf-core/src/graphics/pdf_image.rs": "7fe77964133c86167181a70e820ded44ff75689e5c2784d33acfcaf600de7074",
+  "oxidize-pdf-core/tests/issue_735_image_dimensions_test.rs": "4c513df7b34b9c45f9461bacd7668e8cf4c9b7086d88905c8fce290652b25095",
+  "oxidize-pdf-core/tests/draw_image_transparency_tests.rs": "7e0f78a9e126149d59aeee7ee4b3151ab9f4570dc9160916c7905395ac41c2a5",
+  "oxidize-pdf-core/tests/prop_roundtrip_invariants.rs": "1013faf1c77ecda70e29309941d261fa3fa1d26f9ba1d5b4e0a759777d6369db",
+  "Cargo.toml": "aeb8b19f9ccb409714168e5e480e6d6ff70927c31d755647818051d4d308bd7b"
+}

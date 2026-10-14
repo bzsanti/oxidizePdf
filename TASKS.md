@@ -1,3 +1,19 @@
+## Corrección #735 — 2026-10-14
+
+- Issue: #735 — fix(images): check dimension multiplication before validating raw image buffers — https://github.com/bzsanti/oxidizePdf/issues/735
+- Estado: implementación y revisión local completadas; publicación/CI pendientes; prioridad P1; responsable Codex. OPEN confirmada, base develop aac17faa; rama fix/issue-735-image-dimensions en /tmp/oxidize-issue730, WIP raíz preservado.
+- Cierre verificable: dimensiones/componentes con aritmética comprobada antes de validar/reservar buffers; RGBA y Gray rechazan cero/overflow/tamaño incorrecto sin panic en debug y release; controles válidos conservan muestras RGB/alpha/máscara/gris. RED/GREEN público independiente, regresión y QR calidad/seguridad antes de PR a develop.
+- Bloqueantes resueltos: productos u32 sin comprobación, capacidades derivadas de tamaños desbordados y dimensiones cero. Helper privado de tamaño comprobado, conversión a usize/límite isize y comparación del buffer antes de reservar.
+- Última validación: RED debug 4 FAIL/3 PASS; release 3 FAIL/3 PASS con aceptación inválida reproducida sin grandes reservas. GREEN siete contratos en ambos perfiles, diez tests de transparencia y siete roundtrip (31 resultados PASS), Clippy all-targets -D warnings, formato y QR manual/Kripteia calidad/seguridad completos. Informe docs/reports/2026-10-14-issue-735-review.md; evidencia adyacente.
+- Siguiente acción: publicar PR borrador a develop y comprobar CI. from_raw_data y PNG conservan contratos/issues separados; test histórico tautológico documentado, corrección bloqueada sin issue específica, responsable mantenimiento/bzsanti y desbloqueo al confirmar OPEN. No merge ni release en esta entrega.
+
+## Conciliación de issues fusionadas — 2026-10-14
+
+- Encargo del usuario durante #735: cerrar seguimiento conforme se integran las correcciones. Estado: conciliación completada; responsable Codex. #721/#722/#723/#729/#730/#737/#742 confirmadas CLOSED tras validar sus PR #749/#750/#748/#751/#746/#752/#747, todos MERGED a develop con QR y CI registrados. Cierre significa corrección integrada en develop, no release publicada.
+- Checklist de #719 actualizado sólo para esas siete issues; auditoría permanece OPEN. No se cierran por inferencia otras issues amplias ni los pendientes de release. Evidencia docs/reports/2026-10-14-issue-closures.json.
+- Siguiente acción: en cada fusión autorizada, verificar criterios y cierre remoto de su issue; no depender del cierre automático al apuntar a develop.
+
+
 ## Corrección #737 — 2026-10-14
 
 - Issue: #737 — fix(redaction): report out-of-range entities in visual masking — https://github.com/bzsanti/oxidizePdf/issues/737

@@ -1,0 +1,41 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_735_image_dimensions_test.rs         7     96
+
+--- Worst Offenders ---
+  rgba_rejects_pixel_count_wraparound (oxidize-pdf-core/tests/issue_735_image_dimensions_test.rs:16) - Score: 90
+    - Test 'rgba_rejects_pixel_count_wraparound' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  grayscale_rejects_pixel_count_wraparound (oxidize-pdf-core/tests/issue_735_image_dimensions_test.rs:33) - Score: 90
+    - Test 'grayscale_rejects_pixel_count_wraparound' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  mismatched_buffers_are_invalid (oxidize-pdf-core/tests/issue_735_image_dimensions_test.rs:52) - Score: 90
+    - Test 'mismatched_buffers_are_invalid' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  rgba_rejects_component_count_overflow (oxidize-pdf-core/tests/issue_735_image_dimensions_test.rs:28) - Score: 100
+  zero_dimensions_are_invalid_even_with_an_empty_buffer (oxidize-pdf-core/tests/issue_735_image_dimensions_test.rs:44) - Score: 100
+
+--- Details ---
+oxidize-pdf-core/tests/issue_735_image_dimensions_test.rs:
+  rgba_rejects_pixel_count_wraparound (line 16) - Score: 90
+    - Test 'rgba_rejects_pixel_count_wraparound' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  grayscale_rejects_pixel_count_wraparound (line 33) - Score: 90
+    - Test 'grayscale_rejects_pixel_count_wraparound' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  mismatched_buffers_are_invalid (line 52) - Score: 90
+    - Test 'mismatched_buffers_are_invalid' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  valid_rgba_preserves_rgb_alpha_and_soft_mask_samples (line 62) - Score: 100
+    i Test 'valid_rgba_preserves_rgb_alpha_and_soft_mask_samples' has multiple assertions without diagnostic messages
+    i Test 'valid_rgba_preserves_rgb_alpha_and_soft_mask_samples' uses .unwrap() which silently discards error information
+  valid_grayscale_preserves_dimensions_and_samples (line 90) - Score: 100
+    i Test 'valid_grayscale_preserves_dimensions_and_samples' has multiple assertions without diagnostic messages
+    i Test 'valid_grayscale_preserves_dimensions_and_samples' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
