@@ -1,0 +1,15 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `release` profile [optimized] target(s) in 1m 47s
+     Running tests/issue_735_image_dimensions_test.rs (target/release/deps/issue_735_image_dimensions_test-f7058351f1dc3365)
+
+running 7 tests
+test grayscale_rejects_pixel_count_wraparound ... ok
+test rgba_rejects_component_count_overflow ... ok
+test mismatched_buffers_are_invalid ... ok
+test rgba_rejects_pixel_count_wraparound ... ok
+test valid_grayscale_preserves_dimensions_and_samples ... ok
+test valid_rgba_preserves_rgb_alpha_and_soft_mask_samples ... ok
+test zero_dimensions_are_invalid_even_with_an_empty_buffer ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

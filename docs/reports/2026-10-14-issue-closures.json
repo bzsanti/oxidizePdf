@@ -1,0 +1,58 @@
+[
+  {
+    "issue": 721,
+    "state": "closed",
+    "closed_at": "2026-10-14T20:28:02Z",
+    "pr": 749,
+    "merge": "078386caf12491f90e70ec8560069898a2336f8f",
+    "base": "develop"
+  },
+  {
+    "issue": 722,
+    "state": "closed",
+    "closed_at": "2026-10-14T20:28:04Z",
+    "pr": 750,
+    "merge": "40e655ecb81760aa703c2b023107ed3edb470bd7",
+    "base": "develop"
+  },
+  {
+    "issue": 723,
+    "state": "closed",
+    "closed_at": "2026-10-14T20:28:05Z",
+    "pr": 748,
+    "merge": "a4626905ba27b4f4b3567f6f138d8efced0b590a",
+    "base": "develop"
+  },
+  {
+    "issue": 729,
+    "state": "closed",
+    "closed_at": "2026-10-14T20:28:07Z",
+    "pr": 751,
+    "merge": "b657fa09d49bc1e6559b46d1aa47984640cba19c",
+    "base": "develop"
+  },
+  {
+    "issue": 730,
+    "state": "closed",
+    "closed_at": "2026-10-14T20:28:08Z",
+    "pr": 746,
+    "merge": "22c3c099cb3a82e404b9f38856f211252458b4a2",
+    "base": "develop"
+  },
+  {
+    "issue": 737,
+    "state": "closed",
+    "closed_at": "2026-10-14T20:28:10Z",
+    "pr": 752,
+    "merge": "aac17faa2e967a14d8252e2ca2c9515761be16ae",
+    "base": "develop"
+  },
+  {
+    "issue": 742,
+    "state": "closed",
+    "closed_at": "2026-10-14T20:28:12Z",
+    "pr": 747,
+    "merge": "1087c342635ed96ed87f01ac841aae1e9eb2deb2",
+    "base": "develop"
+  }
+]

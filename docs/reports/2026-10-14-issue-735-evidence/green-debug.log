@@ -1,0 +1,44 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 8.34s
+     Running tests/draw_image_transparency_tests.rs (target/debug/deps/draw_image_transparency_tests-2dba1bf1b6dd5c92)
+
+running 10 tests
+test test_draw_image_in_document ... ok
+test test_draw_image_with_other_operations ... ok
+test test_draw_image_basic ... ok
+test test_create_png_with_transparency ... ok
+test test_draw_image_with_transparency ... ok
+test test_draw_image_without_mask ... ok
+test test_image_transformation_matrix ... ok
+test test_multiple_images_with_transparency ... ok
+test test_opacity_with_image ... ok
+test test_stencil_mask_creation ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_735_image_dimensions_test.rs (target/debug/deps/issue_735_image_dimensions_test-5c7937ef6ba59595)
+
+running 7 tests
+test grayscale_rejects_pixel_count_wraparound ... ok
+test mismatched_buffers_are_invalid ... ok
+test rgba_rejects_component_count_overflow ... ok
+test rgba_rejects_pixel_count_wraparound ... ok
+test valid_grayscale_preserves_dimensions_and_samples ... ok
+test valid_rgba_preserves_rgb_alpha_and_soft_mask_samples ... ok
+test zero_dimensions_are_invalid_even_with_an_empty_buffer ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/prop_roundtrip_invariants.rs (target/debug/deps/prop_roundtrip_invariants-6393fb7d23c870b2)
+
+running 7 tests
+test issue_156_rgba_image_keeps_smask ... ok
+test issue_364_written_text_reads_back ... ok
+test issue_395_two_distinct_embedded_fonts_no_collision ... ok
+test image_smask_preserved ... ok
+test page_count_preserved ... ok
+test text_content_preserved ... ok
+test embedded_fonts_preserved ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.26s
+

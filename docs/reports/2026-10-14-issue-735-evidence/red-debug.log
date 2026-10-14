@@ -1,0 +1,46 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.57s
+     Running tests/issue_735_image_dimensions_test.rs (target/debug/deps/issue_735_image_dimensions_test-5c7937ef6ba59595)
+
+running 7 tests
+test mismatched_buffers_are_invalid ... ok
+test grayscale_rejects_pixel_count_wraparound ... FAILED
+test valid_grayscale_preserves_dimensions_and_samples ... ok
+test rgba_rejects_pixel_count_wraparound ... FAILED
+test rgba_rejects_component_count_overflow ... FAILED
+test valid_rgba_preserves_rgb_alpha_and_soft_mask_samples ... ok
+test zero_dimensions_are_invalid_even_with_an_empty_buffer ... FAILED
+
+failures:
+
+---- grayscale_rejects_pixel_count_wraparound stdout ----
+
+thread 'grayscale_rejects_pixel_count_wraparound' (69) panicked at oxidize-pdf-core/src/graphics/pdf_image.rs:288:31:
+attempt to multiply with overflow
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- rgba_rejects_pixel_count_wraparound stdout ----
+
+thread 'rgba_rejects_pixel_count_wraparound' (72) panicked at oxidize-pdf-core/src/graphics/pdf_image.rs:245:32:
+attempt to multiply with overflow
+
+---- rgba_rejects_component_count_overflow stdout ----
+
+thread 'rgba_rejects_component_count_overflow' (71) panicked at oxidize-pdf-core/src/graphics/pdf_image.rs:245:31:
+attempt to multiply with overflow
+
+---- zero_dimensions_are_invalid_even_with_an_empty_buffer stdout ----
+
+thread 'zero_dimensions_are_invalid_even_with_an_empty_buffer' (75) panicked at oxidize-pdf-core/tests/issue_735_image_dimensions_test.rs:9:5:
+invalid dimensions or buffer must return InvalidImage, got Ok(Image { data: [], format: Raw, width: 0, height: 0, color_space: DeviceRGB, bits_per_component: 8, alpha_data: Some([]), soft_mask: Some(Image { data: [], format: Raw, width: 0, height: 0, color_space: DeviceGray, bits_per_component: 8, alpha_data: None, soft_mask: None }) })
+
+
+failures:
+    grayscale_rejects_pixel_count_wraparound
+    rgba_rejects_component_count_overflow
+    rgba_rejects_pixel_count_wraparound
+    zero_dimensions_are_invalid_even_with_an_empty_buffer
+
+test result: FAILED. 3 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_735_image_dimensions_test`
