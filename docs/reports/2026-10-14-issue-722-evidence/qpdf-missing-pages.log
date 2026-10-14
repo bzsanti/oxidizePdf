@@ -1,0 +1,7 @@
+checking oxidize-pdf-core/tests/fixtures/issue_722_missing_pages.pdf
+PDF Version: 1.4
+File is not encrypted
+File is not linearized
+WARNING: object 113 0: operation for dictionary attempted on object of type null: returning false for a key containment request
+WARNING: object 113 0: operation for dictionary attempted on object of type null: returning false for a key containment request
+qpdf: operation succeeded with warnings

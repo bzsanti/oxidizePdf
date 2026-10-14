@@ -1,0 +1,27 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 1 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/verification/structure.rs                    1    100
+
+--- Worst Offenders ---
+  traversal_budget_is_incomplete_not_invalid_or_success (oxidize-pdf-core/src/verification/structure.rs:155) - Score: 100
+    i Test 'traversal_budget_is_incomplete_not_invalid_or_success' has multiple assertions without diagnostic messages
+    i Test 'traversal_budget_is_incomplete_not_invalid_or_success' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/verification/structure.rs:
+  traversal_budget_is_incomplete_not_invalid_or_success (line 155) - Score: 100
+    i Test 'traversal_budget_is_incomplete_not_invalid_or_success' has multiple assertions without diagnostic messages
+    i Test 'traversal_budget_is_incomplete_not_invalid_or_success' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

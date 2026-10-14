@@ -1,0 +1,3 @@
+    Blocking waiting for file lock on build directory
+    Checking oxidize-pdf v5.4.2 (/tmp/oxidize-issue742/oxidize-pdf-core)
+    Finished `dev` profile [unoptimized] target(s) in 3m 50s
