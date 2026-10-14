@@ -50,7 +50,12 @@ pub(crate) fn ensure_modification_allowed<R: Read + Seek>(
         }
         let object = reader
             .get_object(reference.0, reference.1)
-            .map_err(|error| invalid_policy(format!("inspect signature object: {error}")))?
+            .map_err(|error| {
+                invalid_policy(format!(
+                    "inspect signature object {} {} R: {error}",
+                    reference.0, reference.1
+                ))
+            })?
             .clone();
         let mut signatures = Vec::new();
         let top_level_signature = signature_dictionary(&object).is_some();

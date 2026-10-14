@@ -1,0 +1,35 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 30.33s
+     Running tests/issue_621_tagged_split_test.rs (target/debug/deps/issue_621_tagged_split_test-496827cc4e13ff3d)
+
+running 14 tests
+test corrupt_nonzero_index_is_not_silently_rebuilt ... FAILED
+test certified_source_is_rejected_before_attempting_tag_repair ... ok
+test missing_index_with_wrong_generation_is_not_repaired ... ok
+test cyclic_structure_fails_without_output ... ok
+test broken_structure_parent_is_rejected ... ok
+test missing_marked_content_is_not_declared_accessible ... ok
+test unrelated_missing_reference_identifies_object_and_publishes_nothing ... ok
+test zero_offset_index_alias_in_metadata_is_not_exempted ... ok
+test invalid_later_part_does_not_publish_earlier_parts ... ok
+test tagged_annotation_parent_mapping_is_retained_only_in_its_part ... ok
+test sparse_parent_tree_allocation_is_bounded ... ok
+test explicit_mcr_and_inherited_page_associations_survive_split ... ok
+test missing_zero_offset_parent_and_id_indexes_are_reconstructed ... ok
+test valid_tagged_twelve_page_split_preserves_each_part ... ok
+
+failures:
+
+---- corrupt_nonzero_index_is_not_silently_rebuilt stdout ----
+
+thread 'corrupt_nonzero_index_is_not_silently_rebuilt' (366) panicked at oxidize-pdf-core/tests/issue_621_tagged_split_test.rs:153:5:
+PDF error: Invalid PDF structure: invalid DocMDP policy: inspect signature object: Syntax error at position 24: Unknown keyword: not-a-pdf-object
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    corrupt_nonzero_index_is_not_silently_rebuilt
+
+test result: FAILED. 13 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_621_tagged_split_test`
