@@ -1,0 +1,42 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 9 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...df-core/tests/issue_722_structural_verification_test.rs        9     98
+
+--- Worst Offenders ---
+  larger_valid_control_passes (oxidize-pdf-core/tests/issue_722_structural_verification_test.rs:55) - Score: 90
+    - Test 'larger_valid_control_passes' does not call any production code
+  independent_xref_and_object_streams_pass (oxidize-pdf-core/tests/issue_722_structural_verification_test.rs:105) - Score: 90
+    - Test 'independent_xref_and_object_streams_pass' does not call any production code
+  independent_335_byte_pdf_passes_structure_and_catalog (oxidize-pdf-core/tests/issue_722_structural_verification_test.rs:25) - Score: 100
+    i Test 'independent_335_byte_pdf_passes_structure_and_catalog' asserts against a hardcoded constant instead of a computed expected value
+  padded_header_is_rejected_before_content_or_external_checks (oxidize-pdf-core/tests/issue_722_structural_verification_test.rs:39) - Score: 100
+  broken_references_types_counts_and_cycles_are_rejected (oxidize-pdf-core/tests/issue_722_structural_verification_test.rs:65) - Score: 100
+    i Test 'broken_references_types_counts_and_cycles_are_rejected' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_722_structural_verification_test.rs:
+  independent_335_byte_pdf_passes_structure_and_catalog (line 25) - Score: 100
+    i Test 'independent_335_byte_pdf_passes_structure_and_catalog' asserts against a hardcoded constant instead of a computed expected value
+  larger_valid_control_passes (line 55) - Score: 90
+    - Test 'larger_valid_control_passes' does not call any production code
+  broken_references_types_counts_and_cycles_are_rejected (line 65) - Score: 100
+    i Test 'broken_references_types_counts_and_cycles_are_rejected' uses .unwrap() which silently discards error information
+  independent_xref_and_object_streams_pass (line 105) - Score: 90
+    - Test 'independent_xref_and_object_streams_pass' does not call any production code
+  library_writer_remains_accepted (line 112) - Score: 100
+    i Test 'library_writer_remains_accepted' uses .unwrap() which silently discards error information
+  nested_page_counts_are_checked_per_subtree (line 120) - Score: 100
+    i Test 'nested_page_counts_are_checked_per_subtree' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
