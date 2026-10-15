@@ -1,12 +1,29 @@
 ## Corrección #727 — 2026-10-15
 
 - Issue: #727 — fix(dashboard): report or paginate overflow instead of silently omitting components — https://github.com/bzsanti/oxidizePdf/issues/727
-- Estado: implementación y revisión local completas; publicación pendiente; prioridad P1; responsable Codex. OPEN confirmada en GitHub; base develop 7e5799e7; rama fix/issue-727-dashboard-overflow; checkout /tmp/oxidize-issue727. WIP raíz preservado; #658 permanece bloqueado por seguridad.
+- Estado: implementación y revisión local completas; PR borrador #760 publicado; CI previo 30 SUCCESS/2 SKIPPED; actualización de base en curso; prioridad P1; responsable Codex. OPEN confirmada en GitHub; base develop 7e5799e7; rama fix/issue-727-dashboard-overflow; checkout /tmp/oxidize-issue727. WIP raíz preservado; #658 permanece bloqueado por seguridad.
 - Criterio de cierre: error predeterminado identificando componentes restantes antes de dibujar, omisión solo explícita con informe; ajuste exacto, primera fila excedida, varias filas e identidades en PDF comprobadas por lector independiente; RED/GREEN, regresión y revisión de calidad/seguridad.
 - Bloqueantes resueltos: layout truncado exitoso; header dibujado antes del cálculo; ausencia de contrato de omisión explícita. Geometría no finita no puede evadir el rechazo. No cambia el algoritmo de alturas ni añade paginación.
 - Última validación: cuatro contratos RED y GREEN, fuente idéntica a la auditada; 6.738 biblioteca + 5 integración + 10 contratos PASS (incluye qpdf/Poppler), 3 ignorados preexistentes de biblioteca. Integración antigua dependía de perder seis tarjetas: corregida para exigir error A4 y éxito con espacio suficiente. Clippy all-targets/internal-testing, formato, diff --check y QR manual/Kripteia calidad y seguridad completos. Evidencia docs/reports/2026-10-15-issue-727-review.md y directorio adyacente.
 - Residual no bloqueante: aserciones tautológicas previas de data_aggregation; limpieza bloqueada sin issue OPEN aplicable. Responsable mantenimiento/bzsanti; dependencia/desbloqueo: crear o vincular issue con contrato de pruebas. No corregir ni recalibrar métricas bajo #727.
-- Siguiente acción: publicar PR borrador a develop y verificar CI. Sin merge ni release de #727.
+- Publicación: https://github.com/bzsanti/oxidizePdf/pull/760, borrador contra develop, head fba58a76d19593d01b5f1d3446bfeef93b9beb29.
+- Integración de base: develop 207ac996 después de #759; conflicto limitado a TASKS.md, fuentes dashboard intactas.
+- Siguiente acción: comprobar contratos combinados y nuevo CI; integrar únicamente tras autorización. Sin merge ni release de #727.
+
+
+## Corrección #726 — 2026-10-15
+
+- Issue: #726 — fix(streaming): preserve content when ChunkProcessor read buffer boundaries change — https://github.com/bzsanti/oxidizePdf/issues/726
+- Estado: completada e integrada mediante #759; prioridad P1; responsable Codex. #726 CLOSED tras integración autorizada en develop.
+- Criterio de cierre: contenido y posiciones invariantes frente a fragmentación; bytes seleccionados íntegros; operadores completos o Unknown conservado; todos los cortes, strings y tamaños; RED/GREEN y revisión calidad/seguridad.
+- Bloqueantes resueltos: estado léxico entre lecturas y clasificación antes de partir; Unknown incluido por defecto; filtros explícitos por tipo; opciones inválidas dan error en ambas APIs; Interrupted reintentado. process_content recibe unidades completas, process_in_chunks mantiene fragmentos.
+- Última validación: cinco contratos RED/GREEN sobre fuente anterior idéntica a la auditada; final 6.742 biblioteca + 19 contratos #724 + 14 contratos #726 PASS, 0 FAIL, 3 ignorados preexistentes. Clippy all-targets/internal-testing -D warnings, formato y diff --check PASS; Kripteia calidad/seguridad ejecutado (91/90, sin alertas de seguridad). Evidencia docs/reports/2026-10-15-issue-726-review.md y directorio adyacente; SHA256 verificado.
+- Límites documentados: registros pendientes 16 MiB, anidación 128; sin splitting, operación seleccionada que exceda max_chunk_size da error. XObject sin recursos es Unknown; cola de imagen inline opaca Unknown o error si el filtro pretende excluirla sin clasificación segura. No se interpretan EI/BT falsos en binarios. No es validador PDF.
+- Publicación: https://github.com/bzsanti/oxidizePdf/pull/759, base develop, head 9056dc1413d1a23364c911f5b3c9018f11e9ac81. CI en curso. Siguiente acción: verificar CI y revisar/integrar cuando se autorice. Sin bloqueantes locales pendientes. #725 continúa en PR #756; sin integración ni cambios de release.
+
+- Integración autorizada de #759: 30 SUCCESS/2 SKIPPED sobre 9056dc14; conflicto únicamente en TASKS.md tras #756. Resuelto en checkout aislado /tmp/oxidize-issue759-integration, head 237c36f5a94792336e69a8df374462f6127aa693; productos de ambos padres intactos. Contratos combinados #724/#725/#726: 19 + 12 + 14 PASS; biblioteca combinada 6.735 PASS/3 ignorados preexistentes. CI del nuevo head completo y fusión confirmada (véase cierre).
+
+- Cierre: #759 MERGED en develop el 2026-10-15T20:53:48Z, commit 207ac996538a43b5274d821b5afed3980879becf; CI final de 237c36f5: 30 SUCCESS/2 SKIPPED. #726 cerrada tras fusión. Siguiente acción para #759: ninguna; sin release. #658 mantiene su bloqueo de seguridad.
 
 ## Corrección #725 — 2026-10-15
 
