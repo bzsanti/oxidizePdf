@@ -1,0 +1,12 @@
+{
+  "initial_base": "7e5799e78a4f6c8c6d71cf106a66b4b341a8c5a9",
+  "integration_base": "207ac996538a43b5274d821b5afed3980879becf",
+  "implementation_commit": "a71aec1c0e521294044cf0486b7ac33405db812a",
+  "audited_source_identical_to_initial_base": true,
+  "sha256": {
+    "oxidize-pdf-core/src/performance/streaming_writer.rs": "296033b0ad668281a006824172aef26e3413c3a6ec61e30c36537cbccdb88fad",
+    "oxidize-pdf-core/tests/issue_728_streaming_writer_test.rs": "0095823f7b08aeb9cf97079e7cbfa73a07e9346ab10a8d12c084085d0fc1d7eb",
+    "oxidize-pdf-core/examples/high_performance_demo.rs": "6a9fcd9b0f0b98326846bc1690003a0371be80cd9f11f129980d3fe2cd14c382",
+    ".github/workflows/interoperability.yml": "e718cb9695c252148b8a439b98caf4034fbdf1f045e023bdd3d438f297737849"
+  }
+}

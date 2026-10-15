@@ -1,0 +1,117 @@
+//! #728: final output must contain a real, complete page graph and exact xref offsets.
+#![cfg(feature = "performance")]
+use oxidize_pdf::{
+    parser::{ParseOptions, PdfReader},
+    performance::streaming_writer::{
+        ContentStream, PageResources, StreamingOptions, StreamingPageContent, StreamingPdfWriter,
+        WriteStrategy,
+    },
+};
+use std::{io::Cursor, process::Command};
+
+fn page(streams: &[&[u8]]) -> StreamingPageContent {
+    StreamingPageContent {
+        width: 612.,
+        height: 792.,
+        content_streams: streams
+            .iter()
+            .map(|s| ContentStream::new(s.to_vec()))
+            .collect(),
+        resources: PageResources::default(),
+    }
+}
+
+#[test]
+fn finalized_pages_and_streams_round_trip_without_recovery() {
+    for compression in [false, true] {
+        for counts in [vec![], vec![0], vec![1], vec![0, 3, 1]] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("output.pdf");
+            let mut writer = StreamingPdfWriter::create(
+                &path,
+                StreamingOptions::default().with_compression(compression),
+            )
+            .unwrap();
+            for &count in &counts {
+                writer
+                    .write_page_streaming(&page(&vec![&b"0 0 10 10 re f"[..]; count]))
+                    .unwrap();
+            }
+            writer.finalize().unwrap();
+            let bytes = std::fs::read(path).unwrap();
+            let doc = PdfReader::new_with_options(Cursor::new(bytes), ParseOptions::strict())
+                .unwrap()
+                .into_document();
+            assert_eq!(doc.page_count().unwrap() as usize, counts.len());
+            for (index, &count) in counts.iter().enumerate() {
+                let p = doc.get_page(index as u32).unwrap();
+                let streams = doc.get_page_content_streams(&p).unwrap();
+                assert_eq!(streams, vec![b"0 0 10 10 re f".to_vec(); count]);
+            }
+        }
+    }
+}
+
+#[test]
+fn byte_statistics_match_final_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("output.pdf");
+    let mut writer = StreamingPdfWriter::create(&path, StreamingOptions::default()).unwrap();
+    writer.write_page_streaming(&page(&[b"", b"q Q"])).unwrap();
+    writer.finalize().unwrap();
+    assert_eq!(
+        writer.stats().bytes_written,
+        std::fs::metadata(path).unwrap().len()
+    );
+}
+
+#[test]
+fn finalized_writer_rejects_additional_output() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("output.pdf");
+    let mut writer = StreamingPdfWriter::create(&path, StreamingOptions::default()).unwrap();
+    writer.write_page_streaming(&page(&[])).unwrap();
+    writer.finalize().unwrap();
+    let original = std::fs::read(&path).unwrap();
+    assert!(writer.finalize().is_err());
+    assert!(writer.write_page_streaming(&page(&[])).is_err());
+    assert_eq!(std::fs::read(path).unwrap(), original);
+}
+
+#[test]
+fn unsupported_resources_and_strategy_are_explicit_errors() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("output.pdf");
+    let mut writer = StreamingPdfWriter::create(&path, StreamingOptions::default()).unwrap();
+    let mut invalid = page(&[]);
+    invalid.resources.fonts.insert("F1".into(), 1);
+    assert!(writer.write_page_streaming(&invalid).is_err());
+    assert!(StreamingPdfWriter::create(
+        dir.path().join("mmap.pdf"),
+        StreamingOptions::default().with_write_strategy(WriteStrategy::MemoryMapped)
+    )
+    .is_err());
+}
+
+#[test]
+#[ignore = "requires qpdf; explicitly executed in interoperability CI"]
+fn independent_output_oracle() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("output.pdf");
+    let mut writer = StreamingPdfWriter::create(&path, StreamingOptions::default()).unwrap();
+    writer
+        .write_page_streaming(&page(&[b"0 0 10 10 re f"]))
+        .unwrap();
+    writer.finalize().unwrap();
+    let check = Command::new("qpdf")
+        .arg("--check")
+        .arg(path)
+        .output()
+        .expect("qpdf required");
+    assert!(
+        check.status.success(),
+        "{} {}",
+        String::from_utf8_lossy(&check.stdout),
+        String::from_utf8_lossy(&check.stderr)
+    );
+}
