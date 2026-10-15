@@ -1,0 +1,67 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 11 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/performance/streaming_writer.rs             11     97
+
+--- Worst Offenders ---
+  test_write_strategy_enum (oxidize-pdf-core/src/performance/streaming_writer.rs:662) - Score: 75
+    i Test 'test_write_strategy_enum' has multiple assertions without diagnostic messages
+    - Test 'test_write_strategy_enum' does not call any production code
+    - Test 'test_write_strategy_enum' line 663: assert_eq! with identical arguments: WriteStrategy :: Buffered
+  test_streaming_options_default (oxidize-pdf-core/src/performance/streaming_writer.rs:575) - Score: 90
+    i Test 'test_streaming_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_streaming_options_default' does not call any production code
+  test_streaming_options_minimal_memory (oxidize-pdf-core/src/performance/streaming_writer.rs:583) - Score: 100
+    i Test 'test_streaming_options_minimal_memory' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_streaming_options_minimal_memory' has multiple assertions without diagnostic messages
+  test_streaming_options_max_speed (oxidize-pdf-core/src/performance/streaming_writer.rs:592) - Score: 100
+    i Test 'test_streaming_options_max_speed' has multiple assertions without diagnostic messages
+  test_streaming_writer_creation (oxidize-pdf-core/src/performance/streaming_writer.rs:600) - Score: 100
+    i Test 'test_streaming_writer_creation' has multiple assertions without diagnostic messages
+    i Test 'test_streaming_writer_creation' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/performance/streaming_writer.rs:
+  test_streaming_options_default (line 575) - Score: 90
+    i Test 'test_streaming_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_streaming_options_default' does not call any production code
+  test_streaming_options_minimal_memory (line 583) - Score: 100
+    i Test 'test_streaming_options_minimal_memory' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_streaming_options_minimal_memory' has multiple assertions without diagnostic messages
+  test_streaming_options_max_speed (line 592) - Score: 100
+    i Test 'test_streaming_options_max_speed' has multiple assertions without diagnostic messages
+  test_streaming_writer_creation (line 600) - Score: 100
+    i Test 'test_streaming_writer_creation' has multiple assertions without diagnostic messages
+    i Test 'test_streaming_writer_creation' uses .unwrap() which silently discards error information
+  test_content_stream_creation (line 612) - Score: 100
+    i Test 'test_content_stream_creation' has multiple assertions without diagnostic messages
+  test_page_content (line 622) - Score: 100
+    i Test 'test_page_content' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_content' has multiple assertions without diagnostic messages
+  test_streaming_stats (line 639) - Score: 100
+    i Test 'test_streaming_stats' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_streaming_stats' has multiple assertions without diagnostic messages
+  test_buffer_usage_calculation (line 650) - Score: 100
+    i Test 'test_buffer_usage_calculation' uses .unwrap() which silently discards error information
+  test_write_strategy_enum (line 662) - Score: 75
+    i Test 'test_write_strategy_enum' has multiple assertions without diagnostic messages
+    - Test 'test_write_strategy_enum' does not call any production code
+    - Test 'test_write_strategy_enum' line 663: assert_eq! with identical arguments: WriteStrategy :: Buffered
+  test_streaming_options_builder (line 669) - Score: 100
+    i Test 'test_streaming_options_builder' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_streaming_options_builder' has multiple assertions without diagnostic messages
+  test_compression_level_clamping (line 685) - Score: 100
+    i Test 'test_compression_level_clamping' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_compression_level_clamping' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -1,22 +1,39 @@
 ## Corrección #728 — 2026-10-15
 
 - Issue: #728 — fix(performance): emit valid object graph and xref from StreamingPdfWriter — https://github.com/bzsanti/oxidizePdf/issues/728
-- Estado: activa; prioridad P1; responsable Codex. OPEN confirmada; base develop 7e5799e7; rama fix/issue-728-streaming-writer en /tmp/oxidize-issue728. WIP raíz preservado; #759 fusionado (207ac996); #760 con CI verde previo a actualizar base; #658 bloqueado por seguridad.
+- Estado: implementación y revisión local completas; publicación pendiente; prioridad P1; responsable Codex. OPEN confirmada; base develop 7e5799e7; rama fix/issue-728-streaming-writer en /tmp/oxidize-issue728. WIP raíz preservado; #759 fusionado (207ac996); #760 con CI verde previo a actualizar base; #658 bloqueado por seguridad.
 - Criterio de cierre: objetos completos sin anidación, IDs y offsets reales, Pages/Kids exactos con cero/una/varias páginas y streams vacíos/múltiples, validación qpdf y lector, opciones no soportadas rechazadas antes de producir salida inválida; RED/GREEN y revisión calidad/seguridad.
-- Bloqueantes finitos: objetos anidados, conteo parcial de bytes, colisión de Parent con objetos asignados y Kids estimados. Revisar finalización repetida/fallos de escritura para no certificar salida parcial. Memoria proporcional a índices y al stream actual; sin retener documento completo.
-- Última validación: inspección del escritor y consumidores; contrato derivado de #728 antes de modificar expectativas.
-- Siguiente acción: reproducir fallo en salida finalizada; corregir conjuntamente escritura, xref y ciclo de vida; verificar ambas políticas de compresión y referencias; publicar PR a develop tras revisión.
+- Bloqueantes funcionales resueltos: objetos anidados, conteo parcial de bytes, colisión de Parent con objetos asignados y Kids estimados. Revisar finalización repetida/fallos de escritura para no certificar salida parcial. Memoria proporcional a índices y al stream actual; sin retener documento completo.
+- Última validación: cinco RED/GREEN en fuente idéntica a la auditada; ocho contratos finales con qpdf y fallo I/O real, 40 combinaciones de roundtrip y 20 de validación externa. Biblioteca performance/internal-testing sobre develop 207ac996: 6.810 PASS/3 ignorados preexistentes; contratos 7 PASS + oráculo explícito PASS. Doctest y compilación del ejemplo PASS. Clippy predeterminado all-targets -D warnings y Clippy biblioteca/contratos performance -D clippy::all PASS; formato/diff y QR manual/Kripteia completos. Informe docs/reports/2026-10-15-issue-728-review.md, manifiesto SHA256 y logs adyacentes.
+- Límite de validación: Clippy ampliado all-targets/performance falla por dos sliced_string_as_bytes preexistentes del ejemplo, con warnings anteriores de parallel_generation; no se declara verde ni se cambian allows. Junto al test tautológico del enum, limpieza independiente bloqueada sin issue OPEN aplicable; responsable mantenimiento/bzsanti, desbloqueo al crear/vincular issue, sin corregir ni recalibrar métricas bajo #728. No afectan grafo/xref ni ejecución del escritor validado.
+- Integración de base: develop 207ac996 tras #759; único conflicto en TASKS.md, fuentes del escritor intactas.
+- Siguiente acción: publicar PR borrador contra develop y comprobar CI. Sin merge ni release de #728.
+
+
+## Corrección #726 — 2026-10-15
+
+- Issue: #726 — fix(streaming): preserve content when ChunkProcessor read buffer boundaries change — https://github.com/bzsanti/oxidizePdf/issues/726
+- Estado: completada e integrada mediante #759; prioridad P1; responsable Codex. #726 CLOSED tras integración autorizada en develop.
+- Criterio de cierre: contenido y posiciones invariantes frente a fragmentación; bytes seleccionados íntegros; operadores completos o Unknown conservado; todos los cortes, strings y tamaños; RED/GREEN y revisión calidad/seguridad.
+- Bloqueantes resueltos: estado léxico entre lecturas y clasificación antes de partir; Unknown incluido por defecto; filtros explícitos por tipo; opciones inválidas dan error en ambas APIs; Interrupted reintentado. process_content recibe unidades completas, process_in_chunks mantiene fragmentos.
+- Última validación: cinco contratos RED/GREEN sobre fuente anterior idéntica a la auditada; final 6.742 biblioteca + 19 contratos #724 + 14 contratos #726 PASS, 0 FAIL, 3 ignorados preexistentes. Clippy all-targets/internal-testing -D warnings, formato y diff --check PASS; Kripteia calidad/seguridad ejecutado (91/90, sin alertas de seguridad). Evidencia docs/reports/2026-10-15-issue-726-review.md y directorio adyacente; SHA256 verificado.
+- Límites documentados: registros pendientes 16 MiB, anidación 128; sin splitting, operación seleccionada que exceda max_chunk_size da error. XObject sin recursos es Unknown; cola de imagen inline opaca Unknown o error si el filtro pretende excluirla sin clasificación segura. No se interpretan EI/BT falsos en binarios. No es validador PDF.
+- Publicación: https://github.com/bzsanti/oxidizePdf/pull/759, base develop, head 9056dc1413d1a23364c911f5b3c9018f11e9ac81. CI en curso. Siguiente acción: verificar CI y revisar/integrar cuando se autorice. Sin bloqueantes locales pendientes. #725 continúa en PR #756; sin integración ni cambios de release.
+
+- Integración autorizada de #759: 30 SUCCESS/2 SKIPPED sobre 9056dc14; conflicto únicamente en TASKS.md tras #756. Resuelto en checkout aislado /tmp/oxidize-issue759-integration, head 237c36f5a94792336e69a8df374462f6127aa693; productos de ambos padres intactos. Contratos combinados #724/#725/#726: 19 + 12 + 14 PASS; biblioteca combinada 6.735 PASS/3 ignorados preexistentes. CI del nuevo head completo y fusión confirmada (véase cierre).
+
+- Cierre: #759 MERGED en develop el 2026-10-15T20:53:48Z, commit 207ac996538a43b5274d821b5afed3980879becf; CI final de 237c36f5: 30 SUCCESS/2 SKIPPED. #726 cerrada tras fusión. Siguiente acción para #759: ninguna; sin release. #658 mantiene su bloqueo de seguridad.
 
 ## Corrección #725 — 2026-10-15
 
 - Issue: #725 — fix(memory): initialize LazyDocument page count and object access from its reader — https://github.com/bzsanti/oxidizePdf/issues/725
-- Estado: implementación y revisión local completas; publicación en curso; prioridad P1; responsable Codex. OPEN confirmada en GitHub. Base develop 09c56737; checkout /tmp/oxidize-issue725; WIP previo preservado.
+- Estado: completada e integrada en develop mediante #756; prioridad P1; responsable Codex. CLOSED confirmada tras integración. Base develop 09c56737; checkout /tmp/oxidize-issue725; WIP previo preservado.
 - Criterio de cierre: conteo y páginas/objetos reales, contenido diferido; casos públicos de cero/una/varias páginas y referencias ausentes; comparación con lector ordinario; RED/GREEN y revisión calidad/seguridad.
 - Bloqueantes resueltos: conteo cero y accesos ficticios reemplazados por PdfDocument sincronizado y referencias del xref; Null real distinto de ausencia; precarga propaga errores. Arc conserva Unpin con lector !Unpin; no unsafe nuevo.
 - Última validación: cuatro contratos RED sobre fuente idéntica a la auditada y GREEN; final 6.738 tests biblioteca + 12 contratos + 11 integración PASS, 0 FAIL, 3 ignorados preexistentes; Clippy all-targets/internal-testing -D warnings, formato y diff --check PASS. qpdf acepta fixtures independientes. Kripteia calidad y seguridad completos; sin alertas de seguridad. Evidencia docs/reports/2026-10-15-issue-725-review.md y directorio adyacente, SHA256 verificado.
 - Límite explícito: construcción indexa diccionarios de páginas; streams se cargan al acceder. cache_size/clear_cache gobiernan la caché del adaptador, no las cachés internas del parser ni RSS. Se preservan opciones del lector; no cambia el parser general ni #726/#739.
 - Residual no bloqueante: tests antiguos del enum LazyObject incluyen assert!(true)/match vacío; no aportan evidencia al contrato, cubierto por nuevas pruebas públicas. Limpieza independiente bloqueada sin issue específica; responsable bzsanti/mantenimiento; dependencia/desbloqueo: crear o vincular issue OPEN aplicable; restricción: no recalibrar métricas ni iniciar limpieza bajo esta entrada.
-- Siguiente acción: publicar PR contra develop y verificar CI. Sin merge ni release autorizados para #725.
+- Publicación: https://github.com/bzsanti/oxidizePdf/pull/756, base develop, head b75d8a05a6404bc05da622802c7221e1ee293e62. CI final: 30 SUCCESS/2 SKIPPED, sin pendientes, MERGEABLE. Primer Linux falló en test preexistente veraPDF (Text file busy/os error 26); fuente validators.rs sin cambios; prueba focal SPI local y reejecución remota pasan sobre el mismo commit. Evidencia de ambas ejecuciones preservada. Fusión autorizada confirmada el 2026-10-15T17:16:22Z, commit 7e5799e78a4f6c8c6d71cf106a66b4b341a8c5a9. #725 cerrada y casilla de #719 marcada. Siguiente acción: ninguna pendiente para #756. Sin release.
 
 ## Corrección #724 — 2026-10-15
 

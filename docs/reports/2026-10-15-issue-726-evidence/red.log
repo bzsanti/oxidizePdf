@@ -1,0 +1,58 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue726/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 39.80s
+     Running tests/issue_726_chunk_boundaries_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_726_chunk_boundaries_test-dd4251f615e5b912)
+
+running 5 tests
+test all_split_positions_preserve_bytes_types_and_offsets ... FAILED
+test default_preserves_unknown_and_binary_bytes ... FAILED
+test explicit_text_filter_keeps_complete_text_not_keyword_lookalikes ... FAILED
+test invalid_direct_options_are_errors ... FAILED
+test sentinel_survives_every_buffer_size ... FAILED
+
+failures:
+
+---- all_split_positions_preserve_bytes_types_and_offsets stdout ----
+
+thread 'all_split_positions_preserve_bytes_types_and_offsets' (339) panicked at oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:34:5:
+assertion `left == right` failed
+  left: [32, 40, 84, 106, 32, 92, 40, 32, 101, 115, 99, 97, 112, 101, 69, 84, 41, 32, 84, 106, 32, 84, 10, 49, 32, 50, 32, 109, 32, 51, 32, 52, 32, 108, 32]
+ right: [113, 10, 66, 84, 32, 47, 70, 49, 32, 49, 50, 32, 84, 102, 32, 40, 84, 106, 32, 92, 40, 32, 101, 115, 99, 97, 112, 101, 100, 32, 92, 41, 32, 40, 110, 101, 115, 116, 101, 100, 41, 32, 69, 84, 41, 32, 84, 106, 32, 91, 60, 52, 50, 53, 52, 62, 32, 45, 50, 48, 32, 40, 120, 41, 93, 32, 84, 74, 32, 69, 84, 10, 49, 32, 50, 32, 109, 32, 51, 32, 52, 32, 108, 32, 83, 32, 81, 10, 37, 32, 66, 84, 32, 102, 97, 107, 101, 10]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- default_preserves_unknown_and_binary_bytes stdout ----
+
+thread 'default_preserves_unknown_and_binary_bytes' (340) panicked at oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:59:13:
+assertion `left == right` failed
+  left: []
+ right: [120, 121, 122, 49, 50, 51, 0, 255, 254]
+
+---- explicit_text_filter_keeps_complete_text_not_keyword_lookalikes stdout ----
+
+thread 'explicit_text_filter_keeps_complete_text_not_keyword_lookalikes' (341) panicked at oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:49:9:
+assertion `left == right` failed: buffer 1
+  left: [84, 84, 84, 84, 84, 84]
+ right: [10, 66, 84, 32, 40, 83, 69, 78, 84, 73, 78, 69, 76, 32, 84, 106, 32, 69, 84, 32, 109, 41, 32, 84, 106, 32, 69, 84]
+
+---- invalid_direct_options_are_errors stdout ----
+
+thread 'invalid_direct_options_are_errors' (342) panicked at oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:66:9:
+assertion failed: ChunkProcessor::new(options).process_content(b"BT (x) Tj ET").is_err()
+
+---- sentinel_survives_every_buffer_size stdout ----
+
+thread 'sentinel_survives_every_buffer_size' (343) panicked at oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:26:9:
+assertion `left == right` failed: buffer 1
+  left: [84, 84, 84, 84, 84]
+ right: [66, 84, 32, 47, 70, 49, 32, 49, 50, 32, 84, 102, 32, 40, 83, 69, 78, 84, 73, 78, 69, 76, 41, 32, 84, 106, 32, 69, 84]
+
+
+failures:
+    all_split_positions_preserve_bytes_types_and_offsets
+    default_preserves_unknown_and_binary_bytes
+    explicit_text_filter_keeps_complete_text_not_keyword_lookalikes
+    invalid_direct_options_are_errors
+    sentinel_survives_every_buffer_size
+
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_726_chunk_boundaries_test`
