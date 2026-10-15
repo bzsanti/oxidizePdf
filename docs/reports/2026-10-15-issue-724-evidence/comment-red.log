@@ -1,0 +1,39 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue724/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 44s
+     Running tests/issue_724_streaming_input_test.rs (target/debug/deps/issue_724_streaming_input_test-94b7ce4b804e47f7)
+
+running 17 tests
+test comments_before_endobj_do_not_change_objects ... FAILED
+test incremental_delimiters_in_strings_comments_and_names_are_not_structure ... ok
+test incremental_io_and_callback_errors_are_not_success ... ok
+test incremental_finish_rejects_invalid_truncated_and_unsupported_input ... ok
+test iterator_errors_once_and_synthetic_geometry_has_no_content ... ok
+test incremental_objects_are_real_across_partitions_and_line_endings ... ok
+test incremental_stream_bytes_are_exact ... ok
+test eof_without_newline_is_recognized ... ok
+test nested_and_oversized_objects_fail_before_parsing_or_allocating_payloads ... ok
+test invalid_inputs_never_produce_pages ... ok
+test incremental_xref_trailer_and_short_reads_preserve_values ... ok
+test real_null_objects_are_preserved_instead_of_rejected ... ok
+test processor_resume_keeps_source_page_numbers ... ok
+test seeking_content_limits_and_cache_accounting ... ok
+test callbacks_stop_skip_and_propagate_errors ... ok
+test blank_source_pages_have_empty_text_and_content ... ok
+test real_pages_and_content_through_all_adapters ... ok
+
+failures:
+
+---- comments_before_endobj_do_not_change_objects stdout ----
+
+thread 'comments_before_endobj_do_not_change_objects' (461) panicked at oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:532:36:
+called `Result::unwrap()` on an `Err` value: ParseError("Missing endobj")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    comments_before_endobj_do_not_change_objects
+
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_724_streaming_input_test`

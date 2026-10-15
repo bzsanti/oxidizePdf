@@ -1,0 +1,547 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue724/oxidize-pdf-core)
+error[E0277]: `RefCell<PdfReader<BufReader<std::io::Cursor<Vec<u8>>>>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:605:25
+    |
+605 |     require_send_sync::<StreamingDocument<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<PdfReader<BufReader<std::io::Cursor<Vec<u8>>>>>` cannot be shared between threads safely
+    |
+    = help: within `StreamingDocument<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<PdfReader<BufReader<std::io::Cursor<Vec<u8>>>>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `StreamingDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/mod.rs:127:12
+    |
+127 | pub struct StreamingDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:605:25
+    |
+605 |     require_send_sync::<StreamingDocument<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>` cannot be shared between threads safely
+    |
+    = help: within `StreamingDocument<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `StreamingDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/mod.rs:127:12
+    |
+127 | pub struct StreamingDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<Option<ParsedDocumentMetadata>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:605:25
+    |
+605 |     require_send_sync::<StreamingDocument<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<Option<ParsedDocumentMetadata>>` cannot be shared between threads safely
+    |
+    = help: within `StreamingDocument<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<Option<ParsedDocumentMetadata>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `StreamingDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/mod.rs:127:12
+    |
+127 | pub struct StreamingDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<HashMap<(u32, u16), PdfObject>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:605:25
+    |
+605 |     require_send_sync::<StreamingDocument<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<HashMap<(u32, u16), PdfObject>>` cannot be shared between threads safely
+    |
+    = help: within `StreamingDocument<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<HashMap<(u32, u16), PdfObject>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `ResourceManager`
+   --> oxidize-pdf-core/src/parser/document.rs:88:12
+    |
+ 88 | pub struct ResourceManager {
+    |            ^^^^^^^^^^^^^^^
+note: required because it appears within the type `PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `StreamingDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/mod.rs:127:12
+    |
+127 | pub struct StreamingDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<PdfReader<BufReader<std::io::Cursor<Vec<u8>>>>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:606:25
+    |
+606 |     require_send_sync::<StreamProcessor<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<PdfReader<BufReader<std::io::Cursor<Vec<u8>>>>>` cannot be shared between threads safely
+    |
+    = help: within `StreamProcessor<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<PdfReader<BufReader<std::io::Cursor<Vec<u8>>>>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `StreamProcessor<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/memory/stream_processor.rs:37:12
+    |
+ 37 | pub struct StreamProcessor<R: Read + Seek> {
+    |            ^^^^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:606:25
+    |
+606 |     require_send_sync::<StreamProcessor<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>` cannot be shared between threads safely
+    |
+    = help: within `StreamProcessor<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `StreamProcessor<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/memory/stream_processor.rs:37:12
+    |
+ 37 | pub struct StreamProcessor<R: Read + Seek> {
+    |            ^^^^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<Option<ParsedDocumentMetadata>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:606:25
+    |
+606 |     require_send_sync::<StreamProcessor<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<Option<ParsedDocumentMetadata>>` cannot be shared between threads safely
+    |
+    = help: within `StreamProcessor<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<Option<ParsedDocumentMetadata>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `StreamProcessor<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/memory/stream_processor.rs:37:12
+    |
+ 37 | pub struct StreamProcessor<R: Read + Seek> {
+    |            ^^^^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<HashMap<(u32, u16), PdfObject>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:606:25
+    |
+606 |     require_send_sync::<StreamProcessor<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<HashMap<(u32, u16), PdfObject>>` cannot be shared between threads safely
+    |
+    = help: within `StreamProcessor<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<HashMap<(u32, u16), PdfObject>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `ResourceManager`
+   --> oxidize-pdf-core/src/parser/document.rs:88:12
+    |
+ 88 | pub struct ResourceManager {
+    |            ^^^^^^^^^^^^^^^
+note: required because it appears within the type `PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<BufReader<std::io::Cursor<Vec<u8>>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<BufReader<std::io::Cursor<Vec<u8>>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `StreamProcessor<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/memory/stream_processor.rs:37:12
+    |
+ 37 | pub struct StreamProcessor<R: Read + Seek> {
+    |            ^^^^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<PdfReader<std::io::Cursor<Vec<u8>>>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:607:25
+    |
+607 |     require_send_sync::<oxidize_pdf::streaming::PageStreamer<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<PdfReader<std::io::Cursor<Vec<u8>>>>` cannot be shared between threads safely
+    |
+    = help: within `PageStreamer<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<PdfReader<std::io::Cursor<Vec<u8>>>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<std::io::Cursor<Vec<u8>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:607:25
+    |
+607 |     require_send_sync::<oxidize_pdf::streaming::PageStreamer<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>` cannot be shared between threads safely
+    |
+    = help: within `PageStreamer<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<std::io::Cursor<Vec<u8>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<Option<ParsedDocumentMetadata>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:607:25
+    |
+607 |     require_send_sync::<oxidize_pdf::streaming::PageStreamer<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<Option<ParsedDocumentMetadata>>` cannot be shared between threads safely
+    |
+    = help: within `PageStreamer<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<Option<ParsedDocumentMetadata>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<std::io::Cursor<Vec<u8>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<HashMap<(u32, u16), PdfObject>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:607:25
+    |
+607 |     require_send_sync::<oxidize_pdf::streaming::PageStreamer<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<HashMap<(u32, u16), PdfObject>>` cannot be shared between threads safely
+    |
+    = help: within `PageStreamer<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<HashMap<(u32, u16), PdfObject>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `ResourceManager`
+   --> oxidize-pdf-core/src/parser/document.rs:88:12
+    |
+ 88 | pub struct ResourceManager {
+    |            ^^^^^^^^^^^^^^^
+note: required because it appears within the type `PdfDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<std::io::Cursor<Vec<u8>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<PdfReader<std::io::Cursor<Vec<u8>>>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:608:25
+    |
+608 |     require_send_sync::<PageIterator<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<PdfReader<std::io::Cursor<Vec<u8>>>>` cannot be shared between threads safely
+    |
+    = help: within `PageIterator<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<PdfReader<std::io::Cursor<Vec<u8>>>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<std::io::Cursor<Vec<u8>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `PageIterator<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:199:12
+    |
+199 | pub struct PageIterator<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:608:25
+    |
+608 |     require_send_sync::<PageIterator<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>` cannot be shared between threads safely
+    |
+    = help: within `PageIterator<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<Option<oxidize_pdf::parser::page_tree::PageTree>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<std::io::Cursor<Vec<u8>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `PageIterator<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:199:12
+    |
+199 | pub struct PageIterator<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<Option<ParsedDocumentMetadata>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:608:25
+    |
+608 |     require_send_sync::<PageIterator<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<Option<ParsedDocumentMetadata>>` cannot be shared between threads safely
+    |
+    = help: within `PageIterator<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<Option<ParsedDocumentMetadata>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `PdfDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<std::io::Cursor<Vec<u8>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `PageIterator<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:199:12
+    |
+199 | pub struct PageIterator<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+error[E0277]: `RefCell<HashMap<(u32, u16), PdfObject>>` cannot be shared between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:608:25
+    |
+608 |     require_send_sync::<PageIterator<Cursor<Vec<u8>>>>();
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RefCell<HashMap<(u32, u16), PdfObject>>` cannot be shared between threads safely
+    |
+    = help: within `PageIterator<std::io::Cursor<Vec<u8>>>`, the trait `Sync` is not implemented for `RefCell<HashMap<(u32, u16), PdfObject>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: required because it appears within the type `ResourceManager`
+   --> oxidize-pdf-core/src/parser/document.rs:88:12
+    |
+ 88 | pub struct ResourceManager {
+    |            ^^^^^^^^^^^^^^^
+note: required because it appears within the type `PdfDocument<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `Option<PdfDocument<std::io::Cursor<Vec<u8>>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `PageIterator<std::io::Cursor<Vec<u8>>>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:199:12
+    |
+199 | pub struct PageIterator<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_send_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:604:36
+    |
+604 |     fn require_send_sync<T: Send + Sync>() {}
+    |                                    ^^^^ required by this bound in `require_send_sync`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `oxidize-pdf` (test "issue_724_streaming_input_test") due to 16 previous errors
