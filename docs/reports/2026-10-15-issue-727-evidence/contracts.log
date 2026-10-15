@@ -1,0 +1,18 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue727/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.86s
+     Running tests/issue_727_dashboard_overflow_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_727_dashboard_overflow_test-7f5f9b5923a47323)
+
+running 10 tests
+test exact_fit_and_first_overflow ... ok
+test default_overflow_is_an_error_with_remaining_identities ... ok
+test first_row_overflow_and_empty_dashboard ... ok
+test invalid_grid_geometry_and_spans_are_errors ... ok
+test multiple_rows_require_space_for_every_component ... ok
+test non_finite_bounds_cannot_bypass_overflow ... ok
+test omission_is_explicit_and_identifies_the_entire_remainder ... ok
+test larger_page_renders_all_indices_and_duplicate_labels_remain_distinct ... ok
+test overflow_leaves_existing_page_unchanged ... ok
+test independent_output_oracle ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+

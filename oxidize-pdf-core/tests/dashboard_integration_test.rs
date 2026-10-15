@@ -180,9 +180,13 @@ mod dashboard_tests {
             "Large dashboard should have higher complexity"
         );
 
-        // Should render without error
+        // A4 previously succeeded while silently dropping the last six cards.
+        let error = dashboard.render_to_page(&mut Page::a4()).unwrap_err();
+        assert!(error.to_string().contains("6..12"), "{error}");
+
+        // Give all six rows sufficient room instead of accepting truncated output.
         let mut document = Document::new();
-        let mut page = Page::new(595.0, 842.0);
+        let mut page = Page::new(595.0, 1400.0);
 
         dashboard
             .render_to_page(&mut page)

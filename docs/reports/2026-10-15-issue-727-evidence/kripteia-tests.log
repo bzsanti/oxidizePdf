@@ -1,0 +1,59 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 10 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...ize-pdf-core/tests/issue_727_dashboard_overflow_test.rs       10     98
+
+--- Worst Offenders ---
+  independent_output_oracle (oxidize-pdf-core/tests/issue_727_dashboard_overflow_test.rs:201) - Score: 80
+    - Test 'independent_output_oracle' is marked as #[ignore]
+    i Test 'independent_output_oracle' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'independent_output_oracle' has multiple assertions without diagnostic messages
+    i Test 'independent_output_oracle' uses .unwrap() which silently discards error information
+  default_overflow_is_an_error_with_remaining_identities (oxidize-pdf-core/tests/issue_727_dashboard_overflow_test.rs:16) - Score: 100
+  exact_fit_and_first_overflow (oxidize-pdf-core/tests/issue_727_dashboard_overflow_test.rs:24) - Score: 100
+    i Test 'exact_fit_and_first_overflow' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'exact_fit_and_first_overflow' has multiple assertions without diagnostic messages
+  multiple_rows_require_space_for_every_component (oxidize-pdf-core/tests/issue_727_dashboard_overflow_test.rs:39) - Score: 100
+    i Test 'multiple_rows_require_space_for_every_component' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'multiple_rows_require_space_for_every_component' has multiple assertions without diagnostic messages
+  non_finite_bounds_cannot_bypass_overflow (oxidize-pdf-core/tests/issue_727_dashboard_overflow_test.rs:58) - Score: 100
+
+--- Details ---
+oxidize-pdf-core/tests/issue_727_dashboard_overflow_test.rs:
+  exact_fit_and_first_overflow (line 24) - Score: 100
+    i Test 'exact_fit_and_first_overflow' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'exact_fit_and_first_overflow' has multiple assertions without diagnostic messages
+  multiple_rows_require_space_for_every_component (line 39) - Score: 100
+    i Test 'multiple_rows_require_space_for_every_component' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'multiple_rows_require_space_for_every_component' has multiple assertions without diagnostic messages
+  overflow_leaves_existing_page_unchanged (line 84) - Score: 100
+    i Test 'overflow_leaves_existing_page_unchanged' has multiple assertions without diagnostic messages
+    i Test 'overflow_leaves_existing_page_unchanged' uses .unwrap() which silently discards error information
+  omission_is_explicit_and_identifies_the_entire_remainder (line 101) - Score: 100
+    i Test 'omission_is_explicit_and_identifies_the_entire_remainder' has multiple assertions without diagnostic messages
+    i Test 'omission_is_explicit_and_identifies_the_entire_remainder' uses .unwrap() which silently discards error information
+  first_row_overflow_and_empty_dashboard (line 110) - Score: 100
+    i Test 'first_row_overflow_and_empty_dashboard' has multiple assertions without diagnostic messages
+    i Test 'first_row_overflow_and_empty_dashboard' uses .unwrap() which silently discards error information
+  larger_page_renders_all_indices_and_duplicate_labels_remain_distinct (line 127) - Score: 100
+    i Test 'larger_page_renders_all_indices_and_duplicate_labels_remain_distinct' has multiple assertions without diagnostic messages
+    i Test 'larger_page_renders_all_indices_and_duplicate_labels_remain_distinct' uses .unwrap() which silently discards error information
+  invalid_grid_geometry_and_spans_are_errors (line 143) - Score: 100
+    i Test 'invalid_grid_geometry_and_spans_are_errors' has multiple assertions without diagnostic messages
+  independent_output_oracle (line 201) - Score: 80
+    - Test 'independent_output_oracle' is marked as #[ignore]
+    i Test 'independent_output_oracle' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'independent_output_oracle' has multiple assertions without diagnostic messages
+    i Test 'independent_output_oracle' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

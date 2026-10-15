@@ -1,3 +1,18 @@
+## Corrección #727 — 2026-10-15
+
+- Issue: #727 — fix(dashboard): report or paginate overflow instead of silently omitting components — https://github.com/bzsanti/oxidizePdf/issues/727
+- Estado: implementación y revisión local completas; PR borrador #760 publicado; CI previo 30 SUCCESS/2 SKIPPED; actualización de base en curso; prioridad P1; responsable Codex. OPEN confirmada en GitHub; base develop 7e5799e7; rama fix/issue-727-dashboard-overflow; checkout /tmp/oxidize-issue727. WIP raíz preservado; #658 permanece bloqueado por seguridad.
+- Criterio de cierre: error predeterminado identificando componentes restantes antes de dibujar, omisión solo explícita con informe; ajuste exacto, primera fila excedida, varias filas e identidades en PDF comprobadas por lector independiente; RED/GREEN, regresión y revisión de calidad/seguridad.
+- Bloqueantes resueltos: layout truncado exitoso; header dibujado antes del cálculo; ausencia de contrato de omisión explícita. Geometría no finita no puede evadir el rechazo. No cambia el algoritmo de alturas ni añade paginación.
+- Última validación: cuatro contratos RED y GREEN, fuente idéntica a la auditada; 6.738 biblioteca + 5 integración + 10 contratos PASS (incluye qpdf/Poppler), 3 ignorados preexistentes de biblioteca. Integración antigua dependía de perder seis tarjetas: corregida para exigir error A4 y éxito con espacio suficiente. Clippy all-targets/internal-testing, formato, diff --check y QR manual/Kripteia calidad y seguridad completos. Evidencia docs/reports/2026-10-15-issue-727-review.md y directorio adyacente.
+- Residual no bloqueante: aserciones tautológicas previas de data_aggregation; limpieza bloqueada sin issue OPEN aplicable. Responsable mantenimiento/bzsanti; dependencia/desbloqueo: crear o vincular issue con contrato de pruebas. No corregir ni recalibrar métricas bajo #727.
+- Publicación: https://github.com/bzsanti/oxidizePdf/pull/760, borrador contra develop, head fba58a76d19593d01b5f1d3446bfeef93b9beb29.
+- Integración de base: develop 207ac996 después de #759; conflicto limitado a TASKS.md, fuentes dashboard intactas.
+- Integración autorizada: CI de ca8c22f6 completo (30 SUCCESS/2 SKIPPED). Tras #761, conflictos solo en seguimiento y pasos contiguos del workflow; se conservan ambos pasos, sin modificar fuentes de producto.
+- Siguiente acción: validar contratos combinados y fusionar #760; sin release.
+
+
+
 ## Corrección #728 — 2026-10-15
 
 - Issue: #728 — fix(performance): emit valid object graph and xref from StreamingPdfWriter — https://github.com/bzsanti/oxidizePdf/issues/728
@@ -7,7 +22,7 @@
 - Última validación: cinco RED/GREEN en fuente idéntica a la auditada; ocho contratos finales con qpdf y fallo I/O real, 40 combinaciones de roundtrip y 20 de validación externa. Biblioteca performance/internal-testing sobre develop 207ac996: 6.810 PASS/3 ignorados preexistentes; contratos 7 PASS + oráculo explícito PASS. Doctest y compilación del ejemplo PASS. Clippy predeterminado all-targets -D warnings y Clippy biblioteca/contratos performance -D clippy::all PASS; formato/diff y QR manual/Kripteia completos. Informe docs/reports/2026-10-15-issue-728-review.md, manifiesto SHA256 y logs adyacentes.
 - Límite de validación: Clippy ampliado all-targets/performance falla por dos sliced_string_as_bytes preexistentes del ejemplo, con warnings anteriores de parallel_generation; no se declara verde ni se cambian allows. Junto al test tautológico del enum, limpieza independiente bloqueada sin issue OPEN aplicable; responsable mantenimiento/bzsanti, desbloqueo al crear/vincular issue, sin corregir ni recalibrar métricas bajo #728. No afectan grafo/xref ni ejecución del escritor validado.
 - Integración de base: develop 207ac996 tras #759; único conflicto en TASKS.md, fuentes del escritor intactas.
-- Siguiente acción: publicar PR borrador contra develop y comprobar CI. Sin merge ni release de #728.
+- Cierre: #761 MERGED en develop ce6c1812627c5c6a43780911d890224d14c6acb0, 2026-10-15T21:34:38Z, con 30 SUCCESS/2 SKIPPED. Siguiente acción: cerrar #728 y marcar #719. Sin release.
 
 
 ## Corrección #726 — 2026-10-15

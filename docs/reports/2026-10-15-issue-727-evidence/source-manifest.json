@@ -1,0 +1,12 @@
+{
+  "base": "7e5799e78a4f6c8c6d71cf106a66b4b341a8c5a9",
+  "audited_revision": "206b688768cc49c3210472668e6e3c63959e043f",
+  "audited_dashboard_files_identical_to_base": true,
+  "sha256": {
+    "oxidize-pdf-core/src/dashboard/layout.rs": "f9b33bcb0d3c7d91b7c350867d4340354ff8ec87fa95cb49db72c2dd271b4470",
+    "oxidize-pdf-core/src/dashboard/mod.rs": "847f96fcc71036bd5a9c8c5cf90eee8d26ca30d0a6a5ee9594c9e7740dc20f60",
+    "oxidize-pdf-core/tests/issue_727_dashboard_overflow_test.rs": "7b1192692bc63b5a663bc65c18e129298786ef656337eed0bd10e954c9c9d493",
+    ".github/workflows/interoperability.yml": "f28158a3972e4c40502862cd82e6eb1ecb2fb6172042fef7b2970f2b07c537ba",
+    "oxidize-pdf-core/tests/dashboard_integration_test.rs": "e78b7173c7a0b88a68226cec9b801cd35e37d6b1828b9c8f7e23775be3ac12bd"
+  }
+}
