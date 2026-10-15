@@ -1,0 +1,78 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 14 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs        14     90
+
+--- Worst Offenders ---
+  sentinel_survives_every_buffer_size (oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:47) - Score: 70
+    - Test 'sentinel_survives_every_buffer_size' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'sentinel_survives_every_buffer_size' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'sentinel_survives_every_buffer_size' does not call any production code
+  all_split_positions_preserve_bytes_types_and_offsets (oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:62) - Score: 80
+    - Test 'all_split_positions_preserve_bytes_types_and_offsets' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'all_split_positions_preserve_bytes_types_and_offsets' has multiple assertions without diagnostic messages
+    - Test 'all_split_positions_preserve_bytes_types_and_offsets' does not call any production code
+  text_filter_survives_every_split_with_strings_names_and_comments (oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:313) - Score: 80
+    - Test 'text_filter_survives_every_split_with_strings_names_and_comments' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'text_filter_survives_every_split_with_strings_names_and_comments' has multiple assertions without diagnostic messages
+    - Test 'text_filter_survives_every_split_with_strings_names_and_comments' does not call any production code
+  selecting_no_types_does_not_require_classifying_inline_binary (oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:385) - Score: 80
+    - Test 'selecting_no_types_does_not_require_classifying_inline_binary' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'selecting_no_types_does_not_require_classifying_inline_binary' does not call any production code
+  explicit_text_filter_keeps_complete_text_not_keyword_lookalikes (oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:93) - Score: 90
+    - Test 'explicit_text_filter_keeps_complete_text_not_keyword_lookalikes' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'explicit_text_filter_keeps_complete_text_not_keyword_lookalikes' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/tests/issue_726_chunk_boundaries_test.rs:
+  sentinel_survives_every_buffer_size (line 47) - Score: 70
+    - Test 'sentinel_survives_every_buffer_size' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'sentinel_survives_every_buffer_size' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'sentinel_survives_every_buffer_size' does not call any production code
+  all_split_positions_preserve_bytes_types_and_offsets (line 62) - Score: 80
+    - Test 'all_split_positions_preserve_bytes_types_and_offsets' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'all_split_positions_preserve_bytes_types_and_offsets' has multiple assertions without diagnostic messages
+    - Test 'all_split_positions_preserve_bytes_types_and_offsets' does not call any production code
+  explicit_text_filter_keeps_complete_text_not_keyword_lookalikes (line 93) - Score: 90
+    - Test 'explicit_text_filter_keeps_complete_text_not_keyword_lookalikes' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'explicit_text_filter_keeps_complete_text_not_keyword_lookalikes' has multiple assertions without diagnostic messages
+  invalid_direct_options_are_errors (line 144) - Score: 90
+    - Test 'invalid_direct_options_are_errors' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  inline_image_payload_is_never_interpreted_as_operators (line 187) - Score: 90
+    - Test 'inline_image_payload_is_never_interpreted_as_operators' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'inline_image_payload_is_never_interpreted_as_operators' has multiple assertions without diagnostic messages
+  splitting_disabled_never_splits_an_operation_silently (line 217) - Score: 100
+    i Test 'splitting_disabled_never_splits_an_operation_silently' has multiple assertions without diagnostic messages
+  interrupted_reads_retry_and_callback_failure_stops_processing (line 236) - Score: 90
+    i Test 'interrupted_reads_retry_and_callback_failure_stops_processing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'interrupted_reads_retry_and_callback_failure_stops_processing' has multiple assertions without diagnostic messages
+    i Test 'interrupted_reads_retry_and_callback_failure_stops_processing' uses .unwrap() which silently discards error information
+    - Test 'interrupted_reads_retry_and_callback_failure_stops_processing' has low assert-to-setup ratio (13%): 4 asserts vs 26 setup lines
+  oversized_unfinished_records_and_excessive_nesting_error (line 284) - Score: 100
+    i Test 'oversized_unfinished_records_and_excessive_nesting_error' has multiple assertions without diagnostic messages
+  positions_and_page_numbers_include_deliberately_filtered_content (line 294) - Score: 100
+    i Test 'positions_and_page_numbers_include_deliberately_filtered_content' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'positions_and_page_numbers_include_deliberately_filtered_content' has multiple assertions without diagnostic messages
+    i Test 'positions_and_page_numbers_include_deliberately_filtered_content' uses .unwrap() which silently discards error information
+  text_filter_survives_every_split_with_strings_names_and_comments (line 313) - Score: 80
+    - Test 'text_filter_survives_every_split_with_strings_names_and_comments' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'text_filter_survives_every_split_with_strings_names_and_comments' has multiple assertions without diagnostic messages
+    - Test 'text_filter_survives_every_split_with_strings_names_and_comments' does not call any production code
+  classification_uses_complete_tokens_and_keeps_opaque_image_identity (line 341) - Score: 90
+    - Test 'classification_uses_complete_tokens_and_keeps_opaque_image_identity' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'classification_uses_complete_tokens_and_keeps_opaque_image_identity' has multiple assertions without diagnostic messages
+  selecting_no_types_does_not_require_classifying_inline_binary (line 385) - Score: 80
+    - Test 'selecting_no_types_does_not_require_classifying_inline_binary' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'selecting_no_types_does_not_require_classifying_inline_binary' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

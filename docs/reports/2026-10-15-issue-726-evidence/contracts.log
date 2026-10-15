@@ -1,0 +1,21 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue726/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 12.51s
+     Running tests/issue_726_chunk_boundaries_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_726_chunk_boundaries_test-dd4251f615e5b912)
+
+running 13 tests
+test classification_uses_complete_tokens_and_keeps_opaque_image_identity ... ok
+test default_preserves_unknown_and_binary_bytes ... ok
+test explicit_text_filter_keeps_complete_text_not_keyword_lookalikes ... ok
+test incomplete_input_and_comments_are_preserved_by_default ... ok
+test invalid_direct_options_are_errors ... ok
+test positions_and_page_numbers_include_deliberately_filtered_content ... ok
+test splitting_disabled_never_splits_an_operation_silently ... ok
+test sentinel_survives_every_buffer_size ... ok
+test interrupted_reads_retry_and_callback_failure_stops_processing ... ok
+test all_split_positions_preserve_bytes_types_and_offsets ... ok
+test inline_image_payload_is_never_interpreted_as_operators ... ok
+test text_filter_survives_every_split_with_strings_names_and_comments ... ok
+test oversized_unfinished_records_and_excessive_nesting_error ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.34s

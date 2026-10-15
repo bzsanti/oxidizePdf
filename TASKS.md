@@ -1,3 +1,13 @@
+## Corrección #726 — 2026-10-15
+
+- Issue: #726 — fix(streaming): preserve content when ChunkProcessor read buffer boundaries change — https://github.com/bzsanti/oxidizePdf/issues/726
+- Estado: implementación y revisión local completas; publicación en curso; prioridad P1; responsable Codex. OPEN confirmada; base develop 09c56737; checkout /tmp/oxidize-issue726, independiente de #725 y de la release upstream.
+- Criterio de cierre: contenido y posiciones invariantes frente a fragmentación; bytes seleccionados íntegros; operadores completos o Unknown conservado; todos los cortes, strings y tamaños; RED/GREEN y revisión calidad/seguridad.
+- Bloqueantes resueltos: estado léxico entre lecturas y clasificación antes de partir; Unknown incluido por defecto; filtros explícitos por tipo; opciones inválidas dan error en ambas APIs; Interrupted reintentado. process_content recibe unidades completas, process_in_chunks mantiene fragmentos.
+- Última validación: cinco contratos RED/GREEN sobre fuente anterior idéntica a la auditada; final 6.742 biblioteca + 19 contratos #724 + 14 contratos #726 PASS, 0 FAIL, 3 ignorados preexistentes. Clippy all-targets/internal-testing -D warnings, formato y diff --check PASS; Kripteia calidad/seguridad ejecutado (91/90, sin alertas de seguridad). Evidencia docs/reports/2026-10-15-issue-726-review.md y directorio adyacente; SHA256 verificado.
+- Límites documentados: registros pendientes 16 MiB, anidación 128; sin splitting, operación seleccionada que exceda max_chunk_size da error. XObject sin recursos es Unknown; cola de imagen inline opaca Unknown o error si el filtro pretende excluirla sin clasificación segura. No se interpretan EI/BT falsos en binarios. No es validador PDF.
+- Siguiente acción: publicar PR contra develop y verificar CI. Sin bloqueantes locales pendientes. #725 continúa en PR #756; sin integración ni cambios de release.
+
 ## Corrección #724 — 2026-10-15
 
 - Issue: #724 — fix(streaming): replace fabricated pages and Null objects with parsed input or explicit errors — https://github.com/bzsanti/oxidizePdf/issues/724
