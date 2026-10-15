@@ -1,3 +1,14 @@
+## Corrección #725 — 2026-10-15
+
+- Issue: #725 — fix(memory): initialize LazyDocument page count and object access from its reader — https://github.com/bzsanti/oxidizePdf/issues/725
+- Estado: implementación y revisión local completas; publicación en curso; prioridad P1; responsable Codex. OPEN confirmada en GitHub. Base develop 09c56737; checkout /tmp/oxidize-issue725; WIP previo preservado.
+- Criterio de cierre: conteo y páginas/objetos reales, contenido diferido; casos públicos de cero/una/varias páginas y referencias ausentes; comparación con lector ordinario; RED/GREEN y revisión calidad/seguridad.
+- Bloqueantes resueltos: conteo cero y accesos ficticios reemplazados por PdfDocument sincronizado y referencias del xref; Null real distinto de ausencia; precarga propaga errores. Arc conserva Unpin con lector !Unpin; no unsafe nuevo.
+- Última validación: cuatro contratos RED sobre fuente idéntica a la auditada y GREEN; final 6.738 tests biblioteca + 12 contratos + 11 integración PASS, 0 FAIL, 3 ignorados preexistentes; Clippy all-targets/internal-testing -D warnings, formato y diff --check PASS. qpdf acepta fixtures independientes. Kripteia calidad y seguridad completos; sin alertas de seguridad. Evidencia docs/reports/2026-10-15-issue-725-review.md y directorio adyacente, SHA256 verificado.
+- Límite explícito: construcción indexa diccionarios de páginas; streams se cargan al acceder. cache_size/clear_cache gobiernan la caché del adaptador, no las cachés internas del parser ni RSS. Se preservan opciones del lector; no cambia el parser general ni #726/#739.
+- Residual no bloqueante: tests antiguos del enum LazyObject incluyen assert!(true)/match vacío; no aportan evidencia al contrato, cubierto por nuevas pruebas públicas. Limpieza independiente bloqueada sin issue específica; responsable bzsanti/mantenimiento; dependencia/desbloqueo: crear o vincular issue OPEN aplicable; restricción: no recalibrar métricas ni iniciar limpieza bajo esta entrada.
+- Siguiente acción: publicar PR contra develop y verificar CI. Sin merge ni release autorizados para #725.
+
 ## Corrección #724 — 2026-10-15
 
 - Issue: #724 — fix(streaming): replace fabricated pages and Null objects with parsed input or explicit errors — https://github.com/bzsanti/oxidizePdf/issues/724

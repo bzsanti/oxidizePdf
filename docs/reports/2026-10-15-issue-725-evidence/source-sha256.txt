@@ -1,0 +1,4 @@
+4c041a637f867a168adf928b12e714807119537ddf4a787fe2a7f92eda6415d0  oxidize-pdf-core/src/memory/lazy_loader.rs
+7cc00ef910d1213564e97f3d8eb9d1ccfaeef776af708ef3c822befa59db78fb  oxidize-pdf-core/src/memory/mod.rs
+0ad30d08ba7d6c97862eef319c2bedd912837a68b8c5aef3b77ead4ed9c47204  oxidize-pdf-core/tests/issue_725_lazy_document_test.rs
+15e1ae61d4393a262d501abb308b155244117e81c1da74ff77ee05374aa460ef  oxidize-pdf-core/tests/memory_optimization_tests.rs
