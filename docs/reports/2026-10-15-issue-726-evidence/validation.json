@@ -1,0 +1,12 @@
+{
+  "base": "09c567376611990673b91e7f1ba6129bc4cae6fd",
+  "tests": {
+    "passed": 6775,
+    "failed": 0,
+    "ignored": 3
+  },
+  "clippy": "PASS",
+  "fmt": "PASS",
+  "review": "complete",
+  "ci": "pending publication"
+}

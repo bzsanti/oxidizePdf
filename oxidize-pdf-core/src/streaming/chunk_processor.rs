@@ -74,11 +74,13 @@ impl ContentChunk {
 pub struct ChunkOptions {
     /// Maximum size of a single chunk
     pub max_chunk_size: usize,
-    /// Whether to split large objects
+    /// Whether to split complete operations larger than max_chunk_size.
+    /// If false, an oversized operation returns an error.
     pub split_large_objects: bool,
     /// Buffer size for reading
     pub buffer_size: usize,
-    /// Types of chunks to process
+    /// Types to retain. The default includes Unknown to preserve every byte.
+    /// Explicitly omitted types are discarded after lexical classification.
     pub chunk_types: Vec<ChunkType>,
 }
 
@@ -93,6 +95,7 @@ impl Default for ChunkOptions {
                 ChunkType::Image,
                 ChunkType::Graphics,
                 ChunkType::Form,
+                ChunkType::Unknown,
             ],
         }
     }
@@ -132,41 +135,19 @@ impl ChunkProcessor {
         }
     }
 
-    /// Process content and yield chunks
+    /// Process one complete content buffer. Separate calls are independent
+    /// lexical units; use process_in_chunks for fragments of the same input.
+    /// Positions continue across calls, including deliberately filtered bytes.
     pub fn process_content(&mut self, content: &[u8]) -> Result<Vec<ContentChunk>> {
-        // Handle edge case where max_chunk_size is 0
-        if self.options.max_chunk_size == 0 {
-            return Ok(vec![]);
-        }
-
-        let mut chunks = Vec::new();
-        let mut offset = 0;
-
-        while offset < content.len() {
-            let remaining = content.len() - offset;
-            let chunk_size = remaining.min(self.options.max_chunk_size);
-
-            // Detect chunk type (simplified)
-            let chunk_type = self.detect_chunk_type(&content[offset..offset + chunk_size]);
-
-            // Skip if not in requested types
-            if !self.options.chunk_types.contains(&chunk_type) {
-                offset += chunk_size;
-                continue;
-            }
-
-            let chunk = ContentChunk::new(
-                chunk_type,
-                content[offset..offset + chunk_size].to_vec(),
-                self.current_position + offset as u64,
-                self.current_page,
-            );
-
-            chunks.push(chunk);
-            offset += chunk_size;
-        }
-
-        self.current_position += content.len() as u64;
+        self.options.validate()?;
+        let mut decoder =
+            ChunkDecoder::new(&self.options, self.current_position, self.current_page);
+        let mut chunks = decoder.feed(content)?;
+        chunks.extend(decoder.finish()?);
+        self.current_position = self
+            .current_position
+            .checked_add(content.len() as u64)
+            .ok_or_else(|| chunk_error("content position overflow"))?;
         Ok(chunks)
     }
 
@@ -180,51 +161,475 @@ impl ChunkProcessor {
         self.current_position = 0;
         self.current_page = 0;
     }
+}
 
-    fn detect_chunk_type(&self, data: &[u8]) -> ChunkType {
-        // Simple heuristic for chunk type detection
-        if data.starts_with(b"BT")
-            || (data.contains(&b'T') && data.contains(&b'j'))
-            || (data.len() == 1 && data[0] == b'T')
+// A record consists of operands and a complete operator, never a read buffer.
+// Keep an explicit cap on unfinished strings/arrays/operations.
+const MAX_PENDING_RECORD: usize = 16 * 1024 * 1024;
+
+#[derive(Default)]
+enum LexState {
+    #[default]
+    Normal,
+    Word(usize),
+    Name,
+    Comment,
+    Literal {
+        depth: usize,
+        escaped: bool,
+    },
+    Angle,
+    Hex,
+    CloseAngle,
+}
+
+struct ChunkDecoder<'a> {
+    options: &'a ChunkOptions,
+    position: u64,
+    page: u32,
+    prefix: Vec<u8>,
+    started: bool,
+    opaque: Option<ChunkType>,
+    record: Vec<u8>,
+    record_start: u64,
+    state: LexState,
+    nesting: usize,
+    in_text: bool,
+    last_type: ChunkType,
+    output: Option<ContentChunk>,
+}
+
+impl<'a> ChunkDecoder<'a> {
+    fn new(options: &'a ChunkOptions, position: u64, page: u32) -> Self {
+        Self {
+            options,
+            position,
+            page,
+            prefix: Vec::new(),
+            started: false,
+            // With no selected types, no classification is necessary.
+            opaque: options.chunk_types.is_empty().then_some(ChunkType::Unknown),
+            record: Vec::new(),
+            record_start: position,
+            state: LexState::Normal,
+            nesting: 0,
+            in_text: false,
+            last_type: ChunkType::Unknown,
+            output: None,
+        }
+    }
+
+    fn feed(&mut self, bytes: &[u8]) -> Result<Vec<ContentChunk>> {
+        let mut out = Vec::new();
+        for &byte in bytes {
+            if !self.started {
+                self.prefix.push(byte);
+                if self.prefix.len() < 8 {
+                    continue;
+                }
+                self.start(&mut out)?;
+            } else {
+                self.byte(byte, &mut out)?;
+            }
+        }
+        Ok(out)
+    }
+
+    fn start(&mut self, out: &mut Vec<ContentChunk>) -> Result<()> {
+        self.started = true;
+        if self.prefix.starts_with(b"\xff\xd8") || self.prefix.starts_with(b"\x89PNG\r\n\x1a\n") {
+            self.opaque = Some(ChunkType::Image);
+        }
+        let prefix = std::mem::take(&mut self.prefix);
+        for byte in prefix {
+            self.byte(byte, out)?;
+        }
+        Ok(())
+    }
+
+    fn byte(&mut self, byte: u8, out: &mut Vec<ContentChunk>) -> Result<()> {
+        if let Some(kind) = self.opaque.clone() {
+            if self.options.split_large_objects || !self.options.chunk_types.contains(&kind) {
+                self.append(&[byte], kind, self.position, out)?;
+            } else {
+                if self.record.len() == self.options.max_chunk_size {
+                    return Err(chunk_error(
+                        "opaque content exceeds max_chunk_size with splitting disabled",
+                    ));
+                }
+                self.record.push(byte);
+            }
+            self.advance()?;
+            return Ok(());
+        }
+        // Finish the preceding token before consuming its delimiter; the
+        // delimiter may itself begin a string, name, array, or comment.
+        if let LexState::Word(start) = self.state {
+            if delimiter(byte) {
+                let token = self.record[start..].to_vec();
+                self.state = LexState::Normal;
+                self.operator(&token, out)?;
+            }
+        }
+        if self.opaque.is_some() {
+            return self.byte(byte, out);
+        }
+        let index = self.record.len();
+        if self.record.len() == MAX_PENDING_RECORD {
+            return Err(chunk_error("unfinished content record exceeds 16 MiB"));
+        }
+        self.record.push(byte);
+        self.advance()?;
+        self.state = match std::mem::take(&mut self.state) {
+            LexState::Comment => {
+                if byte == b'\r' || byte == b'\n' {
+                    LexState::Normal
+                } else {
+                    LexState::Comment
+                }
+            }
+            LexState::Name => {
+                if delimiter(byte) {
+                    self.normal(byte, index)?
+                } else {
+                    LexState::Name
+                }
+            }
+            LexState::Literal { mut depth, escaped } => {
+                if escaped {
+                    LexState::Literal {
+                        depth,
+                        escaped: false,
+                    }
+                } else if byte == b'\\' {
+                    LexState::Literal {
+                        depth,
+                        escaped: true,
+                    }
+                } else {
+                    if byte == b'(' {
+                        depth += 1;
+                    }
+                    if byte == b')' {
+                        depth -= 1;
+                    }
+                    if depth > 128 {
+                        return Err(chunk_error("literal string nesting exceeds 128"));
+                    }
+                    if depth == 0 {
+                        LexState::Normal
+                    } else {
+                        LexState::Literal {
+                            depth,
+                            escaped: false,
+                        }
+                    }
+                }
+            }
+            LexState::Angle => {
+                if byte == b'<' {
+                    self.push_nesting()?;
+                    LexState::Normal
+                } else if byte == b'>' {
+                    LexState::Normal
+                } else {
+                    LexState::Hex
+                }
+            }
+            LexState::Hex => {
+                if byte == b'>' {
+                    LexState::Normal
+                } else {
+                    LexState::Hex
+                }
+            }
+            LexState::CloseAngle => {
+                if byte == b'>' {
+                    LexState::Normal
+                } else {
+                    self.normal(byte, index)?
+                }
+            }
+            LexState::Word(start) => LexState::Word(start),
+            LexState::Normal => self.normal(byte, index)?,
+        };
+        Ok(())
+    }
+
+    fn advance(&mut self) -> Result<()> {
+        self.position = self
+            .position
+            .checked_add(1)
+            .ok_or_else(|| chunk_error("content position overflow"))?;
+        Ok(())
+    }
+
+    fn push_nesting(&mut self) -> Result<()> {
+        self.nesting += 1;
+        if self.nesting > 128 {
+            return Err(chunk_error("content nesting exceeds 128"));
+        }
+        Ok(())
+    }
+
+    fn normal(&mut self, byte: u8, index: usize) -> Result<LexState> {
+        Ok(match byte {
+            b'%' => LexState::Comment,
+            b'/' => LexState::Name,
+            b'(' => LexState::Literal {
+                depth: 1,
+                escaped: false,
+            },
+            b'<' => LexState::Angle,
+            b'>' => {
+                self.nesting = self.nesting.saturating_sub(1);
+                LexState::CloseAngle
+            }
+            b'[' => {
+                self.push_nesting()?;
+                LexState::Normal
+            }
+            b']' => {
+                self.nesting = self.nesting.saturating_sub(1);
+                LexState::Normal
+            }
+            b')' | b'{' | b'}' => LexState::Normal,
+            b if whitespace(b) => LexState::Normal,
+            _ => LexState::Word(index),
+        })
+    }
+
+    fn operator(&mut self, token: &[u8], out: &mut Vec<ContentChunk>) -> Result<()> {
+        if self.nesting != 0
+            || token.is_empty()
+            || matches!(token, b"true" | b"false" | b"null")
+            || token
+                .iter()
+                .all(|b| b.is_ascii_digit() || b"+-.".contains(b))
         {
+            return Ok(());
+        }
+        if token == b"BI" {
+            // Without image resource/length information, EI-shaped bytes can
+            // occur inside binary data. Do not scan that payload as operators.
+            if !self.options.chunk_types.contains(&ChunkType::Unknown) {
+                return Err(chunk_error("inline image boundary is ambiguous for type filtering; include Unknown to preserve the remaining bytes"));
+            }
+            self.opaque = Some(ChunkType::Unknown);
+            return self.emit(ChunkType::Unknown, out);
+        }
+        let kind = if self.in_text
+            || matches!(
+                token,
+                b"BT"
+                    | b"ET"
+                    | b"Tc"
+                    | b"Tw"
+                    | b"Tz"
+                    | b"TL"
+                    | b"Tf"
+                    | b"Tr"
+                    | b"Ts"
+                    | b"Td"
+                    | b"TD"
+                    | b"Tm"
+                    | b"T*"
+                    | b"Tj"
+                    | b"TJ"
+                    | b"'"
+                    | b"\""
+            ) {
             ChunkType::Text
-        } else if data.starts_with(b"\xFF\xD8") || data.starts_with(b"\x89PNG") {
-            ChunkType::Image
-        } else if data.contains(&b'm') || data.contains(&b'l') || data.contains(&b'c') {
+        } else if matches!(
+            token,
+            b"q" | b"Q"
+                | b"cm"
+                | b"w"
+                | b"J"
+                | b"j"
+                | b"M"
+                | b"d"
+                | b"ri"
+                | b"i"
+                | b"gs"
+                | b"m"
+                | b"l"
+                | b"c"
+                | b"v"
+                | b"y"
+                | b"h"
+                | b"re"
+                | b"S"
+                | b"s"
+                | b"f"
+                | b"F"
+                | b"f*"
+                | b"B"
+                | b"B*"
+                | b"b"
+                | b"b*"
+                | b"n"
+                | b"W"
+                | b"W*"
+                | b"CS"
+                | b"cs"
+                | b"SC"
+                | b"SCN"
+                | b"sc"
+                | b"scn"
+                | b"G"
+                | b"g"
+                | b"RG"
+                | b"rg"
+                | b"K"
+                | b"k"
+                | b"sh"
+        ) {
             ChunkType::Graphics
         } else {
             ChunkType::Unknown
+        };
+        if token == b"BT" {
+            self.in_text = true;
         }
+        if token == b"ET" {
+            self.in_text = false;
+        }
+        self.emit(kind, out)
+    }
+
+    fn emit(&mut self, kind: ChunkType, out: &mut Vec<ContentChunk>) -> Result<()> {
+        let data = std::mem::take(&mut self.record);
+        self.append(&data, kind.clone(), self.record_start, out)?;
+        self.record_start = self.position;
+        self.last_type = kind;
+        Ok(())
+    }
+
+    fn append(
+        &mut self,
+        data: &[u8],
+        kind: ChunkType,
+        position: u64,
+        out: &mut Vec<ContentChunk>,
+    ) -> Result<()> {
+        if data.is_empty() {
+            return Ok(());
+        }
+        if !self.options.chunk_types.contains(&kind) {
+            if let Some(chunk) = self.output.take() {
+                out.push(chunk);
+            }
+            return Ok(());
+        }
+        if !self.options.split_large_objects && data.len() > self.options.max_chunk_size {
+            return Err(chunk_error(
+                "content operation exceeds max_chunk_size with splitting disabled",
+            ));
+        }
+        let mut offset = 0;
+        while offset < data.len() {
+            if self.output.as_ref().is_some_and(|c| {
+                c.chunk_type != kind
+                    || c.position + c.size as u64 != position + offset as u64
+                    || (!self.options.split_large_objects
+                        && c.size + data.len() > self.options.max_chunk_size)
+            }) {
+                out.push(self.output.take().unwrap());
+            }
+            let chunk = self.output.get_or_insert_with(|| {
+                ContentChunk::new(
+                    kind.clone(),
+                    Vec::new(),
+                    position + offset as u64,
+                    self.page,
+                )
+            });
+            let n = (self.options.max_chunk_size - chunk.size).min(data.len() - offset);
+            chunk.data.extend_from_slice(&data[offset..offset + n]);
+            chunk.size += n;
+            offset += n;
+            if chunk.size == self.options.max_chunk_size {
+                out.push(self.output.take().unwrap());
+            }
+        }
+        Ok(())
+    }
+
+    fn finish(mut self) -> Result<Vec<ContentChunk>> {
+        let mut out = Vec::new();
+        if !self.started {
+            self.start(&mut out)?;
+        }
+        if self.opaque.is_none() {
+            if let LexState::Word(start) = self.state {
+                let token = self.record[start..].to_vec();
+                self.operator(&token, &mut out)?;
+            }
+        }
+        let kind = self.opaque.clone().unwrap_or_else(|| {
+            if self.in_text {
+                ChunkType::Text
+            } else if self.record.iter().all(|b| whitespace(*b)) {
+                self.last_type.clone()
+            } else {
+                ChunkType::Unknown
+            }
+        });
+        self.emit(kind, &mut out)?;
+        if let Some(chunk) = self.output.take() {
+            out.push(chunk);
+        }
+        Ok(out)
     }
 }
 
-/// Process a reader in chunks
+fn whitespace(byte: u8) -> bool {
+    matches!(byte, 0 | 9 | 10 | 12 | 13 | 32)
+}
+fn delimiter(byte: u8) -> bool {
+    whitespace(byte) || b"()<>[]{}/%".contains(&byte)
+}
+fn chunk_error(message: &str) -> crate::error::PdfError {
+    crate::error::PdfError::InvalidStructure(message.to_owned())
+}
+
+/// Process a decoded content stream without depending on Read boundaries.
+///
+/// Tokens, strings, comments and composite operands survive short reads. Text
+/// operations (including BT..ET) and graphics operators are classified;
+/// XObject invocations cannot be distinguished as image/form without resources
+/// and remain Unknown. Raw JPEG/PNG inputs are treated as opaque Image data.
+/// An inline image makes the remaining bytes opaque Unknown: no binary EI
+/// heuristic is used. Filtering that excludes Unknown is rejected in that case.
+///
+/// Output chunks are at most max_chunk_size. Unfinished lexical records have
+/// a 16 MiB limit and nesting has a limit of 128; exceeding either returns an
+/// explicit error. This is a byte-preserving classifier, not PDF validation.
+/// A later I/O, classification or callback error may follow earlier callbacks.
 pub fn process_in_chunks<R, F>(mut reader: R, options: ChunkOptions, mut callback: F) -> Result<()>
 where
     R: Read,
     F: FnMut(ContentChunk) -> Result<()>,
 {
-    // Validate options first
     options.validate()?;
-
-    let mut processor = ChunkProcessor::new(options.clone());
+    let mut decoder = ChunkDecoder::new(&options, 0, 0);
     let mut buffer = vec![0u8; options.buffer_size];
-    let mut _position = 0u64;
-
     loop {
         match reader.read(&mut buffer) {
-            Ok(0) => break, // EOF
+            Ok(0) => break,
             Ok(n) => {
-                let chunks = processor.process_content(&buffer[..n])?;
-                for chunk in chunks {
+                for chunk in decoder.feed(&buffer[..n])? {
                     callback(chunk)?;
                 }
-                _position += n as u64;
             }
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
             Err(e) => return Err(crate::error::PdfError::Io(e)),
         }
     }
-
+    for chunk in decoder.finish()? {
+        callback(chunk)?;
+    }
     Ok(())
 }
 
@@ -251,7 +656,7 @@ mod tests {
         assert_eq!(options.max_chunk_size, 1024 * 1024);
         assert!(options.split_large_objects);
         assert_eq!(options.buffer_size, 64 * 1024);
-        assert_eq!(options.chunk_types.len(), 4);
+        assert_eq!(options.chunk_types.len(), 5);
     }
 
     #[test]
@@ -265,27 +670,6 @@ mod tests {
         assert!(!chunks.is_empty());
         assert_eq!(chunks[0].chunk_type, ChunkType::Text);
         assert_eq!(chunks[0].data, content);
-    }
-
-    #[test]
-    fn test_chunk_type_detection() {
-        let processor = ChunkProcessor::new(ChunkOptions::default());
-
-        // Text content
-        let text = b"BT /F1 12 Tf (text) Tj ET";
-        assert_eq!(processor.detect_chunk_type(text), ChunkType::Text);
-
-        // JPEG image
-        let jpeg = b"\xFF\xD8\xFF\xE0";
-        assert_eq!(processor.detect_chunk_type(jpeg), ChunkType::Image);
-
-        // PNG image
-        let png = b"\x89PNG\r\n\x1a\n";
-        assert_eq!(processor.detect_chunk_type(png), ChunkType::Image);
-
-        // Graphics
-        let graphics = b"100 200 m 300 400 l S";
-        assert_eq!(processor.detect_chunk_type(graphics), ChunkType::Graphics);
     }
 
     #[test]
@@ -475,29 +859,6 @@ mod tests {
     }
 
     #[test]
-    fn test_detect_chunk_type_edge_cases() {
-        let processor = ChunkProcessor::new(ChunkOptions::default());
-
-        // Empty data
-        assert_eq!(processor.detect_chunk_type(b""), ChunkType::Unknown);
-
-        // Single byte
-        assert_eq!(processor.detect_chunk_type(b"T"), ChunkType::Text);
-
-        // Mixed text with Tj
-        assert_eq!(
-            processor.detect_chunk_type(b"Hello Tj World"),
-            ChunkType::Text
-        );
-
-        // Graphics with multiple markers
-        assert_eq!(processor.detect_chunk_type(b"m l c"), ChunkType::Graphics);
-
-        // Unknown content
-        assert_eq!(processor.detect_chunk_type(b"xyz123"), ChunkType::Unknown);
-    }
-
-    #[test]
     fn test_chunk_options_all_chunk_types() {
         let all_types = vec![
             ChunkType::Text,
@@ -604,9 +965,7 @@ mod tests {
         let mut processor = ChunkProcessor::new(options);
         let content = b"Some content";
 
-        let chunks = processor.process_content(content).unwrap();
-        // Should handle gracefully, possibly creating no chunks
-        assert!(chunks.is_empty());
+        assert!(processor.process_content(content).is_err());
     }
 
     #[test]
@@ -650,20 +1009,6 @@ mod tests {
         let text = chunk.as_text();
         assert!(text.is_some());
         assert!(!text.unwrap().is_empty());
-    }
-
-    #[test]
-    fn test_detect_form_xobject() {
-        let processor = ChunkProcessor::new(ChunkOptions::default());
-
-        // Form XObject content (simplified detection)
-        let form_content = b"q 1 0 0 1 0 0 cm BT /F1 12 Tf (Form) Tj ET Q";
-
-        // Current implementation doesn't specifically detect Form type
-        // but this tests the detection logic
-        let detected_type = processor.detect_chunk_type(form_content);
-        // Will be detected as Text due to BT...Tj pattern
-        assert_eq!(detected_type, ChunkType::Text);
     }
 
     #[test]
