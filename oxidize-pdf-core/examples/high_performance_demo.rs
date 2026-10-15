@@ -305,26 +305,15 @@ fn demo_streaming_writer(monitor: &PerformanceMonitor) -> Result<(), Box<dyn std
 
     // Generate pages with streaming
     for i in 0..100 {
-        let mut resources = PageResources::default();
-        resources
-            .fonts
-            .insert(format!("F{}", i % 3 + 1), (i % 3 + 1) as u32);
-
+        // This writer has no font/image registration API. Use self-contained graphics
+        // instead of references to font objects that were never written.
         let content = StreamingPageContent {
             width: 595.0,
             height: 842.0,
-            content_streams: vec![
-                ContentStream::from_text(
-                    &format!("Page {} - Streaming PDF Generation Demo\nThis content is written incrementally.", i + 1),
-                    100.0, 400.0, &format!("F{}", i % 3 + 1), 12.0
-                ),
-                ContentStream::from_text(
-                    &format!("Memory usage stays constant regardless of document size.\nCurrent buffer usage: {:.1}%", 
-                           writer.buffer_usage_percent()),
-                    100.0, 300.0, &format!("F{}", i % 3 + 1), 10.0
-                )
-            ],
-            resources,
+            content_streams: vec![ContentStream::new(
+                format!("q 0.2 0.4 0.8 rg 100 300 {} 40 re f Q", 20 + i).into_bytes(),
+            )],
+            resources: PageResources::default(),
         };
 
         writer.write_page_streaming(&content)?;

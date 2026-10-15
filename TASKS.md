@@ -8,7 +8,21 @@
 - Residual no bloqueante: aserciones tautológicas previas de data_aggregation; limpieza bloqueada sin issue OPEN aplicable. Responsable mantenimiento/bzsanti; dependencia/desbloqueo: crear o vincular issue con contrato de pruebas. No corregir ni recalibrar métricas bajo #727.
 - Publicación: https://github.com/bzsanti/oxidizePdf/pull/760, borrador contra develop, head fba58a76d19593d01b5f1d3446bfeef93b9beb29.
 - Integración de base: develop 207ac996 después de #759; conflicto limitado a TASKS.md, fuentes dashboard intactas.
-- Siguiente acción: comprobar contratos combinados y nuevo CI; integrar únicamente tras autorización. Sin merge ni release de #727.
+- Integración autorizada: CI de ca8c22f6 completo (30 SUCCESS/2 SKIPPED). Tras #761, conflictos solo en seguimiento y pasos contiguos del workflow; se conservan ambos pasos, sin modificar fuentes de producto.
+- Siguiente acción: validar contratos combinados y fusionar #760; sin release.
+
+
+
+## Corrección #728 — 2026-10-15
+
+- Issue: #728 — fix(performance): emit valid object graph and xref from StreamingPdfWriter — https://github.com/bzsanti/oxidizePdf/issues/728
+- Estado: implementación y revisión local completas; publicación pendiente; prioridad P1; responsable Codex. OPEN confirmada; base develop 7e5799e7; rama fix/issue-728-streaming-writer en /tmp/oxidize-issue728. WIP raíz preservado; #759 fusionado (207ac996); #760 con CI verde previo a actualizar base; #658 bloqueado por seguridad.
+- Criterio de cierre: objetos completos sin anidación, IDs y offsets reales, Pages/Kids exactos con cero/una/varias páginas y streams vacíos/múltiples, validación qpdf y lector, opciones no soportadas rechazadas antes de producir salida inválida; RED/GREEN y revisión calidad/seguridad.
+- Bloqueantes funcionales resueltos: objetos anidados, conteo parcial de bytes, colisión de Parent con objetos asignados y Kids estimados. Revisar finalización repetida/fallos de escritura para no certificar salida parcial. Memoria proporcional a índices y al stream actual; sin retener documento completo.
+- Última validación: cinco RED/GREEN en fuente idéntica a la auditada; ocho contratos finales con qpdf y fallo I/O real, 40 combinaciones de roundtrip y 20 de validación externa. Biblioteca performance/internal-testing sobre develop 207ac996: 6.810 PASS/3 ignorados preexistentes; contratos 7 PASS + oráculo explícito PASS. Doctest y compilación del ejemplo PASS. Clippy predeterminado all-targets -D warnings y Clippy biblioteca/contratos performance -D clippy::all PASS; formato/diff y QR manual/Kripteia completos. Informe docs/reports/2026-10-15-issue-728-review.md, manifiesto SHA256 y logs adyacentes.
+- Límite de validación: Clippy ampliado all-targets/performance falla por dos sliced_string_as_bytes preexistentes del ejemplo, con warnings anteriores de parallel_generation; no se declara verde ni se cambian allows. Junto al test tautológico del enum, limpieza independiente bloqueada sin issue OPEN aplicable; responsable mantenimiento/bzsanti, desbloqueo al crear/vincular issue, sin corregir ni recalibrar métricas bajo #728. No afectan grafo/xref ni ejecución del escritor validado.
+- Integración de base: develop 207ac996 tras #759; único conflicto en TASKS.md, fuentes del escritor intactas.
+- Cierre: #761 MERGED en develop ce6c1812627c5c6a43780911d890224d14c6acb0, 2026-10-15T21:34:38Z, con 30 SUCCESS/2 SKIPPED. Siguiente acción: cerrar #728 y marcar #719. Sin release.
 
 
 ## Corrección #726 — 2026-10-15

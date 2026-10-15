@@ -1,0 +1,61 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_728_streaming_writer_test.rs         8     98
+
+--- Worst Offenders ---
+  independent_output_oracle (oxidize-pdf-core/tests/issue_728_streaming_writer_test.rs:216) - Score: 80
+    - Test 'independent_output_oracle' is marked as #[ignore]
+    i Test 'independent_output_oracle' has multiple assertions without diagnostic messages
+    i Test 'independent_output_oracle' uses .unwrap() which silently discards error information
+  finalized_pages_and_streams_round_trip_without_recovery (oxidize-pdf-core/tests/issue_728_streaming_writer_test.rs:72) - Score: 100
+    i Test 'finalized_pages_and_streams_round_trip_without_recovery' has multiple assertions without diagnostic messages
+    i Test 'finalized_pages_and_streams_round_trip_without_recovery' uses .unwrap() which silently discards error information
+  byte_statistics_match_final_file (oxidize-pdf-core/tests/issue_728_streaming_writer_test.rs:107) - Score: 100
+    i Test 'byte_statistics_match_final_file' uses .unwrap() which silently discards error information
+  finalized_writer_rejects_additional_output (oxidize-pdf-core/tests/issue_728_streaming_writer_test.rs:120) - Score: 100
+    i Test 'finalized_writer_rejects_additional_output' has multiple assertions without diagnostic messages
+    i Test 'finalized_writer_rejects_additional_output' uses .unwrap() which silently discards error information
+  unsupported_resources_and_strategy_are_explicit_errors (oxidize-pdf-core/tests/issue_728_streaming_writer_test.rs:133) - Score: 100
+    i Test 'unsupported_resources_and_strategy_are_explicit_errors' has multiple assertions without diagnostic messages
+    i Test 'unsupported_resources_and_strategy_are_explicit_errors' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_728_streaming_writer_test.rs:
+  finalized_pages_and_streams_round_trip_without_recovery (line 72) - Score: 100
+    i Test 'finalized_pages_and_streams_round_trip_without_recovery' has multiple assertions without diagnostic messages
+    i Test 'finalized_pages_and_streams_round_trip_without_recovery' uses .unwrap() which silently discards error information
+  byte_statistics_match_final_file (line 107) - Score: 100
+    i Test 'byte_statistics_match_final_file' uses .unwrap() which silently discards error information
+  finalized_writer_rejects_additional_output (line 120) - Score: 100
+    i Test 'finalized_writer_rejects_additional_output' has multiple assertions without diagnostic messages
+    i Test 'finalized_writer_rejects_additional_output' uses .unwrap() which silently discards error information
+  unsupported_resources_and_strategy_are_explicit_errors (line 133) - Score: 100
+    i Test 'unsupported_resources_and_strategy_are_explicit_errors' has multiple assertions without diagnostic messages
+    i Test 'unsupported_resources_and_strategy_are_explicit_errors' uses .unwrap() which silently discards error information
+  invalid_input_does_not_write_and_valid_retry_succeeds (line 148) - Score: 100
+    i Test 'invalid_input_does_not_write_and_valid_retry_succeeds' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'invalid_input_does_not_write_and_valid_retry_succeeds' has multiple assertions without diagnostic messages
+    i Test 'invalid_input_does_not_write_and_valid_retry_succeeds' uses .unwrap() which silently discards error information
+  invalid_options_do_not_truncate_existing_destination (line 175) - Score: 100
+    i Test 'invalid_options_do_not_truncate_existing_destination' has multiple assertions without diagnostic messages
+    i Test 'invalid_options_do_not_truncate_existing_destination' uses .unwrap() which silently discards error information
+  io_failure_prevents_later_successful_finalization (line 198) - Score: 100
+    i Test 'io_failure_prevents_later_successful_finalization' has multiple assertions without diagnostic messages
+    i Test 'io_failure_prevents_later_successful_finalization' uses .unwrap() which silently discards error information
+  independent_output_oracle (line 216) - Score: 80
+    - Test 'independent_output_oracle' is marked as #[ignore]
+    i Test 'independent_output_oracle' has multiple assertions without diagnostic messages
+    i Test 'independent_output_oracle' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

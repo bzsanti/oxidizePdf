@@ -4,42 +4,34 @@
 //! to avoid keeping the entire PDF in memory. Essential for processing very large
 //! documents or in memory-constrained environments.
 //!
-//! # Key Features
-//! - **Incremental Writing**: Write content as it's generated
-//! - **Bounded Memory**: Configurable buffer sizes with automatic flushing
-//! - **Cross-Reference Streaming**: Build xref table incrementally
-//! - **Compression**: Optional real-time compression of content streams
-//! - **Recovery**: Partial write recovery for large documents
-//!
-//! # Performance Benefits
-//! - **50% memory reduction** for large documents
-//! - **Predictable memory usage** regardless of document size
-//! - **Faster time-to-first-byte** for web applications
-//! - **Better scalability** for server applications
+//! Content is emitted one stream at a time. Object offsets and page references remain
+//! in memory and grow with document size; compression also needs a temporary stream buffer.
+//! Both classic xref tables and binary xref streams are supported. Font/image resource
+//! registration, memory-mapped output, progress callbacks and partial-write recovery
+//! are not supported. Use [`crate::Document`] when registered resources are required.
 //!
 //! # Example
-//! ```rust
-//! use oxidize_pdf::performance::{StreamingPdfWriter, StreamingOptions};
-//!
-//! let options = StreamingOptions::default()
-//!     .with_buffer_size(64 * 1024)    // 64KB buffer
-//!     .with_compression(true)         // Enable compression
-//!     .with_auto_flush(true);         // Auto-flush when full
-//!
-//! let mut writer = StreamingPdfWriter::create("large_doc.pdf", options)?;
-//!
-//! for page_data in generate_pages() {
-//!     writer.write_page_streaming(&page_data)?;
-//!     // Memory usage stays constant regardless of document size
-//! }
-//!
-//! writer.finalize()?; // Write xref table and trailer
+//! ```no_run
+//! use oxidize_pdf::performance::streaming_writer::{
+//!     ContentStream, PageResources, StreamingOptions, StreamingPageContent, StreamingPdfWriter,
+//! };
+//! # fn main() -> oxidize_pdf::Result<()> {
+//! let mut writer = StreamingPdfWriter::create("shapes.pdf", StreamingOptions::default())?;
+//! writer.write_page_streaming(&StreamingPageContent {
+//!     width: 612.0,
+//!     height: 792.0,
+//!     content_streams: vec![ContentStream::new(b"0 0 10 10 re f".to_vec())],
+//!     resources: PageResources::default(),
+//! })?;
+//! writer.finalize()?;
+//! # Ok(())
+//! # }
 //! ```
 
-use crate::error::Result;
+use crate::error::{PdfError, Result};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufWriter, Seek, SeekFrom, Write};
+use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::time::Instant;
 
@@ -54,9 +46,9 @@ pub struct StreamingOptions {
     pub auto_flush: bool,
     /// Compression level (1-9, higher = better compression but slower)
     pub compression_level: u32,
-    /// Enable cross-reference streaming
+    /// Emit a binary cross-reference stream when true, or a classic xref table when false.
     pub xref_streaming: bool,
-    /// Enable progress callbacks
+    /// Reserved: true is currently rejected because callbacks cannot be registered.
     pub progress_callbacks: bool,
     /// Write strategy to use
     pub write_strategy: WriteStrategy,
@@ -136,284 +128,334 @@ pub enum WriteStrategy {
     Buffered,
     /// Write directly to file with minimal buffering
     Direct,
-    /// Memory-map the file for writing
+    /// Reserved: currently rejected rather than silently using buffered writes.
     MemoryMapped,
 }
 
-/// Streaming PDF writer that writes incrementally
+/// Counts every byte accepted by the buffer, including formatted writes.
+struct CountingWriter {
+    inner: BufWriter<File>,
+    position: u64,
+}
+
+impl Write for CountingWriter {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.position
+            .checked_add(bytes.len() as u64)
+            .ok_or_else(|| std::io::Error::other("PDF byte offset overflow"))?;
+        let written = self.inner.write(bytes)?;
+        self.position += written as u64;
+        Ok(written)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+/// Streaming PDF writer that retains object offsets and page IDs, not previous page payloads.
+/// A write/flush failure makes the writer unusable; discard the partial output file.
+/// Finalization is one-shot. Page resources cannot currently be registered through this API.
 pub struct StreamingPdfWriter {
-    writer: BufWriter<File>,
+    writer: CountingWriter,
     options: StreamingOptions,
-    current_position: u64,
     object_positions: HashMap<u32, u64>,
     current_object_id: u32,
-    buffer_used: usize,
+    page_ids: Vec<u32>,
+    last_flush_position: u64,
     stats: StreamingStats,
     start_time: Instant,
-    pages_written: u32,
+    failed: bool,
+    finalized: bool,
 }
 
 impl StreamingPdfWriter {
-    /// Create a new streaming writer
+    /// Create a writer. Unsupported options are rejected before creating/truncating the file.
     pub fn create<P: AsRef<Path>>(path: P, options: StreamingOptions) -> Result<Self> {
-        let file = File::create(path)?;
-        let writer = BufWriter::with_capacity(options.buffer_size, file);
-
+        if options.buffer_size == 0 || !(1..=9).contains(&options.compression_level) {
+            return Err(PdfError::InvalidOperation(
+                "Invalid streaming buffer size or compression level".into(),
+            ));
+        }
+        if options.write_strategy == WriteStrategy::MemoryMapped || options.progress_callbacks {
+            return Err(PdfError::InvalidOperation(
+                "Memory-mapped writing and progress callbacks are not supported".into(),
+            ));
+        }
+        let capacity = if options.write_strategy == WriteStrategy::Direct {
+            0
+        } else {
+            options.buffer_size
+        };
         let mut instance = Self {
-            writer,
+            writer: CountingWriter {
+                inner: BufWriter::with_capacity(capacity, File::create(path)?),
+                position: 0,
+            },
             options,
-            current_position: 0,
             object_positions: HashMap::new(),
-            current_object_id: 1,
-            buffer_used: 0,
+            // Reserve catalog 1 and page tree 2; pages/streams start at 3.
+            current_object_id: 3,
+            page_ids: Vec::new(),
+            last_flush_position: 0,
             stats: StreamingStats::default(),
             start_time: Instant::now(),
-            pages_written: 0,
+            failed: false,
+            finalized: false,
         };
-
-        // Write PDF header
-        instance.write_header()?;
-
+        instance
+            .writer
+            .write_all(b"%PDF-1.7\n%\xE2\xE3\xCF\xD3\n")?;
+        instance.stats.bytes_written = instance.writer.position;
         Ok(instance)
     }
 
-    /// Write PDF header
-    fn write_header(&mut self) -> Result<()> {
-        let header = b"%PDF-1.7\n%\xE2\xE3\xCF\xD3\n";
-        self.write_raw(header)?;
+    fn ensure_open(&self) -> Result<()> {
+        if self.failed || self.finalized {
+            return Err(PdfError::InvalidOperation(
+                "Streaming writer has failed or is already finalized".into(),
+            ));
+        }
         Ok(())
     }
 
-    /// Write a complete page in streaming fashion
-    pub fn write_page_streaming(&mut self, page_content: &StreamingPageContent) -> Result<()> {
+    /// Write streams as complete objects, followed by their page dictionary.
+    /// Invalid dimensions and unsupported resource references are rejected before writing.
+    /// Raw content must contain valid PDF operators; this API does not validate their semantics.
+    pub fn write_page_streaming(&mut self, page: &StreamingPageContent) -> Result<()> {
+        self.ensure_open()?;
+        if !page.width.is_finite()
+            || !page.height.is_finite()
+            || page.width <= 0.0
+            || page.height <= 0.0
+        {
+            return Err(PdfError::InvalidOperation(
+                "Streaming page dimensions must be finite and positive".into(),
+            ));
+        }
+        if !page.resources.fonts.is_empty() || !page.resources.images.is_empty() {
+            return Err(PdfError::InvalidOperation("Streaming page resource references are unsupported: use Document to register fonts or images".into()));
+        }
+        let needed = u32::try_from(page.content_streams.len())
+            .ok()
+            .and_then(|n| n.checked_add(1));
+        if needed
+            .and_then(|n| self.current_object_id.checked_add(n))
+            .is_none_or(|n| n == u32::MAX)
+        {
+            return Err(PdfError::InvalidOperation(
+                "Streaming PDF object ID limit exceeded".into(),
+            ));
+        }
         let start = Instant::now();
+        let result = self.write_page_inner(page);
+        self.stats.bytes_written = self.writer.position;
+        self.stats.total_write_time += start.elapsed();
+        if result.is_err() {
+            self.failed = true;
+        }
+        result
+    }
 
-        // Write page object
-        let _page_obj_id = self.start_object()?;
-
-        writeln!(self.writer, "<<")?;
-        writeln!(self.writer, "  /Type /Page")?;
-        writeln!(self.writer, "  /Parent 2 0 R")?;
+    fn write_page_inner(&mut self, page: &StreamingPageContent) -> Result<()> {
+        let mut streams = Vec::with_capacity(page.content_streams.len());
+        for content in &page.content_streams {
+            streams.push(self.write_content_stream(content)?);
+        }
+        let page_id = self.start_object()?;
         writeln!(
             self.writer,
-            "  /MediaBox [0 0 {} {}]",
-            page_content.width, page_content.height
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {} {}] /Resources << >> /Contents [",
+            page.width, page.height
         )?;
-
-        if !page_content.content_streams.is_empty() {
-            writeln!(self.writer, "  /Contents [")?;
-            for (i, stream) in page_content.content_streams.iter().enumerate() {
-                let stream_obj_id = self.write_content_stream(stream)?;
-                if i == page_content.content_streams.len() - 1 {
-                    writeln!(self.writer, "    {} 0 R", stream_obj_id)?;
-                } else {
-                    writeln!(self.writer, "    {} 0 R", stream_obj_id)?;
-                }
-            }
-            writeln!(self.writer, "  ]")?;
+        for id in streams {
+            writeln!(self.writer, "{id} 0 R")?;
         }
-
-        if !page_content.resources.fonts.is_empty() || !page_content.resources.images.is_empty() {
-            writeln!(self.writer, "  /Resources <<")?;
-
-            if !page_content.resources.fonts.is_empty() {
-                writeln!(self.writer, "    /Font <<")?;
-                for (name, font_id) in &page_content.resources.fonts {
-                    writeln!(self.writer, "      /{} {} 0 R", name, font_id)?;
-                }
-                writeln!(self.writer, "    >>")?;
-            }
-
-            if !page_content.resources.images.is_empty() {
-                writeln!(self.writer, "    /XObject <<")?;
-                for (name, image_id) in &page_content.resources.images {
-                    writeln!(self.writer, "      /{} {} 0 R", name, image_id)?;
-                }
-                writeln!(self.writer, "    >>")?;
-            }
-
-            writeln!(self.writer, "  >>")?;
-        }
-
-        writeln!(self.writer, ">>")?;
-        self.end_object()?;
-
-        self.pages_written += 1;
+        writeln!(self.writer, "] >>\nendobj")?;
+        self.page_ids.push(page_id);
         self.stats.pages_written += 1;
-        self.stats.total_write_time += start.elapsed();
-
-        // Auto-flush if buffer is getting full
-        if self.options.auto_flush && self.should_flush() {
+        if self.options.auto_flush
+            && self.writer.position - self.last_flush_position >= self.options.buffer_size as u64
+        {
             self.flush()?;
         }
-
         Ok(())
     }
 
-    /// Write a content stream with optional compression
     fn write_content_stream(&mut self, content: &ContentStream) -> Result<u32> {
-        let obj_id = self.start_object()?;
-
+        let compressed;
         let data = if self.options.compression {
-            self.compress_data(&content.data)?
+            compressed = self.compress_data(&content.data)?;
+            &compressed[..]
         } else {
-            content.data.clone()
+            &content.data[..]
         };
-
-        writeln!(self.writer, "<<")?;
-        writeln!(self.writer, "  /Length {}", data.len())?;
-
+        let id = self.start_object()?;
+        write!(self.writer, "<< /Length {}", data.len())?;
         if self.options.compression {
-            writeln!(self.writer, "  /Filter /FlateDecode")?;
+            write!(self.writer, " /Filter /FlateDecode")?;
         }
-
-        writeln!(self.writer, ">>")?;
-        writeln!(self.writer, "stream")?;
-        self.writer.write_all(&data)?;
-        writeln!(self.writer, "\nendstream")?;
-
-        self.end_object()?;
-
-        Ok(obj_id)
-    }
-
-    /// Start writing an object and return its ID
-    fn start_object(&mut self) -> Result<u32> {
-        let obj_id = self.current_object_id;
-        self.current_object_id += 1;
-
-        // Record position for xref table
-        self.object_positions.insert(obj_id, self.current_position);
-
-        writeln!(self.writer, "{} 0 obj", obj_id)?;
-        self.stats.objects_written += 1;
-
-        Ok(obj_id)
-    }
-
-    /// End current object
-    fn end_object(&mut self) -> Result<()> {
-        writeln!(self.writer, "endobj")?;
-        Ok(())
-    }
-
-    /// Write raw bytes and track position
-    fn write_raw(&mut self, data: &[u8]) -> Result<()> {
+        writeln!(self.writer, " >>\nstream")?;
         self.writer.write_all(data)?;
-        self.current_position += data.len() as u64;
-        self.buffer_used += data.len();
+        writeln!(self.writer, "\nendstream\nendobj")?;
+        Ok(id)
+    }
+
+    fn start_object(&mut self) -> Result<u32> {
+        let id = self.current_object_id;
+        self.current_object_id = id.checked_add(1).ok_or_else(|| {
+            PdfError::InvalidOperation("Streaming PDF object ID limit exceeded".into())
+        })?;
+        self.start_numbered_object(id)?;
+        Ok(id)
+    }
+
+    fn start_numbered_object(&mut self, id: u32) -> Result<()> {
+        self.object_positions.insert(id, self.writer.position);
+        writeln!(self.writer, "{id} 0 obj")?;
+        self.stats.objects_written += 1;
         Ok(())
     }
 
-    /// Compress data using flate compression
     fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>> {
-        use flate2::write::ZlibEncoder;
-        use flate2::Compression;
-        use std::io::Write;
-
+        use flate2::{write::ZlibEncoder, Compression};
         let mut encoder =
             ZlibEncoder::new(Vec::new(), Compression::new(self.options.compression_level));
         encoder.write_all(data)?;
-        let compressed = encoder.finish()?;
-
-        Ok(compressed)
+        Ok(encoder.finish()?)
     }
 
-    /// Check if we should flush the buffer
-    fn should_flush(&self) -> bool {
-        self.buffer_used >= self.options.buffer_size
-    }
-
-    /// Manually flush the writer
+    /// Flush buffered bytes. An I/O failure permanently invalidates this writer.
     pub fn flush(&mut self) -> Result<()> {
+        if self.failed {
+            return self.ensure_open();
+        }
         let start = Instant::now();
-
-        self.writer.flush()?;
-        self.current_position = self.writer.seek(SeekFrom::Current(0))?;
-        self.buffer_used = 0;
-
+        if let Err(error) = self.writer.flush() {
+            self.failed = true;
+            return Err(error.into());
+        }
+        self.last_flush_position = self.writer.position;
+        self.stats.bytes_written = self.writer.position;
         self.stats.flushes += 1;
         self.stats.total_flush_time += start.elapsed();
-
         Ok(())
     }
 
-    /// Write the cross-reference table and trailer
+    /// Write the complete page tree, catalog, cross-reference section and EOF, then flush.
+    /// Repeated finalization or writing pages after success returns an error without writing.
+    /// On failure the file may be partial and must be discarded; this is not atomic publication.
     pub fn finalize(&mut self) -> Result<()> {
+        self.ensure_open()?;
         let start = Instant::now();
-
-        // Ensure everything is flushed
-        self.flush()?;
-
-        // Write pages tree (simplified - in real implementation would be more complex)
-        let pages_obj_id = self.start_object()?;
-        writeln!(self.writer, "<<")?;
-        writeln!(self.writer, "  /Type /Pages")?;
-        writeln!(self.writer, "  /Count {}", self.pages_written)?;
-        writeln!(self.writer, "  /Kids [")?;
-
-        // This is simplified - would need to track actual page object IDs
-        for i in 0..self.pages_written {
-            writeln!(self.writer, "    {} 0 R", 3 + i * 2)?; // Rough estimate
-        }
-
-        writeln!(self.writer, "  ]")?;
-        writeln!(self.writer, ">>")?;
-        self.end_object()?;
-
-        // Write catalog
-        let catalog_obj_id = self.start_object()?;
-        writeln!(self.writer, "<<")?;
-        writeln!(self.writer, "  /Type /Catalog")?;
-        writeln!(self.writer, "  /Pages {} 0 R", pages_obj_id)?;
-        writeln!(self.writer, ">>")?;
-        self.end_object()?;
-
-        // Write cross-reference table
-        let xref_position = self.current_position;
-        writeln!(self.writer, "xref")?;
-        writeln!(self.writer, "0 {}", self.current_object_id)?;
-        writeln!(self.writer, "0000000000 65535 f ")?;
-
-        for obj_id in 1..self.current_object_id {
-            if let Some(position) = self.object_positions.get(&obj_id) {
-                writeln!(self.writer, "{:010} 00000 n ", position)?;
-            }
-        }
-
-        // Write trailer
-        writeln!(self.writer, "trailer")?;
-        writeln!(self.writer, "<<")?;
-        writeln!(self.writer, "  /Size {}", self.current_object_id)?;
-        writeln!(self.writer, "  /Root {} 0 R", catalog_obj_id)?;
-        writeln!(self.writer, ">>")?;
-        writeln!(self.writer, "startxref")?;
-        writeln!(self.writer, "{}", xref_position)?;
-        writeln!(self.writer, "%%EOF")?;
-
-        self.flush()?;
-
+        let result = self.finalize_inner();
+        self.stats.bytes_written = self.writer.position;
         self.stats.total_time = self.start_time.elapsed();
         self.stats.finalization_time = start.elapsed();
+        if result.is_ok() {
+            self.finalized = true;
+        } else {
+            self.failed = true;
+        }
+        result
+    }
 
+    fn finalize_inner(&mut self) -> Result<()> {
+        self.start_numbered_object(2)?;
+        writeln!(
+            self.writer,
+            "<< /Type /Pages /Count {} /Kids [",
+            self.page_ids.len()
+        )?;
+        for id in &self.page_ids {
+            writeln!(self.writer, "{id} 0 R")?;
+        }
+        writeln!(self.writer, "] >>\nendobj")?;
+        self.start_numbered_object(1)?;
+        writeln!(self.writer, "<< /Type /Catalog /Pages 2 0 R >>\nendobj")?;
+        let xref_position = self.writer.position;
+        if self.options.xref_streaming {
+            self.write_xref_stream()?;
+        } else {
+            self.write_xref_table()?;
+        }
+        writeln!(self.writer, "startxref\n{xref_position}\n%%EOF")?;
+        self.flush()
+    }
+
+    fn object_offset(&self, id: u32) -> Result<u64> {
+        self.object_positions
+            .get(&id)
+            .copied()
+            .ok_or_else(|| PdfError::InvalidOperation(format!("Missing streaming PDF object {id}")))
+    }
+
+    fn write_xref_table(&mut self) -> Result<()> {
+        writeln!(
+            self.writer,
+            "xref\n0 {}\n0000000000 65535 f ",
+            self.current_object_id
+        )?;
+        for id in 1..self.current_object_id {
+            let offset = self.object_offset(id)?;
+            if offset > 9_999_999_999 {
+                return Err(PdfError::InvalidOperation(
+                    "Classic xref offset exceeds ten digits; enable xref_streaming".into(),
+                ));
+            }
+            writeln!(self.writer, "{offset:010} 00000 n ")?;
+        }
+        writeln!(
+            self.writer,
+            "trailer\n<< /Size {} /Root 1 0 R >>",
+            self.current_object_id
+        )?;
         Ok(())
     }
 
-    /// Get current streaming statistics
+    fn write_xref_stream(&mut self) -> Result<()> {
+        self.start_object()?; // The xref stream includes its own recorded offset.
+        let count = self.current_object_id;
+        writeln!(
+            self.writer,
+            "<< /Type /XRef /Size {count} /Root 1 0 R /W [1 8 2] /Length {} >>\nstream",
+            u64::from(count) * 11
+        )?;
+        self.writer
+            .write_all(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255])?;
+        for id in 1..count {
+            let offset = self.object_offset(id)?;
+            self.writer.write_all(&[1])?;
+            self.writer.write_all(&offset.to_be_bytes())?;
+            self.writer.write_all(&[0, 0])?;
+        }
+        writeln!(self.writer, "\nendstream\nendobj")?;
+        Ok(())
+    }
+
+    /// Statistics for completed operations. bytes_written counts bytes accepted by the buffer.
+    /// Successful finalization flushes those bytes; it does not promise fsync durability.
     pub fn stats(&self) -> &StreamingStats {
         &self.stats
     }
 
-    /// Get current buffer usage as percentage
+    /// Actual buffer occupancy; direct writing uses no buffer.
     pub fn buffer_usage_percent(&self) -> f64 {
-        (self.buffer_used as f64 / self.options.buffer_size as f64) * 100.0
+        let capacity = self.writer.inner.capacity();
+        if capacity == 0 {
+            0.0
+        } else {
+            self.writer.inner.buffer().len() as f64 / capacity as f64 * 100.0
+        }
     }
 
-    /// Estimate total memory usage
+    /// Approximate buffer and index payload, excluding allocator overhead, caller data and compression scratch.
+    /// Indices grow with object/page count; this is not a constant-memory or RSS bound.
     pub fn memory_usage(&self) -> usize {
-        self.options.buffer_size
+        self.writer.inner.capacity()
             + self.object_positions.len()
                 * (std::mem::size_of::<u32>() + std::mem::size_of::<u64>())
+            + self.page_ids.capacity() * std::mem::size_of::<u32>()
             + std::mem::size_of::<StreamingStats>()
     }
 }
@@ -447,7 +489,8 @@ impl ContentStream {
     }
 }
 
-/// Resources referenced by a page
+/// Resources referenced by a page. Nonempty maps are currently rejected by this writer;
+/// object IDs cannot be registered through this API. Use Document for fonts/images.
 #[derive(Debug, Clone, Default)]
 pub struct PageResources {
     pub fonts: HashMap<String, u32>,
