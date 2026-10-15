@@ -69,6 +69,12 @@ jobs:
           independent_output_oracle
           -- --ignored --exact
 
+      - name: Verify streaming writer object graph and xref with qpdf
+        run: >-
+          cargo test --locked -p oxidize-pdf --features performance
+          --test issue_728_streaming_writer_test
+          -- --include-ignored
+
       - name: Validate incremental text notes
         run: >
           cargo test -p oxidize-pdf

@@ -1,3 +1,12 @@
+## Corrección #728 — 2026-10-15
+
+- Issue: #728 — fix(performance): emit valid object graph and xref from StreamingPdfWriter — https://github.com/bzsanti/oxidizePdf/issues/728
+- Estado: activa; prioridad P1; responsable Codex. OPEN confirmada; base develop 7e5799e7; rama fix/issue-728-streaming-writer en /tmp/oxidize-issue728. WIP raíz preservado; #759 fusionado (207ac996); #760 con CI verde previo a actualizar base; #658 bloqueado por seguridad.
+- Criterio de cierre: objetos completos sin anidación, IDs y offsets reales, Pages/Kids exactos con cero/una/varias páginas y streams vacíos/múltiples, validación qpdf y lector, opciones no soportadas rechazadas antes de producir salida inválida; RED/GREEN y revisión calidad/seguridad.
+- Bloqueantes finitos: objetos anidados, conteo parcial de bytes, colisión de Parent con objetos asignados y Kids estimados. Revisar finalización repetida/fallos de escritura para no certificar salida parcial. Memoria proporcional a índices y al stream actual; sin retener documento completo.
+- Última validación: inspección del escritor y consumidores; contrato derivado de #728 antes de modificar expectativas.
+- Siguiente acción: reproducir fallo en salida finalizada; corregir conjuntamente escritura, xref y ciclo de vida; verificar ambas políticas de compresión y referencias; publicar PR a develop tras revisión.
+
 ## Corrección #725 — 2026-10-15
 
 - Issue: #725 — fix(memory): initialize LazyDocument page count and object access from its reader — https://github.com/bzsanti/oxidizePdf/issues/725
