@@ -4,7 +4,9 @@
 //! in a 12-column responsive grid. It handles component positioning, row management,
 //! spacing, and responsive breakpoints.
 
-use super::{ComponentPosition, ComponentSpan, DashboardComponent, DashboardConfig};
+use super::{
+    ComponentPosition, ComponentSpan, DashboardComponent, DashboardConfig, DashboardOverflowPolicy,
+};
 use crate::error::PdfError;
 use std::collections::HashMap;
 
@@ -62,11 +64,25 @@ impl DashboardLayout {
         (content_x, content_y, content_width, content_height)
     }
 
-    /// Calculate positions for all components in the dashboard
+    /// Calculate positions for all components in the dashboard.
+    /// Returns an error identifying the remaining component indices if any row cannot fit.
     pub fn calculate_positions(
         &self,
         components: &[Box<dyn DashboardComponent>],
         content_area: (f64, f64, f64, f64),
+    ) -> Result<Vec<ComponentPosition>, PdfError> {
+        self.calculate_positions_with_overflow(
+            components,
+            content_area,
+            DashboardOverflowPolicy::Error,
+        )
+    }
+
+    pub(super) fn calculate_positions_with_overflow(
+        &self,
+        components: &[Box<dyn DashboardComponent>],
+        content_area: (f64, f64, f64, f64),
+        policy: DashboardOverflowPolicy,
     ) -> Result<Vec<ComponentPosition>, PdfError> {
         let (content_x, content_y, content_width, content_height) = content_area;
 
@@ -75,13 +91,11 @@ impl DashboardLayout {
         let layout_height = content_height - self.config.header_height;
 
         // Use grid system to calculate positions
-        self.grid.layout_components(
+        self.grid.layout_with_overflow(
             components,
-            content_x,
-            layout_y,
-            content_width,
-            layout_height,
+            (content_x, layout_y, content_width, layout_height),
             self.config.default_component_height,
+            policy,
         )
     }
 
@@ -166,7 +180,8 @@ impl GridSystem {
         }
     }
 
-    /// Layout components in the grid
+    /// Layout all components in the grid, or return an error identifying the remaining indices.
+    /// Invalid or non-finite grid geometry and invalid component spans are rejected.
     pub fn layout_components(
         &self,
         components: &[Box<dyn DashboardComponent>],
@@ -176,6 +191,53 @@ impl GridSystem {
         total_height: f64,
         default_height: f64,
     ) -> Result<Vec<ComponentPosition>, PdfError> {
+        self.layout_with_overflow(
+            components,
+            (start_x, start_y, total_width, total_height),
+            default_height,
+            DashboardOverflowPolicy::Error,
+        )
+    }
+
+    fn layout_with_overflow(
+        &self,
+        components: &[Box<dyn DashboardComponent>],
+        bounds: (f64, f64, f64, f64),
+        default_height: f64,
+        policy: DashboardOverflowPolicy,
+    ) -> Result<Vec<ComponentPosition>, PdfError> {
+        let (start_x, start_y, total_width, total_height) = bounds;
+        for (name, value) in [
+            ("dashboard x", start_x),
+            ("dashboard y", start_y),
+            ("dashboard width", total_width),
+            ("dashboard height", total_height),
+            ("dashboard component height", default_height),
+            ("dashboard column gutter", self.column_gutter),
+            ("dashboard row gutter", self.row_gutter),
+            ("dashboard bottom", start_y - total_height),
+            ("dashboard right", start_x + total_width),
+        ] {
+            crate::error::ensure_finite(name, value)?;
+        }
+        if self.columns == 0
+            || self.column_gutter < 0.0
+            || self.row_gutter < 0.0
+            || total_width <= 0.0
+            || default_height <= 0.0
+        {
+            return Err(PdfError::InvalidOperation(
+                "Invalid dashboard grid geometry".into(),
+            ));
+        }
+        for (index, component) in components.iter().enumerate() {
+            let span = component.get_span().columns;
+            if span == 0 || span > self.columns {
+                return Err(PdfError::InvalidOperation(format!(
+                    "Invalid dashboard component span at index {index}"
+                )));
+            }
+        }
         let mut positions = Vec::new();
 
         // Start from the top and work downward (PDF coordinates)
@@ -186,6 +248,12 @@ impl GridSystem {
         let total_gutter_width = (self.columns as f64 - 1.0) * self.column_gutter;
         let available_width = total_width - total_gutter_width;
         let column_width = available_width / self.columns as f64;
+
+        if !column_width.is_finite() || column_width <= 0.0 {
+            return Err(PdfError::InvalidOperation(
+                "Dashboard columns have no usable width".into(),
+            ));
+        }
 
         // Reduce default height to fit more components
         let adjusted_height = (default_height * 0.6).max(120.0); // Minimum 120 points
@@ -200,10 +268,12 @@ impl GridSystem {
 
             // Check if we have enough space for this row
             if current_y - row_height < start_y - total_height {
-                tracing::warn!(
-                    "Dashboard components exceed available height, stopping at row {}",
-                    positions.len() / row_components.len()
-                );
+                if policy == DashboardOverflowPolicy::Error {
+                    return Err(PdfError::InvalidOperation(format!(
+                        "Dashboard overflow: remaining component indices {row_start}..{} (zero-based, end-exclusive) do not fit on this page",
+                        components.len()
+                    )));
+                }
                 break;
             }
 
@@ -240,16 +310,16 @@ impl GridSystem {
         let mut end = start;
 
         for (i, component) in components[start..].iter().enumerate() {
-            let span = component.get_span().columns;
+            let span = u16::from(component.get_span().columns);
 
-            if current_span + span > self.columns {
+            if current_span + span > u16::from(self.columns) {
                 break;
             }
 
             current_span += span;
             end = start + i + 1;
 
-            if current_span == self.columns {
+            if current_span == u16::from(self.columns) {
                 break;
             }
         }

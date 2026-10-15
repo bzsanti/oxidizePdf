@@ -69,6 +69,13 @@ jobs:
           independent_output_oracle
           -- --ignored --exact
 
+      - name: Verify dashboard overflow identities with qpdf and Poppler
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_727_dashboard_overflow_test
+          independent_output_oracle
+          -- --ignored --exact
+
       - name: Validate incremental text notes
         run: >
           cargo test -p oxidize-pdf

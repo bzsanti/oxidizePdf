@@ -1,13 +1,23 @@
+## Corrección #727 — 2026-10-15
+
+- Issue: #727 — fix(dashboard): report or paginate overflow instead of silently omitting components — https://github.com/bzsanti/oxidizePdf/issues/727
+- Estado: implementación y revisión local completas; publicación pendiente; prioridad P1; responsable Codex. OPEN confirmada en GitHub; base develop 7e5799e7; rama fix/issue-727-dashboard-overflow; checkout /tmp/oxidize-issue727. WIP raíz preservado; #658 permanece bloqueado por seguridad.
+- Criterio de cierre: error predeterminado identificando componentes restantes antes de dibujar, omisión solo explícita con informe; ajuste exacto, primera fila excedida, varias filas e identidades en PDF comprobadas por lector independiente; RED/GREEN, regresión y revisión de calidad/seguridad.
+- Bloqueantes resueltos: layout truncado exitoso; header dibujado antes del cálculo; ausencia de contrato de omisión explícita. Geometría no finita no puede evadir el rechazo. No cambia el algoritmo de alturas ni añade paginación.
+- Última validación: cuatro contratos RED y GREEN, fuente idéntica a la auditada; 6.738 biblioteca + 5 integración + 10 contratos PASS (incluye qpdf/Poppler), 3 ignorados preexistentes de biblioteca. Integración antigua dependía de perder seis tarjetas: corregida para exigir error A4 y éxito con espacio suficiente. Clippy all-targets/internal-testing, formato, diff --check y QR manual/Kripteia calidad y seguridad completos. Evidencia docs/reports/2026-10-15-issue-727-review.md y directorio adyacente.
+- Residual no bloqueante: aserciones tautológicas previas de data_aggregation; limpieza bloqueada sin issue OPEN aplicable. Responsable mantenimiento/bzsanti; dependencia/desbloqueo: crear o vincular issue con contrato de pruebas. No corregir ni recalibrar métricas bajo #727.
+- Siguiente acción: publicar PR borrador a develop y verificar CI. Sin merge ni release de #727.
+
 ## Corrección #725 — 2026-10-15
 
 - Issue: #725 — fix(memory): initialize LazyDocument page count and object access from its reader — https://github.com/bzsanti/oxidizePdf/issues/725
-- Estado: implementación y revisión local completas; publicación en curso; prioridad P1; responsable Codex. OPEN confirmada en GitHub. Base develop 09c56737; checkout /tmp/oxidize-issue725; WIP previo preservado.
+- Estado: completada e integrada en develop mediante #756; prioridad P1; responsable Codex. CLOSED confirmada tras integración. Base develop 09c56737; checkout /tmp/oxidize-issue725; WIP previo preservado.
 - Criterio de cierre: conteo y páginas/objetos reales, contenido diferido; casos públicos de cero/una/varias páginas y referencias ausentes; comparación con lector ordinario; RED/GREEN y revisión calidad/seguridad.
 - Bloqueantes resueltos: conteo cero y accesos ficticios reemplazados por PdfDocument sincronizado y referencias del xref; Null real distinto de ausencia; precarga propaga errores. Arc conserva Unpin con lector !Unpin; no unsafe nuevo.
 - Última validación: cuatro contratos RED sobre fuente idéntica a la auditada y GREEN; final 6.738 tests biblioteca + 12 contratos + 11 integración PASS, 0 FAIL, 3 ignorados preexistentes; Clippy all-targets/internal-testing -D warnings, formato y diff --check PASS. qpdf acepta fixtures independientes. Kripteia calidad y seguridad completos; sin alertas de seguridad. Evidencia docs/reports/2026-10-15-issue-725-review.md y directorio adyacente, SHA256 verificado.
 - Límite explícito: construcción indexa diccionarios de páginas; streams se cargan al acceder. cache_size/clear_cache gobiernan la caché del adaptador, no las cachés internas del parser ni RSS. Se preservan opciones del lector; no cambia el parser general ni #726/#739.
 - Residual no bloqueante: tests antiguos del enum LazyObject incluyen assert!(true)/match vacío; no aportan evidencia al contrato, cubierto por nuevas pruebas públicas. Limpieza independiente bloqueada sin issue específica; responsable bzsanti/mantenimiento; dependencia/desbloqueo: crear o vincular issue OPEN aplicable; restricción: no recalibrar métricas ni iniciar limpieza bajo esta entrada.
-- Siguiente acción: publicar PR contra develop y verificar CI. Sin merge ni release autorizados para #725.
+- Publicación: https://github.com/bzsanti/oxidizePdf/pull/756, base develop, head b75d8a05a6404bc05da622802c7221e1ee293e62. CI final: 30 SUCCESS/2 SKIPPED, sin pendientes, MERGEABLE. Primer Linux falló en test preexistente veraPDF (Text file busy/os error 26); fuente validators.rs sin cambios; prueba focal SPI local y reejecución remota pasan sobre el mismo commit. Evidencia de ambas ejecuciones preservada. Fusión autorizada confirmada el 2026-10-15T17:16:22Z, commit 7e5799e78a4f6c8c6d71cf106a66b4b341a8c5a9. #725 cerrada y casilla de #719 marcada. Siguiente acción: ninguna pendiente para #756. Sin release.
 
 ## Corrección #724 — 2026-10-15
 
