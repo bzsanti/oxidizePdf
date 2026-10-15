@@ -1,0 +1,48 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue725/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 39.54s
+     Running tests/issue_725_lazy_document_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_725_lazy_document_test-7eb3a41bc8a37fc9)
+
+running 4 tests
+test missing_objects_remain_errors_on_repeated_access ... FAILED
+test shared_document_returns_real_values_concurrently ... FAILED
+test actual_objects_survive_cache_clear_and_eviction ... FAILED
+test real_page_counts_and_pages ... FAILED
+
+failures:
+
+---- missing_objects_remain_errors_on_repeated_access stdout ----
+
+thread 'missing_objects_remain_errors_on_repeated_access' (373) panicked at oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:103:55:
+called `Result::unwrap()` on an `Err` value: InvalidObjectReference(1, 0)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- shared_document_returns_real_values_concurrently stdout ----
+
+thread '<unnamed>' (376) panicked at oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:114:44:
+called `Result::unwrap()` on an `Err` value: InvalidPageNumber(0)
+
+thread 'shared_document_returns_real_values_concurrently' (375) panicked at oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:120:43:
+called `Result::unwrap()` on an `Err` value: Any { .. }
+
+---- actual_objects_survive_cache_clear_and_eviction stdout ----
+
+thread 'actual_objects_survive_cache_clear_and_eviction' (372) panicked at oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:87:68:
+called `Result::unwrap()` on an `Err` value: InvalidObjectReference(1, 0)
+
+---- real_page_counts_and_pages stdout ----
+
+thread 'real_page_counts_and_pages' (374) panicked at oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:62:9:
+assertion `left == right` failed
+  left: 0
+ right: 1
+
+
+failures:
+    actual_objects_survive_cache_clear_and_eviction
+    missing_objects_remain_errors_on_repeated_access
+    real_page_counts_and_pages
+    shared_document_returns_real_values_concurrently
+
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_725_lazy_document_test`

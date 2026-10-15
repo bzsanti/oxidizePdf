@@ -28,11 +28,11 @@
 //! let reader = PdfReader::open("large_document.pdf")?;
 //! let document = LazyDocument::new(reader, options)?;
 //!
-//! // Objects are loaded only when accessed
+//! // Construction indexes page dictionaries; content is loaded on demand
 //! let page = document.get_page(0)?; // Only loads this page
 //! println!("Page loaded: {}x{}", page.width(), page.height());
 //!
-//! // Memory usage remains low even for large PDFs
+//! // The adapter cache limit does not bound the underlying parser caches
 //! # Ok(())
 //! # }
 //! ```

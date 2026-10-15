@@ -1,0 +1,79 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 11 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/memory_optimization_tests.rs              11     95
+
+--- Worst Offenders ---
+  test_stream_processor_basic (oxidize-pdf-core/tests/memory_optimization_tests.rs:67) - Score: 80
+    - Test 'test_stream_processor_basic' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_stream_processor_basic' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_stream_processor_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_stream_processor_basic' has multiple assertions without diagnostic messages
+  test_skip_processing (oxidize-pdf-core/tests/memory_optimization_tests.rs:184) - Score: 80
+    - Test 'test_skip_processing' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_skip_processing' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_skip_processing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_skip_processing' uses .unwrap() which silently discards error information
+  test_streaming_options (oxidize-pdf-core/tests/memory_optimization_tests.rs:93) - Score: 90
+    i Test 'test_streaming_options' has multiple assertions without diagnostic messages
+    - Test 'test_streaming_options' does not call any production code
+  test_processing_actions (oxidize-pdf-core/tests/memory_optimization_tests.rs:112) - Score: 90
+    - Test 'test_processing_actions' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_processing_actions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_processing_actions' uses .unwrap() which silently discards error information
+  test_lazy_document_basic (oxidize-pdf-core/tests/memory_optimization_tests.rs:26) - Score: 100
+    i Test 'test_lazy_document_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_basic' has multiple assertions without diagnostic messages
+    i Test 'test_lazy_document_basic' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/memory_optimization_tests.rs:
+  test_lazy_document_basic (line 26) - Score: 100
+    i Test 'test_lazy_document_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_basic' has multiple assertions without diagnostic messages
+    i Test 'test_lazy_document_basic' uses .unwrap() which silently discards error information
+  test_memory_options_configurations (line 45) - Score: 100
+    i Test 'test_memory_options_configurations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_memory_options_configurations' has multiple assertions without diagnostic messages
+  test_stream_processor_basic (line 67) - Score: 80
+    - Test 'test_stream_processor_basic' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_stream_processor_basic' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_stream_processor_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_stream_processor_basic' has multiple assertions without diagnostic messages
+  test_streaming_options (line 93) - Score: 90
+    i Test 'test_streaming_options' has multiple assertions without diagnostic messages
+    - Test 'test_streaming_options' does not call any production code
+  test_processing_actions (line 112) - Score: 90
+    - Test 'test_processing_actions' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_processing_actions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_processing_actions' uses .unwrap() which silently discards error information
+  test_extract_text_streaming (line 136) - Score: 100
+    i Test 'test_extract_text_streaming' has multiple assertions without diagnostic messages
+    i Test 'test_extract_text_streaming' uses .unwrap() which silently discards error information
+  test_lazy_document_cache_clear (line 154) - Score: 100
+    i Test 'test_lazy_document_cache_clear' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_cache_clear' uses .unwrap() which silently discards error information
+  test_memory_options_thresholds (line 170) - Score: 100
+    i Test 'test_memory_options_thresholds' has multiple assertions without diagnostic messages
+  test_skip_processing (line 184) - Score: 80
+    - Test 'test_skip_processing' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_skip_processing' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_skip_processing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_skip_processing' uses .unwrap() which silently discards error information
+  test_page_preloading (line 207) - Score: 100
+    i Test 'test_page_preloading' uses .unwrap() which silently discards error information
+  test_memory_strategies (line 222) - Score: 100
+    i Test 'test_memory_strategies' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_memory_strategies' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

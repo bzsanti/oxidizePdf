@@ -1,0 +1,73 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 12 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_725_lazy_document_test.rs           12     96
+
+--- Worst Offenders ---
+  preserves_public_auto_traits (oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:340) - Score: 75
+    - Test 'preserves_public_auto_traits' executes production code without asserting on its behaviour
+  actual_null_is_distinct_from_absent_or_wrong_generation (oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:217) - Score: 90
+    i Test 'actual_null_is_distinct_from_absent_or_wrong_generation' has multiple assertions without diagnostic messages
+    i Test 'actual_null_is_distinct_from_absent_or_wrong_generation' uses .unwrap() which silently discards error information
+    - Test 'actual_null_is_distinct_from_absent_or_wrong_generation' does not call any production code
+  preload_reports_missing_font_reference (oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:290) - Score: 90
+    i Test 'preload_reports_missing_font_reference' uses .unwrap() which silently discards error information
+    - Test 'preload_reports_missing_font_reference' does not call any production code
+  real_page_counts_and_pages (oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:61) - Score: 100
+    i Test 'real_page_counts_and_pages' has multiple assertions without diagnostic messages
+    i Test 'real_page_counts_and_pages' uses .unwrap() which silently discards error information
+  actual_objects_survive_cache_clear_and_eviction (oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:94) - Score: 100
+    i Test 'actual_objects_survive_cache_clear_and_eviction' has multiple assertions without diagnostic messages
+    i Test 'actual_objects_survive_cache_clear_and_eviction' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_725_lazy_document_test.rs:
+  real_page_counts_and_pages (line 61) - Score: 100
+    i Test 'real_page_counts_and_pages' has multiple assertions without diagnostic messages
+    i Test 'real_page_counts_and_pages' uses .unwrap() which silently discards error information
+  actual_objects_survive_cache_clear_and_eviction (line 94) - Score: 100
+    i Test 'actual_objects_survive_cache_clear_and_eviction' has multiple assertions without diagnostic messages
+    i Test 'actual_objects_survive_cache_clear_and_eviction' uses .unwrap() which silently discards error information
+  missing_objects_remain_errors_on_repeated_access (line 120) - Score: 100
+    i Test 'missing_objects_remain_errors_on_repeated_access' has multiple assertions without diagnostic messages
+    i Test 'missing_objects_remain_errors_on_repeated_access' uses .unwrap() which silently discards error information
+  shared_document_returns_real_values_concurrently (line 140) - Score: 100
+    i Test 'shared_document_returns_real_values_concurrently' has multiple assertions without diagnostic messages
+    i Test 'shared_document_returns_real_values_concurrently' uses .unwrap() which silently discards error information
+  content_loading_is_deferred_until_object_access (line 170) - Score: 100
+    i Test 'content_loading_is_deferred_until_object_access' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'content_loading_is_deferred_until_object_access' has multiple assertions without diagnostic messages
+    i Test 'content_loading_is_deferred_until_object_access' uses .unwrap() which silently discards error information
+  actual_null_is_distinct_from_absent_or_wrong_generation (line 217) - Score: 90
+    i Test 'actual_null_is_distinct_from_absent_or_wrong_generation' has multiple assertions without diagnostic messages
+    i Test 'actual_null_is_distinct_from_absent_or_wrong_generation' uses .unwrap() which silently discards error information
+    - Test 'actual_null_is_distinct_from_absent_or_wrong_generation' does not call any production code
+  cache_hit_and_clear_preserve_values (line 240) - Score: 100
+    i Test 'cache_hit_and_clear_preserve_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'cache_hit_and_clear_preserve_values' has multiple assertions without diagnostic messages
+    i Test 'cache_hit_and_clear_preserve_values' uses .unwrap() which silently discards error information
+  invalid_catalog_is_rejected_at_construction (line 258) - Score: 100
+    i Test 'invalid_catalog_is_rejected_at_construction' uses .unwrap() which silently discards error information
+  malformed_object_errors_do_not_poison_future_access (line 265) - Score: 100
+    i Test 'malformed_object_errors_do_not_poison_future_access' has multiple assertions without diagnostic messages
+    i Test 'malformed_object_errors_do_not_poison_future_access' uses .unwrap() which silently discards error information
+  preload_reports_missing_font_reference (line 290) - Score: 90
+    i Test 'preload_reports_missing_font_reference' uses .unwrap() which silently discards error information
+    - Test 'preload_reports_missing_font_reference' does not call any production code
+  nonzero_generation_resolves_without_aliasing_generation_zero (line 308) - Score: 100
+    i Test 'nonzero_generation_resolves_without_aliasing_generation_zero' has multiple assertions without diagnostic messages
+    i Test 'nonzero_generation_resolves_without_aliasing_generation_zero' uses .unwrap() which silently discards error information
+  preserves_public_auto_traits (line 340) - Score: 75
+    - Test 'preserves_public_auto_traits' executes production code without asserting on its behaviour
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

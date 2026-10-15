@@ -1,0 +1,122 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 92 | Tests: 23 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/memory/lazy_loader.rs                       23     92
+
+--- Worst Offenders ---
+  test_lazy_object_loading (oxidize-pdf-core/src/memory/lazy_loader.rs:309) - Score: 50
+    - Test 'test_lazy_object_loading' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_lazy_object_loading' does not call any production code
+    - Test 'test_lazy_object_loading' has no assertions
+  test_lazy_object_states (oxidize-pdf-core/src/memory/lazy_loader.rs:208) - Score: 75
+    - Test 'test_lazy_object_states' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_object_states' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_object_states' has multiple assertions without diagnostic messages
+    - Test 'test_lazy_object_states' line 225: assert!(true) is always passing
+  test_lazy_object_not_loaded (oxidize-pdf-core/src/memory/lazy_loader.rs:283) - Score: 80
+    - Test 'test_lazy_object_not_loaded' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_object_not_loaded' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_lazy_object_not_loaded' does not call any production code
+  test_lazy_document_open_nonexistent_file (oxidize-pdf-core/src/memory/lazy_loader.rs:523) - Score: 80
+    - Test 'test_lazy_document_open_nonexistent_file' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_lazy_document_open_nonexistent_file' only exercises the happy path — no None, Err, or edge-case inputs
+  test_lazy_object_enum_all_variants (oxidize-pdf-core/src/memory/lazy_loader.rs:537) - Score: 80
+    - Test 'test_lazy_object_enum_all_variants' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_object_enum_all_variants' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_lazy_object_enum_all_variants' has low assert-to-setup ratio (8%): 1 asserts vs 12 setup lines
+
+--- Details ---
+oxidize-pdf-core/src/memory/lazy_loader.rs:
+  test_lazy_object_states (line 208) - Score: 75
+    - Test 'test_lazy_object_states' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_object_states' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_object_states' has multiple assertions without diagnostic messages
+    - Test 'test_lazy_object_states' line 225: assert!(true) is always passing
+  test_lazy_document_creation (line 231) - Score: 90
+    - Test 'test_lazy_document_creation' has identical neighborhood to 'test_lazy_document_page_count'
+    i Test 'test_lazy_document_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_creation' uses .unwrap() which silently discards error information
+  test_memory_stats (line 242) - Score: 100
+    i Test 'test_memory_stats' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_memory_stats' has multiple assertions without diagnostic messages
+    i Test 'test_memory_stats' uses .unwrap() which silently discards error information
+  test_clear_cache (line 256) - Score: 100
+    i Test 'test_clear_cache' uses .unwrap() which silently discards error information
+  test_page_iterator (line 269) - Score: 100
+    i Test 'test_page_iterator' uses .unwrap() which silently discards error information
+  test_lazy_object_not_loaded (line 283) - Score: 80
+    - Test 'test_lazy_object_not_loaded' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_object_not_loaded' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_lazy_object_not_loaded' does not call any production code
+  test_lazy_object_loaded (line 295) - Score: 90
+    - Test 'test_lazy_object_loaded' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_object_loaded' has multiple assertions without diagnostic messages
+  test_lazy_object_loading (line 309) - Score: 50
+    - Test 'test_lazy_object_loading' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_lazy_object_loading' does not call any production code
+    - Test 'test_lazy_object_loading' has no assertions
+  test_lazy_document_page_count (line 321) - Score: 90
+    - Test 'test_lazy_document_page_count' has identical neighborhood to 'test_lazy_document_creation'
+    i Test 'test_lazy_document_page_count' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_page_count' uses .unwrap() which silently discards error information
+  test_lazy_document_get_page_invalid_index (line 333) - Score: 90
+    - Test 'test_lazy_document_get_page_invalid_index' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_document_get_page_invalid_index' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_get_page_invalid_index' has multiple assertions without diagnostic messages
+    i Test 'test_lazy_document_get_page_invalid_index' uses .unwrap() which silently discards error information
+  test_lazy_document_get_object_not_found (line 365) - Score: 90
+    - Test 'test_lazy_document_get_object_not_found' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_document_get_object_not_found' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_get_object_not_found' has multiple assertions without diagnostic messages
+    i Test 'test_lazy_document_get_object_not_found' uses .unwrap() which silently discards error information
+  test_lazy_document_preload_page_invalid_index (line 387) - Score: 90
+    - Test 'test_lazy_document_preload_page_invalid_index' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_document_preload_page_invalid_index' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_preload_page_invalid_index' has multiple assertions without diagnostic messages
+    i Test 'test_lazy_document_preload_page_invalid_index' uses .unwrap() which silently discards error information
+  test_lazy_document_memory_stats_initial (line 407) - Score: 100
+    i Test 'test_lazy_document_memory_stats_initial' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_memory_stats_initial' has multiple assertions without diagnostic messages
+    i Test 'test_lazy_document_memory_stats_initial' uses .unwrap() which silently discards error information
+  test_lazy_document_memory_stats_after_operations (line 423) - Score: 100
+    i Test 'test_lazy_document_memory_stats_after_operations' uses .unwrap() which silently discards error information
+  test_lazy_document_clear_cache_empty (line 440) - Score: 100
+    i Test 'test_lazy_document_clear_cache_empty' uses .unwrap() which silently discards error information
+  test_lazy_page_iterator_creation (line 459) - Score: 100
+    i Test 'test_lazy_page_iterator_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_page_iterator_creation' has multiple assertions without diagnostic messages
+    i Test 'test_lazy_page_iterator_creation' uses .unwrap() which silently discards error information
+  test_lazy_page_iterator_empty_document (line 474) - Score: 100
+    i Test 'test_lazy_page_iterator_empty_document' has multiple assertions without diagnostic messages
+    i Test 'test_lazy_page_iterator_empty_document' uses .unwrap() which silently discards error information
+  test_lazy_page_iterator_multiple_calls (line 489) - Score: 100
+    i Test 'test_lazy_page_iterator_multiple_calls' uses .unwrap() which silently discards error information
+  test_lazy_document_with_different_memory_options (line 505) - Score: 100
+    i Test 'test_lazy_document_with_different_memory_options' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_with_different_memory_options' has multiple assertions without diagnostic messages
+    i Test 'test_lazy_document_with_different_memory_options' uses .unwrap() which silently discards error information
+  test_lazy_document_open_nonexistent_file (line 523) - Score: 80
+    - Test 'test_lazy_document_open_nonexistent_file' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_lazy_document_open_nonexistent_file' only exercises the happy path — no None, Err, or edge-case inputs
+  test_lazy_object_enum_all_variants (line 537) - Score: 80
+    - Test 'test_lazy_object_enum_all_variants' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_lazy_object_enum_all_variants' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_lazy_object_enum_all_variants' has low assert-to-setup ratio (8%): 1 asserts vs 12 setup lines
+  test_lazy_page_iterator_with_document_reference (line 565) - Score: 100
+    i Test 'test_lazy_page_iterator_with_document_reference' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_page_iterator_with_document_reference' uses .unwrap() which silently discards error information
+  test_lazy_document_concurrent_access_simulation (line 579) - Score: 100
+    i Test 'test_lazy_document_concurrent_access_simulation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_concurrent_access_simulation' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
