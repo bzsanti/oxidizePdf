@@ -1,0 +1,56 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue724/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 30.68s
+     Running tests/issue_724_streaming_input_test.rs (target/debug/deps/issue_724_streaming_input_test-94b7ce4b804e47f7)
+
+running 5 tests
+test incremental_objects_are_real_across_partitions_and_line_endings ... FAILED
+test incremental_stream_bytes_are_exact ... FAILED
+test invalid_inputs_never_produce_pages ... FAILED
+test eof_without_newline_is_recognized ... FAILED
+test real_pages_and_content_through_all_adapters ... FAILED
+
+failures:
+
+---- incremental_objects_are_real_across_partitions_and_line_endings stdout ----
+
+thread 'incremental_objects_are_real_across_partitions_and_line_endings' (362) panicked at oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:168:13:
+assertion `left == right` failed: chunk 1, EOL "\n"
+  left: 0
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- incremental_stream_bytes_are_exact stdout ----
+
+thread 'incremental_stream_bytes_are_exact' (363) panicked at oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:200:25:
+assertion `left == right` failed
+  left: (8, 0)
+ right: (8, 9)
+
+---- invalid_inputs_never_produce_pages stdout ----
+
+thread 'invalid_inputs_never_produce_pages' (364) panicked at oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:66:9:
+invalid document accepted
+
+---- eof_without_newline_is_recognized stdout ----
+
+thread 'eof_without_newline_is_recognized' (361) panicked at oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:221:9:
+assertion failed: parser.is_complete()
+
+---- real_pages_and_content_through_all_adapters stdout ----
+
+thread 'real_pages_and_content_through_all_adapters' (365) panicked at oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:90:13:
+assertion `left == right` failed
+  left: [0.0, 0.0, 595.0, 842.0]
+ right: [10.0, 20.0, 310.0, 420.0]
+
+
+failures:
+    eof_without_newline_is_recognized
+    incremental_objects_are_real_across_partitions_and_line_endings
+    incremental_stream_bytes_are_exact
+    invalid_inputs_never_produce_pages
+    real_pages_and_content_through_all_adapters
+
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_724_streaming_input_test`

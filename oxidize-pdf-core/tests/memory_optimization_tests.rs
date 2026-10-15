@@ -7,6 +7,21 @@ use oxidize_pdf::memory::{
 use oxidize_pdf::parser::PdfReader;
 use std::io::Cursor;
 
+fn source_pdf() -> Vec<u8> {
+    use oxidize_pdf::{text::Font, Document, Page};
+    let mut doc = Document::new();
+    for i in 0..3 {
+        let mut page = Page::a4();
+        page.text()
+            .set_font(Font::Helvetica, 12.)
+            .at(50., 700.)
+            .write(&format!("Source page {i}"))
+            .unwrap();
+        doc.add_page(page);
+    }
+    doc.to_bytes().unwrap()
+}
+
 #[test]
 fn test_lazy_document_basic() {
     // Create minimal valid PDF that just parses without xref
@@ -66,7 +81,7 @@ fn test_memory_options_configurations() {
 
 #[test]
 fn test_stream_processor_basic() {
-    let pdf_data = b"%PDF-1.7\ntest content";
+    let pdf_data = source_pdf();
     let cursor = Cursor::new(pdf_data);
     let options = StreamingOptions::default();
 
@@ -78,7 +93,7 @@ fn test_stream_processor_basic() {
         match event {
             ProcessingEvent::Start => assert_eq!(event_count, 1),
             ProcessingEvent::Header { version } => {
-                assert_eq!(version, "1.7");
+                assert!(!version.is_empty());
             }
             ProcessingEvent::End => {}
             _ => {}
@@ -111,7 +126,7 @@ fn test_streaming_options() {
 
 #[test]
 fn test_processing_actions() {
-    let pdf_data = b"%PDF-1.7\n";
+    let pdf_data = source_pdf();
     let cursor = Cursor::new(pdf_data);
     let options = StreamingOptions::default();
 
@@ -135,7 +150,7 @@ fn test_processing_actions() {
 
 #[test]
 fn test_extract_text_streaming() {
-    let pdf_data = b"%PDF-1.7\n";
+    let pdf_data = source_pdf();
     let cursor = Cursor::new(pdf_data);
     let options = StreamingOptions::default();
 
@@ -146,7 +161,9 @@ fn test_extract_text_streaming() {
     assert!(result.is_ok());
 
     let extracted_text = String::from_utf8(output).unwrap();
-    assert!(!extracted_text.is_empty());
+    for i in 0..3 {
+        assert!(extracted_text.contains(&format!("Source page {i}")));
+    }
 }
 
 #[test]
@@ -197,7 +214,7 @@ fn test_memory_options_thresholds() {
 
 #[test]
 fn test_skip_processing() {
-    let pdf_data = b"%PDF-1.7\n";
+    let pdf_data = source_pdf();
     let cursor = Cursor::new(pdf_data);
     let options = StreamingOptions::default();
 
@@ -215,7 +232,7 @@ fn test_skip_processing() {
         .unwrap();
 
     // Pages should be encountered but skipped
-    assert!(skipped_count > 0);
+    assert_eq!(skipped_count, 3);
 }
 
 #[test]

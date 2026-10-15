@@ -1,0 +1,122 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 87 | Tests: 19 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_724_streaming_input_test.rs         19     87
+
+--- Worst Offenders ---
+  page_adapters_preserve_send_and_sync_for_owned_readers (oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:627) - Score: 65
+    - Test 'page_adapters_preserve_send_and_sync_for_owned_readers' does not call any production code
+    - Test 'page_adapters_preserve_send_and_sync_for_owned_readers' executes production code without asserting on its behaviour
+  page_adapters_preserve_sync_without_requiring_send (oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:637) - Score: 65
+    - Test 'page_adapters_preserve_sync_without_requiring_send' does not call any production code
+    - Test 'page_adapters_preserve_sync_without_requiring_send' executes production code without asserting on its behaviour
+  invalid_inputs_never_produce_pages (oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:56) - Score: 75
+    - Test 'invalid_inputs_never_produce_pages' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'invalid_inputs_never_produce_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'invalid_inputs_never_produce_pages' has multiple assertions without diagnostic messages
+    - Test 'invalid_inputs_never_produce_pages' asserts values that resolve to the same constant via bindings
+  incremental_finish_rejects_invalid_truncated_and_unsupported_input (oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:373) - Score: 75
+    - Test 'incremental_finish_rejects_invalid_truncated_and_unsupported_input' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incremental_finish_rejects_invalid_truncated_and_unsupported_input' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_finish_rejects_invalid_truncated_and_unsupported_input' has multiple assertions without diagnostic messages
+    - Test 'incremental_finish_rejects_invalid_truncated_and_unsupported_input' asserts values that resolve to the same constant via bindings
+  incremental_stream_bytes_are_exact (oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:174) - Score: 80
+    - Test 'incremental_stream_bytes_are_exact' has a match arm with empty body, ignoring potential error cases
+    - Test 'incremental_stream_bytes_are_exact' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incremental_stream_bytes_are_exact' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_stream_bytes_are_exact' has multiple assertions without diagnostic messages
+    i Test 'incremental_stream_bytes_are_exact' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:
+  invalid_inputs_never_produce_pages (line 56) - Score: 75
+    - Test 'invalid_inputs_never_produce_pages' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'invalid_inputs_never_produce_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'invalid_inputs_never_produce_pages' has multiple assertions without diagnostic messages
+    - Test 'invalid_inputs_never_produce_pages' asserts values that resolve to the same constant via bindings
+  real_pages_and_content_through_all_adapters (line 82) - Score: 100
+    i Test 'real_pages_and_content_through_all_adapters' has multiple assertions without diagnostic messages
+    i Test 'real_pages_and_content_through_all_adapters' uses .unwrap() which silently discards error information
+  incremental_objects_are_real_across_partitions_and_line_endings (line 140) - Score: 90
+    - Test 'incremental_objects_are_real_across_partitions_and_line_endings' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incremental_objects_are_real_across_partitions_and_line_endings' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_objects_are_real_across_partitions_and_line_endings' uses .unwrap() which silently discards error information
+  incremental_stream_bytes_are_exact (line 174) - Score: 80
+    - Test 'incremental_stream_bytes_are_exact' has a match arm with empty body, ignoring potential error cases
+    - Test 'incremental_stream_bytes_are_exact' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incremental_stream_bytes_are_exact' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_stream_bytes_are_exact' has multiple assertions without diagnostic messages
+    i Test 'incremental_stream_bytes_are_exact' uses .unwrap() which silently discards error information
+  eof_without_newline_is_recognized (line 214) - Score: 80
+    - Test 'eof_without_newline_is_recognized' has a match arm with empty body, ignoring potential error cases
+    - Test 'eof_without_newline_is_recognized' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'eof_without_newline_is_recognized' has multiple assertions without diagnostic messages
+    i Test 'eof_without_newline_is_recognized' uses .unwrap() which silently discards error information
+  iterator_errors_once_and_synthetic_geometry_has_no_content (line 258) - Score: 90
+    - Test 'iterator_errors_once_and_synthetic_geometry_has_no_content' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'iterator_errors_once_and_synthetic_geometry_has_no_content' has multiple assertions without diagnostic messages
+  seeking_content_limits_and_cache_accounting (line 276) - Score: 100
+    i Test 'seeking_content_limits_and_cache_accounting' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'seeking_content_limits_and_cache_accounting' has multiple assertions without diagnostic messages
+    i Test 'seeking_content_limits_and_cache_accounting' uses .unwrap() which silently discards error information
+  callbacks_stop_skip_and_propagate_errors (line 319) - Score: 90
+    - Test 'callbacks_stop_skip_and_propagate_errors' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'callbacks_stop_skip_and_propagate_errors' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'callbacks_stop_skip_and_propagate_errors' has multiple assertions without diagnostic messages
+    i Test 'callbacks_stop_skip_and_propagate_errors' uses .unwrap() which silently discards error information
+  incremental_finish_rejects_invalid_truncated_and_unsupported_input (line 373) - Score: 75
+    - Test 'incremental_finish_rejects_invalid_truncated_and_unsupported_input' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incremental_finish_rejects_invalid_truncated_and_unsupported_input' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_finish_rejects_invalid_truncated_and_unsupported_input' has multiple assertions without diagnostic messages
+    - Test 'incremental_finish_rejects_invalid_truncated_and_unsupported_input' asserts values that resolve to the same constant via bindings
+  incremental_xref_trailer_and_short_reads_preserve_values (line 400) - Score: 80
+    - Test 'incremental_xref_trailer_and_short_reads_preserve_values' has a match arm with empty body, ignoring potential error cases
+    - Test 'incremental_xref_trailer_and_short_reads_preserve_values' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incremental_xref_trailer_and_short_reads_preserve_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_xref_trailer_and_short_reads_preserve_values' has multiple assertions without diagnostic messages
+    i Test 'incremental_xref_trailer_and_short_reads_preserve_values' uses .unwrap() which silently discards error information
+  incremental_delimiters_in_strings_comments_and_names_are_not_structure (line 442) - Score: 90
+    - Test 'incremental_delimiters_in_strings_comments_and_names_are_not_structure' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'incremental_delimiters_in_strings_comments_and_names_are_not_structure' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_delimiters_in_strings_comments_and_names_are_not_structure' has multiple assertions without diagnostic messages
+    i Test 'incremental_delimiters_in_strings_comments_and_names_are_not_structure' uses .unwrap() which silently discards error information
+  incremental_io_and_callback_errors_are_not_success (line 469) - Score: 100
+    i Test 'incremental_io_and_callback_errors_are_not_success' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'incremental_io_and_callback_errors_are_not_success' has multiple assertions without diagnostic messages
+  nested_and_oversized_objects_fail_before_parsing_or_allocating_payloads (line 493) - Score: 90
+    - Test 'nested_and_oversized_objects_fail_before_parsing_or_allocating_payloads' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'nested_and_oversized_objects_fail_before_parsing_or_allocating_payloads' has multiple assertions without diagnostic messages
+  real_null_objects_are_preserved_instead_of_rejected (line 520) - Score: 100
+    i Test 'real_null_objects_are_preserved_instead_of_rejected' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'real_null_objects_are_preserved_instead_of_rejected' has multiple assertions without diagnostic messages
+    i Test 'real_null_objects_are_preserved_instead_of_rejected' uses .unwrap() which silently discards error information
+  comments_before_endobj_do_not_change_objects (line 546) - Score: 100
+    i Test 'comments_before_endobj_do_not_change_objects' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'comments_before_endobj_do_not_change_objects' has multiple assertions without diagnostic messages
+    i Test 'comments_before_endobj_do_not_change_objects' uses .unwrap() which silently discards error information
+  processor_resume_keeps_source_page_numbers (line 573) - Score: 100
+    i Test 'processor_resume_keeps_source_page_numbers' has multiple assertions without diagnostic messages
+    i Test 'processor_resume_keeps_source_page_numbers' uses .unwrap() which silently discards error information
+  blank_source_pages_have_empty_text_and_content (line 595) - Score: 90
+    - Test 'blank_source_pages_have_empty_text_and_content' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'blank_source_pages_have_empty_text_and_content' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'blank_source_pages_have_empty_text_and_content' has multiple assertions without diagnostic messages
+    i Test 'blank_source_pages_have_empty_text_and_content' uses .unwrap() which silently discards error information
+  page_adapters_preserve_send_and_sync_for_owned_readers (line 627) - Score: 65
+    - Test 'page_adapters_preserve_send_and_sync_for_owned_readers' does not call any production code
+    - Test 'page_adapters_preserve_send_and_sync_for_owned_readers' executes production code without asserting on its behaviour
+  page_adapters_preserve_sync_without_requiring_send (line 637) - Score: 65
+    - Test 'page_adapters_preserve_sync_without_requiring_send' does not call any production code
+    - Test 'page_adapters_preserve_sync_without_requiring_send' executes production code without asserting on its behaviour
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

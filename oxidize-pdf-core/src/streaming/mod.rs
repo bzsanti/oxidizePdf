@@ -1,8 +1,8 @@
 //! Streaming support for incremental PDF processing
 //!
 //! This module provides advanced streaming capabilities for processing PDFs
-//! without loading the entire document into memory. It's designed for handling
-//! very large PDFs or situations with limited memory.
+//! using seekable input. Page adapters materialize content/text one page at a time;
+//! reader caches and caller-retained pages are outside the page cache budget.
 //!
 //! # Features
 //!
@@ -10,8 +10,7 @@
 //! - **Page Streaming**: Process pages one at a time
 //! - **Content Stream Processing**: Handle content streams in chunks
 //! - **Progressive Text Extraction**: Extract text as it's encountered
-//! - **Memory Bounds**: Configurable memory limits for buffering
-//! - **Async Support**: Future-ready for async I/O operations
+//! - **Page Cache Budget**: Configurable limits for retained page payloads
 //!
 //! # Example
 //!
@@ -63,11 +62,11 @@ pub struct StreamingOptions {
     pub buffer_size: usize,
     /// Maximum number of pages to keep in cache
     pub page_cache_size: usize,
-    /// Maximum size of a single content stream
+    /// Maximum combined decoded page content size
     pub max_content_stream_size: usize,
-    /// Enable progressive rendering hints
+    /// Reserved for progressive rendering hints; currently unused
     pub progressive_hints: bool,
-    /// Memory limit for buffers (bytes)
+    /// Budget for retained page content/text in this adapter cache (bytes)
     pub memory_limit: usize,
 }
 
@@ -122,72 +121,50 @@ impl StreamingOptions {
     }
 }
 
-/// A PDF document that supports streaming operations
+/// Page-at-a-time document access using the seekable PDF reader.
+/// Content and text are materialized per page. `memory_usage` measures only this
+/// adapter's retained page payloads, not reader caches or caller-owned pages.
 pub struct StreamingDocument<R: Read + Seek> {
-    #[allow(dead_code)]
-    reader: BufReader<R>,
+    streamer: PageStreamer<BufReader<R>>,
     options: StreamingOptions,
     page_cache: VecDeque<StreamingPage>,
-    current_page: u32,
-    total_pages: Option<u32>,
     memory_used: usize,
 }
-
 impl<R: Read + Seek> StreamingDocument<R> {
-    /// Create a new streaming document
     pub fn new(reader: R, options: StreamingOptions) -> Result<Self> {
-        let buf_reader = BufReader::with_capacity(options.buffer_size, reader);
-
+        let mut streamer = PageStreamer::with_content_limit(
+            BufReader::with_capacity(options.buffer_size.max(1), reader),
+            options.max_content_stream_size,
+        );
+        streamer.initialize()?;
         Ok(Self {
-            reader: buf_reader,
+            streamer,
             options,
             page_cache: VecDeque::new(),
-            current_page: 0,
-            total_pages: None,
             memory_used: 0,
         })
     }
-
-    /// Get the next page for processing
     pub fn next_page(&mut self) -> Result<Option<StreamingPage>> {
-        // Check if we've processed all pages
-        if let Some(total) = self.total_pages {
-            if self.current_page >= total {
-                return Ok(None);
-            }
-        } else {
-            // For demo/test purposes, limit to 10 pages when total is unknown
-            if self.current_page >= 10 {
-                return Ok(None);
-            }
-        }
-
-        // Check memory limit
-        if self.memory_used > self.options.memory_limit {
-            self.evict_pages();
-        }
-
-        // In a real implementation, this would parse the next page
-        // For now, return a mock page
-        let page = StreamingPage {
-            number: self.current_page,
-            width: 595.0,
-            height: 842.0,
-            content_offset: 0,
-            content_length: 0,
+        let Some(page) = self.streamer.next()? else {
+            return Ok(None);
         };
-
-        self.current_page += 1;
-
-        // Cache the page if there's room
-        if self.page_cache.len() < self.options.page_cache_size {
+        let size = page.retained_bytes();
+        while !self.page_cache.is_empty()
+            && (self.page_cache.len() >= self.options.page_cache_size
+                || size > self.options.memory_limit.saturating_sub(self.memory_used))
+        {
+            if let Some(old) = self.page_cache.pop_front() {
+                self.memory_used -= old.retained_bytes();
+            }
+        }
+        if self.options.page_cache_size > 0
+            && size <= self.options.memory_limit.saturating_sub(self.memory_used)
+        {
+            self.memory_used += size;
             self.page_cache.push_back(page.clone());
         }
-
         Ok(Some(page))
     }
-
-    /// Process all pages with a callback
     pub fn process_pages<F>(&mut self, mut callback: F) -> Result<()>
     where
         F: FnMut(&StreamingPage) -> Result<()>,
@@ -197,26 +174,13 @@ impl<R: Read + Seek> StreamingDocument<R> {
         }
         Ok(())
     }
-
-    /// Get current memory usage
+    /// Bytes of content/text retained in this adapter's page cache.
     pub fn memory_usage(&self) -> usize {
         self.memory_used
     }
-
-    /// Clear page cache to free memory
     pub fn clear_cache(&mut self) {
         self.page_cache.clear();
         self.memory_used = 0;
-    }
-
-    fn evict_pages(&mut self) {
-        // Evict oldest pages until we're under the memory limit
-        while self.memory_used > self.options.memory_limit && !self.page_cache.is_empty() {
-            if self.page_cache.pop_front().is_some() {
-                // In a real implementation, update memory_used
-                self.memory_used = self.memory_used.saturating_sub(1024);
-            }
-        }
     }
 }
 
@@ -240,7 +204,6 @@ pub struct StreamingStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
 
     #[test]
     fn test_streaming_options_default() {
@@ -277,75 +240,6 @@ mod tests {
         assert_eq!(options.buffer_size, 512 * 1024);
         assert_eq!(options.page_cache_size, 5);
         assert_eq!(options.memory_limit, 50 * 1024 * 1024);
-    }
-
-    #[test]
-    fn test_streaming_document_creation() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-
-        let doc = StreamingDocument::new(cursor, options);
-        assert!(doc.is_ok());
-    }
-
-    #[test]
-    fn test_next_page() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-
-        let mut doc = StreamingDocument::new(cursor, options).unwrap();
-
-        // Should get at least one page
-        let page = doc.next_page().unwrap();
-        assert!(page.is_some());
-
-        let page = page.unwrap();
-        assert_eq!(page.number(), 0);
-        assert_eq!(page.width(), 595.0);
-        assert_eq!(page.height(), 842.0);
-    }
-
-    #[test]
-    fn test_process_pages() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-
-        let mut doc = StreamingDocument::new(cursor, options).unwrap();
-        let mut page_count = 0;
-
-        doc.process_pages(|page| {
-            page_count += 1;
-            assert!(page.number() < 1000); // Sanity check with higher limit
-            Ok(())
-        })
-        .unwrap();
-
-        assert!(page_count > 0);
-    }
-
-    #[test]
-    fn test_memory_management() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default().with_memory_limit(1024); // Very small limit
-
-        let mut doc = StreamingDocument::new(cursor, options).unwrap();
-
-        // Process multiple pages
-        for _ in 0..5 {
-            let _ = doc.next_page();
-        }
-
-        // Cache should be limited
-        assert!(doc.page_cache.len() <= 3);
-
-        // Clear cache
-        doc.clear_cache();
-        assert_eq!(doc.page_cache.len(), 0);
-        assert_eq!(doc.memory_usage(), 0);
     }
 
     #[test]

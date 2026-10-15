@@ -1,0 +1,32 @@
+{
+  "base": "7a6d0723c7fd8f90d527780a7801a9af865c3e09",
+  "audit_base": "206b688768cc49c3210472668e6e3c63959e043f",
+  "suites": 433,
+  "passed": 10497,
+  "failed": 0,
+  "ignored": 77,
+  "public_contracts_final": 19,
+  "memory_integration": 11,
+  "review": "complete, no remaining in-scope blockers",
+  "clippy": "all/all-targets/internal-testing -D warnings PASS",
+  "toolchain": "rustc/cargo 1.96.0 x86_64-unknown-linux-gnu",
+  "external_tools": {
+    "qpdf": "11.9.0",
+    "Poppler": "24.02.0"
+  },
+  "limits": "Syntax events are not document validation; pending records <=16MiB and depth<=128; direct stream Length; page payload cache is not RSS.",
+  "source_sha256": {
+    "oxidize-pdf-core/src/streaming/mod.rs": "196011ca6a0375082cd717e39462d46e46fe3edba893cb75833e77acfcab5349",
+    "oxidize-pdf-core/src/streaming/page_streamer.rs": "836f32d5e041da3d9189cafd0a3058fe0d8d9b150479956b85988b6621fdf329",
+    "oxidize-pdf-core/src/streaming/incremental_parser.rs": "5944049278f29082cba03f46dedb025b059e9b74361b99a68dd9a6f4be564862",
+    "oxidize-pdf-core/src/memory/stream_processor.rs": "7c11eb96799713578741501b103f1e87b88e706c9ffb43f08b51960c82a7599c",
+    "oxidize-pdf-core/tests/issue_724_streaming_input_test.rs": "bed808c5cbd94c120395382fd7b8a55d2b57b54cb61d24269e135121c5bffbb2",
+    "oxidize-pdf-core/tests/memory_optimization_tests.rs": "f5cff43f454d049f7898a6e78e0b1516c65734052b36fd27d7e483555f49c3b2"
+  },
+  "audited_source_unchanged_before_fix": {
+    "oxidize-pdf-core/src/streaming/mod.rs": "21f97537ace1feef393f1321e84d717e0a45c8fe23920b12f0e7ae340184da9c",
+    "oxidize-pdf-core/src/streaming/page_streamer.rs": "4ec50e7463da5805a9f0c538d4d5024d31e9a449cc4b97ac1d1946531b334067",
+    "oxidize-pdf-core/src/streaming/incremental_parser.rs": "fedbfbb0e1ff0c821bffa5b4a7011b0b0486f6d83078995af6a9cbd08821a875",
+    "oxidize-pdf-core/src/memory/stream_processor.rs": "d426f4165a74d76b2e59015ec76a4883344d4a6b139cea76a0042c3212d02147"
+  }
+}

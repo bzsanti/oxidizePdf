@@ -1,0 +1,12 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue724/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 32.16s
+     Running tests/issue_724_streaming_input_test.rs (target/debug/deps/issue_724_streaming_input_test-94b7ce4b804e47f7)
+
+running 5 tests
+test incremental_stream_bytes_are_exact ... ok
+test invalid_inputs_never_produce_pages ... ok
+test incremental_objects_are_real_across_partitions_and_line_endings ... ok
+test eof_without_newline_is_recognized ... ok
+test real_pages_and_content_through_all_adapters ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
