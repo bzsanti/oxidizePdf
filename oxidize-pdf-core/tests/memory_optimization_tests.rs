@@ -24,32 +24,16 @@ fn source_pdf() -> Vec<u8> {
 
 #[test]
 fn test_lazy_document_basic() {
-    // Create minimal valid PDF that just parses without xref
-    let pdf_data = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n%%EOF\n";
-    let cursor = Cursor::new(pdf_data);
-    let reader = match PdfReader::new(cursor) {
-        Ok(r) => r,
-        Err(_) => {
-            println!("Skipping test - cannot create PdfReader from minimal PDF");
-            return;
-        }
-    };
+    let reader = PdfReader::new(Cursor::new(source_pdf())).unwrap();
 
     let options = MemoryOptions::default()
         .with_lazy_loading(true)
         .with_cache_size(10);
 
-    // LazyDocument expects valid PDF structure, skip if it fails
-    let lazy_doc = match LazyDocument::new(reader, options) {
-        Ok(doc) => doc,
-        Err(_) => {
-            println!("Skipping test - minimal PDF not sufficient for LazyDocument");
-            return;
-        }
-    };
+    let lazy_doc = LazyDocument::new(reader, options).unwrap();
 
-    // Should have 0 pages for minimal PDF
-    assert_eq!(lazy_doc.page_count(), 0);
+    // The writer-produced input has three pages
+    assert_eq!(lazy_doc.page_count(), 3);
 
     // Memory stats should start at zero
     let stats = lazy_doc.memory_stats();
@@ -168,27 +152,11 @@ fn test_extract_text_streaming() {
 
 #[test]
 fn test_lazy_document_cache_clear() {
-    // Create minimal valid PDF that just parses without xref
-    let pdf_data = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n%%EOF\n";
-    let cursor = Cursor::new(pdf_data);
-    let reader = match PdfReader::new(cursor) {
-        Ok(r) => r,
-        Err(_) => {
-            println!("Skipping test - cannot create PdfReader from minimal PDF");
-            return;
-        }
-    };
+    let reader = PdfReader::new(Cursor::new(source_pdf())).unwrap();
 
     let options = MemoryOptions::default().with_cache_size(100);
 
-    // LazyDocument expects valid PDF structure, skip if it fails
-    let lazy_doc = match LazyDocument::new(reader, options) {
-        Ok(doc) => doc,
-        Err(_) => {
-            println!("Skipping test - minimal PDF not sufficient for LazyDocument");
-            return;
-        }
-    };
+    let lazy_doc = LazyDocument::new(reader, options).unwrap();
 
     // Clear cache should not panic
     lazy_doc.clear_cache();
@@ -237,30 +205,15 @@ fn test_skip_processing() {
 
 #[test]
 fn test_page_preloading() {
-    // Create minimal valid PDF that just parses without xref
-    let pdf_data = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n%%EOF\n";
-    let cursor = Cursor::new(pdf_data);
-    let reader = match PdfReader::new(cursor) {
-        Ok(r) => r,
-        Err(_) => {
-            println!("Skipping test - cannot create PdfReader from minimal PDF");
-            return;
-        }
-    };
+    let reader = PdfReader::new(Cursor::new(source_pdf())).unwrap();
 
     let options = MemoryOptions::default().with_lazy_loading(true);
 
-    // LazyDocument expects valid PDF structure, skip if it fails
-    let lazy_doc = match LazyDocument::new(reader, options) {
-        Ok(doc) => doc,
-        Err(_) => {
-            println!("Skipping test - minimal PDF not sufficient for LazyDocument");
-            return;
-        }
-    };
+    let lazy_doc = LazyDocument::new(reader, options).unwrap();
 
     // Preloading non-existent page should fail
-    let result = lazy_doc.preload_page(0);
+    lazy_doc.preload_page(0).unwrap();
+    let result = lazy_doc.preload_page(3);
     assert!(result.is_err());
 }
 
