@@ -1,0 +1,61 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue740/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 29.47s
+     Running tests/issue_740_source_spans_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_740_source_spans_test-2c64382f664f2237)
+
+running 6 tests
+test empty_and_plain_text_controls ... ok
+test source_slices_reconstruct_chunks_across_sentence_boundaries ... FAILED
+test crossing_pages_uses_supplied_order_and_skips_empty_pages ... FAILED
+test sparse_page_ids_are_not_synthesized ... FAILED
+test unicode_whitespace_offsets_refer_to_original_characters ... FAILED
+test repeated_overlap_keeps_third_page_provenance ... FAILED
+
+failures:
+
+---- source_slices_reconstruct_chunks_across_sentence_boundaries stdout ----
+
+thread 'source_slices_reconstruct_chunks_across_sentence_boundaries' (348) panicked at oxidize-pdf-core/tests/issue_740_source_spans_test.rs:73:13:
+assertion `left == right` failed
+  left: "Alpha beta. Γάμμα 猫! d"
+ right: "Alpha beta. Γάμμα 猫!"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- crossing_pages_uses_supplied_order_and_skips_empty_pages stdout ----
+
+thread 'crossing_pages_uses_supplied_order_and_skips_empty_pages' (345) panicked at oxidize-pdf-core/tests/issue_740_source_spans_test.rs:54:9:
+assertion `left == right` failed
+  left: [9, 10]
+ right: [9, 3]
+
+---- sparse_page_ids_are_not_synthesized stdout ----
+
+thread 'sparse_page_ids_are_not_synthesized' (349) panicked at oxidize-pdf-core/tests/issue_740_source_spans_test.rs:11:5:
+assertion `left == right` failed
+  left: [2]
+ right: [5]
+
+---- unicode_whitespace_offsets_refer_to_original_characters stdout ----
+
+thread 'unicode_whitespace_offsets_refer_to_original_characters' (350) panicked at oxidize-pdf-core/tests/issue_740_source_spans_test.rs:41:9:
+assertion `left == right` failed
+  left: (0, 6)
+ right: (2, 5)
+
+---- repeated_overlap_keeps_third_page_provenance stdout ----
+
+thread 'repeated_overlap_keeps_third_page_provenance' (347) panicked at oxidize-pdf-core/tests/issue_740_source_spans_test.rs:24:5:
+assertion `left == right` failed
+  left: [1]
+ right: [3]
+
+
+failures:
+    crossing_pages_uses_supplied_order_and_skips_empty_pages
+    repeated_overlap_keeps_third_page_provenance
+    source_slices_reconstruct_chunks_across_sentence_boundaries
+    sparse_page_ids_are_not_synthesized
+    unicode_whitespace_offsets_refer_to_original_characters
+
+test result: FAILED. 1 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_740_source_spans_test`

@@ -1,0 +1,28 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue740/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 11.97s
+     Running tests/chunk_page_mapper_test.rs (/tmp/oxidize-issue724/target/debug/deps/chunk_page_mapper_test-038a5b8d1cf834f5)
+
+running 8 tests
+test test_pages_1_indexed_to_0_indexed ... ok
+test test_pages_for_empty_chunks ... ok
+test test_pages_for_multiple_chunks_overlap ... ok
+test test_pages_for_single_chunk ... ok
+test test_pages_sorted ... ok
+test test_extract_pages_empty_gives_error ... ok
+test test_extract_pages_preserves_content ... ok
+test test_extract_pages_produces_correct_count ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/issue_740_source_spans_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_740_source_spans_test-2c64382f664f2237)
+
+running 6 tests
+test crossing_pages_uses_supplied_order_and_skips_empty_pages ... ok
+test empty_and_plain_text_controls ... ok
+test source_slices_reconstruct_chunks_across_sentence_boundaries ... ok
+test sparse_page_ids_are_not_synthesized ... ok
+test unicode_whitespace_offsets_refer_to_original_characters ... ok
+test repeated_overlap_keeps_third_page_provenance ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

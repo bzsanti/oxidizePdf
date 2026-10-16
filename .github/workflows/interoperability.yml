@@ -69,6 +69,12 @@ jobs:
           independent_output_oracle
           -- --ignored --exact
 
+      - name: Verify unsupported pivot output and real dashboard controls
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_738_pivot_contract_test independent_output_oracle
+          -- --ignored --exact
+
       - name: Verify dashboard overflow identities with qpdf and Poppler
         run: >-
           cargo test --locked -p oxidize-pdf

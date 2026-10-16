@@ -1,0 +1,7 @@
+{
+  "base_at_implementation": "bb3dfe3671049e1fe2c4bc5db9e79b8224f1e84f",
+  "sha256": {
+    "oxidize-pdf-core/src/ai/chunking.rs": "9b290dc0d81e402e92e2d3f358be6476162745988c50e204155faad68b317610",
+    "oxidize-pdf-core/tests/issue_740_source_spans_test.rs": "91532ba9bccf1483a8a0b94d80d5fc74491e45e7dbf22a88aaf02e78ddb83fd0"
+  }
+}

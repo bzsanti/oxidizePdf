@@ -10,7 +10,40 @@
 - Residual independiente: tests tautológicos de anidamiento en stack_safe_tests.rs:173/195. Corrección bloqueada sin issue específica; mantenimiento/bzsanti debe crear/vincular OPEN para desbloquear; no modificar ni recalibrar bajo #757. No se usan para aceptar la corrección.
 - Release: #738/#739/#740 siguen pendientes, además de contratos de texto #731 e imágenes #732/#733/#734/#736. Corregir #757 no basta para recomendar una release general con esas APIs soportadas. #658 conserva bloqueo de seguridad y queda fuera de integración. CI final #760 confirmado: 30 PASS/2 SKIPPED. Sin publicación de versión.
 - Publicación confirmada: https://github.com/bzsanti/oxidizePdf/pull/764, OPEN/borrador, base develop, HEAD d1384445d6d68479d7d09e0082889226b1c3cc30. CI inicial: 30 IN_PROGRESS/2 SKIPPED, sin aprobación final todavía. Push realizado con credential helper de gh tras detener el intento sin respuesta del gestor predeterminado.
+- Integración 2026-10-16: CI previo d1384445 completo (30 SUCCESS/2 SKIPPED). Incorporada rama revisada #767 (4fe23926), que incluye develop 92e3abdf; único conflicto en TASKS.md, preservados ambos registros. Fuentes #757/#739/#740 idénticas a manifiestos QR. Regresión combinada: 19 contratos PASS, incluido oráculo externo. #767 fusionado con 30 SUCCESS/2 SKIPPED en 392e95a2; #740 cerrada. Nuevo CI de #764 pendiente antes de fusión autorizada.
 - Siguiente acción exacta: comprobar `gh pr checks 764 --repo bzsanti/oxidizePdf`; resolver cualquier fallo y verificar el mismo HEAD antes de integrar. Tras integración, continuar #739/#738/#740 y reevaluar alcance de release bajo #719. No se ha fusionado ni publicado versión.
+
+## #740 — Páginas y posiciones originales en chunks
+
+Issue: #740 — fix(ai): preserve original page IDs and source offsets during overlapping chunking — https://github.com/bzsanti/oxidizePdf/issues/740
+Estado: implementación y QR completos; PR borrador #767 publicado, CI en curso. Prioridad: P1. Responsable: Codex / bzsanti. OPEN confirmada.
+Cierre: spans de origen conservados tras normalización/overlap; IDs suministrados exactos, páginas dispersas, Unicode/whitespace, límites cruzados y último chunk solo de página 3; RED/GREEN y controles independientes, regresión, calidad/seguridad.
+Última validación: RED cinco fallos discriminantes/un control PASS; GREEN siete contratos, ocho mapeador, 66 AI y 18 con feature language-detection PASS (99 ejecuciones). Clippy all-targets -D warnings, formato/diff-check, revisión manual y Kripteia calidad/seguridad completos. Sin bloqueantes locales del alcance.
+Evidencia: docs/reports/2026-10-16-issue-740-review.md y directorio adyacente con manifiesto de fuentes.
+Publicación: https://github.com/bzsanti/oxidizePdf/pull/767 — base develop, head b03ee27cba1d3fe6e4fe0d69967274314e62e5ea; OPEN/draft confirmado.
+Integración de base: CI previo b03ee27c completo, 30 SUCCESS/2 SKIPPED. Merge develop 92e3abdf con conflicto únicamente en TASKS.md; se conservan ambos registros. Fuentes Rust revisadas intactas y hashes comprobados; nuevo CI pendiente.
+Siguiente acción exacta: gh pr checks 767 --repo bzsanti/oxidizePdf; registrar resultado e investigar fallos si aparecen. Sin ampliar candidatos #719. #766 fusionado con 30 SUCCESS/2 SKIPPED en 92e3abdf; #739 cerrada.
+
+## #739 — Retención del texto reciente
+
+Issue: #739 — fix(streaming): retain recent text when evicting buffered chunks — https://github.com/bzsanti/oxidizePdf/issues/739
+Estado: completada; PR #766 fusionado en develop (92e3abdf) y #739 cerrada. Prioridad: P1. Responsable: Codex / bzsanti.
+Cierre: eliminar únicamente fragmentos antiguos necesarios para cumplir el límite de bytes; demostrar RED/GREEN por API pública, límites inferior/exacto/superior y fragmento sobredimensionado, entrega batch/callback intacta y revisión de calidad/seguridad.
+Última validación: RED tres fallos discriminantes/dos controles PASS; GREEN 101 tests PASS, Clippy all-targets -D warnings, formato/diff-check y QR manual/Kripteia calidad/seguridad completos. Evidencia: docs/reports/2026-10-16-issue-739-review.md y directorio adyacente. Base bb3dfe36 incluye #765 fusionado.
+Residual: prueba previa tautológica de errores del parser; corrección bloqueada sin issue específica, responsable mantenimiento/bzsanti; dependencia externa y desbloqueo: crear/vincular issue OPEN con contrato. No corregir ni recalibrar bajo #739. No bloquea retención, demostrada mediante contratos RED/GREEN independientes.
+Validación final remota: 30 SUCCESS/2 SKIPPED sobre c1894548. Siguiente acción para #739: ninguna; sin release.
+
+## Corrección #738 — 2026-10-16
+
+- Issue: #738 — fix(dashboard): replace fabricated pivot table output with input-derived results or explicit errors — https://github.com/bzsanti/oxidizePdf/issues/738
+- Estado: implementada, validada y revisada localmente; publicación de PR a develop en curso. Prioridad P1; responsable Codex. OPEN confirmada. Checkout /tmp/oxidize-issue738 desde develop 0b644126, rama fix/issue-738-pivot-errors; #757 separada en PR #764.
+- Criterio de cierre local cumplido: error explícito de función no implementada sin dibujar datos ficticios, datasets/configuraciones distintos, página intacta en render directo, error propagado por dashboard; controles positivos/negativos independientes qpdf/Poppler y RED/GREEN. Cierre remoto requiere integración; no se cierra issue ni publica release con el resultado local.
+- Alcance conforme a alternativa autorizada: contención con InvalidOperation existente, sin motor nuevo de agregación. API pública conservada; documentado soporte ausente y corregido ejemplo para propagar error antes de guardar. Nombres desconocidos de aggregate_by fuera de alcance por la issue; #727 intacta.
+- Última validación: RED cuatro fallos previstos/un control PASS; GREEN cinco contratos nuevos + diez #727 + cinco integración PASS, con qpdf/Poppler. Biblioteca: 6.734 PASS/3 ignoradas y un fallo de ejecución temporal Text file busy en validador ajeno; el mismo test aislado pasa sin cambios. Se conservan ambos logs, no se presenta la primera suite como verde. Clippy all-targets -D warnings, formato/diff-check y QR manual/Kripteia calidad y seguridad completados. Ejemplo exit 1 esperado, cero archivos creados.
+- Evidencia: docs/reports/2026-10-16-issue-738-review.md y directorio -evidence con logs/manifiesto SHA256. No quedan bloqueantes locales de aceptación. Dashboard completo puede conservar dibujos previos tras error de componente, según contrato existente; no se promete atomicidad nueva.
+- Siguiente acción exacta: publicar PR borrador contra develop, confirmar base/HEAD/CI y registrar URL. #739/#740 y demás condiciones de #719 siguen separadas; #658 conserva bloqueo de seguridad. Sin merge ni release.
+
+- Integración definitiva 2026-10-16: PR #765 fusionado en develop tras 30 SUCCESS/2 SKIPPED; commit bb3dfe3671049e1fe2c4bc5db9e79b8224f1e84f (head 959b7092). Repetición Ubuntu PASS sin cambios de fuente. Issue #738 cerrada. Estado: completada; siguiente acción: ninguna para #738, continuar #739; sin release. Esta evidencia sustituye el estado pendiente anterior.
 
 ## Corrección #727 — 2026-10-15
 

@@ -1,0 +1,7 @@
+{
+  "base": "bb3dfe3671049e1fe2c4bc5db9e79b8224f1e84f",
+  "sha256": {
+    "oxidize-pdf-core/src/streaming/text_streamer.rs": "b6f405c6a376064aab7a5b3ed724ff2dc11a9accbb55127c507317d709b51648",
+    "oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs": "5a4efca6dd25e57fb32983c637b9fa16ebf090cdb1bd17aa64685c1ee66e6ac0"
+  }
+}

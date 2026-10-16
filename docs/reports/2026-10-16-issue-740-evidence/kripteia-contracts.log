@@ -1,0 +1,65 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_740_source_spans_test.rs             7     97
+
+--- Worst Offenders ---
+  unicode_whitespace_offsets_refer_to_original_characters (oxidize-pdf-core/tests/issue_740_source_spans_test.rs:39) - Score: 90
+    - Test 'unicode_whitespace_offsets_refer_to_original_characters' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unicode_whitespace_offsets_refer_to_original_characters' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unicode_whitespace_offsets_refer_to_original_characters' has multiple assertions without diagnostic messages
+    i Test 'unicode_whitespace_offsets_refer_to_original_characters' uses .unwrap() which silently discards error information
+  source_slices_reconstruct_chunks_across_sentence_boundaries (oxidize-pdf-core/tests/issue_740_source_spans_test.rs:89) - Score: 90
+    - Test 'source_slices_reconstruct_chunks_across_sentence_boundaries' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'source_slices_reconstruct_chunks_across_sentence_boundaries' has multiple assertions without diagnostic messages
+    i Test 'source_slices_reconstruct_chunks_across_sentence_boundaries' uses .unwrap() which silently discards error information
+  sparse_page_ids_are_not_synthesized (oxidize-pdf-core/tests/issue_740_source_spans_test.rs:4) - Score: 100
+    i Test 'sparse_page_ids_are_not_synthesized' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'sparse_page_ids_are_not_synthesized' uses .unwrap() which silently discards error information
+  repeated_overlap_keeps_third_page_provenance (oxidize-pdf-core/tests/issue_740_source_spans_test.rs:18) - Score: 100
+    i Test 'repeated_overlap_keeps_third_page_provenance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'repeated_overlap_keeps_third_page_provenance' has multiple assertions without diagnostic messages
+    i Test 'repeated_overlap_keeps_third_page_provenance' uses .unwrap() which silently discards error information
+  crossing_pages_uses_supplied_order_and_skips_empty_pages (oxidize-pdf-core/tests/issue_740_source_spans_test.rs:60) - Score: 100
+    i Test 'crossing_pages_uses_supplied_order_and_skips_empty_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'crossing_pages_uses_supplied_order_and_skips_empty_pages' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_740_source_spans_test.rs:
+  sparse_page_ids_are_not_synthesized (line 4) - Score: 100
+    i Test 'sparse_page_ids_are_not_synthesized' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'sparse_page_ids_are_not_synthesized' uses .unwrap() which silently discards error information
+  repeated_overlap_keeps_third_page_provenance (line 18) - Score: 100
+    i Test 'repeated_overlap_keeps_third_page_provenance' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'repeated_overlap_keeps_third_page_provenance' has multiple assertions without diagnostic messages
+    i Test 'repeated_overlap_keeps_third_page_provenance' uses .unwrap() which silently discards error information
+  unicode_whitespace_offsets_refer_to_original_characters (line 39) - Score: 90
+    - Test 'unicode_whitespace_offsets_refer_to_original_characters' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'unicode_whitespace_offsets_refer_to_original_characters' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unicode_whitespace_offsets_refer_to_original_characters' has multiple assertions without diagnostic messages
+    i Test 'unicode_whitespace_offsets_refer_to_original_characters' uses .unwrap() which silently discards error information
+  crossing_pages_uses_supplied_order_and_skips_empty_pages (line 60) - Score: 100
+    i Test 'crossing_pages_uses_supplied_order_and_skips_empty_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'crossing_pages_uses_supplied_order_and_skips_empty_pages' uses .unwrap() which silently discards error information
+  source_slices_reconstruct_chunks_across_sentence_boundaries (line 89) - Score: 90
+    - Test 'source_slices_reconstruct_chunks_across_sentence_boundaries' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'source_slices_reconstruct_chunks_across_sentence_boundaries' has multiple assertions without diagnostic messages
+    i Test 'source_slices_reconstruct_chunks_across_sentence_boundaries' uses .unwrap() which silently discards error information
+  empty_and_plain_text_controls (line 113) - Score: 100
+    i Test 'empty_and_plain_text_controls' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'empty_and_plain_text_controls' uses .unwrap() which silently discards error information
+  empty_pages_still_count_in_source_coordinates (line 129) - Score: 100
+    i Test 'empty_pages_still_count_in_source_coordinates' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'empty_pages_still_count_in_source_coordinates' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
