@@ -1,0 +1,8 @@
+{
+  "equal": true,
+  "bytes": 5667502,
+  "sha256": "34b3e39a1dc7a5900881ab5349a27486a5021fa2bbd585aa45cc598dcf9329ae",
+  "oracle": "Unmodified develop baseline on qpdf --object-streams=disable copy, reopening every 20 pages; ActualText active",
+  "candidate": "Original input, extract_text(); byte-identical also to candidate per-page output",
+  "limits": "qpdf rewrites container representation; this is a semantic comparison, not a speed benchmark of original baseline."
+}

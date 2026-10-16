@@ -1,0 +1,31 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 2 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...idize-pdf-core/tests/issue_757_sparse_structure_test.rs        2    100
+
+--- Worst Offenders ---
+  sparse_compressed_and_plain_owners_preserve_mcid_and_inline_precedence (/tmp/oxidize-issue757/oxidize-pdf-core/tests/issue_757_sparse_structure_test.rs:92) - Score: 100
+    i Test 'sparse_compressed_and_plain_owners_preserve_mcid_and_inline_precedence' has multiple assertions without diagnostic messages
+    i Test 'sparse_compressed_and_plain_owners_preserve_mcid_and_inline_precedence' uses .unwrap() which silently discards error information
+  unrelated_object_is_not_parsed_during_structure_lookup (/tmp/oxidize-issue757/oxidize-pdf-core/tests/issue_757_sparse_structure_test.rs:111) - Score: 100
+    i Test 'unrelated_object_is_not_parsed_during_structure_lookup' uses .unwrap() which silently discards error information
+
+--- Details ---
+/tmp/oxidize-issue757/oxidize-pdf-core/tests/issue_757_sparse_structure_test.rs:
+  sparse_compressed_and_plain_owners_preserve_mcid_and_inline_precedence (line 92) - Score: 100
+    i Test 'sparse_compressed_and_plain_owners_preserve_mcid_and_inline_precedence' has multiple assertions without diagnostic messages
+    i Test 'sparse_compressed_and_plain_owners_preserve_mcid_and_inline_precedence' uses .unwrap() which silently discards error information
+  unrelated_object_is_not_parsed_during_structure_lookup (line 111) - Score: 100
+    i Test 'unrelated_object_is_not_parsed_during_structure_lookup' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

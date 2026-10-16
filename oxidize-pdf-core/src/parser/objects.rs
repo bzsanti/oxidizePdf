@@ -441,6 +441,45 @@ impl PdfObject {
         }
     }
 
+    /// Parse a positional array without allocating an object for null padding.
+    /// Keys remain the original array indices, including null entries.
+    pub(crate) fn parse_sparse_array_with_options<R: Read + std::io::Seek>(
+        lexer: &mut Lexer<R>,
+        options: &super::ParseOptions,
+    ) -> ParseResult<HashMap<usize, PdfObject>> {
+        loop {
+            match lexer.next_token()? {
+                Token::Comment(_) => continue,
+                Token::ArrayStart => break,
+                token => {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "array".to_string(),
+                        found: format!("{token:?}"),
+                    })
+                }
+            }
+        }
+        let mut entries = HashMap::new();
+        let mut index = 0usize;
+        loop {
+            match lexer.next_token()? {
+                Token::ArrayEnd => return Ok(entries),
+                Token::Comment(_) => continue,
+                Token::Null => {}
+                token => {
+                    let object = Self::parse_from_token_with_options(lexer, token, options)?;
+                    entries.insert(index, object);
+                }
+            }
+            index = index
+                .checked_add(1)
+                .ok_or_else(|| ParseError::SyntaxError {
+                    position: 0,
+                    message: "Sparse array index overflow".to_string(),
+                })?;
+        }
+    }
+
     /// Parse a PDF array with custom options
     fn parse_array_with_options<R: Read + std::io::Seek>(
         lexer: &mut Lexer<R>,

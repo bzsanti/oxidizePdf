@@ -4,7 +4,7 @@
 
 use super::encryption_handler::EncryptionHandler;
 use super::header::PdfHeader;
-use super::object_stream::ObjectStream;
+use super::indexed_object_stream::IndexedObjectStream;
 use super::objects::{PdfArray, PdfDictionary, PdfObject, PdfString};
 use super::stack_safe::StackSafeContext;
 use super::trailer::PdfTrailer;
@@ -54,7 +54,7 @@ pub struct PdfReader<R: Read + Seek> {
     /// Cache of loaded objects
     object_cache: HashMap<(u32, u16), PdfObject>,
     /// Cache of object streams
-    object_stream_cache: HashMap<u32, ObjectStream>,
+    object_stream_cache: HashMap<u32, IndexedObjectStream>,
     /// Page tree navigator
     page_tree: Option<super::page_tree::PageTree>,
     /// Stack-safe parsing context
@@ -952,38 +952,82 @@ impl<R: Read + Seek> PdfReader<R> {
     ) -> ParseResult<&PdfObject> {
         let key = (obj_num, gen_num);
 
-        // Load the object stream if not cached
-        if !self.object_stream_cache.contains_key(&stream_obj_num) {
-            // Get the stream object using get_object (with circular ref protection)
-            let stream_obj = self.get_object(stream_obj_num, 0)?;
-
-            if let Some(stream) = stream_obj.as_stream() {
-                // Parse the object stream
-                let obj_stream = ObjectStream::parse(stream.clone(), &self.options)?;
-                self.object_stream_cache.insert(stream_obj_num, obj_stream);
-            } else {
-                return Err(ParseError::SyntaxError {
-                    position: 0,
-                    message: format!("Object {stream_obj_num} is not a stream"),
-                });
-            }
-        }
-
-        // Get the object from the stream
-        let obj_stream = &self.object_stream_cache[&stream_obj_num];
-        let obj = obj_stream
-            .get_object(obj_num)
-            .ok_or_else(|| ParseError::SyntaxError {
-                position: 0,
-                message: format!("Object {obj_num} not found in object stream {stream_obj_num}"),
-            })?;
-
-        // Decrypt if encryption is active (object stream contents may contain encrypted strings)
-        let decrypted_obj = self.decrypt_object_if_needed(obj.clone(), obj_num, gen_num)?;
+        self.ensure_object_stream(stream_obj_num)?;
+        let obj = self.object_stream_cache[&stream_obj_num].object(obj_num, &self.options)?;
+        let decrypted_obj = self.decrypt_object_if_needed(obj, obj_num, gen_num)?;
 
         // Cache the decrypted object
         self.object_cache.insert(key, decrypted_obj);
         Ok(&self.object_cache[&key])
+    }
+
+    /// Retain decoded bytes, never all parsed objects. Bound aggregate retained
+    /// bytes to 128 MiB, except that one larger stream can be held alone. The
+    /// existing decoder limits still govern a single stream's allocation.
+    fn ensure_object_stream(&mut self, stream_obj_num: u32) -> ParseResult<()> {
+        const CACHE_BYTES: usize = 128 * 1024 * 1024;
+        if self.object_stream_cache.contains_key(&stream_obj_num) {
+            return Ok(());
+        }
+        let options = self.options.clone();
+        let stream = self
+            .get_object(stream_obj_num, 0)?
+            .as_stream()
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: format!("Object {stream_obj_num} is not a stream"),
+            })?;
+        let indexed = IndexedObjectStream::parse(stream, &options)?;
+        let retained: usize = self
+            .object_stream_cache
+            .values()
+            .map(IndexedObjectStream::decoded_len)
+            .sum();
+        if retained.saturating_add(indexed.decoded_len()) > CACHE_BYTES {
+            self.object_stream_cache.clear();
+        }
+        self.object_stream_cache.insert(stream_obj_num, indexed);
+        Ok(())
+    }
+
+    /// Structure-owner arrays are temporary positional metadata. Do not retain
+    /// their dense representation in the reader or document resource caches.
+    pub(crate) fn sparse_array(
+        &mut self,
+        obj_num: u32,
+        gen_num: u16,
+    ) -> ParseResult<HashMap<usize, PdfObject>> {
+        self.ensure_unlocked()?;
+        let compressed = self
+            .xref
+            .get_extended_entry(obj_num)
+            .and_then(|entry| entry.compressed_info);
+        if let Some((stream, _)) = compressed {
+            self.ensure_object_stream(stream)?;
+            let entries = self.object_stream_cache[&stream].sparse_array(obj_num, &self.options)?;
+            return entries
+                .into_iter()
+                .map(|(index, value)| {
+                    self.decrypt_object_if_needed(value, obj_num, gen_num)
+                        .map(|value| (index, value))
+                })
+                .collect();
+        }
+        // Ordinary objects already use the reader's validated offset, generation
+        // and encryption handling. Take the temporary array out of its cache.
+        self.get_object(obj_num, gen_num)?;
+        match self.object_cache.remove(&(obj_num, gen_num)) {
+            Some(PdfObject::Array(array)) => Ok(array
+                .0
+                .into_iter()
+                .enumerate()
+                .filter(|(_, value)| !matches!(value, PdfObject::Null))
+                .collect()),
+            _ => Err(ParseError::SyntaxError {
+                position: 0,
+                message: "Structure owners must be an array".to_string(),
+            }),
+        }
     }
 
     /// Get the page tree root

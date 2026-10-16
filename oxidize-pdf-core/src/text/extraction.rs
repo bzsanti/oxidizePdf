@@ -348,7 +348,7 @@ struct PendingActualText {
 
 #[derive(Default)]
 struct StructureActualText {
-    owners: Vec<crate::parser::objects::PdfObject>,
+    owners: HashMap<usize, crate::parser::objects::PdfObject>,
     cache: HashMap<u32, Option<String>>,
 }
 
@@ -362,7 +362,7 @@ impl StructureActualText {
         if let Some(cached) = self.cache.get(&mcid) {
             return Ok(cached.clone());
         }
-        let Some(owner) = self.owners.get(mcid as usize) else {
+        let Some(owner) = self.owners.get(&(mcid as usize)) else {
             self.cache.insert(mcid, None);
             return Ok(None);
         };
@@ -4535,14 +4535,11 @@ fn resolve_structure_actual_text<R: Read + Seek>(
     ) else {
         return StructureActualText::default();
     };
-    let Ok(owner_array_object) = document.resolve(&owner_array_object) else {
-        return StructureActualText::default();
-    };
-    let PdfObject::Array(owners) = owner_array_object else {
+    let Ok(owners) = document.sparse_array(&owner_array_object) else {
         return StructureActualText::default();
     };
     StructureActualText {
-        owners: owners.0,
+        owners,
         cache: HashMap::new(),
     }
 }

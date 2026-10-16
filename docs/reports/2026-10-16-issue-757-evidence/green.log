@@ -1,0 +1,36 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue757/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 16.23s
+     Running tests/issue_498_tagged_actual_text_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_498_tagged_actual_text_test-6cfa648f733091bd)
+
+running 5 tests
+test rejects_a_structure_reference_to_an_unknown_mcid ... ok
+test rejects_a_structure_reference_to_an_unknown_page ... ok
+test rejects_an_mcid_owned_by_multiple_structure_elements ... ok
+test actual_text_mcid_is_connected_through_the_parent_tree ... ok
+test parent_tree_maps_multiple_pages_and_preserves_mcid_holes ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_506_struct_actual_text_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_506_struct_actual_text_test-cdca9507213c288f)
+
+running 10 tests
+test invalid_mcid_falls_back_to_visual_text ... ok
+test cyclic_parent_tree_falls_back_to_visual_text ... ok
+test malformed_parent_tree_falls_back_to_visual_text ... ok
+test form_xobject_uses_its_own_structparents_context ... ok
+test resolves_parent_tree_kids_and_indirect_owner ... ok
+test overdeep_parent_tree_falls_back_to_visual_text ... ok
+test structure_actualtext_cannot_bypass_the_page_byte_budget ... ok
+test structure_actualtext_replaces_visual_text_in_flat_extraction ... ok
+test resolves_inline_and_structure_actualtext_with_inline_precedence ... ok
+test oversized_parent_tree_stops_at_the_node_limit ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/issue_757_sparse_structure_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_757_sparse_structure_test-9fe0e3dc06af2fa6)
+
+running 2 tests
+test unrelated_object_is_not_parsed_during_structure_lookup ... ok
+test sparse_compressed_and_plain_owners_preserve_mcid_and_inline_precedence ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s

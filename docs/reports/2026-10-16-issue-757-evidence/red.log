@@ -1,0 +1,25 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue757/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 32.30s
+     Running tests/issue_757_sparse_structure_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_757_sparse_structure_test-9fe0e3dc06af2fa6)
+
+running 2 tests
+test unrelated_object_is_not_parsed_during_structure_lookup ... FAILED
+test sparse_compressed_and_plain_owners_preserve_mcid_and_inline_precedence ... ok
+
+failures:
+
+---- unrelated_object_is_not_parsed_during_structure_lookup stdout ----
+
+thread 'unrelated_object_is_not_parsed_during_structure_lookup' (386) panicked at oxidize-pdf-core/tests/issue_757_sparse_structure_test.rs:81:5:
+VISUAL
+NULL_OWNER
+INLINE
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    unrelated_object_is_not_parsed_during_structure_lookup
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_757_sparse_structure_test`
