@@ -101,6 +101,9 @@
 //!     .aggregate("revenue", AggregateFunction::Sum);
 //! ```
 
+//! `PivotTable` configuration is available, but rendering returns an explicit
+//! not-implemented error. No pivot aggregation results are currently supported.
+
 pub mod builder;
 pub mod component;
 pub mod data_aggregation;

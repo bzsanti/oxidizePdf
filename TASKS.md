@@ -1,3 +1,13 @@
+## Corrección #738 — 2026-10-16
+
+- Issue: #738 — fix(dashboard): replace fabricated pivot table output with input-derived results or explicit errors — https://github.com/bzsanti/oxidizePdf/issues/738
+- Estado: implementada, validada y revisada localmente; publicación de PR a develop en curso. Prioridad P1; responsable Codex. OPEN confirmada. Checkout /tmp/oxidize-issue738 desde develop 0b644126, rama fix/issue-738-pivot-errors; #757 separada en PR #764.
+- Criterio de cierre local cumplido: error explícito de función no implementada sin dibujar datos ficticios, datasets/configuraciones distintos, página intacta en render directo, error propagado por dashboard; controles positivos/negativos independientes qpdf/Poppler y RED/GREEN. Cierre remoto requiere integración; no se cierra issue ni publica release con el resultado local.
+- Alcance conforme a alternativa autorizada: contención con InvalidOperation existente, sin motor nuevo de agregación. API pública conservada; documentado soporte ausente y corregido ejemplo para propagar error antes de guardar. Nombres desconocidos de aggregate_by fuera de alcance por la issue; #727 intacta.
+- Última validación: RED cuatro fallos previstos/un control PASS; GREEN cinco contratos nuevos + diez #727 + cinco integración PASS, con qpdf/Poppler. Biblioteca: 6.734 PASS/3 ignoradas y un fallo de ejecución temporal Text file busy en validador ajeno; el mismo test aislado pasa sin cambios. Se conservan ambos logs, no se presenta la primera suite como verde. Clippy all-targets -D warnings, formato/diff-check y QR manual/Kripteia calidad y seguridad completados. Ejemplo exit 1 esperado, cero archivos creados.
+- Evidencia: docs/reports/2026-10-16-issue-738-review.md y directorio -evidence con logs/manifiesto SHA256. No quedan bloqueantes locales de aceptación. Dashboard completo puede conservar dibujos previos tras error de componente, según contrato existente; no se promete atomicidad nueva.
+- Siguiente acción exacta: publicar PR borrador contra develop, confirmar base/HEAD/CI y registrar URL. #739/#740 y demás condiciones de #719 siguen separadas; #658 conserva bloqueo de seguridad. Sin merge ni release.
+
 ## Corrección #727 — 2026-10-15
 
 - Issue: #727 — fix(dashboard): report or paginate overflow instead of silently omitting components — https://github.com/bzsanti/oxidizePdf/issues/727

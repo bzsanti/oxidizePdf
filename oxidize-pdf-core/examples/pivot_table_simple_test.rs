@@ -1,6 +1,7 @@
 //! Simple PivotTable Test Example
 //!
-//! Tests the PivotTable component in isolation
+//! Demonstrates propagation of the currently unsupported PivotTable error.
+//! Running this example returns an error and does not save a PDF.
 
 use oxidize_pdf::{
     dashboard::{ComponentPosition, DashboardComponent, DashboardTheme, PivotConfig, PivotTable},
@@ -50,10 +51,8 @@ fn main() -> Result<()> {
 
     let theme = DashboardTheme::default();
 
-    match pivot.render(&mut page, position, &theme) {
-        Ok(_) => println!("✅ PivotTable rendered successfully"),
-        Err(e) => println!("❌ Error rendering PivotTable: {}", e),
-    }
+    // Propagate the unsupported operation instead of saving a misleading report.
+    pivot.render(&mut page, position, &theme)?;
 
     document.add_page(page);
 

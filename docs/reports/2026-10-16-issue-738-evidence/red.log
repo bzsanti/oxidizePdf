@@ -1,0 +1,68 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue738/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 40.11s
+     Running tests/issue_738_pivot_contract_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_738_pivot_contract_test-2b91ac3c9676cc99)
+
+running 5 tests
+test dashboard_propagates_unsupported_pivot_instead_of_reporting_success ... FAILED
+test distinct_data_and_all_aggregation_configs_reject_demo_output ... FAILED
+test supported_dashboard_still_renders_supplied_labels_and_values ... ok
+test unsupported_pivot_does_not_modify_existing_page ... FAILED
+test independent_output_oracle ... FAILED
+
+failures:
+
+---- dashboard_propagates_unsupported_pivot_instead_of_reporting_success stdout ----
+
+thread 'dashboard_propagates_unsupported_pivot_instead_of_reporting_success' (434) panicked at oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:17:17:
+expected explicit unsupported pivot error, got Ok(())
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- distinct_data_and_all_aggregation_configs_reject_demo_output stdout ----
+
+thread 'distinct_data_and_all_aggregation_configs_reject_demo_output' (435) panicked at oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:17:17:
+expected explicit unsupported pivot error, got Ok(())
+
+---- unsupported_pivot_does_not_modify_existing_page stdout ----
+
+thread 'unsupported_pivot_does_not_modify_existing_page' (438) panicked at oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:17:17:
+expected explicit unsupported pivot error, got Ok(())
+
+---- independent_output_oracle stdout ----
+
+thread 'independent_output_oracle' (436) panicked at oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:71:9:
+expected pivot error; independent extraction: REAL_REPORT
+FIRST_REAL_TOTAL
+
+37
+
+Group
+
+Count
+
+Group A
+
+10
+
+Group B
+
+15
+
+Total
+
+25
+
+Generated: 2026-10-16 09:22 UTC
+
+
+
+
+
+failures:
+    dashboard_propagates_unsupported_pivot_instead_of_reporting_success
+    distinct_data_and_all_aggregation_configs_reject_demo_output
+    independent_output_oracle
+    unsupported_pivot_does_not_modify_existing_page
+
+test result: FAILED. 1 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_738_pivot_contract_test`
