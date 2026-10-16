@@ -1,11 +1,12 @@
 ## #740 — Páginas y posiciones originales en chunks
 
 Issue: #740 — fix(ai): preserve original page IDs and source offsets during overlapping chunking — https://github.com/bzsanti/oxidizePdf/issues/740
-Estado: implementación y QR local completos; publicación en curso. Prioridad: P1. Responsable: Codex / bzsanti. OPEN confirmada.
+Estado: implementación y QR completos; PR borrador #767 publicado, CI en curso. Prioridad: P1. Responsable: Codex / bzsanti. OPEN confirmada.
 Cierre: spans de origen conservados tras normalización/overlap; IDs suministrados exactos, páginas dispersas, Unicode/whitespace, límites cruzados y último chunk solo de página 3; RED/GREEN y controles independientes, regresión, calidad/seguridad.
 Última validación: RED cinco fallos discriminantes/un control PASS; GREEN siete contratos, ocho mapeador, 66 AI y 18 con feature language-detection PASS (99 ejecuciones). Clippy all-targets -D warnings, formato/diff-check, revisión manual y Kripteia calidad/seguridad completos. Sin bloqueantes locales del alcance.
 Evidencia: docs/reports/2026-10-16-issue-740-review.md y directorio adyacente con manifiesto de fuentes.
-Siguiente acción: publicar PR borrador a develop y comprobar CI. Sin ampliar candidatos #719. #766 se fusionará si su mismo HEAD termina con CI verde, según autorización vigente.
+Publicación: https://github.com/bzsanti/oxidizePdf/pull/767 — base develop, head b03ee27cba1d3fe6e4fe0d69967274314e62e5ea; OPEN/draft confirmado.
+Siguiente acción exacta: gh pr checks 767 --repo bzsanti/oxidizePdf; registrar resultado e investigar fallos si aparecen. Sin ampliar candidatos #719. #766 se fusionará si su mismo HEAD termina con CI verde, según autorización vigente.
 
 ## Corrección #738 — 2026-10-16
 
