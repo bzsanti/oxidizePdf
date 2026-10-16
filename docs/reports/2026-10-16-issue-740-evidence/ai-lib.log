@@ -1,0 +1,74 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue740/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 18s
+     Running unittests src/lib.rs (/tmp/oxidize-issue724/target/debug/deps/oxidize_pdf-ff79de59d27c30be)
+
+running 66 tests
+test ai::chunking::tests::test_empty_text ... ok
+test ai::chunking::tests::test_basic_chunking ... ok
+test ai::chunking::tests::test_confidence_scores ... ok
+test ai::chunking::tests::test_metadata_position_tracking ... ok
+test ai::chunking::tests::test_chunk_ids_are_unique ... ok
+test ai::chunking::tests::test_page_tracking ... ok
+test ai::chunking::tests::test_sentence_boundary_detection ... ok
+test ai::chunking::tests::test_no_infinite_loop_when_sentence_boundary_at_chunk_start ... ok
+test ai::chunking::tests::test_text_smaller_than_chunk_size ... ok
+test ai::chunking::tests::test_no_panic_when_chunk_size_below_search_window ... ok
+test ai::chunking::tests::test_sentence_boundary_still_respected_after_loop_fix ... ok
+test ai::chunking::tests::test_zero_chunk_size_terminates_with_coverage ... ok
+test ai::formats::tests::test_basic_text_to_markdown ... ok
+test ai::chunking::tests::test_token_estimation ... ok
+test ai::chunking::tests::test_overlap_preserves_context ... ok
+test ai::formats::tests::test_chunk_exporter_trait_object ... ok
+test ai::formats::tests::test_contextual_empty_text ... ok
+test ai::formats::tests::test_chunk_exporter_trait_matches_inherent ... ok
+test ai::formats::tests::test_contextual_natural_language_flow ... ok
+test ai::formats::tests::test_content_quoting ... ok
+test ai::formats::tests::test_contextual_simple ... ok
+test ai::formats::tests::test_contextual_with_metadata_and_pages ... ok
+test ai::formats::tests::test_contextual_with_metadata_full ... ok
+test ai::formats::tests::test_contextual_with_metadata_minimal ... ok
+test ai::formats::tests::test_contextual_with_metadata_no_page_count ... ok
+test ai::formats::tests::test_contextual_with_pages ... ok
+test ai::formats::tests::test_contextual_with_pages_empty ... ok
+test ai::formats::tests::test_contextual_with_pages_single ... ok
+test ai::formats::tests::test_document_metadata_default ... ok
+test ai::formats::tests::test_empty_pages_list ... ok
+test ai::chunking::tests::test_no_infinite_loop_when_overlap_meets_or_exceeds_chunk_size ... ok
+test ai::formats::tests::test_empty_text ... ok
+test ai::formats::tests::test_encode_scalar_fields_no_special_chars ... ok
+test ai::formats::tests::test_markdown_exporter_creation ... ok
+test ai::formats::tests::test_markdown_exporter_default ... ok
+test ai::formats::tests::test_markdown_with_metadata ... ok
+test ai::formats::tests::test_metadata_and_pages_combined ... ok
+test ai::formats::tests::test_metadata_minimal ... ok
+test ai::formats::tests::test_metadata_with_special_characters ... ok
+test ai::formats::tests::test_multi_chunk_document ... ok
+test ai::formats::tests::test_multiline_text ... ok
+test ai::formats::tests::test_multipage_markdown ... ok
+test ai::formats::tests::test_page_numbers_correct ... ok
+test ai::formats::tests::test_page_numbers_encoding ... ok
+test ai::formats::tests::test_page_separator_format ... ok
+test ai::formats::tests::test_parse_content_field ... ok
+test ai::formats::tests::test_parse_page_numbers_field ... ok
+test ai::formats::tests::test_parse_rejects_bad_header ... ok
+test ai::formats::tests::test_parse_rejects_bad_magic ... ok
+test ai::formats::tests::test_parse_rejects_unterminated_quote ... ok
+test ai::formats::tests::test_parse_rejects_non_finite_confidence ... ok
+test ai::formats::tests::test_parse_rejects_wrong_column_count ... ok
+test ai::formats::tests::test_rejoin_quoted_lines_with_embedded_newline ... ok
+test ai::formats::tests::test_roundtrip_content_starting_with_quote ... ok
+test ai::formats::tests::test_roundtrip_content_with_comma ... ok
+test ai::formats::tests::test_roundtrip_content_with_embedded_newline ... ok
+test ai::formats::tests::test_roundtrip_content_with_embedded_quote ... ok
+test ai::formats::tests::test_roundtrip_content_with_odd_interior_quote ... ok
+test ai::formats::tests::test_roundtrip_multi_page ... ok
+test ai::formats::tests::test_roundtrip_single_chunk ... ok
+test ai::formats::tests::test_roundtrip_multiple_chunks_preserves_order ... ok
+test ai::formats::tests::test_roundtrip_unicode ... ok
+test ai::formats::tests::test_roundtrip_zero_chunks ... ok
+test ai::formats::tests::test_single_page_no_separator ... ok
+test ai::formats::tests::test_text_with_special_characters ... ok
+test ai::chunking::tests::test_performance_100_pages ... ok
+
+test result: ok. 66 passed; 0 failed; 0 ignored; 0 measured; 6672 filtered out; finished in 0.02s
+
