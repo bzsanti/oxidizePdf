@@ -1,3 +1,12 @@
+## #739 — Retención del texto reciente
+
+Issue: #739 — fix(streaming): retain recent text when evicting buffered chunks — https://github.com/bzsanti/oxidizePdf/issues/739
+Estado: implementada y validada localmente; publicación de PR en curso. Prioridad: P1. Responsable: Codex / bzsanti.
+Cierre: eliminar únicamente fragmentos antiguos necesarios para cumplir el límite de bytes; demostrar RED/GREEN por API pública, límites inferior/exacto/superior y fragmento sobredimensionado, entrega batch/callback intacta y revisión de calidad/seguridad.
+Última validación: RED tres fallos discriminantes/dos controles PASS; GREEN 101 tests PASS, Clippy all-targets -D warnings, formato/diff-check y QR manual/Kripteia calidad/seguridad completos. Evidencia: docs/reports/2026-10-16-issue-739-review.md y directorio adyacente. Base bb3dfe36 incluye #765 fusionado.
+Residual: prueba previa tautológica de errores del parser; corrección bloqueada sin issue específica, responsable mantenimiento/bzsanti; dependencia externa y desbloqueo: crear/vincular issue OPEN con contrato. No corregir ni recalibrar bajo #739. No bloquea retención, demostrada mediante contratos RED/GREEN independientes.
+Siguiente acción: publicar PR contra develop y registrar CI. Fuera de alcance: parsing incremental y otros candidatos de #719; no fusionar #739 ni liberar versión en esta entrega.
+
 ## Corrección #738 — 2026-10-16
 
 - Issue: #738 — fix(dashboard): replace fabricated pivot table output with input-derived results or explicit errors — https://github.com/bzsanti/oxidizePdf/issues/738
@@ -7,6 +16,8 @@
 - Última validación: RED cuatro fallos previstos/un control PASS; GREEN cinco contratos nuevos + diez #727 + cinco integración PASS, con qpdf/Poppler. Biblioteca: 6.734 PASS/3 ignoradas y un fallo de ejecución temporal Text file busy en validador ajeno; el mismo test aislado pasa sin cambios. Se conservan ambos logs, no se presenta la primera suite como verde. Clippy all-targets -D warnings, formato/diff-check y QR manual/Kripteia calidad y seguridad completados. Ejemplo exit 1 esperado, cero archivos creados.
 - Evidencia: docs/reports/2026-10-16-issue-738-review.md y directorio -evidence con logs/manifiesto SHA256. No quedan bloqueantes locales de aceptación. Dashboard completo puede conservar dibujos previos tras error de componente, según contrato existente; no se promete atomicidad nueva.
 - Siguiente acción exacta: publicar PR borrador contra develop, confirmar base/HEAD/CI y registrar URL. #739/#740 y demás condiciones de #719 siguen separadas; #658 conserva bloqueo de seguridad. Sin merge ni release.
+
+- Integración definitiva 2026-10-16: PR #765 fusionado en develop tras 30 SUCCESS/2 SKIPPED; commit bb3dfe3671049e1fe2c4bc5db9e79b8224f1e84f (head 959b7092). Repetición Ubuntu PASS sin cambios de fuente. Issue #738 cerrada. Estado: completada; siguiente acción: ninguna para #738, continuar #739; sin release. Esta evidencia sustituye el estado pendiente anterior.
 
 ## Corrección #727 — 2026-10-15
 

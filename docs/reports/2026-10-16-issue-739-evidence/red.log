@@ -1,0 +1,44 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue739/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 31.45s
+     Running tests/issue_739_buffer_retention_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_739_buffer_retention_test-60bf8eab74f9f2d8)
+
+running 5 tests
+test callback_delivery_and_filter_controls_are_independent_of_retention ... ok
+test batch_retention_is_a_suffix_and_uses_utf8_bytes ... FAILED
+test below_exact_and_over_limit_history ... FAILED
+test oversized_and_zero_limits_do_not_suppress_returned_text ... ok
+test retains_newest_chunk_from_issue_reproduction ... FAILED
+
+failures:
+
+---- batch_retention_is_a_suffix_and_uses_utf8_bytes stdout ----
+
+thread 'batch_retention_is_a_suffix_and_uses_utf8_bytes' (339) panicked at oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs:64:5:
+assertion `left == right` failed
+  left: ""
+ right: "éé"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- below_exact_and_over_limit_history stdout ----
+
+thread 'below_exact_and_over_limit_history' (340) panicked at oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs:35:5:
+assertion `left == right` failed
+  left: ""
+ right: "bbb cccc dd"
+
+---- retains_newest_chunk_from_issue_reproduction stdout ----
+
+thread 'retains_newest_chunk_from_issue_reproduction' (343) panicked at oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs:23:5:
+assertion `left == right` failed
+  left: ""
+ right: "bbbbbb"
+
+
+failures:
+    batch_retention_is_a_suffix_and_uses_utf8_bytes
+    below_exact_and_over_limit_history
+    retains_newest_chunk_from_issue_reproduction
+
+test result: FAILED. 2 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_739_buffer_retention_test`

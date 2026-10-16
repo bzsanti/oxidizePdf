@@ -1,0 +1,45 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs         5    100
+
+--- Worst Offenders ---
+  retains_newest_chunk_from_issue_reproduction (oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs:19) - Score: 100
+    i Test 'retains_newest_chunk_from_issue_reproduction' asserts against a hardcoded constant instead of a computed expected value
+  below_exact_and_over_limit_history (oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs:27) - Score: 100
+    i Test 'below_exact_and_over_limit_history' asserts against a hardcoded constant instead of a computed expected value
+  oversized_and_zero_limits_do_not_suppress_returned_text (oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs:45) - Score: 100
+    i Test 'oversized_and_zero_limits_do_not_suppress_returned_text' asserts against a hardcoded constant instead of a computed expected value
+  batch_retention_is_a_suffix_and_uses_utf8_bytes (oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs:60) - Score: 100
+    i Test 'batch_retention_is_a_suffix_and_uses_utf8_bytes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'batch_retention_is_a_suffix_and_uses_utf8_bytes' uses .unwrap() which silently discards error information
+  callback_delivery_and_filter_controls_are_independent_of_retention (oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs:75) - Score: 100
+    i Test 'callback_delivery_and_filter_controls_are_independent_of_retention' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'callback_delivery_and_filter_controls_are_independent_of_retention' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_739_buffer_retention_test.rs:
+  retains_newest_chunk_from_issue_reproduction (line 19) - Score: 100
+    i Test 'retains_newest_chunk_from_issue_reproduction' asserts against a hardcoded constant instead of a computed expected value
+  below_exact_and_over_limit_history (line 27) - Score: 100
+    i Test 'below_exact_and_over_limit_history' asserts against a hardcoded constant instead of a computed expected value
+  oversized_and_zero_limits_do_not_suppress_returned_text (line 45) - Score: 100
+    i Test 'oversized_and_zero_limits_do_not_suppress_returned_text' asserts against a hardcoded constant instead of a computed expected value
+  batch_retention_is_a_suffix_and_uses_utf8_bytes (line 60) - Score: 100
+    i Test 'batch_retention_is_a_suffix_and_uses_utf8_bytes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'batch_retention_is_a_suffix_and_uses_utf8_bytes' uses .unwrap() which silently discards error information
+  callback_delivery_and_filter_controls_are_independent_of_retention (line 75) - Score: 100
+    i Test 'callback_delivery_and_filter_controls_are_independent_of_retention' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'callback_delivery_and_filter_controls_are_independent_of_retention' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
