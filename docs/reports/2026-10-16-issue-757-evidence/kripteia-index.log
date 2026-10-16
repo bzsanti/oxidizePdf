@@ -1,0 +1,43 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 3 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...57/oxidize-pdf-core/src/parser/indexed_object_stream.rs        3    100
+
+--- Worst Offenders ---
+  sparse_indices_match_dense_objects_without_null_storage (/tmp/oxidize-issue757/oxidize-pdf-core/src/parser/indexed_object_stream.rs:122) - Score: 100
+    i Test 'sparse_indices_match_dense_objects_without_null_storage' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'sparse_indices_match_dense_objects_without_null_storage' has multiple assertions without diagnostic messages
+    i Test 'sparse_indices_match_dense_objects_without_null_storage' uses .unwrap() which silently discards error information
+  large_null_prefix_stores_only_the_live_owner (/tmp/oxidize-issue757/oxidize-pdf-core/src/parser/indexed_object_stream.rs:148) - Score: 100
+    i Test 'large_null_prefix_stores_only_the_live_owner' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'large_null_prefix_stores_only_the_live_owner' has multiple assertions without diagnostic messages
+    i Test 'large_null_prefix_stores_only_the_live_owner' uses .unwrap() which silently discards error information
+  malformed_header_and_cross_object_array_are_rejected (/tmp/oxidize-issue757/oxidize-pdf-core/src/parser/indexed_object_stream.rs:160) - Score: 100
+    i Test 'malformed_header_and_cross_object_array_are_rejected' has multiple assertions without diagnostic messages
+    i Test 'malformed_header_and_cross_object_array_are_rejected' uses .unwrap() which silently discards error information
+
+--- Details ---
+/tmp/oxidize-issue757/oxidize-pdf-core/src/parser/indexed_object_stream.rs:
+  sparse_indices_match_dense_objects_without_null_storage (line 122) - Score: 100
+    i Test 'sparse_indices_match_dense_objects_without_null_storage' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'sparse_indices_match_dense_objects_without_null_storage' has multiple assertions without diagnostic messages
+    i Test 'sparse_indices_match_dense_objects_without_null_storage' uses .unwrap() which silently discards error information
+  large_null_prefix_stores_only_the_live_owner (line 148) - Score: 100
+    i Test 'large_null_prefix_stores_only_the_live_owner' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'large_null_prefix_stores_only_the_live_owner' has multiple assertions without diagnostic messages
+    i Test 'large_null_prefix_stores_only_the_live_owner' uses .unwrap() which silently discards error information
+  malformed_header_and_cross_object_array_are_rejected (line 160) - Score: 100
+    i Test 'malformed_header_and_cross_object_array_are_rejected' has multiple assertions without diagnostic messages
+    i Test 'malformed_header_and_cross_object_array_are_rejected' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

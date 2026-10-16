@@ -1,3 +1,16 @@
+## Corrección #757 y evaluación de release — 2026-10-16
+
+- Issue: #757 — Text extraction runs out of memory on large tagged PDFs (structure ActualText resolution, since 4.5.1) — https://github.com/bzsanti/oxidizePdf/issues/757
+- Issue: #719 — audit: design policies, blanket restrictions and compatibility acceptance after #715 — https://github.com/bzsanti/oxidizePdf/issues/719
+- Estado: #757 implementada, validada y revisada localmente; publicación de PR a develop en curso, integración pendiente. Prioridad P1; responsable Codex. Ambas issues OPEN confirmadas hoy. Checkout /tmp/oxidize-issue757, rama fix/issue-757-structure-memory, base develop 0b644126; WIP raíz preservado.
+- Criterio de cierre local cumplido: adjunto de 2.083 páginas termina bajo AS=2 GiB; ActualText activo, MCID y prioridad inline conservados, regresión RED/GREEN y revisión manual/Kripteia calidad y seguridad. Cierre remoto requiere integración del candidato; no se cierra issue ni se libera versión por esta validación local.
+- Corrección: índice interno de object streams para parsear objetos individuales; owners indirectos dispersos sin null padding almacenado; bytes decodificados retenidos hasta 128 MiB o un único stream mayor. No es límite global de RSS; arrays inline y otras cachés conservan sus límites. API pública ObjectStream intacta; no desactivar ActualText ni ampliar #758.
+- Última validación: baseline aborta tras página 200, RSS 1603 MiB; candidato por página completa 5.667.502 bytes, RSS 476 MiB/27,22 s. extract_text y to_markdown también completan, RSS ~484 MiB/19,6 y 19,4 s. Texto completo idéntico byte a byte a baseline sin modificar sobre copia qpdf sin object streams/reapertura cada 20 páginas, con ActualText activo. No comparar tiempos del oráculo como benchmark.
+- Regresión: 6.738 biblioteca PASS/3 ignoradas preexistentes, 17 contratos ActualText/#757 y 185 integración PASS; Clippy all-targets -D warnings, formato y diff-check PASS. Seis PDFs normales con texto idéntico antes/después. Informe docs/reports/2026-10-16-issue-757-review.md y manifiesto/logs adyacentes; PDF/texto del usuario sólo en /tmp, sin publicar.
+- Residual independiente: tests tautológicos de anidamiento en stack_safe_tests.rs:173/195. Corrección bloqueada sin issue específica; mantenimiento/bzsanti debe crear/vincular OPEN para desbloquear; no modificar ni recalibrar bajo #757. No se usan para aceptar la corrección.
+- Release: #738/#739/#740 siguen pendientes, además de contratos de texto #731 e imágenes #732/#733/#734/#736. Corregir #757 no basta para recomendar una release general con esas APIs soportadas. #658 conserva bloqueo de seguridad y queda fuera de integración. CI final #760 confirmado: 30 PASS/2 SKIPPED. Sin publicación de versión.
+- Siguiente acción exacta: publicar PR borrador de #757 contra develop con QR/evidencia; comprobar HEAD/base/CI y registrar URL. Tras integración, continuar #739/#738/#740 y reevaluar alcance de release bajo #719.
+
 ## Corrección #727 — 2026-10-15
 
 - Issue: #727 — fix(dashboard): report or paginate overflow instead of silently omitting components — https://github.com/bzsanti/oxidizePdf/issues/727

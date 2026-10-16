@@ -1,0 +1,8 @@
+pages=2083
+page=0 bytes=35
+page=100 bytes=254782
+page=200 bytes=531835
+memory allocation of 1418256 bytes failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Command terminated by signal 6
+maxrss_kb=1641064 elapsed=3.11

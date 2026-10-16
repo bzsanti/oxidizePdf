@@ -1,0 +1,252 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue757/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 46.39s
+     Running tests/encryption_r5_real_pdf_test.rs (/tmp/oxidize-issue724/target/debug/deps/encryption_r5_real_pdf_test-924b0d63995ab5d2)
+
+running 9 tests
+test test_r5_fixture_exists_and_readable ... ok
+test test_r5_ue_entry_extraction ... ok
+test test_r5_encryption_revision_detection ... ok
+test test_r5_u_entry_extraction ... ok
+test test_r5_password_validation_incorrect ... ok
+test test_r5_password_validation_correct ... ok
+test test_r5_empty_user_password ... ok
+test test_r5_unicode_password ... ok
+test test_r5_key_recovery ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/encryption_r6_real_pdf_test.rs (/tmp/oxidize-issue724/target/debug/deps/encryption_r6_real_pdf_test-9e6b6900476655d7)
+
+running 10 tests
+test test_r6_fixture_exists_and_readable ... ok
+test test_r6_perms_entry_extraction ... ok
+test test_r6_encryption_revision_detection ... ok
+test test_r6_u_entry_extraction ... ok
+test test_r6_ue_entry_extraction ... ok
+test test_r6_password_validation_correct ... ok
+test test_r6_empty_user_password ... ok
+test test_r6_password_validation_incorrect ... ok
+test test_r6_key_recovery ... ok
+test test_r6_unicode_password ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/encryption_real_pdf_test.rs (/tmp/oxidize-issue724/target/debug/deps/encryption_real_pdf_test-ff41f94700b0f3ed)
+
+running 9 tests
+test test_md5_verification ... ok
+test test_cannot_read_objects_before_unlock ... ok
+test test_decrypt_rc4_40bit_user_password ... ok
+test test_debug_password_validation_algorithm ... ok
+test test_unlock_is_idempotent ... ok
+test test_wrong_password_returns_error ... ok
+test test_user_password_respects_permissions ... ok
+test test_decrypt_rc4_128bit_user_password ... ok
+test test_owner_password_grants_full_permissions ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.60s
+
+     Running tests/issue_382_extract_page_byte_limit.rs (/tmp/oxidize-issue724/target/debug/deps/issue_382_extract_page_byte_limit-b97a0b34675ac156)
+
+running 6 tests
+test test_zero_budget_and_empty_page ... ok
+test test_actualtext_scope_respects_budget ... ok
+test test_never_splits_utf8 ... ok
+test test_bounds_flat_text_and_sets_flag ... ok
+test test_composes_with_document_budget ... ok
+test test_bounds_reorder_and_preserve_layout ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+     Running tests/issue_513_resolved_parser_fonts_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_513_resolved_parser_fonts_test-3ee927bc40ea4a57)
+
+running 16 tests
+test rejects_circular_font_resource_without_panicking ... ok
+test decodes_win_ansi_without_confusing_code_and_unicode ... ok
+test rejects_non_cid_descendant_in_type0_font ... ok
+test rejects_odd_cid_to_gid_map_without_panicking ... ok
+test exposes_type3_through_the_coherent_resource_model ... ok
+test cid_unicode_collection_requires_adobe_registry_and_resolves_indirect_strings ... ok
+test rejects_type0_font_without_required_encoding ... ok
+test resolves_non_identity_encoding_cmap_and_default_identity_gid ... ok
+test resolves_inherited_identity_type2_into_renderer_glyphs ... ok
+test type3_uses_tounicode_when_decoding_glyphs ... ok
+test unmapped_composite_code_uses_default_cid_width ... ok
+test resolves_cidfont_type0_open_type_program_and_vertical_mode ... ok
+test rejects_oversized_cid_to_gid_map_after_bounded_decompression ... ok
+test resolves_symbol_difference_as_a_bullet_not_latin_x ... ok
+test named_unicode_encoding_resolves_cid_before_width_and_unicode ... ok
+test rejects_oversized_embedded_font_after_bounded_decompression ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
+
+     Running tests/issue_722_structural_verification_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_722_structural_verification_test-82122be6f4ae7cd8)
+
+running 9 tests
+test empty_non_pdf_and_truncated_input_fail ... ok
+test larger_valid_control_passes ... ok
+test padded_header_is_rejected_before_content_or_external_checks ... ok
+test independent_xref_and_object_streams_pass ... ok
+test recovery_of_missing_page_tree_is_not_structural_validity ... ok
+test independent_335_byte_pdf_passes_structure_and_catalog ... ok
+test nested_page_counts_are_checked_per_subtree ... ok
+test library_writer_remains_accepted ... ok
+test broken_references_types_counts_and_cycles_are_rejected ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/parser_comprehensive_test.rs (/tmp/oxidize-issue724/target/debug/deps/parser_comprehensive_test-9d94b8519580224e)
+
+running 21 tests
+test content_parser_tests::test_parse_color_operations ... ok
+test content_parser_tests::test_parse_invalid_operators ... ok
+test content_parser_tests::test_parse_inline_image ... ok
+test content_parser_tests::test_parse_marked_content ... ok
+test content_parser_tests::test_parse_path_construction ... ok
+test content_parser_tests::test_parse_shading_patterns ... ok
+test content_parser_tests::test_parse_text_positioning ... ok
+test content_parser_tests::test_parse_transformation_matrix ... ok
+test content_parser_tests::test_parse_xobject_invocation ... ok
+test content_parser_tests::test_tokenizer_edge_cases ... ok
+test objects_parser_tests::test_circular_reference_detection ... ok
+test objects_parser_tests::test_pdf_array_operations ... ok
+test objects_parser_tests::test_pdf_dictionary_nested ... ok
+test objects_parser_tests::test_pdf_hexstring ... ok
+test objects_parser_tests::test_pdf_name_escaping ... ok
+test objects_parser_tests::test_pdf_object_conversion ... ok
+test objects_parser_tests::test_pdf_reference_handling ... ok
+test objects_parser_tests::test_pdf_stream_with_filters ... ok
+test parser_error_tests::test_parse_error_conversion ... ok
+test parser_error_tests::test_parse_error_creation ... ok
+test parser_error_tests::test_parse_error_propagation ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/parser_objects_coverage.rs (/tmp/oxidize-issue724/target/debug/deps/parser_objects_coverage-232b284205bc4f2f)
+
+running 46 tests
+test test_as_array_with_array ... ok
+test test_as_array_with_non_array ... ok
+test test_as_bool_with_boolean ... ok
+test test_as_bool_with_non_boolean ... ok
+test test_as_dict_with_dictionary ... ok
+test test_as_dict_with_non_dict ... ok
+test test_as_integer_with_integer ... ok
+test test_as_integer_with_non_integer ... ok
+test test_as_name_with_name ... ok
+test test_as_name_with_non_name ... ok
+test test_as_real_with_integer_conversion ... ok
+test test_as_real_with_non_numeric ... ok
+test test_as_real_with_real ... ok
+test test_as_reference_with_non_reference ... ok
+test test_as_reference_with_reference ... ok
+test test_as_string_with_non_string ... ok
+test test_as_string_with_string ... ok
+test test_nested_arrays ... ok
+test test_dictionary_with_array_value ... ok
+test test_parse_array ... ok
+test test_parse_empty_array ... ok
+test test_parse_dictionary ... ok
+test test_parse_empty_dictionary ... ok
+test test_parse_large_integer ... ok
+test test_parse_name ... ok
+test test_parse_literal_string ... ok
+test test_parse_negative_integer ... ok
+test test_parse_null ... ok
+test test_parse_real_number ... ok
+test test_parse_reference ... ok
+test test_parse_with_eof ... ok
+test test_pdfarray_len_and_is_empty ... ok
+test test_parse_with_options ... ok
+test test_pdfarray_multiple_elements ... ok
+test test_pdfarray_push_and_get ... ok
+test test_pdfdictionary_contains_key ... ok
+test test_pdfdictionary_get_type ... ok
+test test_pdfdictionary_get_type_missing ... ok
+test test_pdfdictionary_insert_and_get ... ok
+test test_pdfdictionary_multiple_keys ... ok
+test test_pdfname_as_str ... ok
+test test_pdfname_equality ... ok
+test test_pdfstring_as_bytes ... ok
+test test_pdfstring_as_str_invalid_utf8 ... ok
+test test_pdfstring_as_str_valid_utf8 ... ok
+test test_pdfstring_equality ... ok
+
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/parser_reader_coverage.rs (/tmp/oxidize-issue724/target/debug/deps/parser_reader_coverage-64cc518e3dec564d)
+
+running 42 tests
+test test_clear_context_and_reparse ... ok
+test test_empty_pdf_detection ... ok
+test test_clear_parse_context ... ok
+test test_encryption_handler_mut_on_unencrypted_pdf ... ok
+test test_catalog_access_attempt ... ok
+test test_encryption_handler_on_unencrypted_pdf ... ok
+test test_get_object_with_invalid_reference ... ok
+test test_get_all_pages_on_empty_pdf ... ok
+test test_into_document_conversion ... ok
+test test_info_access_attempt ... ok
+test test_minimal_invalid_pdf ... ok
+test test_object_cache_behavior ... ok
+test test_is_encrypted_on_unencrypted_pdf ... ok
+test test_is_unlocked_on_unencrypted_pdf ... ok
+test test_missing_trailer ... ok
+test test_open_and_parse_unicode_pdf ... ok
+test test_open_document_convenience_method ... ok
+test test_malformed_xref_handling ... ok
+test test_open_and_parse_simple_pdf ... ok
+test test_new_reader_with_default_options ... ok
+test test_metadata_attempt ... ok
+test test_open_with_custom_options_real_pdf ... ok
+test test_open_with_strict_options_real_pdf ... ok
+test test_parse_complex_pdf_with_many_objects ... ok
+test test_parse_issue_93_romanian_pdf ... ok
+test test_pdf_with_invalid_version ... ok
+test test_page_count_attempt ... ok
+test test_pdf_with_only_header ... ok
+test test_pages_access_on_minimal_pdf ... ok
+test test_parse_context_mut_access ... ok
+test test_pdf_version_getter ... ok
+test test_reader_with_strict_options ... ok
+test test_reader_options_getter ... ok
+test test_resolve_reference_chain ... ok
+test test_reader_with_lenient_options ... ok
+test test_truncated_pdf_header ... ok
+test test_resolve_boolean_object ... ok
+test test_resolve_integer_object ... ok
+test test_resolve_null_object ... ok
+test test_resolve_stream_length_on_non_stream ... ok
+test test_try_empty_password_on_unencrypted_pdf ... ok
+test test_unlock_with_password_on_unencrypted_pdf ... ok
+
+test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/parser_version_compatibility_test.rs (/tmp/oxidize-issue724/target/debug/deps/parser_version_compatibility_test-f1ab5ba321a2df98)
+
+running 16 tests
+test test_corrupted_indirect_syntax ... ok
+test test_comment_edge_cases ... ok
+test test_corrupted_page_tree ... ok
+test test_boolean_edge_cases ... ok
+test test_hybrid_xref_format ... ok
+test test_corrupted_compression ... ok
+test test_empty_structures ... ok
+test test_mixed_line_endings ... ok
+test test_invalid_object_numbers ... ok
+test test_number_edge_cases ... ok
+test test_whitespace_variations ... ok
+test test_unicode_edge_cases ... ok
+test version_tests::test_version_suite_coverage ... ok
+test test_invalid_stream_keywords ... ok
+test test_deeply_nested_structures ... ok
+test test_pdf_version_compatibility ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/xref_stream_simple.rs (/tmp/oxidize-issue724/target/debug/deps/xref_stream_simple-47837f6445ba6bc3)
+
+running 1 test
+test test_xref_stream_basic_generation ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

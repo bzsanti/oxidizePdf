@@ -1,0 +1,14 @@
+{
+  "base": "0b64412627709e97448822b3737520a1eaf5ac83",
+  "files": {
+    "src/parser/document.rs": "3fc72637f58c9591bde866d2227d204b4013cb128c3d0188010a1cb639a2c695",
+    "src/parser/mod.rs": "204e1bb82f2d1bc23e83a47aafed9ca7e2927ac9424153f32b4b6170c2f9f302",
+    "src/parser/objects.rs": "a97298ee2e4088bdf1ce0ee22359fd253f724bc1a8a8ef95e53d38c763044c62",
+    "src/parser/reader.rs": "3168424d5e141ed736bec2b78ba8e646f56b29451080fcee6a0c66a651d086fb",
+    "src/parser/indexed_object_stream.rs": "bfc1efdf3f7b2686f252c01b39bc8f309a64e2f525328ba069650cd356cf5d8d",
+    "src/text/extraction.rs": "79ec71c2fbc5d264daa81fa9bda9b101b33a39b82cc2f56da71db92923627f12",
+    "tests/issue_757_sparse_structure_test.rs": "217c2d6984c55d99ed551672a64cd54cbab9760da5d7111e08dd3f69f76b5387"
+  },
+  "input_sha256": "0146b6e20da769a01235d1dede7dc954218c4c3b24a898ee3aa32d277fe326d3",
+  "full_text_sha256": "34b3e39a1dc7a5900881ab5349a27486a5021fa2bbd585aa45cc598dcf9329ae"
+}

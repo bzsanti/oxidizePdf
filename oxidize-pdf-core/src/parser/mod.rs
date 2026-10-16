@@ -138,6 +138,7 @@ pub mod encryption_handler;
 pub mod filter_impls;
 pub mod filters;
 pub mod header;
+mod indexed_object_stream;
 pub mod lexer;
 pub mod object_stream;
 pub mod objects;
