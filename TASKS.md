@@ -6,7 +6,17 @@ Cierre: spans de origen conservados tras normalización/overlap; IDs suministrad
 Última validación: RED cinco fallos discriminantes/un control PASS; GREEN siete contratos, ocho mapeador, 66 AI y 18 con feature language-detection PASS (99 ejecuciones). Clippy all-targets -D warnings, formato/diff-check, revisión manual y Kripteia calidad/seguridad completos. Sin bloqueantes locales del alcance.
 Evidencia: docs/reports/2026-10-16-issue-740-review.md y directorio adyacente con manifiesto de fuentes.
 Publicación: https://github.com/bzsanti/oxidizePdf/pull/767 — base develop, head b03ee27cba1d3fe6e4fe0d69967274314e62e5ea; OPEN/draft confirmado.
-Siguiente acción exacta: gh pr checks 767 --repo bzsanti/oxidizePdf; registrar resultado e investigar fallos si aparecen. Sin ampliar candidatos #719. #766 se fusionará si su mismo HEAD termina con CI verde, según autorización vigente.
+Integración de base: CI previo b03ee27c completo, 30 SUCCESS/2 SKIPPED. Merge develop 92e3abdf con conflicto únicamente en TASKS.md; se conservan ambos registros. Fuentes Rust revisadas intactas y hashes comprobados; nuevo CI pendiente.
+Siguiente acción exacta: gh pr checks 767 --repo bzsanti/oxidizePdf; registrar resultado e investigar fallos si aparecen. Sin ampliar candidatos #719. #766 fusionado con 30 SUCCESS/2 SKIPPED en 92e3abdf; #739 cerrada.
+
+## #739 — Retención del texto reciente
+
+Issue: #739 — fix(streaming): retain recent text when evicting buffered chunks — https://github.com/bzsanti/oxidizePdf/issues/739
+Estado: completada; PR #766 fusionado en develop (92e3abdf) y #739 cerrada. Prioridad: P1. Responsable: Codex / bzsanti.
+Cierre: eliminar únicamente fragmentos antiguos necesarios para cumplir el límite de bytes; demostrar RED/GREEN por API pública, límites inferior/exacto/superior y fragmento sobredimensionado, entrega batch/callback intacta y revisión de calidad/seguridad.
+Última validación: RED tres fallos discriminantes/dos controles PASS; GREEN 101 tests PASS, Clippy all-targets -D warnings, formato/diff-check y QR manual/Kripteia calidad/seguridad completos. Evidencia: docs/reports/2026-10-16-issue-739-review.md y directorio adyacente. Base bb3dfe36 incluye #765 fusionado.
+Residual: prueba previa tautológica de errores del parser; corrección bloqueada sin issue específica, responsable mantenimiento/bzsanti; dependencia externa y desbloqueo: crear/vincular issue OPEN con contrato. No corregir ni recalibrar bajo #739. No bloquea retención, demostrada mediante contratos RED/GREEN independientes.
+Validación final remota: 30 SUCCESS/2 SKIPPED sobre c1894548. Siguiente acción para #739: ninguna; sin release.
 
 ## Corrección #738 — 2026-10-16
 
@@ -17,6 +27,8 @@ Siguiente acción exacta: gh pr checks 767 --repo bzsanti/oxidizePdf; registrar 
 - Última validación: RED cuatro fallos previstos/un control PASS; GREEN cinco contratos nuevos + diez #727 + cinco integración PASS, con qpdf/Poppler. Biblioteca: 6.734 PASS/3 ignoradas y un fallo de ejecución temporal Text file busy en validador ajeno; el mismo test aislado pasa sin cambios. Se conservan ambos logs, no se presenta la primera suite como verde. Clippy all-targets -D warnings, formato/diff-check y QR manual/Kripteia calidad y seguridad completados. Ejemplo exit 1 esperado, cero archivos creados.
 - Evidencia: docs/reports/2026-10-16-issue-738-review.md y directorio -evidence con logs/manifiesto SHA256. No quedan bloqueantes locales de aceptación. Dashboard completo puede conservar dibujos previos tras error de componente, según contrato existente; no se promete atomicidad nueva.
 - Siguiente acción exacta: publicar PR borrador contra develop, confirmar base/HEAD/CI y registrar URL. #739/#740 y demás condiciones de #719 siguen separadas; #658 conserva bloqueo de seguridad. Sin merge ni release.
+
+- Integración definitiva 2026-10-16: PR #765 fusionado en develop tras 30 SUCCESS/2 SKIPPED; commit bb3dfe3671049e1fe2c4bc5db9e79b8224f1e84f (head 959b7092). Repetición Ubuntu PASS sin cambios de fuente. Issue #738 cerrada. Estado: completada; siguiente acción: ninguna para #738, continuar #739; sin release. Esta evidencia sustituye el estado pendiente anterior.
 
 ## Corrección #727 — 2026-10-15
 
