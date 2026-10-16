@@ -1,0 +1,47 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 94 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs        5     94
+
+--- Worst Offenders ---
+  independent_output_oracle (/tmp/oxidize-issue738/oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:152) - Score: 80
+    - Test 'independent_output_oracle' is marked as #[ignore]
+    i Test 'independent_output_oracle' has multiple assertions without diagnostic messages
+    i Test 'independent_output_oracle' uses .unwrap() which silently discards error information
+  distinct_data_and_all_aggregation_configs_reject_demo_output (/tmp/oxidize-issue738/oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:52) - Score: 90
+    - Test 'distinct_data_and_all_aggregation_configs_reject_demo_output' has low assert-to-setup ratio (3%): 1 asserts vs 30 setup lines
+  unsupported_pivot_does_not_modify_existing_page (/tmp/oxidize-issue738/oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:85) - Score: 100
+    i Test 'unsupported_pivot_does_not_modify_existing_page' uses .unwrap() which silently discards error information
+  dashboard_propagates_unsupported_pivot_instead_of_reporting_success (/tmp/oxidize-issue738/oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:101) - Score: 100
+    i Test 'dashboard_propagates_unsupported_pivot_instead_of_reporting_success' uses .unwrap() which silently discards error information
+  supported_dashboard_still_renders_supplied_labels_and_values (/tmp/oxidize-issue738/oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:110) - Score: 100
+    i Test 'supported_dashboard_still_renders_supplied_labels_and_values' has multiple assertions without diagnostic messages
+    i Test 'supported_dashboard_still_renders_supplied_labels_and_values' uses .unwrap() which silently discards error information
+
+--- Details ---
+/tmp/oxidize-issue738/oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs:
+  distinct_data_and_all_aggregation_configs_reject_demo_output (line 52) - Score: 90
+    - Test 'distinct_data_and_all_aggregation_configs_reject_demo_output' has low assert-to-setup ratio (3%): 1 asserts vs 30 setup lines
+  unsupported_pivot_does_not_modify_existing_page (line 85) - Score: 100
+    i Test 'unsupported_pivot_does_not_modify_existing_page' uses .unwrap() which silently discards error information
+  dashboard_propagates_unsupported_pivot_instead_of_reporting_success (line 101) - Score: 100
+    i Test 'dashboard_propagates_unsupported_pivot_instead_of_reporting_success' uses .unwrap() which silently discards error information
+  supported_dashboard_still_renders_supplied_labels_and_values (line 110) - Score: 100
+    i Test 'supported_dashboard_still_renders_supplied_labels_and_values' has multiple assertions without diagnostic messages
+    i Test 'supported_dashboard_still_renders_supplied_labels_and_values' uses .unwrap() which silently discards error information
+  independent_output_oracle (line 152) - Score: 80
+    - Test 'independent_output_oracle' is marked as #[ignore]
+    i Test 'independent_output_oracle' has multiple assertions without diagnostic messages
+    i Test 'independent_output_oracle' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -2,6 +2,8 @@
 //!
 //! This example demonstrates how to create a professional sales dashboard
 //! with KPI cards, charts, and data tables using the oxidize-pdf dashboard framework.
+//! PivotTable is currently unsupported: this example propagates render errors
+//! and must not save a report as though pivot values had been computed.
 
 use oxidize_pdf::{
     charts::{BarChartBuilder, DashboardBarChart, DashboardPieChart, PieChartBuilder, PieSegment},

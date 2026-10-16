@@ -1,0 +1,6 @@
+{
+  "exit_code": 1,
+  "stdout": "\ud83d\udcca Testing PivotTable component...\n",
+  "stderr": "Error: InvalidOperation(\"PivotTable aggregation and rendering are not implemented\")\n",
+  "files_created": []
+}
