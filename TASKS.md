@@ -1,3 +1,20 @@
+## #762 — Mutaciones ordenadas — 2026-10-17
+
+Issue: #762 — fix(tagged): preserve ordered attribute mutations when a batch restores the original value — https://github.com/bzsanti/oxidizePdf/issues/762
+Estado: implementación, validación y revisión locales completas; publicación/CI pendientes. Prioridad: P1. Responsable: Codex.
+GitHub confirma OPEN; base develop e8dbe772, checkout aislado /tmp/oxidize-issue762. WIP raíz preservado.
+Cierre: restauración/eliminación/ausencia de atributos, operaciones ParentTree/reparent repetidas y mixtas, plan/apply coherentes, prefijo/generaciones/desconocidos conservados, fallos atómicos y permisos intactos; RED/GREEN, qpdf y QR calidad/seguridad.
+
+| Requisito | Estado/evidencia | Bloqueante / siguiente acción |
+| --- | --- | --- |
+| Orden efectivo del lote | Demostrado: RED/GREEN y estado acumulado | Resuelto |
+| ParentTree/reparent e índices | Demostrado: restauración, ciclos e índices actuales | Resuelto |
+| Preservación y permisos | Demostrado: contratos públicos, qpdf y regresión | Resuelto |
+| Calidad/seguridad | Completados: QR manual y ambos Kripteia | Sin bloqueantes locales |
+
+Última validación: RED 7 FAIL/1 control PASS; GREEN final 11 contratos (qpdf incluido), 52 integración PASS y biblioteca 6.738 PASS/3 ignorados previos. Clippy all-targets y contrato final -D warnings, formato/diff-check y QR manual/Kripteia calidad/seguridad completos. Fixture DocMDP inicial corregido por rango firmado incorrecto; fallo histórico conservado. Informe docs/reports/2026-10-17-issue-762-review.md y evidencia adyacente. Siguiente acción: publicar candidato en PR borrador hacia develop y comprobar CI; no fusionar ni cerrar issue por el resultado local.
+Release: consulta remota mantiene #731/#732/#733/#734/#736 y #741/#762/#763 abiertas. #719 es auditoría, no autorización de release ni obligación de cerrar todo el backlog; sus casillas #738/#739/#740 están obsoletas respecto al relevo que acredita sus merges. #658 permanece excluido por seguridad. No hay fecha comprometida ni publicación autorizada; reevaluar candidato tras resolver los defectos del alcance y validar paquete/CI.
+
 ### #732 — muestras grises empaquetadas — 2026-10-17
 
 Issue: #732 — fix(images): decode packed grayscale samples during image extraction — https://github.com/bzsanti/oxidizePdf/issues/732
@@ -1519,4 +1536,8 @@ Validación #763: commit de código fe4631a5; RED 5 FAIL/2 controles PASS. Final
 
 Integración #741 verificada: PR #769 MERGED a develop, commit 075b5f7b532212afcdc5c681a53ce4531785a537, CI 30 SUCCESS/2 SKIPPED; issue cerrada explícitamente. #763 incorpora ese develop sin conflictos y sus hashes de código/tests/workflow coinciden con los del QR; evidencia reutilizada. Siguiente acción #763: publicar PR propio contra develop y fusionar únicamente tras CI verde.
 
+Integración PR #768: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos limitados a seguimiento y pasos CI resueltos conservando ambos. Fuentes Rust de la corrección sin cambios; nuevo CI obligatorio sobre el merge de develop b3f2a58e. Siguiente acción: fusionar a develop al quedar verde, según autorización del usuario. #741/#763 ya integradas (PR #769/#772).
+
 Integración PR #775: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos limitados a seguimiento y pasos CI resueltos conservando ambos. Fuentes Rust de la corrección sin cambios; nuevo CI obligatorio sobre el merge de develop b3f2a58e. Siguiente acción: fusionar a develop al quedar verde, según autorización del usuario. #741/#763 ya integradas (PR #769/#772).
+
+Integración PR #768: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos limitados a seguimiento y pasos CI resueltos conservando ambos. Fuentes Rust de la corrección sin cambios; nuevo CI obligatorio sobre el merge de develop ef0c9698. Siguiente acción: fusionar a develop al quedar verde, según autorización del usuario. #741/#763 ya integradas (PR #769/#772).

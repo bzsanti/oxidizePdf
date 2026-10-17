@@ -101,6 +101,13 @@ jobs:
           cargo test --locked -p oxidize-pdf --features external-images
           --test issue_732_packed_gray_test -- --include-ignored
 
+      - name: Verify ordered tagged mutations with qpdf
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_762_ordered_mutations_test
+          independent_qpdf_observes_restored_value_and_generation
+          -- --ignored --exact
+
       - name: Verify streaming writer object graph and xref with qpdf
         run: >-
           cargo test --locked -p oxidize-pdf --features performance

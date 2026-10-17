@@ -1,0 +1,20 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue762/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 21.08s
+     Running tests/issue_762_ordered_mutations_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_762_ordered_mutations_test-2f69caf6de2c9a46)
+
+running 11 tests
+test docmdp_forbids_even_restoring_batches_without_publishing_bytes ... ok
+test indices_use_current_children_after_moves_and_creations ... ok
+test independent_attributes_and_elements_do_not_share_state ... ok
+test effective_plan_omits_only_noops_at_their_position ... ok
+test repeated_reparent_uses_current_parent_and_restores_original ... ok
+test invalid_later_operations_fail_atomically_in_plan_and_apply ... ok
+test independent_qpdf_observes_restored_value_and_generation ... ok
+test mixed_parent_tree_and_association_operations_observe_batch_state ... ok
+test unchanged_batch_is_byte_identical ... ok
+test assignments_and_removals_restore_original_or_absent_values ... ok
+test parent_tree_remove_restore_and_repeated_assignments ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
