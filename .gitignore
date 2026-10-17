@@ -186,3 +186,6 @@ oxidize-pdf-core/out/
 
 # proptest runtime artifacts (discovered seeds; known cases pinned by issue_* tests)
 *.proptest-regressions
+
+# Local daily task tracking
+/TASKS.md
