@@ -82,6 +82,13 @@ jobs:
           independent_output_oracle
           -- --ignored --exact
 
+      - name: Verify XMP identifiers with an independent XML parser
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_741_xmp_identifier_test
+          independent_xml_reader_agrees_on_identifier_forms
+          -- --ignored --exact
+
       - name: Verify simple-font encodings against Poppler
         run: >-
           cargo test --locked -p oxidize-pdf
@@ -89,8 +96,91 @@ jobs:
           independent_poppler_standard_encoding_control
           -- --ignored --exact
 
-      - name: Verify XMP identifiers with an independent XML parser
+      - name: Verify streaming writer object graph and xref with qpdf
+        run: >-
+          cargo test --locked -p oxidize-pdf --features performance
+          --test issue_728_streaming_writer_test
+          -- --include-ignored
+
+      - name: Validate incremental text notes
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_493_incremental_text_notes_test
+          qpdf_accepts_incremental_text_note_revision
+          -- --ignored --exact
+
+      - name: Validate incremental highlights
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_525_incremental_highlights_test
+          qpdf_accepts_classic_and_xref_stream_highlight_revisions
+          -- --ignored --exact
+
+      - name: Validate incremental ink annotations
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_536_incremental_ink_test
+          qpdf_accepts_classic_and_xref_stream_ink_revisions
+          -- --ignored --exact
+
+      - name: Validate incremental geometric annotations
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_537_incremental_geometric_test
+          qpdf_accepts_classic_and_xref_stream_geometric_revisions
+          -- --ignored --exact
+
+      - name: Validate lossless page-tree mutations
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_538_page_tree_mutations_test
+          qpdf_and_poppler_accept_classic_and_xref_stream_page_mutations
+          -- --ignored --exact
+
+      - name: Validate incremental OCR layers
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_542_incremental_ocr_test
+          qpdf_accepts_classic_and_xref_stream_ocr_revisions
+          -- --ignored --exact
+
+      - name: Validate incremental signature appearances
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_540_incremental_signing_test
+          -- --ignored
+
+      - name: Validate incremental objects and external document timestamps
         run: >-
           cargo test --locked -p oxidize-pdf
-          --test issue_741_xmp_identifier_test
-          independent_xml_reader_agrees_on_identifier_forms
+          --test issue_714_incremental_primitives_test -- --ignored
+
+      - name: Validate AES-256 R5 interoperability
+        run: >
+          cargo test -p oxidize-pdf
+          --test issue_492_aes256_perms_interop_test
+          qpdf_checks_and_linearizes_generated_aes256_r5_pdf
+          -- --ignored --exact
+
+  wasm-encryption:
+    name: WASM encryption in Node and Chrome
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.14.0 --locked
+      - name: Build and validate Node consumer
+        run: |
+          wasm-pack build tools/wasm-encryption-regression --target nodejs --out-dir pkg-node --dev --no-opt --locked
+          node tools/wasm-encryption-regression/node_test.cjs
+      - name: Build and validate Chrome consumer
+        run: |
+          wasm-pack build tools/wasm-encryption-regression --target web --dev --no-opt --locked
+          node tools/wasm-encryption-regression/browser_test.cjs
