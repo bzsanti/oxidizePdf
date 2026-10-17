@@ -1506,3 +1506,6 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 
 
 Validación #731: RED cinco fallos/un control PASS; GREEN final nueve contratos (Poppler incluido), 103 integración, 875 unidades text:: y 278 fonts:: PASS (filtros solapados). Formato/diff-check, Clippy all-targets y focal final PASS; QR manual y Kripteia calidad/seguridad completos sin hallazgos nuevos. Informe docs/reports/2026-10-17-issue-731-review.md. Siguiente acción: publicar PR contra develop, esperar CI verde y fusionar.
+
+
+Integración #731 con develop 075b5f7b: Rust/tests idénticos al QR; conflicto aditivo de workflow/TASKS resuelto conservando todo el historial y todos los jobs/steps previos. Check de YAML detectó una resolución temporal incompleta; corregida antes de publicación. Contratos combinados #731/#741: 21 PASS con Poppler y Python. Siguiente acción: publicar PR y verificar CI del head final.
