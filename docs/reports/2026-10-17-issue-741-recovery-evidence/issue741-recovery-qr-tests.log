@@ -1,0 +1,58 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 12 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs          12     91
+
+--- Worst Offenders ---
+  malformed_xml_and_dtds_are_typed_errors (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:85) - Score: 80
+    - Test 'malformed_xml_and_dtds_are_typed_errors' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'malformed_xml_and_dtds_are_typed_errors' does not call any production code
+  conflicting_and_nonliteral_properties_are_rejected (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:99) - Score: 80
+    - Test 'conflicting_and_nonliteral_properties_are_rejected' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'conflicting_and_nonliteral_properties_are_rejected' does not call any production code
+  independent_xml_reader_agrees_on_identifier_forms (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:156) - Score: 80
+    - Test 'independent_xml_reader_agrees_on_identifier_forms' is marked as #[ignore]
+    i Test 'independent_xml_reader_agrees_on_identifier_forms' has multiple assertions without diagnostic messages
+    i Test 'independent_xml_reader_agrees_on_identifier_forms' uses .unwrap() which silently discards error information
+  equivalent_attribute_element_and_mixed_forms (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:18) - Score: 90
+    - Test 'equivalent_attribute_element_and_mixed_forms' does not call any production code
+  missing_is_distinct_from_partial_invalid_and_unsupported (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:53) - Score: 90
+    - Test 'missing_is_distinct_from_partial_invalid_and_unsupported' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:
+  equivalent_attribute_element_and_mixed_forms (line 18) - Score: 90
+    - Test 'equivalent_attribute_element_and_mixed_forms' does not call any production code
+  namespace_identity_and_default_namespace (line 31) - Score: 100
+    i Test 'namespace_identity_and_default_namespace' has multiple assertions without diagnostic messages
+  missing_is_distinct_from_partial_invalid_and_unsupported (line 53) - Score: 90
+    - Test 'missing_is_distinct_from_partial_invalid_and_unsupported' does not call any production code
+  entity_and_cdata_values_are_decoded (line 68) - Score: 90
+    i Test 'entity_and_cdata_values_are_decoded' uses .unwrap() which silently discards error information
+    - Test 'entity_and_cdata_values_are_decoded' does not call any production code
+  malformed_xml_and_dtds_are_typed_errors (line 85) - Score: 80
+    - Test 'malformed_xml_and_dtds_are_typed_errors' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'malformed_xml_and_dtds_are_typed_errors' does not call any production code
+  conflicting_and_nonliteral_properties_are_rejected (line 99) - Score: 80
+    - Test 'conflicting_and_nonliteral_properties_are_rejected' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'conflicting_and_nonliteral_properties_are_rejected' does not call any production code
+  descriptions_must_describe_the_same_subject (line 117) - Score: 90
+    - Test 'descriptions_must_describe_the_same_subject' only exercises the happy path — no None, Err, or edge-case inputs
+  xml_base_subject_resolution_is_not_silently_ignored (line 135) - Score: 90
+    - Test 'xml_base_subject_resolution_is_not_silently_ignored' does not call any production code
+  independent_xml_reader_agrees_on_identifier_forms (line 156) - Score: 80
+    - Test 'independent_xml_reader_agrees_on_identifier_forms' is marked as #[ignore]
+    i Test 'independent_xml_reader_agrees_on_identifier_forms' has multiple assertions without diagnostic messages
+    i Test 'independent_xml_reader_agrees_on_identifier_forms' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

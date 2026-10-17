@@ -1,0 +1,23 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue741/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 04s
+     Running tests/issue_741_xmp_identifier_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_741_xmp_identifier_test-5d0627da890551b5)
+
+running 1 test
+test xml_base_cannot_merge_identifiers_from_distinct_subjects ... FAILED
+
+failures:
+
+---- xml_base_cannot_merge_identifiers_from_distinct_subjects stdout ----
+
+thread 'xml_base_cannot_merge_identifiers_from_distinct_subjects' (73) panicked at oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:197:5:
+assertion failed: matches!(XmpMetadata::parse(&xml),Err(PdfAError::XmpParseError(_)))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    xml_base_cannot_merge_identifiers_from_distinct_subjects
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_741_xmp_identifier_test`

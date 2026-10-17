@@ -30,6 +30,7 @@ mod error;
 mod types;
 mod validator;
 mod xmp;
+mod xmp_packet;
 
 pub use error::{PdfAError, PdfAResult, ValidationError};
 pub use types::{PdfAConformance, PdfALevel, ValidationResult, ValidationWarning};
