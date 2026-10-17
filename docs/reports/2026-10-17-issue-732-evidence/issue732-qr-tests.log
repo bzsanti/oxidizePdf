@@ -1,0 +1,47 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 92 | Tests: 9 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_732_packed_gray_test.rs              9     92
+
+--- Worst Offenders ---
+  independent_qpdf_accepts_source_documents (oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:119) - Score: 80
+    - Test 'independent_qpdf_accepts_source_documents' is marked as #[ignore]
+    i Test 'independent_qpdf_accepts_source_documents' uses .unwrap() which silently discards error information
+  one_bit_row_padding_does_not_become_pixels (oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:64) - Score: 90
+    - Test 'one_bit_row_padding_does_not_become_pixels' does not call any production code
+  two_bit_row_padding_and_scale (oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:68) - Score: 90
+    - Test 'two_bit_row_padding_and_scale' does not call any production code
+  four_bit_row_padding_and_scale (oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:72) - Score: 90
+    - Test 'four_bit_row_padding_and_scale' does not call any production code
+  eight_bit_control (oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:82) - Score: 90
+    - Test 'eight_bit_control' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:
+  one_bit_row_padding_does_not_become_pixels (line 64) - Score: 90
+    - Test 'one_bit_row_padding_does_not_become_pixels' does not call any production code
+  two_bit_row_padding_and_scale (line 68) - Score: 90
+    - Test 'two_bit_row_padding_and_scale' does not call any production code
+  four_bit_row_padding_and_scale (line 72) - Score: 90
+    - Test 'four_bit_row_padding_and_scale' does not call any production code
+  eight_bit_control (line 82) - Score: 90
+    - Test 'eight_bit_control' does not call any production code
+  pixel_limit_is_checked_before_unpacking (line 98) - Score: 90
+    - Test 'pixel_limit_is_checked_before_unpacking' does not call any production code
+  packed_gray_preserves_separate_soft_mask (line 108) - Score: 100
+    i Test 'packed_gray_preserves_separate_soft_mask' uses .unwrap() which silently discards error information
+  independent_qpdf_accepts_source_documents (line 119) - Score: 80
+    - Test 'independent_qpdf_accepts_source_documents' is marked as #[ignore]
+    i Test 'independent_qpdf_accepts_source_documents' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
