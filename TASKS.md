@@ -1,3 +1,10 @@
+### #763 — propiedades XMP y escape XML — 2026-10-17
+
+Issue: #763 — fix(pdfa): preserve XMP properties and validate/escape XML in metadata round trips — https://github.com/bzsanti/oxidizePdf/issues/763
+Estado: implementación, validación y QR completos; publicación/CI pendientes. Prioridad: P1. Responsable: Codex.
+Cierre: todas las propiedades del modelo preservadas, listas/Unicode/entidades, namespaces por URI y controles negativos, escape de campos textuales, XML independiente, regresión y QR. Bloqueantes: regex de propiedades ordinarias, keywords omitidas, escape incompleto de amd/corr/fechas/IDs. XML malformado y límites reutilizan #741; no duplicar parser ni certificar integración FFI/.NET.
+Última validación: issue OPEN y criterios leídos en GitHub; base local #741 1f87b1ab. Siguiente acción: ejecutar contratos públicos RED y corregir lector/serializador. PR contra develop después de integrar #741.
+
 ## #741 — XMP namespace-aware PDF/A identifiers — 2026-10-17
 
 Issue: #741 — fix(pdfa): recognize RDF attribute-form PDF/A identifiers — https://github.com/bzsanti/oxidizePdf/issues/741
@@ -1496,3 +1503,9 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Cierre verificable local: todos los widgets del campo timestamp tienen Rect cero válido, independientemente del seleccionado; errores explícitos para hermanos visibles/malformados; controles invisibles conservan prefijo, widgets y DocTimeStamp.
 - Última validación: RED 2 fallos previstos; GREEN/regresión 48 PASS en cuatro targets, incluyendo qpdf/OpenSSL; Clippy all-targets/signatures y formato PASS; Kripteia calidad/seguridad e inspección final terminados. Informe actualizado docs/reports/2026-10-12-issue-714-review.md, evidencias pr717 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
 - Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.
+
+
+Validación #763: commit de código fe4631a5; RED 5 FAIL/2 controles PASS. Final 11 contratos nuevos (Python independiente incluido), 12 #741, 15 PDF/A integración, 55 validator y 3 comprimidos PASS; 70 unidades PDF/A PASS. Clippy all-targets -D warnings, formato/diff-check y QR/Kripteia calidad/seguridad completos sin hallazgos nuevos. Informe docs/reports/2026-10-17-issue-763-review.md. Siguiente acción: integrar #741 tras CI verde; rebasar #763 sobre develop y publicar su PR propio, comprobar CI y fusionar. Bundle y fuentes conservados fuera de /tmp.
+
+
+Integración #741 verificada: PR #769 MERGED a develop, commit 075b5f7b532212afcdc5c681a53ce4531785a537, CI 30 SUCCESS/2 SKIPPED; issue cerrada explícitamente. #763 incorpora ese develop sin conflictos y sus hashes de código/tests/workflow coinciden con los del QR; evidencia reutilizada. Siguiente acción #763: publicar PR propio contra develop y fusionar únicamente tras CI verde.
