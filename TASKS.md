@@ -1,3 +1,10 @@
+### #732 — muestras grises empaquetadas — 2026-10-17
+
+Issue: #732 — fix(images): decode packed grayscale samples during image extraction — https://github.com/bzsanti/oxidizePdf/issues/732
+Estado: activa, reproducción. Prioridad: P1. Responsable: Codex.
+Cierre: extracción 1/2/4 bits con stride por fila y muestras correctas, control 8 bits, truncamiento/límites y PNG decodificado independientemente, QR/seguridad y CI antes de merge.
+Última validación: OPEN y cuerpo confirmados; convert_raw_image_data_to_png trata todo bpc<=8 como byte por muestra. Siguiente acción: contratos RED y reutilizar desempaquetado con validación previa, escalar a gris de 8 bits. ImageMask/Decode no se declaran corregidos.
+
 ## #741 — XMP namespace-aware PDF/A identifiers — 2026-10-17
 
 Issue: #741 — fix(pdfa): recognize RDF attribute-form PDF/A identifiers — https://github.com/bzsanti/oxidizePdf/issues/741
@@ -1496,3 +1503,6 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Cierre verificable local: todos los widgets del campo timestamp tienen Rect cero válido, independientemente del seleccionado; errores explícitos para hermanos visibles/malformados; controles invisibles conservan prefijo, widgets y DocTimeStamp.
 - Última validación: RED 2 fallos previstos; GREEN/regresión 48 PASS en cuatro targets, incluyendo qpdf/OpenSSL; Clippy all-targets/signatures y formato PASS; Kripteia calidad/seguridad e inspección final terminados. Informe actualizado docs/reports/2026-10-12-issue-714-review.md, evidencias pr717 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
 - Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.
+
+
+Validación #732: RED cinco fallos/cuatro controles; QR encontró conversión 257→1, demostrada RED y corregida. Final diez contratos nuevos (PNG independiente/qpdf/alpha), doce integración existentes y 63 unidades PASS. Clippy all-targets -D warnings, formato/diff-check y QR/Kripteia completos. Informe docs/reports/2026-10-17-issue-732-review.md. Siguiente acción: publicar PR a develop y esperar CI verde antes de merge; continuar #733 sobre la corrección revisada.

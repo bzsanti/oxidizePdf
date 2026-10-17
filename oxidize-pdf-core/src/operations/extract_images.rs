@@ -451,7 +451,13 @@ impl<R: Read + Seek> ImageExtractor<R> {
         budget.check_pixels(width, height)?;
         let color_space = stream.dict.get("ColorSpace");
         let bits = match stream.dict.get("BitsPerComponent") {
-            Some(PdfObject::Integer(bits)) => *bits as u8,
+            Some(PdfObject::Integer(bits)) if matches!(*bits, 1 | 2 | 4 | 8 | 16) => *bits as u8,
+            Some(PdfObject::Integer(bits)) => {
+                return Err(OperationError::ParseError(format!(
+                    "Unsupported image sample depth: {bits}"
+                ))
+                .into());
+            }
             _ => 8,
         };
         let smask = self.extract_smask_alpha(&stream.dict, width, height);
@@ -913,6 +919,40 @@ impl<R: Read + Seek> ImageExtractor<R> {
         // Non-indexed: component count from the colour space.
         let icc_n = self.icc_components(cs);
         let components = image_sample_components(cs, icc_n);
+
+        // PDF packs sub-byte grayscale samples independently in each row.
+        // Expand to 8-bit gray before PNG encoding and optional soft-mask composition.
+        if components == 1 && bits_per_component < 8 {
+            if !matches!(bits_per_component, 1 | 2 | 4) {
+                return Err(OperationError::ParseError(format!(
+                    "Unsupported grayscale sample depth: {bits_per_component}"
+                )));
+            }
+            let row_bytes = (width as usize)
+                .checked_mul(bits_per_component as usize)
+                .map(|bits| bits.div_ceil(8))
+                .ok_or_else(|| {
+                    OperationError::ParseError("Packed image row size overflow".into())
+                })?;
+            let required = row_bytes
+                .checked_mul(height as usize)
+                .ok_or_else(|| OperationError::ParseError("Packed image size overflow".into()))?;
+            (width as usize)
+                .checked_mul(height as usize)
+                .ok_or_else(|| OperationError::ParseError("Unpacked image size overflow".into()))?;
+            if data.len() < required {
+                return Err(OperationError::ParseError(format!(
+                    "Packed image data too small: expected {required}, got {}",
+                    data.len()
+                )));
+            }
+            let mut samples = unpack_indices(&data[..required], width, height, bits_per_component);
+            let maximum = (1u16 << bits_per_component) - 1;
+            for sample in &mut samples {
+                *sample = (u16::from(*sample) * 255 / maximum) as u8;
+            }
+            return self.encode_png_maybe_alpha(&samples, width, height, 1, 8, smask_alpha);
+        }
 
         // Calculate expected data size. Use usize arithmetic so large images
         // do not overflow the intermediate product (a u32 multiply wraps near
