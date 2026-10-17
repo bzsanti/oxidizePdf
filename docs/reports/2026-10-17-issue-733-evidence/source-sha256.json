@@ -1,0 +1,5 @@
+{
+  "oxidize-pdf-core/src/operations/extract_images.rs": "a07c8d17682953fd9e66b8731f4c27415b8d3625ebe15aa884b58afd4cbd64bc",
+  "oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs": "672127f20407d364227e6dd18be9d77f0490e8e0bdd0af2a1dfc8891d418fa9a",
+  ".github/workflows/interoperability.yml": "3cd163c0ada18f2f2e9f1946059ac5446298df1c01fbcc54c8b5c15b9ce1d6ee"
+}

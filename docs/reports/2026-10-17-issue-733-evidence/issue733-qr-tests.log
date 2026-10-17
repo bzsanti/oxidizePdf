@@ -1,0 +1,49 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 87 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs          6     87
+
+--- Worst Offenders ---
+  cyan_black_white_and_red_are_opaque (oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:59) - Score: 80
+    - Test 'cyan_black_white_and_red_are_opaque' has identical neighborhood to 'intermediate_device_values_are_converted_consistently'
+    - Test 'cyan_black_white_and_red_are_opaque' does not call any production code
+  intermediate_device_values_are_converted_consistently (oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:73) - Score: 80
+    - Test 'intermediate_device_values_are_converted_consistently' has identical neighborhood to 'cyan_black_white_and_red_are_opaque'
+    - Test 'intermediate_device_values_are_converted_consistently' does not call any production code
+  soft_mask_is_alpha_and_black_ink_is_not (oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:80) - Score: 80
+    - Test 'soft_mask_is_alpha_and_black_ink_is_not' has identical neighborhood to 'cyan_black_white_and_red_are_opaque'
+    - Test 'soft_mask_is_alpha_and_black_ink_is_not' does not call any production code
+  legitimate_rgb_alpha_control (oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:94) - Score: 80
+    - Test 'legitimate_rgb_alpha_control' has identical neighborhood to 'cyan_black_white_and_red_are_opaque'
+    - Test 'legitimate_rgb_alpha_control' does not call any production code
+  unsupported_cmyk_depth_and_indexed_base_are_explicit_errors (oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:101) - Score: 100
+    i Test 'unsupported_cmyk_depth_and_indexed_base_are_explicit_errors' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:
+  cyan_black_white_and_red_are_opaque (line 59) - Score: 80
+    - Test 'cyan_black_white_and_red_are_opaque' has identical neighborhood to 'intermediate_device_values_are_converted_consistently'
+    - Test 'cyan_black_white_and_red_are_opaque' does not call any production code
+  intermediate_device_values_are_converted_consistently (line 73) - Score: 80
+    - Test 'intermediate_device_values_are_converted_consistently' has identical neighborhood to 'cyan_black_white_and_red_are_opaque'
+    - Test 'intermediate_device_values_are_converted_consistently' does not call any production code
+  soft_mask_is_alpha_and_black_ink_is_not (line 80) - Score: 80
+    - Test 'soft_mask_is_alpha_and_black_ink_is_not' has identical neighborhood to 'cyan_black_white_and_red_are_opaque'
+    - Test 'soft_mask_is_alpha_and_black_ink_is_not' does not call any production code
+  legitimate_rgb_alpha_control (line 94) - Score: 80
+    - Test 'legitimate_rgb_alpha_control' has identical neighborhood to 'cyan_black_white_and_red_are_opaque'
+    - Test 'legitimate_rgb_alpha_control' does not call any production code
+  unsupported_cmyk_depth_and_indexed_base_are_explicit_errors (line 101) - Score: 100
+    i Test 'unsupported_cmyk_depth_and_indexed_base_are_explicit_errors' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

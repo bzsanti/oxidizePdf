@@ -1,3 +1,10 @@
+### #733 — DeviceCMYK y alpha — 2026-10-17
+
+Issue: #733 — fix(images): avoid exporting CMYK samples as RGBA — https://github.com/bzsanti/oxidizePdf/issues/733
+Estado: activa, reproducción sobre #732 revisada c5a5608a. Prioridad: P1. Responsable: Codex.
+Cierre: DeviceCMYK de 8 bits convertido a RGB opaco con alpha separado, nunca inferir RGBA por cuatro componentes; PNG independiente, cyan/negro/controles, error explícito en perfiles no soportados, QR y CI verde antes de merge.
+Última validación: OPEN/cuerpo confirmados; cuatro componentes se etiquetan RGBA. Siguiente acción: RED público y conversión DeviceCMYK no gestionada por perfil; rechazar otras fuentes de cuatro componentes en vez de inventar alpha. Indexed-CMYK/ICC no se declaran convertidos.
+
 ### #732 — muestras grises empaquetadas — 2026-10-17
 
 Issue: #732 — fix(images): decode packed grayscale samples during image extraction — https://github.com/bzsanti/oxidizePdf/issues/732
@@ -1506,3 +1513,5 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 
 
 Validación #732: RED cinco fallos/cuatro controles; QR encontró conversión 257→1, demostrada RED y corregida. Final diez contratos nuevos (PNG independiente/qpdf/alpha), doce integración existentes y 63 unidades PASS. Clippy all-targets -D warnings, formato/diff-check y QR/Kripteia completos. Informe docs/reports/2026-10-17-issue-732-review.md. Siguiente acción: publicar PR a develop y esperar CI verde antes de merge; continuar #733 sobre la corrección revisada.
+
+Validación #733: RED cuatro fallos/dos controles; final seis contratos nuevos y 22 regresiones PASS; PNG independiente confirma colores/alpha y negativos explícitos. Clippy all-targets con external-images y QR manual/ambos Kripteia completos. Informe docs/reports/2026-10-17-issue-733-review.md. Estado: QR local completo, publicación/CI pendientes. Siguiente acción: incorporar develop con #732 integrada, publicar PR y fusionar tras CI verde.
