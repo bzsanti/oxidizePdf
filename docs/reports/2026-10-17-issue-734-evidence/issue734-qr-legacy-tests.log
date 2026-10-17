@@ -1,0 +1,123 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 25 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/operations/extract_images_tests.rs          25     95
+
+--- Worst Offenders ---
+  test_minimum_size_filter (oxidize-pdf-core/src/operations/extract_images_tests.rs:237) - Score: 80
+    - Test 'test_minimum_size_filter' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'test_minimum_size_filter' does not call any production code
+  test_duplicate_image_detection (oxidize-pdf-core/src/operations/extract_images_tests.rs:263) - Score: 80
+    i Test 'test_duplicate_image_detection' has multiple assertions without diagnostic messages
+    - Test 'test_duplicate_image_detection' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'test_duplicate_image_detection' does not call any production code
+  test_extract_options_default (oxidize-pdf-core/src/operations/extract_images_tests.rs:83) - Score: 90
+    i Test 'test_extract_options_default' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_extract_options_default' does not call any production code
+  test_extracted_image_struct (oxidize-pdf-core/src/operations/extract_images_tests.rs:111) - Score: 90
+    i Test 'test_extracted_image_struct' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extracted_image_struct' has multiple assertions without diagnostic messages
+    - Test 'test_extracted_image_struct' does not call any production code
+  test_name_pattern_replacement (oxidize-pdf-core/src/operations/extract_images_tests.rs:249) - Score: 90
+    - Test 'test_name_pattern_replacement' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_name_pattern_replacement' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_name_pattern_replacement' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/operations/extract_images_tests.rs:
+  test_extract_options_default (line 83) - Score: 90
+    i Test 'test_extract_options_default' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_extract_options_default' does not call any production code
+  test_extract_options_custom (line 93) - Score: 100
+    i Test 'test_extract_options_custom' has multiple assertions without diagnostic messages
+    i Test 'test_extract_options_custom' uses .unwrap() which silently discards error information
+  test_extracted_image_struct (line 111) - Score: 90
+    i Test 'test_extracted_image_struct' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extracted_image_struct' has multiple assertions without diagnostic messages
+    - Test 'test_extracted_image_struct' does not call any production code
+  test_extract_from_empty_pdf (line 129) - Score: 100
+    i Test 'test_extract_from_empty_pdf' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extract_from_empty_pdf' has multiple assertions without diagnostic messages
+    i Test 'test_extract_from_empty_pdf' uses .unwrap() which silently discards error information
+  test_extract_from_pdf_without_images (line 147) - Score: 100
+    i Test 'test_extract_from_pdf_without_images' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extract_from_pdf_without_images' has multiple assertions without diagnostic messages
+    i Test 'test_extract_from_pdf_without_images' uses .unwrap() which silently discards error information
+  test_extract_specific_pages (line 175) - Score: 100
+    i Test 'test_extract_specific_pages' uses .unwrap() which silently discards error information
+  test_output_directory_creation (line 203) - Score: 100
+    i Test 'test_output_directory_creation' has multiple assertions without diagnostic messages
+    i Test 'test_output_directory_creation' uses .unwrap() which silently discards error information
+  test_invalid_pdf_path (line 225) - Score: 100
+    i Test 'test_invalid_pdf_path' uses .unwrap() which silently discards error information
+  test_minimum_size_filter (line 237) - Score: 80
+    - Test 'test_minimum_size_filter' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'test_minimum_size_filter' does not call any production code
+  test_name_pattern_replacement (line 249) - Score: 90
+    - Test 'test_name_pattern_replacement' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_name_pattern_replacement' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_name_pattern_replacement' uses .unwrap() which silently discards error information
+  test_duplicate_image_detection (line 263) - Score: 80
+    i Test 'test_duplicate_image_detection' has multiple assertions without diagnostic messages
+    - Test 'test_duplicate_image_detection' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'test_duplicate_image_detection' does not call any production code
+  test_png_image_creation (line 279) - Score: 100
+    i Test 'test_png_image_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_png_image_creation' has multiple assertions without diagnostic messages
+    i Test 'test_png_image_creation' uses .unwrap() which silently discards error information
+  test_tiff_image_creation (line 301) - Score: 100
+    i Test 'test_tiff_image_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_tiff_image_creation' has multiple assertions without diagnostic messages
+    i Test 'test_tiff_image_creation' uses .unwrap() which silently discards error information
+  test_extended_file_extensions (line 327) - Score: 100
+    i Test 'test_extended_file_extensions' has multiple assertions without diagnostic messages
+    i Test 'test_extended_file_extensions' uses .unwrap() which silently discards error information
+  test_dct_decode_jpeg_parsing (line 366) - Score: 90
+    i Test 'test_dct_decode_jpeg_parsing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dct_decode_jpeg_parsing' has multiple assertions without diagnostic messages
+    i Test 'test_dct_decode_jpeg_parsing' uses .unwrap() which silently discards error information
+    - Test 'test_dct_decode_jpeg_parsing' has low assert-to-setup ratio (16%): 6 asserts vs 32 setup lines
+  test_dct_decode_cmyk_jpeg (line 408) - Score: 90
+    i Test 'test_dct_decode_cmyk_jpeg' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dct_decode_cmyk_jpeg' has multiple assertions without diagnostic messages
+    i Test 'test_dct_decode_cmyk_jpeg' uses .unwrap() which silently discards error information
+    - Test 'test_dct_decode_cmyk_jpeg' has low assert-to-setup ratio (15%): 3 asserts vs 17 setup lines
+  test_extract_from_real_pdf_with_images (line 432) - Score: 90
+    - Test 'test_extract_from_real_pdf_with_images' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_extract_from_real_pdf_with_images' uses .unwrap() which silently discards error information
+  test_extract_from_specific_page (line 478) - Score: 100
+    i Test 'test_extract_from_specific_page' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extract_from_specific_page' uses .unwrap() which silently discards error information
+  test_create_png_from_raw_data (line 506) - Score: 100
+    i Test 'test_create_png_from_raw_data' has multiple assertions without diagnostic messages
+    i Test 'test_create_png_from_raw_data' uses .unwrap() which silently discards error information
+  test_create_png_rgb_data (line 537) - Score: 100
+    i Test 'test_create_png_rgb_data' has multiple assertions without diagnostic messages
+    i Test 'test_create_png_rgb_data' uses .unwrap() which silently discards error information
+  test_crc32_calculation (line 562) - Score: 90
+    - Test 'test_crc32_calculation' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_crc32_calculation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_crc32_calculation' has multiple assertions without diagnostic messages
+    i Test 'test_crc32_calculation' uses .unwrap() which silently discards error information
+  test_compress_image_data (line 593) - Score: 100
+    i Test 'test_compress_image_data' has multiple assertions without diagnostic messages
+    i Test 'test_compress_image_data' uses .unwrap() which silently discards error information
+  test_detect_correct_row_stride (line 617) - Score: 90
+    - Test 'test_detect_correct_row_stride' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_detect_correct_row_stride' uses .unwrap() which silently discards error information
+  test_image_extraction_with_min_size_filter (line 670) - Score: 100
+    i Test 'test_image_extraction_with_min_size_filter' uses .unwrap() which silently discards error information
+  test_deduplication_with_page_pattern (line 714) - Score: 100
+    i Test 'test_deduplication_with_page_pattern' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

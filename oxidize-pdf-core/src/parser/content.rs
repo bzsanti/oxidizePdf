@@ -439,6 +439,7 @@ pub struct ContentTokenizer<'a> {
     in_inline_image: bool,
     inline_header_start: Option<usize>,
     inline_data_length: Option<usize>,
+    strict_inline_end: bool,
 }
 
 impl<'a> ContentTokenizer<'a> {
@@ -450,6 +451,7 @@ impl<'a> ContentTokenizer<'a> {
             in_inline_image: false,
             inline_header_start: None,
             inline_data_length: None,
+            strict_inline_end: false,
         }
     }
 
@@ -833,8 +835,14 @@ impl<'a> ContentTokenizer<'a> {
     /// all subsequent bytes are raw image data until the EI marker is found.
     /// The EI marker is: whitespace + 'E' + 'I' + (whitespace, delimiter, or EOF).
     fn read_inline_image_data(&mut self) -> ParseResult<Option<Token>> {
-        self.read_inline_image_data_part(true)
-            .map(|(token, _)| token)
+        let (token, complete) = self.read_inline_image_data_part(true)?;
+        if self.strict_inline_end && !complete {
+            return Err(ParseError::SyntaxError {
+                position: self.position,
+                message: "Missing inline image EI delimiter".into(),
+            });
+        }
+        Ok(token)
     }
 
     // The visitor carries incomplete image data across stream boundaries. The
@@ -1027,6 +1035,7 @@ impl ContentParser {
     /// the rendered glyph.
     pub fn parse_strict(content: &[u8]) -> ParseResult<Vec<ContentOperation>> {
         let mut tokenizer = ContentTokenizer::new(content);
+        tokenizer.strict_inline_end = true;
         let mut tokens = Vec::new();
         while let Some(token) = tokenizer.next_token()? {
             tokens.push(token);

@@ -1,0 +1,125 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 29 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/operations/extract_images.rs                29     90
+
+--- Worst Offenders ---
+  test_extract_options_no_min_size (oxidize-pdf-core/src/operations/extract_images.rs:1876) - Score: 80
+    - Test 'test_extract_options_no_min_size' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+    - Test 'test_extract_options_no_min_size' does not call any production code
+  test_multiple_format_extensions (oxidize-pdf-core/src/operations/extract_images.rs:1919) - Score: 80
+    - Test 'test_multiple_format_extensions' has low assert-to-setup ratio (7%): 1 asserts vs 13 setup lines
+    - Test 'test_multiple_format_extensions' does not call any production code
+  test_min_size_filtering (oxidize-pdf-core/src/operations/extract_images.rs:1947) - Score: 80
+    i Test 'test_min_size_filtering' has multiple assertions without diagnostic messages
+    - Test 'test_min_size_filtering' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'test_min_size_filtering' does not call any production code
+  test_image_dimensions (oxidize-pdf-core/src/operations/extract_images.rs:2014) - Score: 80
+    i Test 'test_image_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_dimensions' has multiple assertions without diagnostic messages
+    - Test 'test_image_dimensions' has low assert-to-setup ratio (18%): 4 asserts vs 18 setup lines
+    - Test 'test_image_dimensions' does not call any production code
+  test_page_and_index_numbering (oxidize-pdf-core/src/operations/extract_images.rs:2040) - Score: 80
+    i Test 'test_page_and_index_numbering' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_and_index_numbering' has multiple assertions without diagnostic messages
+    - Test 'test_page_and_index_numbering' has low assert-to-setup ratio (17%): 4 asserts vs 19 setup lines
+    - Test 'test_page_and_index_numbering' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/src/operations/extract_images.rs:
+  test_image_sample_components_device_color_spaces (line 1660) - Score: 90
+    i Test 'test_image_sample_components_device_color_spaces' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_sample_components_device_color_spaces' has multiple assertions without diagnostic messages
+    - Test 'test_image_sample_components_device_color_spaces' does not call any production code
+  test_image_sample_components_indexed_is_one (line 1670) - Score: 90
+    i Test 'test_image_sample_components_indexed_is_one' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_image_sample_components_indexed_is_one' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_image_sample_components_iccbased_uses_n (line 1681) - Score: 100
+    i Test 'test_image_sample_components_iccbased_uses_n' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_sample_components_iccbased_uses_n' has multiple assertions without diagnostic messages
+  test_image_sample_components_devicen_counts_colorants (line 1690) - Score: 90
+    i Test 'test_image_sample_components_devicen_counts_colorants' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_image_sample_components_devicen_counts_colorants' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_expand_indexed_maps_indices_to_palette_rgb (line 1701) - Score: 90
+    - Test 'test_expand_indexed_maps_indices_to_palette_rgb' does not call any production code
+  test_expand_indexed_clamps_out_of_range_index (line 1710) - Score: 90
+    - Test 'test_expand_indexed_clamps_out_of_range_index' does not call any production code
+  test_unpack_indices_passthrough_for_8bit (line 1718) - Score: 90
+    - Test 'test_unpack_indices_passthrough_for_8bit' does not call any production code
+  test_unpack_indices_4bit_two_pixels_per_byte (line 1724) - Score: 90
+    - Test 'test_unpack_indices_4bit_two_pixels_per_byte' does not call any production code
+  test_unpack_indices_2bit_four_pixels_per_byte (line 1731) - Score: 90
+    - Test 'test_unpack_indices_2bit_four_pixels_per_byte' does not call any production code
+  test_unpack_indices_passthrough_for_unsupported_bpc (line 1738) - Score: 90
+    - Test 'test_unpack_indices_passthrough_for_unsupported_bpc' does not call any production code
+  test_unpack_indices_1bit_respects_row_byte_alignment (line 1745) - Score: 90
+    - Test 'test_unpack_indices_1bit_respects_row_byte_alignment' does not call any production code
+  test_extract_options_default (line 1753) - Score: 90
+    i Test 'test_extract_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_extract_options_default' does not call any production code
+  test_filename_pattern (line 1762) - Score: 90
+    i Test 'test_filename_pattern' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_filename_pattern' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_extract_options_custom (line 1778) - Score: 100
+    i Test 'test_extract_options_custom' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extract_options_custom' uses .unwrap() which silently discards error information
+  test_extract_options_debug_clone (line 1797) - Score: 100
+    i Test 'test_extract_options_debug_clone' has multiple assertions without diagnostic messages
+  test_extracted_image_struct (line 1820) - Score: 90
+    i Test 'test_extracted_image_struct' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_extracted_image_struct' has multiple assertions without diagnostic messages
+    - Test 'test_extracted_image_struct' does not call any production code
+  test_extracted_image_debug (line 1839) - Score: 100
+    i Test 'test_extracted_image_debug' has multiple assertions without diagnostic messages
+  test_filename_pattern_replacements (line 1860) - Score: 90
+    i Test 'test_filename_pattern_replacements' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_filename_pattern_replacements' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_extract_options_no_min_size (line 1876) - Score: 80
+    - Test 'test_extract_options_no_min_size' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+    - Test 'test_extract_options_no_min_size' does not call any production code
+  test_create_output_directory (line 1886) - Score: 100
+    i Test 'test_create_output_directory' has multiple assertions without diagnostic messages
+    i Test 'test_create_output_directory' uses .unwrap() which silently discards error information
+  test_pattern_with_special_chars (line 1903) - Score: 90
+    i Test 'test_pattern_with_special_chars' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pattern_with_special_chars' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_multiple_format_extensions (line 1919) - Score: 80
+    - Test 'test_multiple_format_extensions' has low assert-to-setup ratio (7%): 1 asserts vs 13 setup lines
+    - Test 'test_multiple_format_extensions' does not call any production code
+  test_extract_inline_option (line 1938) - Score: 90
+    i Test 'test_extract_inline_option' has multiple assertions without diagnostic messages
+    - Test 'test_extract_inline_option' does not call any production code
+  test_min_size_filtering (line 1947) - Score: 80
+    i Test 'test_min_size_filtering' has multiple assertions without diagnostic messages
+    - Test 'test_min_size_filtering' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'test_min_size_filtering' does not call any production code
+  test_output_path_combinations (line 1963) - Score: 90
+    - Test 'test_output_path_combinations' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+  test_pattern_without_placeholders (line 1982) - Score: 90
+    i Test 'test_pattern_without_placeholders' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pattern_without_placeholders' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_complex_filename_pattern (line 1998) - Score: 90
+    i Test 'test_complex_filename_pattern' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_complex_filename_pattern' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_image_dimensions (line 2014) - Score: 80
+    i Test 'test_image_dimensions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_dimensions' has multiple assertions without diagnostic messages
+    - Test 'test_image_dimensions' has low assert-to-setup ratio (18%): 4 asserts vs 18 setup lines
+    - Test 'test_image_dimensions' does not call any production code
+  test_page_and_index_numbering (line 2040) - Score: 80
+    i Test 'test_page_and_index_numbering' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_and_index_numbering' has multiple assertions without diagnostic messages
+    - Test 'test_page_and_index_numbering' has low assert-to-setup ratio (17%): 4 asserts vs 19 setup lines
+    - Test 'test_page_and_index_numbering' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

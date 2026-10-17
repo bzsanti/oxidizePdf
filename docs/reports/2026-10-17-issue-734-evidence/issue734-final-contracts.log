@@ -1,0 +1,71 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue732/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 24.65s
+     Running tests/issue_286_indexed_image_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_286_indexed_image_test-71df437ae924b5fa)
+
+running 4 tests
+test test_page_resources_indirect_reference_is_resolved ... ok
+test test_indexed_image_matches_independent_decode ... ok
+test test_indexed_image_extraction_does_not_fail_with_size_error ... ok
+test test_indexed_image_is_expanded_to_rgb_png ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.81s
+
+     Running tests/issue_516_in_memory_image_extraction_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_516_in_memory_image_extraction_test-4dad12089f1f8df9)
+
+running 8 tests
+test enforces_the_image_count_limit_before_visiting ... ok
+test inline_binary_offsets_are_applied_to_the_original_bytes ... ok
+test extracts_image_bytes_without_touching_the_filesystem ... ok
+test extracts_one_page_in_memory ... ok
+test enforces_per_image_and_total_encoded_byte_limits ... ok
+test rejects_pixel_limit_before_decoding_image_data ... ok
+test visitor_error_stops_extraction_immediately ... ok
+test file_api_persists_the_same_bytes_produced_by_the_memory_core ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_732_packed_gray_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_732_packed_gray_test-d76bc9c65fe05f95)
+
+running 10 tests
+test one_bit_row_padding_does_not_become_pixels ... ok
+test packed_gray_preserves_separate_soft_mask ... ok
+test four_bit_row_padding_and_scale ... ok
+test eight_bit_control ... ok
+test truncated_packed_rows_are_rejected ... ok
+test pixel_limit_is_checked_before_unpacking ... ok
+test one_bit_16_by_16_samples_decode_independently ... ok
+test two_bit_row_padding_and_scale ... ok
+test invalid_depth_cannot_wrap_into_supported_packed_depth ... ok
+test independent_qpdf_accepts_source_documents ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/issue_733_cmyk_extraction_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_733_cmyk_extraction_test-f28decc8bd2430cb)
+
+running 6 tests
+test truncated_cmyk_data_is_rejected ... ok
+test cyan_black_white_and_red_are_opaque ... ok
+test legitimate_rgb_alpha_control ... ok
+test intermediate_device_values_are_converted_consistently ... ok
+test soft_mask_is_alpha_and_black_ink_is_not ... ok
+test unsupported_cmyk_depth_and_indexed_base_are_explicit_errors ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_734_inline_images_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_734_inline_images_test-6227d652368dd733)
+
+running 11 tests
+test empty_content_and_incomplete_metadata_controls ... ok
+test missing_or_invalid_dimensions_are_explicit_errors ... ok
+test full_dictionary_names_and_crlf_separator ... ok
+test binary_ei_and_whitespace_pixels_are_not_delimiters ... ok
+test missing_end_delimiter_is_not_silently_repaired ... ok
+test text_comments_and_names_do_not_create_images ... ok
+test unknown_filter_is_explicit_raw_never_fake_png ... ok
+test truncated_flate_is_an_error_not_an_image ... ok
+test flate_and_ascii_hex_filters_decode_to_real_png ... ok
+test one_line_dictionary_has_real_dimensions_and_png_samples ... ok
+test opaque_dct_payload_is_not_claimed_to_be_a_valid_jpeg ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

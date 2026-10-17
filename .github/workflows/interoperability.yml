@@ -125,6 +125,11 @@ jobs:
           cargo test --locked -p oxidize-pdf --features external-images
           --test issue_736_png_depth_test -- --include-ignored
 
+      - name: Verify inline image grammar and independently decoded PNG samples
+        run: >-
+          cargo test --locked -p oxidize-pdf --features external-images
+          --test issue_734_inline_images_test
+
       - name: Verify streaming writer object graph and xref with qpdf
         run: >-
           cargo test --locked -p oxidize-pdf --features performance

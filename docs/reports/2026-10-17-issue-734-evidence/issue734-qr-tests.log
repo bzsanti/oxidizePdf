@@ -1,0 +1,53 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_734_inline_images_test.rs            8     93
+
+--- Worst Offenders ---
+  one_line_dictionary_has_real_dimensions_and_png_samples (oxidize-pdf-core/tests/issue_734_inline_images_test.rs:53) - Score: 90
+    - Test 'one_line_dictionary_has_real_dimensions_and_png_samples' does not call any production code
+  binary_ei_and_whitespace_pixels_are_not_delimiters (oxidize-pdf-core/tests/issue_734_inline_images_test.rs:62) - Score: 90
+    - Test 'binary_ei_and_whitespace_pixels_are_not_delimiters' does not call any production code
+  text_comments_and_names_do_not_create_images (oxidize-pdf-core/tests/issue_734_inline_images_test.rs:71) - Score: 90
+    - Test 'text_comments_and_names_do_not_create_images' does not call any production code
+  flate_and_ascii_hex_filters_decode_to_real_png (oxidize-pdf-core/tests/issue_734_inline_images_test.rs:79) - Score: 90
+    - Test 'flate_and_ascii_hex_filters_decode_to_real_png' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'flate_and_ascii_hex_filters_decode_to_real_png' uses .unwrap() which silently discards error information
+  unknown_filter_is_explicit_raw_never_fake_png (oxidize-pdf-core/tests/issue_734_inline_images_test.rs:104) - Score: 90
+    i Test 'unknown_filter_is_explicit_raw_never_fake_png' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unknown_filter_is_explicit_raw_never_fake_png' has multiple assertions without diagnostic messages
+    i Test 'unknown_filter_is_explicit_raw_never_fake_png' uses .unwrap() which silently discards error information
+    - Test 'unknown_filter_is_explicit_raw_never_fake_png' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/issue_734_inline_images_test.rs:
+  one_line_dictionary_has_real_dimensions_and_png_samples (line 53) - Score: 90
+    - Test 'one_line_dictionary_has_real_dimensions_and_png_samples' does not call any production code
+  binary_ei_and_whitespace_pixels_are_not_delimiters (line 62) - Score: 90
+    - Test 'binary_ei_and_whitespace_pixels_are_not_delimiters' does not call any production code
+  text_comments_and_names_do_not_create_images (line 71) - Score: 90
+    - Test 'text_comments_and_names_do_not_create_images' does not call any production code
+  flate_and_ascii_hex_filters_decode_to_real_png (line 79) - Score: 90
+    - Test 'flate_and_ascii_hex_filters_decode_to_real_png' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'flate_and_ascii_hex_filters_decode_to_real_png' uses .unwrap() which silently discards error information
+  unknown_filter_is_explicit_raw_never_fake_png (line 104) - Score: 90
+    i Test 'unknown_filter_is_explicit_raw_never_fake_png' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unknown_filter_is_explicit_raw_never_fake_png' has multiple assertions without diagnostic messages
+    i Test 'unknown_filter_is_explicit_raw_never_fake_png' uses .unwrap() which silently discards error information
+    - Test 'unknown_filter_is_explicit_raw_never_fake_png' does not call any production code
+  empty_content_and_incomplete_metadata_controls (line 112) - Score: 90
+    i Test 'empty_content_and_incomplete_metadata_controls' has multiple assertions without diagnostic messages
+    i Test 'empty_content_and_incomplete_metadata_controls' uses .unwrap() which silently discards error information
+    - Test 'empty_content_and_incomplete_metadata_controls' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
