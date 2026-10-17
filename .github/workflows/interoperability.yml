@@ -96,6 +96,11 @@ jobs:
           independent_xml_reader_checks_every_serialized_property
           -- --ignored --exact
 
+      - name: Verify packed grayscale image samples and source PDFs
+        run: >-
+          cargo test --locked -p oxidize-pdf --features external-images
+          --test issue_732_packed_gray_test -- --include-ignored
+
       - name: Verify streaming writer object graph and xref with qpdf
         run: >-
           cargo test --locked -p oxidize-pdf --features performance

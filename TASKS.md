@@ -1,3 +1,10 @@
+### #732 — muestras grises empaquetadas — 2026-10-17
+
+Issue: #732 — fix(images): decode packed grayscale samples during image extraction — https://github.com/bzsanti/oxidizePdf/issues/732
+Estado: activa, reproducción. Prioridad: P1. Responsable: Codex.
+Cierre: extracción 1/2/4 bits con stride por fila y muestras correctas, control 8 bits, truncamiento/límites y PNG decodificado independientemente, QR/seguridad y CI antes de merge.
+Última validación: OPEN y cuerpo confirmados; convert_raw_image_data_to_png trata todo bpc<=8 como byte por muestra. Siguiente acción: contratos RED y reutilizar desempaquetado con validación previa, escalar a gris de 8 bits. ImageMask/Decode no se declaran corregidos.
+
 ### #763 — propiedades XMP y escape XML — 2026-10-17
 
 Issue: #763 — fix(pdfa): preserve XMP properties and validate/escape XML in metadata round trips — https://github.com/bzsanti/oxidizePdf/issues/763
@@ -1505,7 +1512,11 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.
 
 
+Validación #732: RED cinco fallos/cuatro controles; QR encontró conversión 257→1, demostrada RED y corregida. Final diez contratos nuevos (PNG independiente/qpdf/alpha), doce integración existentes y 63 unidades PASS. Clippy all-targets -D warnings, formato/diff-check y QR/Kripteia completos. Informe docs/reports/2026-10-17-issue-732-review.md. Siguiente acción: publicar PR a develop y esperar CI verde antes de merge; continuar #733 sobre la corrección revisada.
+
 Validación #763: commit de código fe4631a5; RED 5 FAIL/2 controles PASS. Final 11 contratos nuevos (Python independiente incluido), 12 #741, 15 PDF/A integración, 55 validator y 3 comprimidos PASS; 70 unidades PDF/A PASS. Clippy all-targets -D warnings, formato/diff-check y QR/Kripteia calidad/seguridad completos sin hallazgos nuevos. Informe docs/reports/2026-10-17-issue-763-review.md. Siguiente acción: integrar #741 tras CI verde; rebasar #763 sobre develop y publicar su PR propio, comprobar CI y fusionar. Bundle y fuentes conservados fuera de /tmp.
 
 
 Integración #741 verificada: PR #769 MERGED a develop, commit 075b5f7b532212afcdc5c681a53ce4531785a537, CI 30 SUCCESS/2 SKIPPED; issue cerrada explícitamente. #763 incorpora ese develop sin conflictos y sus hashes de código/tests/workflow coinciden con los del QR; evidencia reutilizada. Siguiente acción #763: publicar PR propio contra develop y fusionar únicamente tras CI verde.
+
+Integración PR #775: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos limitados a seguimiento y pasos CI resueltos conservando ambos. Fuentes Rust de la corrección sin cambios; nuevo CI obligatorio sobre el merge de develop b3f2a58e. Siguiente acción: fusionar a develop al quedar verde, según autorización del usuario. #741/#763 ya integradas (PR #769/#772).
