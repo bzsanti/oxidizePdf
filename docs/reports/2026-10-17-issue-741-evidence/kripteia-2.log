@@ -1,0 +1,57 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 10 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs          10     91
+
+--- Worst Offenders ---
+  malformed_xml_and_entity_resolution_fail_with_typed_errors (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:78) - Score: 80
+    - Test 'malformed_xml_and_entity_resolution_fail_with_typed_errors' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+    - Test 'malformed_xml_and_entity_resolution_fail_with_typed_errors' does not call any production code
+  conflicts_and_nonliteral_identifiers_are_explicit_errors (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:95) - Score: 80
+    - Test 'conflicts_and_nonliteral_identifiers_are_explicit_errors' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'conflicts_and_nonliteral_identifiers_are_explicit_errors' does not call any production code
+  independent_xml_reader_agrees_on_identifier_forms (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:162) - Score: 80
+    - Test 'independent_xml_reader_agrees_on_identifier_forms' is marked as #[ignore]
+    i Test 'independent_xml_reader_agrees_on_identifier_forms' has multiple assertions without diagnostic messages
+    i Test 'independent_xml_reader_agrees_on_identifier_forms' uses .unwrap() which silently discards error information
+  attributes_elements_and_mixed_forms_are_equivalent (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:9) - Score: 90
+    - Test 'attributes_elements_and_mixed_forms_are_equivalent' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  malformed_or_unsupported_identifier_is_not_missing (oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:45) - Score: 90
+    - Test 'malformed_or_unsupported_identifier_is_not_missing' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+
+--- Details ---
+oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:
+  attributes_elements_and_mixed_forms_are_equivalent (line 9) - Score: 90
+    - Test 'attributes_elements_and_mixed_forms_are_equivalent' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  namespace_identity_controls_aliases_default_and_rebinding (line 24) - Score: 100
+    i Test 'namespace_identity_controls_aliases_default_and_rebinding' has multiple assertions without diagnostic messages
+  malformed_or_unsupported_identifier_is_not_missing (line 45) - Score: 90
+    - Test 'malformed_or_unsupported_identifier_is_not_missing' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  entities_cdata_and_optional_identifier_fields_are_decoded (line 67) - Score: 90
+    - Test 'entities_cdata_and_optional_identifier_fields_are_decoded' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  malformed_xml_and_entity_resolution_fail_with_typed_errors (line 78) - Score: 80
+    - Test 'malformed_xml_and_entity_resolution_fail_with_typed_errors' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+    - Test 'malformed_xml_and_entity_resolution_fail_with_typed_errors' does not call any production code
+  conflicts_and_nonliteral_identifiers_are_explicit_errors (line 95) - Score: 80
+    - Test 'conflicts_and_nonliteral_identifiers_are_explicit_errors' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'conflicts_and_nonliteral_identifiers_are_explicit_errors' does not call any production code
+  multiple_descriptions_do_not_combine_different_subjects (line 126) - Score: 100
+    i Test 'multiple_descriptions_do_not_combine_different_subjects' has multiple assertions without diagnostic messages
+  xml_size_and_node_limits_are_explicit (line 146) - Score: 100
+    i Test 'xml_size_and_node_limits_are_explicit' has multiple assertions without diagnostic messages
+  independent_xml_reader_agrees_on_identifier_forms (line 162) - Score: 80
+    - Test 'independent_xml_reader_agrees_on_identifier_forms' is marked as #[ignore]
+    i Test 'independent_xml_reader_agrees_on_identifier_forms' has multiple assertions without diagnostic messages
+    i Test 'independent_xml_reader_agrees_on_identifier_forms' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
