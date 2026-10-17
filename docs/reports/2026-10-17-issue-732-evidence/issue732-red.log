@@ -1,0 +1,54 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue732/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 31.52s
+     Running tests/issue_732_packed_gray_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_732_packed_gray_test-d76bc9c65fe05f95)
+
+running 9 tests
+test one_bit_16_by_16_samples_decode_independently ... FAILED
+test one_bit_row_padding_does_not_become_pixels ... FAILED
+test four_bit_row_padding_and_scale ... FAILED
+test eight_bit_control ... ok
+test pixel_limit_is_checked_before_unpacking ... ok
+test packed_gray_preserves_separate_soft_mask ... FAILED
+test truncated_packed_rows_are_rejected ... ok
+test two_bit_row_padding_and_scale ... FAILED
+test independent_qpdf_accepts_source_documents ... ok
+
+failures:
+
+---- one_bit_16_by_16_samples_decode_independently stdout ----
+
+thread 'one_bit_16_by_16_samples_decode_independently' (440) panicked at oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:50:10:
+called `Result::unwrap()` on an `Err` value: Operation(ParseError("Image data too small: expected 256, got 32"))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- one_bit_row_padding_does_not_become_pixels stdout ----
+
+thread 'one_bit_row_padding_does_not_become_pixels' (441) panicked at oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:50:10:
+called `Result::unwrap()` on an `Err` value: Operation(ParseError("Image data too small: expected 6, got 2"))
+
+---- four_bit_row_padding_and_scale stdout ----
+
+thread 'four_bit_row_padding_and_scale' (438) panicked at oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:50:10:
+called `Result::unwrap()` on an `Err` value: Operation(ParseError("Image data too small: expected 6, got 4"))
+
+---- packed_gray_preserves_separate_soft_mask stdout ----
+
+thread 'packed_gray_preserves_separate_soft_mask' (442) panicked at oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:111:10:
+called `Result::unwrap()` on an `Err` value: Operation(ParseError("Image data too small: expected 2, got 1"))
+
+---- two_bit_row_padding_and_scale stdout ----
+
+thread 'two_bit_row_padding_and_scale' (446) panicked at oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:50:10:
+called `Result::unwrap()` on an `Err` value: Operation(ParseError("Image data too small: expected 6, got 2"))
+
+
+failures:
+    four_bit_row_padding_and_scale
+    one_bit_16_by_16_samples_decode_independently
+    one_bit_row_padding_does_not_become_pixels
+    packed_gray_preserves_separate_soft_mask
+    two_bit_row_padding_and_scale
+
+test result: FAILED. 4 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_732_packed_gray_test`
