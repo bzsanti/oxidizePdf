@@ -1,0 +1,17 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue731/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.75s
+     Running tests/issue_731_simple_encoding_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_731_simple_encoding_test-2ade9632ae146142)
+
+running 9 tests
+test explicit_standard_encoding_in_both_consumers ... ok
+test symbolic_flag_and_invalid_subset_prefix_do_not_infer_latin_encoding ... ok
+test builtin_symbol_fonts_and_explicit_override ... ok
+test embedded_program_is_not_replaced_by_standard14_name ... ok
+test supported_named_encodings_agree ... ok
+test symbolic_truetype_is_not_assigned_standard_encoding ... ok
+test differences_and_tounicode_keep_precedence ... ok
+test independent_poppler_standard_encoding_control ... ok
+test implicit_standard14_encoding_in_both_consumers ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

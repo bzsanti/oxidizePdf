@@ -1,0 +1,35 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue731/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 33.99s
+     Running tests/issue_731_simple_encoding_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_731_simple_encoding_test-64a82333838f43c2)
+
+running 9 tests
+test symbolic_flag_and_invalid_subset_prefix_do_not_infer_latin_encoding ... ok
+test explicit_standard_encoding_in_both_consumers ... ok
+test symbolic_truetype_is_not_assigned_standard_encoding ... ok
+test builtin_symbol_fonts_and_explicit_override ... ok
+test embedded_program_is_not_replaced_by_standard14_name ... ok
+test supported_named_encodings_agree ... ok
+test differences_and_tounicode_keep_precedence ... ok
+test implicit_standard14_encoding_in_both_consumers ... ok
+test independent_poppler_standard_encoding_control ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/issue_741_xmp_identifier_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_741_xmp_identifier_test-5d0627da890551b5)
+
+running 12 tests
+test malformed_xml_and_dtds_are_typed_errors ... ok
+test entity_and_cdata_values_are_decoded ... ok
+test nesting_is_bounded_before_tree_recursion ... ok
+test conflicting_and_nonliteral_properties_are_rejected ... ok
+test equivalent_attribute_element_and_mixed_forms ... ok
+test xml_base_subject_resolution_is_not_silently_ignored ... ok
+test serialized_identifier_roundtrips ... ok
+test descriptions_must_describe_the_same_subject ... ok
+test independent_xml_reader_agrees_on_identifier_forms ... ok
+test namespace_identity_and_default_namespace ... ok
+test missing_is_distinct_from_partial_invalid_and_unsupported ... ok
+test input_size_and_node_limits ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.23s
+
