@@ -1,0 +1,70 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 92 | Tests: 11 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs           11     92
+
+--- Worst Offenders ---
+  independent_xml_reader_checks_every_serialized_property (oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:161) - Score: 60
+    - Test 'independent_xml_reader_checks_every_serialized_property' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'independent_xml_reader_checks_every_serialized_property' is marked as #[ignore]
+    i Test 'independent_xml_reader_checks_every_serialized_property' has multiple assertions without diagnostic messages
+    i Test 'independent_xml_reader_checks_every_serialized_property' uses .unwrap() which silently discards error information
+    - Test 'independent_xml_reader_checks_every_serialized_property' has low assert-to-setup ratio (16%): 6 asserts vs 32 setup lines
+  conflicting_nonliteral_and_cross_subject_properties_are_errors (oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:137) - Score: 80
+    - Test 'conflicting_nonliteral_and_cross_subject_properties_are_errors' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'conflicting_nonliteral_and_cross_subject_properties_are_errors' does not call any production code
+  all_supported_fields_preserve_unicode_entities_and_lists (oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:4) - Score: 90
+    - Test 'all_supported_fields_preserve_unicode_entities_and_lists' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'all_supported_fields_preserve_unicode_entities_and_lists' has multiple assertions without diagnostic messages
+    i Test 'all_supported_fields_preserve_unicode_entities_and_lists' uses .unwrap() which silently discards error information
+  malformed_xml_is_a_typed_error (oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:101) - Score: 90
+    - Test 'malformed_xml_is_a_typed_error' does not call any production code
+  xml_forbidden_characters_are_rejected_without_silent_text_loss (oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:149) - Score: 90
+    - Test 'xml_forbidden_characters_are_rejected_without_silent_text_loss' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:
+  all_supported_fields_preserve_unicode_entities_and_lists (line 4) - Score: 90
+    - Test 'all_supported_fields_preserve_unicode_entities_and_lists' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'all_supported_fields_preserve_unicode_entities_and_lists' has multiple assertions without diagnostic messages
+    i Test 'all_supported_fields_preserve_unicode_entities_and_lists' uses .unwrap() which silently discards error information
+  namespace_aliases_and_wrong_uri_controls (line 47) - Score: 100
+    i Test 'namespace_aliases_and_wrong_uri_controls' has multiple assertions without diagnostic messages
+    i Test 'namespace_aliases_and_wrong_uri_controls' uses .unwrap() which silently discards error information
+  empty_values_and_list_entries_remain_present (line 70) - Score: 100
+    i Test 'empty_values_and_list_entries_remain_present' has multiple assertions without diagnostic messages
+    i Test 'empty_values_and_list_entries_remain_present' uses .unwrap() which silently discards error information
+  amendment_cannot_inject_properties (line 83) - Score: 100
+    i Test 'amendment_cannot_inject_properties' has multiple assertions without diagnostic messages
+    i Test 'amendment_cannot_inject_properties' uses .unwrap() which silently discards error information
+  malformed_xml_is_a_typed_error (line 101) - Score: 90
+    - Test 'malformed_xml_is_a_typed_error' does not call any production code
+  ordinary_unicode_identifier_control (line 108) - Score: 100
+    i Test 'ordinary_unicode_identifier_control' has multiple assertions without diagnostic messages
+    i Test 'ordinary_unicode_identifier_control' uses .unwrap() which silently discards error information
+  attributes_default_namespaces_cdata_and_language_alternatives (line 125) - Score: 100
+    i Test 'attributes_default_namespaces_cdata_and_language_alternatives' has multiple assertions without diagnostic messages
+    i Test 'attributes_default_namespaces_cdata_and_language_alternatives' uses .unwrap() which silently discards error information
+  conflicting_nonliteral_and_cross_subject_properties_are_errors (line 137) - Score: 80
+    - Test 'conflicting_nonliteral_and_cross_subject_properties_are_errors' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'conflicting_nonliteral_and_cross_subject_properties_are_errors' does not call any production code
+  xml_forbidden_characters_are_rejected_without_silent_text_loss (line 149) - Score: 90
+    - Test 'xml_forbidden_characters_are_rejected_without_silent_text_loss' does not call any production code
+  independent_xml_reader_checks_every_serialized_property (line 161) - Score: 60
+    - Test 'independent_xml_reader_checks_every_serialized_property' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'independent_xml_reader_checks_every_serialized_property' is marked as #[ignore]
+    i Test 'independent_xml_reader_checks_every_serialized_property' has multiple assertions without diagnostic messages
+    i Test 'independent_xml_reader_checks_every_serialized_property' uses .unwrap() which silently discards error information
+    - Test 'independent_xml_reader_checks_every_serialized_property' has low assert-to-setup ratio (16%): 6 asserts vs 32 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

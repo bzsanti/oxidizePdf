@@ -1,0 +1,11 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue763/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 55.25s
+     Running tests/issue_346_pdfa_metadata_decode_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_346_pdfa_metadata_decode_test-83de9dbe727740fa)
+
+running 3 tests
+test undecodable_metadata_stream_reports_missing_without_erroring ... ok
+test flate_compressed_metadata_does_not_spuriously_report_missing_xmp ... ok
+test flate_compressed_metadata_validates_like_uncompressed ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
