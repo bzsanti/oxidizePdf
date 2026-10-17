@@ -1,0 +1,97 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue741/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 46.62s
+     Running tests/issue_741_xmp_identifier_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_741_xmp_identifier_test-5d0627da890551b5)
+
+running 7 tests
+test malformed_xml_and_entity_resolution_fail_with_typed_errors ... ok
+test entities_cdata_and_optional_identifier_fields_are_decoded ... ok
+test conventional_element_and_serialization_control ... ok
+test conflicts_and_nonliteral_identifiers_are_explicit_errors ... ok
+test attributes_elements_and_mixed_forms_are_equivalent ... ok
+test namespace_identity_controls_aliases_default_and_rebinding ... ok
+test malformed_or_unsupported_identifier_is_not_missing ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/pdfa_integration_test.rs (/tmp/oxidize-issue724/target/debug/deps/pdfa_integration_test-f48afe8385eb6a99)
+
+running 15 tests
+test test_pdfa_level_comparison ... ok
+test test_pdfa_level_iso_references ... ok
+test test_pdfa_level_parsing ... ok
+test test_validation_error_messages ... ok
+test test_validation_result_display ... ok
+test test_validation_warning_types ... ok
+test test_validator_collect_all_errors_mode ... ok
+test test_validator_configuration ... ok
+test test_xmp_pdfa_identifier_rdf_generation ... ok
+test test_pdfa_level_pdf_version_requirements ... ok
+test test_pdfa_2b_validation_allows_pdf17 ... ok
+test test_minimal_pdf_validation ... ok
+test test_xmp_metadata_parsing ... ok
+test test_pdfa_1b_stricter_than_2b ... ok
+test test_all_pdfa_levels_validate_without_panic ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/pdfa_validator_coverage_test.rs (/tmp/oxidize-issue724/target/debug/deps/pdfa_validator_coverage_test-e443014afcb1e17a)
+
+running 55 tests
+test a2b_rejects_pdf_1_3 ... ok
+test a2b_accepts_pdf_1_7_version ... ok
+test a1b_accepts_pdf_1_4_version ... ok
+test a1b_rejects_pdf_1_7 ... ok
+test additional_actions_without_javascript_is_not_flagged ... ok
+test additional_actions_via_reference_is_flagged ... ok
+test colorspace_dict_via_reference_is_checked ... ok
+test colorspace_value_via_reference_is_resolved ... ok
+test conforming_extgstate_has_no_transparency_error ... ok
+test embedded_files_allowed_in_pdfa_3 ... ok
+test device_rgb_without_output_intent_is_invalid ... ok
+test extgstate_fill_alpha_below_one_is_transparency ... ok
+test embedded_files_forbidden_in_pdfa_1 ... ok
+test device_rgb_with_output_intent_dest_profile_is_valid ... ok
+test extgstate_non_normal_blend_mode_is_transparency ... ok
+test extgstate_stroke_alpha_below_one_is_transparency ... ok
+test flate_content_stream_has_no_lzw_error ... ok
+test extgstate_soft_mask_is_transparency ... ok
+test extgstate_via_reference_is_checked ... ok
+test font_descriptor_with_fontfile_is_embedded ... ok
+test font_resources_via_reference_are_checked ... ok
+test dangling_metadata_reference_denies_conformance ... ok
+test font_descriptor_without_fontfile_is_not_embedded ... ok
+test font_without_descriptor_is_not_embedded ... ok
+test icc_based_array_colour_space_is_not_device_dependent ... ok
+test javascript_in_additional_actions_is_flagged ... ok
+test javascript_in_names_tree_is_flagged ... ok
+test javascript_in_names_tree_via_reference_is_flagged ... ok
+test javascript_in_open_action_is_flagged ... ok
+test image_xobject_with_smask_is_flagged ... ok
+test image_xobject_device_cmyk_without_output_intent_is_invalid ... ok
+test javascript_in_open_action_via_reference_is_flagged ... ok
+test lzw_in_content_stream_is_flagged ... ok
+test lzw_is_allowed_in_pdfa_2 ... ok
+test lzw_in_filter_array_is_flagged ... ok
+test level_a_type3_without_tounicode_lacks_unicode_mapping ... ok
+test lzw_in_xobject_stream_is_flagged ... ok
+test level_a_type0_identity_encoding_without_tounicode_passes ... ok
+test metadata_missing_is_flagged ... ok
+test metadata_non_stream_object_is_flagged ... ok
+test open_action_gotoe_is_flagged_external ... ok
+test non_javascript_open_action_is_not_flagged_as_js ... ok
+test open_action_gotor_is_flagged_external ... ok
+test open_action_launch_via_reference_is_flagged_external ... ok
+test output_intent_pdfa_subtype_satisfies_device_colour ... ok
+test output_intents_via_reference_is_resolved ... ok
+test transparency_is_allowed_in_pdfa_2 ... ok
+test type0_descendant_without_fontfile_is_not_embedded ... ok
+test type0_font_without_descendants_is_not_embedded ... ok
+test type0_descendant_with_fontfile_is_embedded ... ok
+test xobject_transparency_group_is_flagged ... ok
+test metadata_conformance_mismatch_is_flagged ... ok
+test metadata_matching_identifier_passes ... ok
+test metadata_present_without_pdfa_identifier_is_flagged ... ok
+test metadata_part_mismatch_is_flagged ... ok
+
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+

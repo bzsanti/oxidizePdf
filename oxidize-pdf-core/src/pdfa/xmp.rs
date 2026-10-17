@@ -2,6 +2,7 @@
 
 use super::error::{PdfAError, PdfAResult};
 use super::types::PdfAConformance;
+use super::xmp_packet;
 use regex::Regex;
 use std::str::FromStr;
 
@@ -83,8 +84,13 @@ impl XmpMetadata {
         Self::default()
     }
 
-    /// Parse XMP metadata from XML string
+    /// Parse a well-formed, namespace-qualified XMP XML packet.
+    ///
+    /// Input is limited to 16 MiB, 100,000 nodes and 128 nesting levels.
+    /// DTDs and external entities are disabled. Invalid, incomplete or unsupported
+    /// PDF/A identifiers return an error, including unsupported RDF subject resolution.
     pub fn parse(xml: &str) -> PdfAResult<Self> {
+        let document = xmp_packet::parse(xml)?;
         let mut metadata = Self::new();
 
         // Parse title
@@ -122,20 +128,7 @@ impl XmpMetadata {
             metadata.creator_tool = Some(tool);
         }
 
-        // Parse PDF/A identification
-        if let (Some(part_str), Some(conf_str)) = (
-            Self::extract_simple_value(xml, "pdfaid:part"),
-            Self::extract_simple_value(xml, "pdfaid:conformance"),
-        ) {
-            if let (Ok(part), Ok(conformance)) =
-                (part_str.parse::<u8>(), PdfAConformance::from_str(&conf_str))
-            {
-                let mut pdfa_id = XmpPdfAIdentifier::new(part, conformance);
-                pdfa_id.amd = Self::extract_simple_value(xml, "pdfaid:amd");
-                pdfa_id.corr = Self::extract_simple_value(xml, "pdfaid:corr");
-                metadata.pdfa_id = Some(pdfa_id);
-            }
-        }
+        metadata.pdfa_id = parse_identifier(&document)?;
 
         // Parse document/instance IDs
         metadata.document_id = Self::extract_simple_value(xml, "xmpMM:DocumentID");
@@ -306,9 +299,88 @@ impl XmpMetadata {
     }
 }
 
+fn parse_identifier(document: &roxmltree::Document<'_>) -> PdfAResult<Option<XmpPdfAIdentifier>> {
+    let mut values = std::collections::BTreeMap::<String, String>::new();
+    let mut subject: Option<String> = None;
+    let mut check_subject = |node: roxmltree::Node<'_, '_>| -> PdfAResult<()> {
+        xmp_packet::require_document_subject(node)?;
+        let current = node.attribute((xmp_packet::RDF, "about")).unwrap_or("");
+        if subject
+            .as_deref()
+            .is_some_and(|previous| previous != current)
+        {
+            return Err(xmp_packet::invalid(
+                "PDF/A properties describe different RDF subjects",
+            ));
+        }
+        subject = Some(current.to_owned());
+        Ok(())
+    };
+    let mut record = |name: &str, value: String| -> PdfAResult<()> {
+        if let Some(previous) = values.get(name) {
+            if previous != &value {
+                return Err(xmp_packet::invalid(format!("conflicting PDF/A {name}")));
+            }
+        } else {
+            values.insert(name.to_owned(), value);
+        }
+        Ok(())
+    };
+    let known = |namespace, name| {
+        namespace == Some(xmp_packet::PDFA_ID)
+            && matches!(name, "part" | "conformance" | "amd" | "corr")
+    };
+    for node in document.descendants().filter(|n| n.is_element()) {
+        if known(node.tag_name().namespace(), node.tag_name().name()) {
+            let parent = node
+                .parent()
+                .ok_or_else(|| xmp_packet::invalid("missing RDF description"))?;
+            check_subject(parent)?;
+            record(node.tag_name().name(), xmp_packet::literal(node)?)?;
+        }
+        for attribute in node.attributes() {
+            if known(attribute.namespace(), attribute.name()) {
+                check_subject(node)?;
+                record(attribute.name(), attribute.value().to_owned())?;
+            }
+        }
+    }
+    if values.is_empty() {
+        return Ok(None);
+    }
+    let part = values
+        .get("part")
+        .ok_or_else(|| xmp_packet::invalid("missing PDF/A part"))?
+        .trim()
+        .parse::<u8>()
+        .map_err(|_| xmp_packet::invalid("invalid PDF/A part"))?;
+    let conformance = PdfAConformance::from_str(
+        values
+            .get("conformance")
+            .ok_or_else(|| xmp_packet::invalid("missing PDF/A conformance"))?
+            .trim(),
+    )
+    .map_err(xmp_packet::invalid)?;
+    if !(1..=3).contains(&part) || (part == 1 && conformance == PdfAConformance::U) {
+        return Err(xmp_packet::invalid("unsupported PDF/A part/conformance"));
+    }
+    Ok(Some(XmpPdfAIdentifier {
+        part,
+        conformance,
+        amd: values.remove("amd"),
+        corr: values.remove("corr"),
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn packet(properties: &str) -> String {
+        format!(
+            r#"<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">{properties}</rdf:Description></rdf:RDF>"#
+        )
+    }
 
     #[test]
     fn test_xmp_pdfa_identifier_new() {
@@ -338,7 +410,7 @@ mod tests {
     #[test]
     fn test_xmp_metadata_parse_title() {
         let xml = r#"<dc:title><rdf:Alt><rdf:li xml:lang="x-default">Test Title</rdf:li></rdf:Alt></dc:title>"#;
-        let metadata = XmpMetadata::parse(xml).unwrap();
+        let metadata = XmpMetadata::parse(&packet(xml)).unwrap();
         assert_eq!(metadata.title.as_deref(), Some("Test Title"));
     }
 
@@ -348,7 +420,7 @@ mod tests {
             <pdfaid:part>1</pdfaid:part>
             <pdfaid:conformance>B</pdfaid:conformance>
         "#;
-        let metadata = XmpMetadata::parse(xml).unwrap();
+        let metadata = XmpMetadata::parse(&packet(xml)).unwrap();
         assert!(metadata.pdfa_id.is_some());
         let pdfa_id = metadata.pdfa_id.unwrap();
         assert_eq!(pdfa_id.part, 1);
@@ -365,7 +437,7 @@ mod tests {
                 </rdf:Seq>
             </dc:creator>
         "#;
-        let metadata = XmpMetadata::parse(xml).unwrap();
+        let metadata = XmpMetadata::parse(&packet(xml)).unwrap();
         assert!(metadata.creator.is_some());
         let creators = metadata.creator.unwrap();
         assert_eq!(creators.len(), 2);
@@ -420,7 +492,7 @@ mod tests {
             <xmp:CreateDate>2024-01-15T10:30:00Z</xmp:CreateDate>
             <xmp:ModifyDate>2024-01-16T14:00:00Z</xmp:ModifyDate>
         "#;
-        let metadata = XmpMetadata::parse(xml).unwrap();
+        let metadata = XmpMetadata::parse(&packet(xml)).unwrap();
         assert_eq!(
             metadata.create_date.as_deref(),
             Some("2024-01-15T10:30:00Z")
@@ -452,7 +524,7 @@ mod tests {
     #[test]
     fn test_xmp_metadata_parse_simple_tag() {
         let xml = r#"<xmp:CreatorTool>oxidize-pdf 1.6.0</xmp:CreatorTool>"#;
-        let metadata = XmpMetadata::parse(xml).unwrap();
+        let metadata = XmpMetadata::parse(&packet(xml)).unwrap();
         assert_eq!(metadata.creator_tool.as_deref(), Some("oxidize-pdf 1.6.0"));
     }
 

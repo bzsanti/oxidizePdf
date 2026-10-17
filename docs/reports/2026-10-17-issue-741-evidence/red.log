@@ -1,0 +1,65 @@
+   Compiling roxmltree v0.21.1
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue741/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 30.25s
+     Running tests/issue_741_xmp_identifier_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_741_xmp_identifier_test-5d0627da890551b5)
+
+running 7 tests
+test entities_cdata_and_optional_identifier_fields_are_decoded ... FAILED
+test malformed_xml_and_entity_resolution_fail_with_typed_errors ... FAILED
+test conflicts_and_nonliteral_identifiers_are_explicit_errors ... FAILED
+test attributes_elements_and_mixed_forms_are_equivalent ... FAILED
+test namespace_identity_controls_aliases_default_and_rebinding ... FAILED
+test malformed_or_unsupported_identifier_is_not_missing ... FAILED
+test conventional_element_and_serialization_control ... ok
+
+failures:
+
+---- entities_cdata_and_optional_identifier_fields_are_decoded stdout ----
+
+thread 'entities_cdata_and_optional_identifier_fields_are_decoded' (360) panicked at oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:75:5:
+assertion `left == right` failed
+  left: None
+ right: Some(XmpPdfAIdentifier { part: 2, conformance: B, amd: Some("a&b"), corr: Some("c<d") })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- malformed_xml_and_entity_resolution_fail_with_typed_errors stdout ----
+
+thread 'malformed_xml_and_entity_resolution_fail_with_typed_errors' (362) panicked at oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:88:9:
+
+
+---- conflicts_and_nonliteral_identifiers_are_explicit_errors stdout ----
+
+thread 'conflicts_and_nonliteral_identifiers_are_explicit_errors' (358) panicked at oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:107:9:
+<x:xmpmeta xmlns:x="adobe:ns:meta/"><r:RDF xmlns:r="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><r:Description xmlns:p="http://www.aiim.org/pdfa/ns/id/" p:part="2" p:conformance="B"><p:part>3</p:part></r:Description></r:RDF></x:xmpmeta>
+
+---- attributes_elements_and_mixed_forms_are_equivalent stdout ----
+
+thread 'attributes_elements_and_mixed_forms_are_equivalent' (357) panicked at oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:16:9:
+assertion `left == right` failed: <x:xmpmeta xmlns:x="adobe:ns:meta/"><r:RDF xmlns:r="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><r:Description xmlns:p="http://www.aiim.org/pdfa/ns/id/" p:part="2" p:conformance="B"></r:Description></r:RDF></x:xmpmeta>
+  left: None
+ right: Some(XmpPdfAIdentifier { part: 2, conformance: B, amd: None, corr: None })
+
+---- namespace_identity_controls_aliases_default_and_rebinding stdout ----
+
+thread 'namespace_identity_controls_aliases_default_and_rebinding' (363) panicked at oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:29:5:
+assertion `left == right` failed
+  left: None
+ right: Some(XmpPdfAIdentifier { part: 3, conformance: U, amd: None, corr: None })
+
+---- malformed_or_unsupported_identifier_is_not_missing stdout ----
+
+thread 'malformed_or_unsupported_identifier_is_not_missing' (361) panicked at oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:56:9:
+<x:xmpmeta xmlns:x="adobe:ns:meta/"><r:RDF xmlns:r="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><r:Description xmlns:p="http://www.aiim.org/pdfa/ns/id/" p:part="2"></r:Description></r:RDF></x:xmpmeta>
+
+
+failures:
+    attributes_elements_and_mixed_forms_are_equivalent
+    conflicts_and_nonliteral_identifiers_are_explicit_errors
+    entities_cdata_and_optional_identifier_fields_are_decoded
+    malformed_or_unsupported_identifier_is_not_missing
+    malformed_xml_and_entity_resolution_fail_with_typed_errors
+    namespace_identity_controls_aliases_default_and_rebinding
+
+test result: FAILED. 1 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_741_xmp_identifier_test`
