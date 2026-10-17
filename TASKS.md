@@ -1,3 +1,11 @@
+## #741 — XMP namespace-aware PDF/A identifiers — 2026-10-17
+
+Issue: #741 — fix(pdfa): recognize RDF attribute-form PDF/A identifiers — https://github.com/bzsanti/oxidizePdf/issues/741
+Estado: implementación reconstruida; validación final en curso. Prioridad: P1. Responsable: Codex.
+Cierre: atributos/elementos equivalentes por URI; errores tipados para metadatos inválidos/no soportados; límites XML, regresión, QR y CI verde antes del merge a develop.
+Última validación: 82 integración PASS, incluido Python independiente. QR manual y Kripteia calidad/seguridad completos sin nuevos hallazgos. Unidades PDF/A, consumidor #346 y Clippy pendientes. Evidencia histórica RED preservada; reconstrucción guardada también fuera de /tmp.
+Siguiente acción: terminar validación, publicar PR con informe/evidencia, verificar CI y fusionar según autorización del usuario. Después #763 cubre las demás propiedades y el escape de salida. No es certificación completa PDF/A ni publicación de release.
+
 ## Corrección #757 y evaluación de release — 2026-10-16
 
 - Issue: #757 — Text extraction runs out of memory on large tagged PDFs (structure ActualText resolution, since 4.5.1) — https://github.com/bzsanti/oxidizePdf/issues/757
