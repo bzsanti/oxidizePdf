@@ -1,0 +1,51 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue732/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1.12s
+     Running tests/issue_733_cmyk_extraction_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_733_cmyk_extraction_test-f28decc8bd2430cb)
+
+running 6 tests
+test unsupported_cmyk_depth_and_indexed_base_are_explicit_errors ... FAILED
+test soft_mask_is_alpha_and_black_ink_is_not ... FAILED
+test intermediate_device_values_are_converted_consistently ... FAILED
+test cyan_black_white_and_red_are_opaque ... FAILED
+test truncated_cmyk_data_is_rejected ... ok
+test legitimate_rgb_alpha_control ... ok
+
+failures:
+
+---- unsupported_cmyk_depth_and_indexed_base_are_explicit_errors stdout ----
+
+thread 'unsupported_cmyk_depth_and_indexed_base_are_explicit_errors' (171) panicked at oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:53:14:
+called `Result::unwrap()` on an `Err` value: Decoding(DecodingError { format: Exact(Png), underlying: Some(Format(FormatError { inner: NoMoreImageData })) })
+
+---- soft_mask_is_alpha_and_black_ink_is_not stdout ----
+
+thread 'soft_mask_is_alpha_and_black_ink_is_not' (169) panicked at oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:81:5:
+assertion `left == right` failed
+  left: [255, 0, 0, 0, 0, 0, 0, 255]
+ right: [0, 255, 255, 32, 0, 0, 0, 200]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- intermediate_device_values_are_converted_consistently stdout ----
+
+thread 'intermediate_device_values_are_converted_consistently' (167) panicked at oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:74:5:
+assertion `left == right` failed
+  left: [128, 0, 0, 127]
+ right: [64, 128, 128, 255]
+
+---- cyan_black_white_and_red_are_opaque stdout ----
+
+thread 'cyan_black_white_and_red_are_opaque' (166) panicked at oxidize-pdf-core/tests/issue_733_cmyk_extraction_test.rs:60:5:
+assertion `left == right` failed
+  left: [255, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 255, 255, 0]
+ right: [0, 255, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255, 255, 0, 0, 255]
+
+
+failures:
+    cyan_black_white_and_red_are_opaque
+    intermediate_device_values_are_converted_consistently
+    soft_mask_is_alpha_and_black_ink_is_not
+    unsupported_cmyk_depth_and_indexed_base_are_explicit_errors
+
+test result: FAILED. 2 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_733_cmyk_extraction_test`

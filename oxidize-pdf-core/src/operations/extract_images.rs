@@ -959,9 +959,10 @@ impl<R: Read + Seek> ImageExtractor<R> {
         // 4 GB and would let truncated data pass the check below).
         let bytes_per_sample = if bits_per_component <= 8 { 1 } else { 2 };
         let expected_size = (width as usize)
-            * (height as usize)
-            * (components as usize)
-            * (bytes_per_sample as usize);
+            .checked_mul(height as usize)
+            .and_then(|size| size.checked_mul(components as usize))
+            .and_then(|size| size.checked_mul(bytes_per_sample as usize))
+            .ok_or_else(|| OperationError::ParseError("Image sample size overflow".into()))?;
 
         // Validate data size
         if data.len() < expected_size {
@@ -970,6 +971,25 @@ impl<R: Read + Seek> ImageExtractor<R> {
                 expected_size,
                 data.len()
             )));
+        }
+
+        // DeviceCMYK has ink components, not an alpha channel. Use an unmanaged
+        // subtractive conversion for 8-bit device samples; ICC profiles are not
+        // interpreted by this path. Preserve a separate SMask after conversion.
+        if components == 4
+            && bits_per_component == 8
+            && cs
+                .and_then(PdfObject::as_name)
+                .is_some_and(|name| name.0 == "DeviceCMYK")
+        {
+            let mut rgb = Vec::with_capacity(expected_size / 4 * 3);
+            for pixel in data[..expected_size].chunks_exact(4) {
+                let lightness = 255 - u16::from(pixel[3]);
+                for &ink in &pixel[..3] {
+                    rgb.push((((255 - u16::from(ink)) * lightness + 127) / 255) as u8);
+                }
+            }
+            return self.encode_png_maybe_alpha(&rgb, width, height, 3, 8, smask_alpha);
         }
 
         // Convert to PNG format using simple PNG encoding
@@ -1054,8 +1074,9 @@ impl<R: Read + Seek> ImageExtractor<R> {
     /// Encode `samples` as PNG. When `alpha` is present and the samples are
     /// 8-bit grayscale or RGB, composite it as the alpha channel and emit an
     /// RGBA PNG (grayscale is expanded to RGB first); otherwise emit the image
-    /// as-is. Images that are 16-bit, DCT-encoded, or have 4 components (CMYK or
-    /// an already-RGBA base) are emitted without alpha (the soft mask is dropped).
+    /// as-is. Four-component source color samples must be converted explicitly
+    /// before this function; they are never assumed to be RGBA. Sixteen-bit
+    /// samples retain the existing behavior of omitting the soft mask.
     fn encode_png_maybe_alpha(
         &self,
         samples: &[u8],
@@ -1065,6 +1086,11 @@ impl<R: Read + Seek> ImageExtractor<R> {
         bits_per_component: u8,
         alpha: Option<&[u8]>,
     ) -> OperationResult<Vec<u8>> {
+        if components == 4 {
+            return Err(OperationError::ParseError(
+                "Unsupported four-component source color space or sample depth; explicit color conversion is required".into()
+            ));
+        }
         match alpha {
             Some(a) if bits_per_component == 8 && (components == 1 || components == 3) => {
                 let pixel_count = (width as usize) * (height as usize);

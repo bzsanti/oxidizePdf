@@ -1,0 +1,99 @@
+diff --git a/.github/workflows/interoperability.yml b/.github/workflows/interoperability.yml
+index 3bfc6762..216e5084 100644
+--- a/.github/workflows/interoperability.yml
++++ b/.github/workflows/interoperability.yml
+@@ -89,6 +89,11 @@ jobs:
+           independent_xml_reader_agrees_on_identifier_forms
+           -- --ignored --exact
+ 
++      - name: Verify CMYK conversion and independent alpha
++        run: >-
++          cargo test --locked -p oxidize-pdf --features external-images
++          --test issue_733_cmyk_extraction_test
++
+       - name: Verify packed grayscale image samples and source PDFs
+         run: >-
+           cargo test --locked -p oxidize-pdf --features external-images
+diff --git a/TASKS.md b/TASKS.md
+index 2b9c6a7d..255c5232 100644
+--- a/TASKS.md
++++ b/TASKS.md
+@@ -1,3 +1,10 @@
++### #733 — DeviceCMYK y alpha — 2026-10-17
++
++Issue: #733 — fix(images): avoid exporting CMYK samples as RGBA — https://github.com/bzsanti/oxidizePdf/issues/733
++Estado: activa, reproducción sobre #732 revisada c5a5608a. Prioridad: P1. Responsable: Codex.
++Cierre: DeviceCMYK de 8 bits convertido a RGB opaco con alpha separado, nunca inferir RGBA por cuatro componentes; PNG independiente, cyan/negro/controles, error explícito en perfiles no soportados, QR y CI verde antes de merge.
++Última validación: OPEN/cuerpo confirmados; cuatro componentes se etiquetan RGBA. Siguiente acción: RED público y conversión DeviceCMYK no gestionada por perfil; rechazar otras fuentes de cuatro componentes en vez de inventar alpha. Indexed-CMYK/ICC no se declaran convertidos.
++
+ ### #732 — muestras grises empaquetadas — 2026-10-17
+ 
+ Issue: #732 — fix(images): decode packed grayscale samples during image extraction — https://github.com/bzsanti/oxidizePdf/issues/732
+diff --git a/oxidize-pdf-core/src/operations/extract_images.rs b/oxidize-pdf-core/src/operations/extract_images.rs
+index d6507857..77a3f954 100644
+--- a/oxidize-pdf-core/src/operations/extract_images.rs
++++ b/oxidize-pdf-core/src/operations/extract_images.rs
+@@ -959,9 +959,10 @@ impl<R: Read + Seek> ImageExtractor<R> {
+         // 4 GB and would let truncated data pass the check below).
+         let bytes_per_sample = if bits_per_component <= 8 { 1 } else { 2 };
+         let expected_size = (width as usize)
+-            * (height as usize)
+-            * (components as usize)
+-            * (bytes_per_sample as usize);
++            .checked_mul(height as usize)
++            .and_then(|size| size.checked_mul(components as usize))
++            .and_then(|size| size.checked_mul(bytes_per_sample as usize))
++            .ok_or_else(|| OperationError::ParseError("Image sample size overflow".into()))?;
+ 
+         // Validate data size
+         if data.len() < expected_size {
+@@ -972,6 +973,25 @@ impl<R: Read + Seek> ImageExtractor<R> {
+             )));
+         }
+ 
++        // DeviceCMYK has ink components, not an alpha channel. Use an unmanaged
++        // subtractive conversion for 8-bit device samples; ICC profiles are not
++        // interpreted by this path. Preserve a separate SMask after conversion.
++        if components == 4
++            && bits_per_component == 8
++            && cs
++                .and_then(PdfObject::as_name)
++                .is_some_and(|name| name.0 == "DeviceCMYK")
++        {
++            let mut rgb = Vec::with_capacity(expected_size / 4 * 3);
++            for pixel in data[..expected_size].chunks_exact(4) {
++                let lightness = 255 - u16::from(pixel[3]);
++                for &ink in &pixel[..3] {
++                    rgb.push((((255 - u16::from(ink)) * lightness + 127) / 255) as u8);
++                }
++            }
++            return self.encode_png_maybe_alpha(&rgb, width, height, 3, 8, smask_alpha);
++        }
++
+         // Convert to PNG format using simple PNG encoding
+         self.encode_png_maybe_alpha(
+             data,
+@@ -1054,8 +1074,9 @@ impl<R: Read + Seek> ImageExtractor<R> {
+     /// Encode `samples` as PNG. When `alpha` is present and the samples are
+     /// 8-bit grayscale or RGB, composite it as the alpha channel and emit an
+     /// RGBA PNG (grayscale is expanded to RGB first); otherwise emit the image
+-    /// as-is. Images that are 16-bit, DCT-encoded, or have 4 components (CMYK or
+-    /// an already-RGBA base) are emitted without alpha (the soft mask is dropped).
++    /// as-is. Four-component source color samples must be converted explicitly
++    /// before this function; they are never assumed to be RGBA. Sixteen-bit
++    /// samples retain the existing behavior of omitting the soft mask.
+     fn encode_png_maybe_alpha(
+         &self,
+         samples: &[u8],
+@@ -1065,6 +1086,11 @@ impl<R: Read + Seek> ImageExtractor<R> {
+         bits_per_component: u8,
+         alpha: Option<&[u8]>,
+     ) -> OperationResult<Vec<u8>> {
++        if components == 4 {
++            return Err(OperationError::ParseError(
++                "Unsupported four-component source color space or sample depth; explicit color conversion is required".into()
++            ));
++        }
+         match alpha {
+             Some(a) if bits_per_component == 8 && (components == 1 || components == 3) => {
+                 let pixel_count = (width as usize) * (height as usize);
