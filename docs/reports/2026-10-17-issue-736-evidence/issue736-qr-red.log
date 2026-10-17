@@ -1,0 +1,25 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue736/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 4.57s
+     Running tests/issue_736_png_depth_test.rs (target/debug/deps/issue_736_png_depth_test-c2800d699d579027)
+
+running 1 test
+test oversized_sixteen_bit_geometry_returns_error_without_panicking ... FAILED
+
+failures:
+
+---- oversized_sixteen_bit_geometry_returns_error_without_panicking stdout ----
+
+thread 'oversized_sixteen_bit_geometry_returns_error_without_panicking' (112) panicked at oxidize-pdf-core/src/graphics/png_decoder.rs:341:29:
+attempt to multiply with overflow
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'oversized_sixteen_bit_geometry_returns_error_without_panicking' (112) panicked at oxidize-pdf-core/tests/issue_736_png_depth_test.rs:218:5:
+invalid large image must not panic
+
+
+failures:
+    oversized_sixteen_bit_geometry_returns_error_without_panicking
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_736_png_depth_test`

@@ -1,0 +1,60 @@
+    Finished `test` profile [unoptimized] target(s) in 0.16s
+     Running unittests src/lib.rs (target/debug/deps/oxidize_pdf-f7eaee7acec1d021)
+
+running 53 tests
+test graphics::pdf_image::tests::comprehensive_tests::test_color_space_clone_copy ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_color_space_variants ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_color_space_debug ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_error_invalid_jpeg ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_error_invalid_png ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_error_invalid_tiff ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_error_jpeg_unsupported_components ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_error_nonexistent_file ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_error_png_unsupported_color_type ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_error_truncated_jpeg ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_clone ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_format_clone_copy ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_debug ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_format_debug ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_format_variants ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_different_bit_depths ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_error_truncated_png ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_complete_workflow ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_error_truncated_tiff ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_jpeg_data ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_tiff_data ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_file_no_extension ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_file_unsupported_extension ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_png_data ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_tiff_file ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_file_jpeg ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_file_uppercase_extension ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_to_pdf_object_jpeg ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_jpeg_file ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_jpeg_cmyk_image ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_jpeg_grayscale_image ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_jpeg_no_dimensions ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_memory_efficiency ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_performance_large_image_data ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_png_no_ihdr ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_png_palette_image_incomplete ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_tiff_big_endian ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_from_png_file ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_to_pdf_object_tiff ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_png_grayscale_image ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_image_to_pdf_object_png ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_png_to_pdf_object_stream_not_png_container ... ok
+test graphics::pdf_image::tests::test_invalid_jpeg ... ok
+test graphics::pdf_image::tests::test_invalid_png ... ok
+test graphics::pdf_image::tests::test_invalid_tiff ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_tiff_no_dimensions ... ok
+test graphics::pdf_image::tests::test_parse_jpeg_header ... ok
+test graphics::pdf_image::tests::test_image_format_enum ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_png_pdf_stream_pixel_values_correct ... ok
+test graphics::pdf_image::tests::test_parse_png_header ... ok
+test graphics::pdf_image::tests::test_parse_tiff_header_big_endian ... ok
+test graphics::pdf_image::tests::test_parse_tiff_header_little_endian ... ok
+test graphics::pdf_image::tests::comprehensive_tests::test_tiff_cmyk_image ... ok
+
+test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 6688 filtered out; finished in 0.00s
+

@@ -1,3 +1,10 @@
+### #736 — profundidad PNG de 16 bits — 2026-10-17
+
+Issue: #736 — fix(images): preserve PNG sample depth or convert samples before declaring 8 bits — https://github.com/bzsanti/oxidizePdf/issues/736
+Estado: activa, reproducción. Prioridad: P1. Responsable: Codex.
+Cierre: preservar muestras de 16 bits y declarar 16 en imagen y máscara; separación de alpha por muestra, controles de 8 bits, PDF escrito/reabierto y qpdf/PNG independientes, QR y CI verde antes de merge.
+Última validación: OPEN y criterios leídos; importación declara siempre 8, separador alpha opera por bytes y SMask declara 8. Siguiente acción: RED con PNG generado por encoder independiente, luego conservar 16 bits sin conversión con pérdida. Palette/tRNS no se declaran completos.
+
 ### #733 — DeviceCMYK y alpha — 2026-10-17
 
 Issue: #733 — fix(images): avoid exporting CMYK samples as RGBA — https://github.com/bzsanti/oxidizePdf/issues/733
@@ -1542,6 +1549,8 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Última validación: RED 2 fallos previstos; GREEN/regresión 48 PASS en cuatro targets, incluyendo qpdf/OpenSSL; Clippy all-targets/signatures y formato PASS; Kripteia calidad/seguridad e inspección final terminados. Informe actualizado docs/reports/2026-10-12-issue-714-review.md, evidencias pr717 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
 - Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.
 
+Validación #736: RED 4 fallos/1 control; QR reprodujo overflow de geometría con CRC válido, corregido mediante arithmetic checked. Final seis contratos nuevos, once regresiones integración y 59 unidades PASS; qpdf independiente, Clippy all-targets -D warnings y ambos Kripteia completos. Informe docs/reports/2026-10-17-issue-736-review.md. Estado: QR local completo; siguiente acción publicar PR a develop y fusionar tras CI verde.
+
 
 Validación #731: RED cinco fallos/un control PASS; GREEN final nueve contratos (Poppler incluido), 103 integración, 875 unidades text:: y 278 fonts:: PASS (filtros solapados). Formato/diff-check, Clippy all-targets y focal final PASS; QR manual y Kripteia calidad/seguridad completos sin hallazgos nuevos. Informe docs/reports/2026-10-17-issue-731-review.md. Siguiente acción: publicar PR contra develop, esperar CI verde y fusionar.
 
@@ -1568,6 +1577,8 @@ Integración PR #768: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos li
 
 Integración #731: incorpora develop y candidatos revisados #732/#762; conflictos exclusivamente en seguimiento y pasos CI resueltos conservando ambos. Código #731 sin cambios respecto al QR/43 contratos PASS. Siguiente acción: fusionar PR #773 tras #775/#768 y CI verde del head final.
 
+Integración #736: incorpora candidatos revisados #732/#762/#731; conflictos de seguimiento y workflow resueltos conservando todos los contratos. Código propio sin cambios respecto al QR. Siguiente acción: publicar PR propio a develop tras esos merges y verificar CI del nuevo head.
+
 Integración #733: incorpora candidatos revisados #732/#762/#731; conflictos de seguimiento y workflow resueltos conservando todos los contratos. Código propio sin cambios respecto al QR. Siguiente acción: publicar PR propio a develop tras esos merges y verificar CI del nuevo head.
 
 ### #734 — imágenes inline — 2026-10-17
@@ -1579,3 +1590,7 @@ Issue: #734 — fix(images): parse inline image dimensions and return correctly 
 Estado: activa, RED. Prioridad: P1. Responsable: Codex. Cierre: gramática BI/ID/EI, dimensiones 4×2, PNG real o raw explícito, filtros y falsos delimitadores, controles independientes, QR y CI verde/merge. Última validación: issue OPEN/cuerpo confirmado. Bloqueantes: escaneo por subcadena y dimensiones por líneas. Siguiente acción: RED público; reutilizar ContentParser y conversión existente con límites.
 
 Validación final #734: once contratos nuevos y 28 regresiones PASS; 54 unidades extracción y 96 parser PASS; Clippy all-targets estricto, formato/diff y ambos análisis Kripteia completos. Hallazgos EI ausente y etiqueta JPEG basada solo en DCT demostrados RED y corregidos; sin bloqueantes locales. Informe docs/reports/2026-10-17-issue-734-review.md. Siguiente acción: publicar PR a develop, comprobar CI y fusionar después de #777/#778.
+
+Integración #736: incorpora candidatos revisados #732/#762/#731; conflictos de seguimiento y workflow resueltos conservando todos los contratos. Código propio sin cambios respecto al QR. Siguiente acción: publicar PR propio a develop tras esos merges y verificar CI del nuevo head.
+
+Integración #734: incorpora candidatos revisados #732/#762/#731; conflictos de seguimiento y workflow resueltos conservando todos los contratos. Código propio sin cambios respecto al QR. Siguiente acción: publicar PR propio a develop tras esos merges y verificar CI del nuevo head.
