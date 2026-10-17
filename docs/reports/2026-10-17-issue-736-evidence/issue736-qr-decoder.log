@@ -1,0 +1,49 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/graphics/png_decoder.rs                      6     95
+
+--- Worst Offenders ---
+  test_paeth_predictor (oxidize-pdf-core/src/graphics/png_decoder.rs:519) - Score: 90
+    i Test 'test_paeth_predictor' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_paeth_predictor' has multiple assertions without diagnostic messages
+    - Test 'test_paeth_predictor' does not call any production code
+  test_invalid_png_signature (oxidize-pdf-core/src/graphics/png_decoder.rs:534) - Score: 90
+    - Test 'test_invalid_png_signature' only exercises the happy path — no None, Err, or edge-case inputs
+  test_minimal_valid_png (oxidize-pdf-core/src/graphics/png_decoder.rs:541) - Score: 90
+    - Test 'test_minimal_valid_png' has low assert-to-setup ratio (4%): 1 asserts vs 25 setup lines
+  test_png_color_type (oxidize-pdf-core/src/graphics/png_decoder.rs:488) - Score: 100
+    i Test 'test_png_color_type' has multiple assertions without diagnostic messages
+  test_color_type_channels (oxidize-pdf-core/src/graphics/png_decoder.rs:501) - Score: 100
+    i Test 'test_color_type_channels' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_color_type_channels' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/src/graphics/png_decoder.rs:
+  test_png_color_type (line 488) - Score: 100
+    i Test 'test_png_color_type' has multiple assertions without diagnostic messages
+  test_color_type_channels (line 501) - Score: 100
+    i Test 'test_color_type_channels' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_color_type_channels' has multiple assertions without diagnostic messages
+  test_color_type_has_alpha (line 510) - Score: 100
+    i Test 'test_color_type_has_alpha' has multiple assertions without diagnostic messages
+  test_paeth_predictor (line 519) - Score: 90
+    i Test 'test_paeth_predictor' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_paeth_predictor' has multiple assertions without diagnostic messages
+    - Test 'test_paeth_predictor' does not call any production code
+  test_invalid_png_signature (line 534) - Score: 90
+    - Test 'test_invalid_png_signature' only exercises the happy path — no None, Err, or edge-case inputs
+  test_minimal_valid_png (line 541) - Score: 90
+    - Test 'test_minimal_valid_png' has low assert-to-setup ratio (4%): 1 asserts vs 25 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

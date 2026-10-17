@@ -120,6 +120,11 @@ jobs:
           cargo test --locked -p oxidize-pdf --features external-images
           --test issue_733_cmyk_extraction_test
 
+      - name: Verify 16-bit PNG samples through PDF streams
+        run: >-
+          cargo test --locked -p oxidize-pdf --features external-images
+          --test issue_736_png_depth_test -- --include-ignored
+
       - name: Verify streaming writer object graph and xref with qpdf
         run: >-
           cargo test --locked -p oxidize-pdf --features performance
