@@ -1,0 +1,71 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue732/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 19s
+     Running unittests src/lib.rs (/tmp/oxidize-issue741/target/debug/deps/oxidize_pdf-f7eaee7acec1d021)
+
+running 63 tests
+test operations::extract_images::extract_images_tests::tests::test_dct_decode_cmyk_jpeg ... ok
+test operations::extract_images::extract_images_tests::tests::test_dct_decode_jpeg_parsing ... ok
+test operations::extract_images::extract_images_tests::tests::test_duplicate_image_detection ... ok
+test operations::extract_images::extract_images_tests::tests::test_extended_file_extensions ... ok
+test operations::extract_images::extract_images_tests::tests::test_deduplication_with_page_pattern ... ok
+test operations::extract_images::extract_images_tests::tests::test_crc32_calculation ... ok
+test operations::extract_images::extract_images_tests::tests::test_compress_image_data ... ok
+test operations::extract_images::extract_images_tests::tests::test_create_png_from_raw_data ... ok
+test operations::extract_images::extract_images_tests::tests::test_extract_from_empty_pdf ... ok
+test operations::extract_images::extract_images_tests::tests::test_extract_options_custom ... ok
+test operations::extract_images::extract_images_tests::tests::test_detect_correct_row_stride ... ok
+test operations::extract_images::extract_images_tests::tests::test_extracted_image_struct ... ok
+test operations::extract_images::extract_images_tests::tests::test_create_png_rgb_data ... ok
+test operations::extract_images::extract_images_tests::tests::test_extract_options_default ... ok
+test operations::extract_images::extract_images_tests::tests::test_extract_from_pdf_without_images ... ok
+test operations::extract_images::extract_images_tests::tests::test_image_format_detection ... ok
+test operations::extract_images::extract_images_tests::tests::test_name_pattern_replacement ... ok
+test operations::extract_images::extract_images_tests::tests::test_invalid_pdf_path ... ok
+test operations::extract_images::extract_images_tests::tests::test_minimum_size_filter ... ok
+test operations::extract_images::extract_images_tests::tests::test_extract_specific_pages ... ok
+test operations::extract_images::extract_images_tests::tests::test_output_directory_creation ... ok
+test operations::extract_images::extract_images_tests::tests::test_tiff_image_creation ... ok
+test operations::extract_images::extract_images_tests::tests::test_png_image_creation ... ok
+test operations::extract_images::tests::test_detect_image_format_jpeg ... ok
+test operations::extract_images::tests::test_detect_image_format_png ... ok
+test operations::extract_images::extract_images_tests::tests::test_parse_inline_image_dict ... ok
+test operations::extract_images::tests::test_create_output_directory ... ok
+test operations::extract_images::tests::test_detect_image_format_short_data ... ok
+test operations::extract_images::tests::test_detect_format_edge_cases ... ok
+test operations::extract_images::tests::test_detect_image_format_tiff_big_endian ... ok
+test operations::extract_images::tests::test_complex_filename_pattern ... ok
+test operations::extract_images::tests::test_expand_indexed_clamps_out_of_range_index ... ok
+test operations::extract_images::tests::test_expand_indexed_maps_indices_to_palette_rgb ... ok
+test operations::extract_images::tests::test_extract_inline_option ... ok
+test operations::extract_images::tests::test_detect_image_format_tiff_little_endian ... ok
+test operations::extract_images::tests::test_detect_image_format_unknown ... ok
+test operations::extract_images::tests::test_extract_options_custom ... ok
+test operations::extract_images::tests::test_extract_options_debug_clone ... ok
+test operations::extract_images::tests::test_extract_options_default ... ok
+test operations::extract_images::tests::test_extract_options_no_min_size ... ok
+test operations::extract_images::tests::test_extracted_image_debug ... ok
+test operations::extract_images::tests::test_extracted_image_struct ... ok
+test operations::extract_images::tests::test_filename_pattern_replacements ... ok
+test operations::extract_images::tests::test_image_dimensions ... ok
+test operations::extract_images::tests::test_image_sample_components_device_color_spaces ... ok
+test operations::extract_images::tests::test_image_sample_components_devicen_counts_colorants ... ok
+test operations::extract_images::tests::test_image_sample_components_iccbased_uses_n ... ok
+test operations::extract_images::tests::test_min_size_filtering ... ok
+test operations::extract_images::tests::test_multiple_format_extensions ... ok
+test operations::extract_images::tests::test_output_path_combinations ... ok
+test operations::extract_images::tests::test_page_and_index_numbering ... ok
+test operations::extract_images::tests::test_pattern_with_special_chars ... ok
+test operations::extract_images::tests::test_pattern_without_placeholders ... ok
+test operations::extract_images::tests::test_unpack_indices_1bit_respects_row_byte_alignment ... ok
+test operations::extract_images::tests::test_unpack_indices_2bit_four_pixels_per_byte ... ok
+test operations::extract_images::tests::test_unpack_indices_passthrough_for_8bit ... ok
+test operations::extract_images::tests::test_image_sample_components_indexed_is_one ... ok
+test operations::extract_images::tests::test_filename_pattern ... ok
+test operations::extract_images::tests::test_unpack_indices_passthrough_for_unsupported_bpc ... ok
+test operations::extract_images::tests::test_unpack_indices_4bit_two_pixels_per_byte ... ok
+test operations::extract_images::extract_images_tests::tests::test_extract_from_specific_page ... ok
+test operations::extract_images::extract_images_tests::tests::test_extract_from_real_pdf_with_images ... ok
+test operations::extract_images::extract_images_tests::tests::test_image_extraction_with_min_size_filter ... ok
+
+test result: ok. 63 passed; 0 failed; 0 ignored; 0 measured; 6678 filtered out; finished in 9.27s
+

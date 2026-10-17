@@ -1,0 +1,39 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 3 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_476_stray_cr_test.rs                 3     90
+
+--- Worst Offenders ---
+  a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word (oxidize-pdf-core/tests/issue_476_stray_cr_test.rs:67) - Score: 90
+    - Test 'a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word' has multiple assertions without diagnostic messages
+  a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline (oxidize-pdf-core/tests/issue_476_stray_cr_test.rs:86) - Score: 90
+    - Test 'a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline' has multiple assertions without diagnostic messages
+  a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy (oxidize-pdf-core/tests/issue_476_stray_cr_test.rs:104) - Score: 90
+    - Test 'a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/tests/issue_476_stray_cr_test.rs:
+  a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word (line 67) - Score: 90
+    - Test 'a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word' has multiple assertions without diagnostic messages
+  a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline (line 86) - Score: 90
+    - Test 'a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline' has multiple assertions without diagnostic messages
+  a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy (line 104) - Score: 90
+    - Test 'a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

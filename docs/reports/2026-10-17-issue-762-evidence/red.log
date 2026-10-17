@@ -1,0 +1,72 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue762/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 42.53s
+     Running tests/issue_762_ordered_mutations_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_762_ordered_mutations_test-2f69caf6de2c9a46)
+
+running 8 tests
+test indices_use_current_children_after_moves_and_creations ... FAILED
+test parent_tree_remove_restore_and_repeated_assignments ... FAILED
+test invalid_later_operations_fail_atomically_in_plan_and_apply ... FAILED
+test assignments_and_removals_restore_original_or_absent_values ... FAILED
+test unchanged_batch_is_byte_identical ... ok
+test independent_attributes_and_elements_do_not_share_state ... FAILED
+test repeated_reparent_uses_current_parent_and_restores_original ... FAILED
+test independent_qpdf_observes_restored_value_and_generation ... FAILED
+
+failures:
+
+---- indices_use_current_children_after_moves_and_creations stdout ----
+
+thread 'indices_use_current_children_after_moves_and_creations' (373) panicked at oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:89:39:
+called `Result::unwrap()` on an `Err` value: InvalidStructure("tagged-PDF edit: new-parent child index is out of bounds")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- parent_tree_remove_restore_and_repeated_assignments stdout ----
+
+thread 'parent_tree_remove_restore_and_repeated_assignments' (375) panicked at oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:105:5:
+[TaggedPdfFinding { severity: Error, code: MissingParentTreeEntry, path: "/StructTreeRoot/ParentTree/0", message: "ParentTree has no entry for the page StructParents key", object: Some(TaggedPdfObjectRef { object_number: 3, generation: 0 }) }]
+
+---- invalid_later_operations_fail_atomically_in_plan_and_apply stdout ----
+
+thread 'invalid_later_operations_fail_atomically_in_plan_and_apply' (374) panicked at oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:283:9:
+assertion failed: editor.plan(&mutations).is_err()
+
+---- assignments_and_removals_restore_original_or_absent_values stdout ----
+
+thread 'assignments_and_removals_restore_original_or_absent_values' (370) panicked at oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:145:9:
+assertion `left == right` failed
+  left: Some(String(PdfString([99, 104, 97, 110, 103, 101, 100])))
+ right: Some(String(PdfString([116, 105, 116, 108, 101])))
+
+---- independent_attributes_and_elements_do_not_share_state stdout ----
+
+thread 'independent_attributes_and_elements_do_not_share_state' (371) panicked at oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:170:5:
+assertion `left == right` failed
+  left: Some(String(PdfString([99, 104, 97, 110, 103, 101, 100])))
+ right: Some(String(PdfString([116, 105, 116, 108, 101])))
+
+---- repeated_reparent_uses_current_parent_and_restores_original stdout ----
+
+thread 'repeated_reparent_uses_current_parent_and_restores_original' (376) panicked at oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:230:5:
+assertion `left == right` failed
+  left: Some(Reference(9, 0))
+ right: Some(Reference(8, 0))
+
+---- independent_qpdf_observes_restored_value_and_generation stdout ----
+
+thread 'independent_qpdf_observes_restored_value_and_generation' (372) panicked at oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:320:5:
+<< /K << /MCID 0 /Pg 3 0 R /Type /MCR >> /Lang (es) /P 8 0 R /Pg 3 0 R /S /CustomP /T (changed) /Type /StructElem /Vendor << /Flag true /Raw <00ff> >> >>
+
+
+
+failures:
+    assignments_and_removals_restore_original_or_absent_values
+    independent_attributes_and_elements_do_not_share_state
+    independent_qpdf_observes_restored_value_and_generation
+    indices_use_current_children_after_moves_and_creations
+    invalid_later_operations_fail_atomically_in_plan_and_apply
+    parent_tree_remove_restore_and_repeated_assignments
+    repeated_reparent_uses_current_parent_and_restores_original
+
+test result: FAILED. 1 passed; 7 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_762_ordered_mutations_test`

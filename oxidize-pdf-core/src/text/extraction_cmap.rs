@@ -559,24 +559,23 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         // when Encoding (or BaseEncoding within a Differences dictionary) is
         // absent. Do not guess an embedded font's intrinsic encoding by name.
         if font_info.encoding.is_none() && font_info.font_type == "Type1" {
-            let has_embedded_program = font_dict
+            let descriptor = font_dict
                 .get("FontDescriptor")
+                .and_then(|obj| document.resolve(obj).ok());
+            let descriptor = descriptor.as_ref().and_then(PdfObject::as_dict);
+            let has_embedded_program = descriptor.is_some_and(|dict| {
+                ["FontFile", "FontFile2", "FontFile3"]
+                    .iter()
+                    .any(|key| dict.get(key).is_some())
+            });
+            let symbolic = descriptor
+                .and_then(|dict| dict.get("Flags"))
                 .and_then(|obj| document.resolve(obj).ok())
-                .is_some_and(|obj| {
-                    obj.as_dict().is_some_and(|descriptor| {
-                        ["FontFile", "FontFile2", "FontFile3"]
-                            .iter()
-                            .any(|key| descriptor.get(key).is_some())
-                    })
-                });
+                .and_then(|obj| obj.as_integer())
+                .is_some_and(|flags| flags & 4 != 0);
             if !has_embedded_program {
-                // PDF subset prefixes contain exactly six uppercase letters.
-                let base_name = without_subset_prefix(&font_info.name);
-                font_info.encoding = match base_name {
-                    "Symbol" => Some("SymbolEncoding".to_owned()),
-                    "ZapfDingbats" => Some("ZapfDingbatsEncoding".to_owned()),
-                    _ => None,
-                };
+                font_info.encoding =
+                    builtin_type1_encoding(&font_info.name, symbolic).map(str::to_owned);
             }
         }
 
@@ -1715,6 +1714,46 @@ fn without_subset_prefix(name: &str) -> &str {
         .map_or(name, |(_, name)| name)
 }
 
+/// Built-in encodings for non-embedded Standard14 Type1 fonts only.
+/// A descriptor's symbolic flag prevents guessing a Latin StandardEncoding.
+pub(crate) fn builtin_type1_encoding(name: &str, symbolic: bool) -> Option<&'static str> {
+    match without_subset_prefix(name) {
+        "Symbol" => Some("SymbolEncoding"),
+        "ZapfDingbats" => Some("ZapfDingbatsEncoding"),
+        "Helvetica"
+        | "Helvetica-Bold"
+        | "Helvetica-Oblique"
+        | "Helvetica-BoldOblique"
+        | "Times-Roman"
+        | "Times-Bold"
+        | "Times-Italic"
+        | "Times-BoldItalic"
+        | "Courier"
+        | "Courier-Bold"
+        | "Courier-Oblique"
+        | "Courier-BoldOblique"
+            if !symbolic =>
+        {
+            Some("StandardEncoding")
+        }
+        _ => None,
+    }
+}
+
+/// Shared PDF simple-font mappings. SymbolEncoding and ZapfDingbatsEncoding
+/// names are compatibility extensions, also used for the fonts' built-in maps.
+pub(crate) fn decode_named_simple_encoding(encoding: &str, byte: u8) -> Option<char> {
+    Some(match encoding {
+        "WinAnsiEncoding" => decode_winansi(byte),
+        "MacRomanEncoding" => decode_macroman(byte),
+        "StandardEncoding" => decode_standard(byte),
+        "MacExpertEncoding" => pdf_simple_encodings::MAC_EXPERT[usize::from(byte)],
+        "SymbolEncoding" => pdf_simple_encodings::SYMBOL[usize::from(byte)],
+        "ZapfDingbatsEncoding" => pdf_simple_encodings::ZAPF_DINGBATS[usize::from(byte)],
+        _ => return None,
+    })
+}
+
 /// Decode text using encoding differences and base encoding — free function.
 fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<String> {
     let mut result = String::new();
@@ -1736,15 +1775,11 @@ fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<
             }
         }
 
-        let ch = match font_info.encoding.as_deref() {
-            Some("WinAnsiEncoding") => decode_winansi(byte),
-            Some("MacRomanEncoding") => decode_macroman(byte),
-            Some("StandardEncoding") => decode_standard(byte),
-            Some("MacExpertEncoding") => pdf_simple_encodings::MAC_EXPERT[usize::from(byte)],
-            Some("SymbolEncoding") => pdf_simple_encodings::SYMBOL[usize::from(byte)],
-            Some("ZapfDingbatsEncoding") => pdf_simple_encodings::ZAPF_DINGBATS[usize::from(byte)],
-            _ => byte as char,
-        };
+        let ch = font_info
+            .encoding
+            .as_deref()
+            .and_then(|encoding| decode_named_simple_encoding(encoding, byte))
+            .unwrap_or(byte as char);
 
         result.push(ch);
     }
