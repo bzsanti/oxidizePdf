@@ -1,0 +1,78 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue741/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 24.16s
+     Running unittests src/lib.rs (/tmp/oxidize-issue724/target/debug/deps/oxidize_pdf-f7eaee7acec1d021)
+
+running 70 tests
+test pdfa::error::tests::test_pdfa_error_from_validation_error ... ok
+test pdfa::error::tests::test_validation_error_clone ... ok
+test pdfa::error::tests::test_pdfa_error_display ... ok
+test pdfa::error::tests::test_validation_error_debug ... ok
+test pdfa::error::tests::test_validation_error_display_encryption ... ok
+test pdfa::error::tests::test_validation_error_display_font_not_embedded ... ok
+test pdfa::error::tests::test_validation_error_display_invalid_colorspace ... ok
+test pdfa::error::tests::test_validation_error_display_javascript ... ok
+test pdfa::error::tests::test_validation_error_display_lzw ... ok
+test pdfa::error::tests::test_validation_error_display_pdf_version ... ok
+test pdfa::error::tests::test_validation_error_display_transparency ... ok
+test pdfa::error::tests::test_validation_error_display_xmp_missing ... ok
+test pdfa::error::tests::test_validation_error_is_send_sync ... ok
+test pdfa::types::tests::test_pdfa_conformance_clone_eq ... ok
+test pdfa::types::tests::test_pdfa_conformance_display ... ok
+test pdfa::types::tests::test_pdfa_conformance_from_str ... ok
+test pdfa::types::tests::test_pdfa_level_clone_eq ... ok
+test pdfa::types::tests::test_pdfa_level_conformance ... ok
+test pdfa::types::tests::test_pdfa_level_display ... ok
+test pdfa::types::tests::test_pdfa_level_embedded_files ... ok
+test pdfa::types::tests::test_pdfa_level_from_str ... ok
+test pdfa::types::tests::test_pdfa_level_from_str_invalid ... ok
+test pdfa::types::tests::test_pdfa_level_iso_reference ... ok
+test pdfa::types::tests::test_pdfa_level_lzw ... ok
+test pdfa::types::tests::test_pdfa_level_part ... ok
+test pdfa::types::tests::test_pdfa_level_required_version ... ok
+test pdfa::types::tests::test_pdfa_level_transparency ... ok
+test pdfa::types::tests::test_validation_result_add_error ... ok
+test pdfa::types::tests::test_validation_result_add_warning ... ok
+test pdfa::types::tests::test_validation_result_display_invalid ... ok
+test pdfa::types::tests::test_validation_result_display_valid ... ok
+test pdfa::types::tests::test_validation_result_new ... ok
+test pdfa::types::tests::test_validation_result_with_errors ... ok
+test pdfa::types::tests::test_validation_warning_display ... ok
+test pdfa::validator::tests::test_check_stream_for_lzw_no_filter ... ok
+test pdfa::validator::tests::test_check_for_external_action_gotor ... ok
+test pdfa::validator::tests::test_check_for_external_action_goto_internal ... ok
+test pdfa::validator::tests::test_check_stream_for_lzw_array_filter ... ok
+test pdfa::validator::tests::test_check_stream_for_lzw_no_lzw ... ok
+test pdfa::validator::tests::test_check_for_external_action_launch ... ok
+test pdfa::validator::tests::test_is_javascript_action_no_s_key ... ok
+test pdfa::validator::tests::test_check_stream_for_lzw_single_filter ... ok
+test pdfa::validator::tests::test_pdfa_conformance_level_a ... ok
+test pdfa::validator::tests::test_is_javascript_action_false ... ok
+test pdfa::validator::tests::test_is_device_dependent_colorspace ... ok
+test pdfa::validator::tests::test_is_javascript_action_true ... ok
+test pdfa::validator::tests::test_pdfa_level_allows_embedded_files ... ok
+test pdfa::validator::tests::test_pdfa_level_allows_lzw ... ok
+test pdfa::validator::tests::test_validator_clone ... ok
+test pdfa::validator::tests::test_validator_collect_all_errors ... ok
+test pdfa::validator::tests::test_validator_debug ... ok
+test pdfa::validator::tests::test_validator_level_a2b ... ok
+test pdfa::validator::tests::test_validator_level_a3b ... ok
+test pdfa::validator::tests::test_validator_new ... ok
+test pdfa::xmp::tests::test_xml_escape ... ok
+test pdfa::xmp::tests::test_xmp_metadata_clone ... ok
+test pdfa::xmp::tests::test_xmp_metadata_new ... ok
+test pdfa::xmp::tests::test_xmp_metadata_to_xml ... ok
+test pdfa::xmp::tests::test_xmp_metadata_validate_for_pdfa_missing_id ... ok
+test pdfa::xmp::tests::test_xmp_metadata_validate_for_pdfa_with_id ... ok
+test pdfa::xmp::tests::test_xmp_pdfa_identifier_clone ... ok
+test pdfa::xmp::tests::test_xmp_pdfa_identifier_new ... ok
+test pdfa::xmp::tests::test_xmp_pdfa_identifier_to_rdf ... ok
+test pdfa::xmp::tests::test_xmp_pdfa_identifier_with_amd ... ok
+test pdfa::xmp::tests::test_xmp_metadata_parse_dates ... ok
+test pdfa::xmp::tests::test_xmp_metadata_parse_pdfa_id ... ok
+test pdfa::xmp::tests::test_xmp_metadata_parse_title ... ok
+test pdfa::xmp::tests::test_xmp_metadata_parse_simple_tag ... ok
+test pdfa::xmp::tests::test_xmp_metadata_parse_creator_list ... ok
+test pdfa::xmp::tests::test_xmp_metadata_roundtrip ... ok
+
+test result: ok. 70 passed; 0 failed; 0 ignored; 0 measured; 6671 filtered out; finished in 0.04s
+
