@@ -1,3 +1,10 @@
+### #731 — codificaciones simples coherentes — 2026-10-17
+
+Issue: #731 — fix(text): preserve StandardEncoding and named simple-font mappings across extraction APIs — https://github.com/bzsanti/oxidizePdf/issues/731
+Estado: implementación, validación y QR completos; publicación/CI pendientes. Prioridad: P1. Responsable: Codex.
+Cierre: StandardEncoding implícita en Standard14 Type1 no simbólicas y explícita en ambas APIs; nombres soportados coherentes, ToUnicode/Differences y salvaguardas simbólicas preservados, controles no ASCII/Poppler, QR y CI antes de merge.
+Última validación: OPEN y criterios confirmados en GitHub; inspección identifica fallback byte-as-char en extractor y TextEncoding incompleto en resolver. Siguiente acción: RED público en checkout /tmp/oxidize-issue731 basado en develop e8dbe772; compartir mapeos existentes sin ampliar #715.
+
 ## #762 — Mutaciones ordenadas — 2026-10-17
 
 Issue: #762 — fix(tagged): preserve ordered attribute mutations when a batch restores the original value — https://github.com/bzsanti/oxidizePdf/issues/762
@@ -1529,6 +1536,14 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.
 
 
+Validación #731: RED cinco fallos/un control PASS; GREEN final nueve contratos (Poppler incluido), 103 integración, 875 unidades text:: y 278 fonts:: PASS (filtros solapados). Formato/diff-check, Clippy all-targets y focal final PASS; QR manual y Kripteia calidad/seguridad completos sin hallazgos nuevos. Informe docs/reports/2026-10-17-issue-731-review.md. Siguiente acción: publicar PR contra develop, esperar CI verde y fusionar.
+
+
+Integración #731 con develop 075b5f7b: Rust/tests idénticos al QR; conflicto aditivo de workflow/TASKS resuelto conservando todo el historial y todos los jobs/steps previos. Check de YAML detectó una resolución temporal incompleta; corregida antes de publicación. Contratos combinados #731/#741: 21 PASS con Poppler y Python. Siguiente acción: publicar PR y verificar CI del head final.
+
+
+Corrección CI #731: fixture CR declara ToUnicode, todas las aserciones originales conservadas; nuevo control negativo de códigos StandardEncoding sin asignación. En target aislado: 43 tests PASS y Clippy focal estricto PASS; QR/Kripteia de ambos tests completo. Intento anterior con target compartido devolvió comportamiento de otra rama y queda excluido de evidencia. Código de producto sin cambios. Siguiente acción: publicar nuevo head de #773 y exigir nuevo CI verde.
+
 Validación #732: RED cinco fallos/cuatro controles; QR encontró conversión 257→1, demostrada RED y corregida. Final diez contratos nuevos (PNG independiente/qpdf/alpha), doce integración existentes y 63 unidades PASS. Clippy all-targets -D warnings, formato/diff-check y QR/Kripteia completos. Informe docs/reports/2026-10-17-issue-732-review.md. Siguiente acción: publicar PR a develop y esperar CI verde antes de merge; continuar #733 sobre la corrección revisada.
 
 Validación #763: commit de código fe4631a5; RED 5 FAIL/2 controles PASS. Final 11 contratos nuevos (Python independiente incluido), 12 #741, 15 PDF/A integración, 55 validator y 3 comprimidos PASS; 70 unidades PDF/A PASS. Clippy all-targets -D warnings, formato/diff-check y QR/Kripteia calidad/seguridad completos sin hallazgos nuevos. Informe docs/reports/2026-10-17-issue-763-review.md. Siguiente acción: integrar #741 tras CI verde; rebasar #763 sobre develop y publicar su PR propio, comprobar CI y fusionar. Bundle y fuentes conservados fuera de /tmp.
@@ -1541,3 +1556,5 @@ Integración PR #768: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos li
 Integración PR #775: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos limitados a seguimiento y pasos CI resueltos conservando ambos. Fuentes Rust de la corrección sin cambios; nuevo CI obligatorio sobre el merge de develop b3f2a58e. Siguiente acción: fusionar a develop al quedar verde, según autorización del usuario. #741/#763 ya integradas (PR #769/#772).
 
 Integración PR #768: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos limitados a seguimiento y pasos CI resueltos conservando ambos. Fuentes Rust de la corrección sin cambios; nuevo CI obligatorio sobre el merge de develop ef0c9698. Siguiente acción: fusionar a develop al quedar verde, según autorización del usuario. #741/#763 ya integradas (PR #769/#772).
+
+Integración #731: incorpora develop y candidatos revisados #732/#762; conflictos exclusivamente en seguimiento y pasos CI resueltos conservando ambos. Código #731 sin cambios respecto al QR/43 contratos PASS. Siguiente acción: fusionar PR #773 tras #775/#768 y CI verde del head final.

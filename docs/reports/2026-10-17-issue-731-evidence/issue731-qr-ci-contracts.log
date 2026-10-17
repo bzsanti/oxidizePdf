@@ -1,0 +1,54 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 10 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs         10     91
+
+--- Worst Offenders ---
+  independent_poppler_standard_encoding_control (oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:131) - Score: 80
+    - Test 'independent_poppler_standard_encoding_control' is marked as #[ignore]
+    i Test 'independent_poppler_standard_encoding_control' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'independent_poppler_standard_encoding_control' has multiple assertions without diagnostic messages
+    i Test 'independent_poppler_standard_encoding_control' uses .unwrap() which silently discards error information
+  implicit_standard14_encoding_in_both_consumers (oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:48) - Score: 90
+    - Test 'implicit_standard14_encoding_in_both_consumers' does not call any production code
+  explicit_standard_encoding_in_both_consumers (oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:63) - Score: 90
+    - Test 'explicit_standard_encoding_in_both_consumers' does not call any production code
+  supported_named_encodings_agree (oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:77) - Score: 90
+    - Test 'supported_named_encodings_agree' does not call any production code
+  differences_and_tounicode_keep_precedence (oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:93) - Score: 90
+    - Test 'differences_and_tounicode_keep_precedence' has low assert-to-setup ratio (15%): 5 asserts vs 29 setup lines
+
+--- Details ---
+oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:
+  implicit_standard14_encoding_in_both_consumers (line 48) - Score: 90
+    - Test 'implicit_standard14_encoding_in_both_consumers' does not call any production code
+  explicit_standard_encoding_in_both_consumers (line 63) - Score: 90
+    - Test 'explicit_standard_encoding_in_both_consumers' does not call any production code
+  supported_named_encodings_agree (line 77) - Score: 90
+    - Test 'supported_named_encodings_agree' does not call any production code
+  differences_and_tounicode_keep_precedence (line 93) - Score: 90
+    - Test 'differences_and_tounicode_keep_precedence' has low assert-to-setup ratio (15%): 5 asserts vs 29 setup lines
+  independent_poppler_standard_encoding_control (line 131) - Score: 80
+    - Test 'independent_poppler_standard_encoding_control' is marked as #[ignore]
+    i Test 'independent_poppler_standard_encoding_control' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'independent_poppler_standard_encoding_control' has multiple assertions without diagnostic messages
+    i Test 'independent_poppler_standard_encoding_control' uses .unwrap() which silently discards error information
+  builtin_symbol_fonts_and_explicit_override (line 164) - Score: 90
+    - Test 'builtin_symbol_fonts_and_explicit_override' does not call any production code
+  symbolic_flag_and_invalid_subset_prefix_do_not_infer_latin_encoding (line 178) - Score: 90
+    i Test 'symbolic_flag_and_invalid_subset_prefix_do_not_infer_latin_encoding' uses .unwrap() which silently discards error information
+    - Test 'symbolic_flag_and_invalid_subset_prefix_do_not_infer_latin_encoding' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  unassigned_standard_codes_do_not_manufacture_line_endings (line 202) - Score: 90
+    - Test 'unassigned_standard_codes_do_not_manufacture_line_endings' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

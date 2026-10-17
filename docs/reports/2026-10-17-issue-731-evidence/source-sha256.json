@@ -1,0 +1,6 @@
+{
+  "oxidize-pdf-core/src/fonts/resolved.rs": "50d82cd39126384767b59257a23e40a0ebef39d09de580c00bf31476df987a35",
+  "oxidize-pdf-core/src/text/extraction_cmap.rs": "6cd7b346cddbacc7f8d124fc1dbedd46545e0c6dd13d4a7de7d6c682af7fb609",
+  "oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs": "1f5269a72aee9bc873d65024284c80fd3e16761d915a05be484c38622118c65c",
+  ".github/workflows/interoperability.yml": "d51b152390c9cbd29059f2e7b16b95113c38bc0965f252c215a63cca9179eeb9"
+}
