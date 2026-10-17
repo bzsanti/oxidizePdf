@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue732/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.58s
+     Running tests/issue_734_inline_images_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_734_inline_images_test-6227d652368dd733)
+
+running 1 test
+test missing_end_delimiter_is_not_silently_repaired ... FAILED
+
+failures:
+
+---- missing_end_delimiter_is_not_silently_repaired stdout ----
+
+thread 'missing_end_delimiter_is_not_silently_repaired' (143) panicked at oxidize-pdf-core/tests/issue_734_inline_images_test.rs:125:5:
+assertion failed: extract(b"BI /W 4 /H 2 /CS /G /BPC 8 ID abcdefgh").is_err()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    missing_end_delimiter_is_not_silently_repaired
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_734_inline_images_test`

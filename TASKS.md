@@ -1569,3 +1569,13 @@ Integración PR #768: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos li
 Integración #731: incorpora develop y candidatos revisados #732/#762; conflictos exclusivamente en seguimiento y pasos CI resueltos conservando ambos. Código #731 sin cambios respecto al QR/43 contratos PASS. Siguiente acción: fusionar PR #773 tras #775/#768 y CI verde del head final.
 
 Integración #733: incorpora candidatos revisados #732/#762/#731; conflictos de seguimiento y workflow resueltos conservando todos los contratos. Código propio sin cambios respecto al QR. Siguiente acción: publicar PR propio a develop tras esos merges y verificar CI del nuevo head.
+
+### #734 — imágenes inline — 2026-10-17
+Issue: #734 — fix(images): parse inline image dimensions and return correctly encoded data — https://github.com/bzsanti/oxidizePdf/issues/734
+Estado: activa, RED. Prioridad: P1. Responsable: Codex. Cierre: gramática BI/ID/EI, dimensiones 4×2, PNG real o raw explícito, filtros y falsos delimitadores, controles independientes, QR y CI verde/merge. Última validación: issue OPEN/cuerpo confirmado. Bloqueantes: escaneo por subcadena y dimensiones por líneas. Siguiente acción: RED público; reutilizar ContentParser y conversión existente con límites.
+
+### #734 — imágenes inline — 2026-10-17
+Issue: #734 — fix(images): parse inline image dimensions and return correctly encoded data — https://github.com/bzsanti/oxidizePdf/issues/734
+Estado: activa, RED. Prioridad: P1. Responsable: Codex. Cierre: gramática BI/ID/EI, dimensiones 4×2, PNG real o raw explícito, filtros y falsos delimitadores, controles independientes, QR y CI verde/merge. Última validación: issue OPEN/cuerpo confirmado. Bloqueantes: escaneo por subcadena y dimensiones por líneas. Siguiente acción: RED público; reutilizar ContentParser y conversión existente con límites.
+
+Validación final #734: once contratos nuevos y 28 regresiones PASS; 54 unidades extracción y 96 parser PASS; Clippy all-targets estricto, formato/diff y ambos análisis Kripteia completos. Hallazgos EI ausente y etiqueta JPEG basada solo en DCT demostrados RED y corregidos; sin bloqueantes locales. Informe docs/reports/2026-10-17-issue-734-review.md. Siguiente acción: publicar PR a develop, comprobar CI y fusionar después de #777/#778.

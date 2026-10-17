@@ -1,0 +1,65 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue732/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 29.12s
+     Running tests/issue_734_inline_images_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_734_inline_images_test-6227d652368dd733)
+
+running 6 tests
+test text_comments_and_names_do_not_create_images ... FAILED
+test unknown_filter_is_explicit_raw_never_fake_png ... FAILED
+test one_line_dictionary_has_real_dimensions_and_png_samples ... FAILED
+test binary_ei_and_whitespace_pixels_are_not_delimiters ... FAILED
+test missing_or_invalid_dimensions_are_explicit_errors ... FAILED
+test flate_and_ascii_hex_filters_decode_to_real_png ... FAILED
+
+failures:
+
+---- text_comments_and_names_do_not_create_images stdout ----
+
+thread 'text_comments_and_names_do_not_create_images' (423) panicked at oxidize-pdf-core/tests/issue_734_inline_images_test.rs:30:53:
+assertion failed: extract(b"% BI /W 1 /H 1 ID x EI\nBT (BI /W 1 /H 1 ID x EI) Tj ET /BI /ID /EI /Unknown BMC EMC").unwrap().is_empty()
+
+---- unknown_filter_is_explicit_raw_never_fake_png stdout ----
+
+thread 'unknown_filter_is_explicit_raw_never_fake_png' (424) panicked at oxidize-pdf-core/tests/issue_734_inline_images_test.rs:40:164:
+assertion `left == right` failed
+  left: Png
+ right: Raw
+
+---- one_line_dictionary_has_real_dimensions_and_png_samples stdout ----
+
+thread 'one_line_dictionary_has_real_dimensions_and_png_samples' (422) panicked at oxidize-pdf-core/tests/issue_734_inline_images_test.rs:21:25:
+assertion `left == right` failed
+  left: (4, 100)
+ right: (4, 2)
+
+---- binary_ei_and_whitespace_pixels_are_not_delimiters stdout ----
+
+thread 'binary_ei_and_whitespace_pixels_are_not_delimiters' (419) panicked at oxidize-pdf-core/tests/issue_734_inline_images_test.rs:21:25:
+assertion `left == right` failed
+  left: (8, 100)
+ right: (8, 1)
+
+---- missing_or_invalid_dimensions_are_explicit_errors stdout ----
+
+thread 'missing_or_invalid_dimensions_are_explicit_errors' (421) panicked at oxidize-pdf-core/tests/issue_734_inline_images_test.rs:38:160:
+assertion failed: extract(content).is_err()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- flate_and_ascii_hex_filters_decode_to_real_png stdout ----
+
+thread 'flate_and_ascii_hex_filters_decode_to_real_png' (420) panicked at oxidize-pdf-core/tests/issue_734_inline_images_test.rs:21:25:
+assertion `left == right` failed
+  left: (4, 100)
+ right: (4, 2)
+
+
+failures:
+    binary_ei_and_whitespace_pixels_are_not_delimiters
+    flate_and_ascii_hex_filters_decode_to_real_png
+    missing_or_invalid_dimensions_are_explicit_errors
+    one_line_dictionary_has_real_dimensions_and_png_samples
+    text_comments_and_names_do_not_create_images
+    unknown_filter_is_explicit_raw_never_fake_png
+
+test result: FAILED. 0 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_734_inline_images_test`
