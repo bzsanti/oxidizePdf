@@ -82,6 +82,13 @@ jobs:
           independent_output_oracle
           -- --ignored --exact
 
+      - name: Verify simple-font encodings against Poppler
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_731_simple_encoding_test
+          independent_poppler_standard_encoding_control
+          -- --ignored --exact
+
       - name: Verify streaming writer object graph and xref with qpdf
         run: >-
           cargo test --locked -p oxidize-pdf --features performance

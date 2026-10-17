@@ -1,0 +1,62 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue731/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 2m 35s
+     Running tests/issue_731_simple_encoding_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_731_simple_encoding_test-2ade9632ae146142)
+
+running 6 tests
+test implicit_standard14_encoding_in_both_consumers ... FAILED
+test supported_named_encodings_agree ... FAILED
+test explicit_standard_encoding_in_both_consumers ... FAILED
+test symbolic_truetype_is_not_assigned_standard_encoding ... ok
+test independent_poppler_standard_encoding_control ... FAILED
+test differences_and_tounicode_keep_precedence ... FAILED
+
+failures:
+
+---- implicit_standard14_encoding_in_both_consumers stdout ----
+
+thread 'implicit_standard14_encoding_in_both_consumers' (436) panicked at oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:39:9:
+assertion `left == right` failed: resolved font
+  left: "'`�"
+ right: "’‘Æ"
+
+---- supported_named_encodings_agree stdout ----
+
+thread 'supported_named_encodings_agree' (438) panicked at oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:39:9:
+assertion `left == right` failed: resolved font
+  left: "!"
+ right: "\u{f721}"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- explicit_standard_encoding_in_both_consumers stdout ----
+
+thread 'explicit_standard_encoding_in_both_consumers' (435) panicked at oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:39:9:
+assertion `left == right` failed: resolved font
+  left: "'`�"
+ right: "’‘Æ"
+
+---- independent_poppler_standard_encoding_control stdout ----
+
+thread 'independent_poppler_standard_encoding_control' (437) panicked at oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:39:9:
+assertion `left == right` failed: resolved font
+  left: "'`�"
+ right: "’‘Æ"
+
+---- differences_and_tounicode_keep_precedence stdout ----
+
+thread 'differences_and_tounicode_keep_precedence' (434) panicked at oxidize-pdf-core/tests/issue_731_simple_encoding_test.rs:39:9:
+assertion `left == right` failed: resolved font
+  left: "'€"
+ right: "’€"
+
+
+failures:
+    differences_and_tounicode_keep_precedence
+    explicit_standard_encoding_in_both_consumers
+    implicit_standard14_encoding_in_both_consumers
+    independent_poppler_standard_encoding_control
+    supported_named_encodings_agree
+
+test result: FAILED. 1 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_731_simple_encoding_test`

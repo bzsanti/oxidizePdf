@@ -1,3 +1,10 @@
+### #731 — codificaciones simples coherentes — 2026-10-17
+
+Issue: #731 — fix(text): preserve StandardEncoding and named simple-font mappings across extraction APIs — https://github.com/bzsanti/oxidizePdf/issues/731
+Estado: activa, reproducción. Prioridad: P1. Responsable: Codex.
+Cierre: StandardEncoding implícita en Standard14 Type1 no simbólicas y explícita en ambas APIs; nombres soportados coherentes, ToUnicode/Differences y salvaguardas simbólicas preservados, controles no ASCII/Poppler, QR y CI antes de merge.
+Última validación: OPEN y criterios confirmados en GitHub; inspección identifica fallback byte-as-char en extractor y TextEncoding incompleto en resolver. Siguiente acción: RED público en checkout /tmp/oxidize-issue731 basado en develop e8dbe772; compartir mapeos existentes sin ampliar #715.
+
 ## Corrección #757 y evaluación de release — 2026-10-16
 
 - Issue: #757 — Text extraction runs out of memory on large tagged PDFs (structure ActualText resolution, since 4.5.1) — https://github.com/bzsanti/oxidizePdf/issues/757
@@ -1488,3 +1495,6 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Cierre verificable local: todos los widgets del campo timestamp tienen Rect cero válido, independientemente del seleccionado; errores explícitos para hermanos visibles/malformados; controles invisibles conservan prefijo, widgets y DocTimeStamp.
 - Última validación: RED 2 fallos previstos; GREEN/regresión 48 PASS en cuatro targets, incluyendo qpdf/OpenSSL; Clippy all-targets/signatures y formato PASS; Kripteia calidad/seguridad e inspección final terminados. Informe actualizado docs/reports/2026-10-12-issue-714-review.md, evidencias pr717 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
 - Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.
+
+
+Validación #731: RED cinco fallos/un control PASS; GREEN final nueve contratos (Poppler incluido), 103 integración, 875 unidades text:: y 278 fonts:: PASS (filtros solapados). Formato/diff-check, Clippy all-targets y focal final PASS; QR manual y Kripteia calidad/seguridad completos sin hallazgos nuevos. Informe docs/reports/2026-10-17-issue-731-review.md. Siguiente acción: publicar PR contra develop, esperar CI verde y fusionar.

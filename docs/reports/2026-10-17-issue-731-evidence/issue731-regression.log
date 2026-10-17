@@ -1,0 +1,165 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue731/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 7.19s
+     Running tests/issue_662_pdf_macroman_contract_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_662_pdf_macroman_contract_test-f5530f06cf0b48b3)
+
+running 2 tests
+test explicit_mappings_override_currency_and_undefined_codes ... ok
+test all_pdf_macroman_positions_match_independent_reference ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running tests/text_differences_boundary_contract_test.rs (/tmp/oxidize-issue741/target/debug/deps/text_differences_boundary_contract_test-7d3527c4e09e4c57)
+
+running 7 tests
+test invalid_counter_recovery_must_not_alias_valid_byte_mappings ... ok
+test fifteen_independently_verified_fixtures_match_frozen_hashes ... ok
+test later_difference_entry_overrides_earlier_entry_for_same_code ... ok
+test integer_resets_do_not_remap_intermediate_base_encoding_codes ... ok
+test first_and_last_byte_codes_are_valid_differences_positions ... ok
+test name_sequence_can_end_exactly_at_code_255 ... ok
+test tounicode_overrides_differences_without_multiplying_source_advances ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/text_embedded_font_contract_test.rs (/tmp/oxidize-issue741/target/debug/deps/text_embedded_font_contract_test-66cd3893f1a0814d)
+
+running 4 tests
+test embedded_cff_simple_font_decodes_without_tounicode ... ok
+test embedded_cff_advance_matches_declared_font_metrics ... ok
+test embedded_cff_tounicode_has_precedence ... ok
+test embedded_font_is_the_pinned_opentype_cff_program ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/text_encoding_contract_test.rs (/tmp/oxidize-issue741/target/debug/deps/text_encoding_contract_test-0ccddefe0e50cd05)
+
+running 24 tests
+test builtin_decoding_preserves_afm_widths_and_following_origins ... ok
+test builtin_font_selection_does_not_match_unrelated_names_or_type3 ... ok
+test external_oracles_have_256_unique_positions_and_recorded_hashes ... ok
+test literal_and_hex_strings_preserve_the_same_source_codes ... ok
+test differences_restart_the_code_counter_and_preserve_unmodified_codes ... ok
+test builtin_symbol_subset_names_and_explicit_tounicode_are_distinct ... ok
+test differences_override_the_base_encoding ... ok
+test builtin_symbol_and_zapf_keep_encoding_and_differences_precedence ... ok
+test custom_type3_names_preserve_unknown_markers_and_mapping_precedence ... ok
+test macroman_overrides_cover_undefined_and_currency_codes ... ok
+test tounicode_overrides_builtin_symbol_and_dingbats ... ok
+test tounicode_overrides_differences_and_supports_unicode_sequences ... ok
+test unknown_intrinsic_type1_names_preserve_markers_and_explicit_unicode ... ok
+test unresolved_differences_replace_instead_of_restoring_the_base_glyph ... ok
+test macroman_undefined_codes_preserve_neighbors_with_replacement ... ok
+test zapf_differences_resolve_adobe_names_before_builtin_codes ... ok
+test standard_encoding_matches_independent_table ... ok
+test symbol_builtin_encoding_matches_independent_table ... ok
+test macroman_encoding_matches_independent_table ... ok
+test zapfdingbats_builtin_encoding_matches_independent_table ... ok
+test winansi_encoding_matches_independent_table ... ok
+test all_zapf_glyph_names_can_be_remapped_over_an_explicit_base_encoding ... ok
+test simple_encoding_undefined_codes_recover_without_losing_neighbors ... ok
+test latin_standard14_fonts_use_complete_explicit_pdf_encodings_in_both_modes ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.97s
+
+     Running tests/text_expert_contract_test.rs (/tmp/oxidize-issue741/target/debug/deps/text_expert_contract_test-e46f5be82af98d5e)
+
+running 5 tests
+test expert_program_and_independent_name_inventory_are_pinned ... ok
+test macexpert_unambiguous_glyph_names_decode_without_tounicode ... ok
+test tounicode_can_choose_non_pua_text_for_expert_glyphs ... ok
+test all_expert_codes_preserve_their_explicit_tounicode_values ... ok
+test all_macexpert_codes_follow_agl_or_explicit_undefined_recovery ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running tests/text_qr_regression_contract_test.rs (/tmp/oxidize-issue741/target/debug/deps/text_qr_regression_contract_test-a93eb1fb7e42c0c7)
+
+running 15 tests
+test legacy_collection_matches_stay_exhaustive ... ok
+test inherited_adobe_kr_dictionary ... ok
+test inherited_adobe_kr_operator ... ok
+test resolved_intrinsic_cff ... ok
+test resolved_intrinsic_type1 ... ok
+test resolved_flat_control ... ok
+test resolved_encoding_parent ... ok
+test resolved_vertical_advance ... ok
+test resolved_named_parent ... ok
+test resolved_unicode_parent ... ok
+test strict_public_extraction_rejects_cyclic_usecmap ... ok
+test type1_procedure_is_not_executed ... ok
+test page_and_form_strict_cycles_error_while_lenient_keeps_child ... ok
+test resolved_intrinsic_differences_and_tounicode_precedence ... ok
+test indirect_cid_collection_matches_direct_extraction ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/text_standard14_metrics_contract_test.rs (/tmp/oxidize-issue741/target/debug/deps/text_standard14_metrics_contract_test-55f132f33d919aca)
+
+running 8 tests
+test symbol_and_zapf_follow_adobe_metrics ... ok
+test helvetica_styles_follow_adobe_implicit_metrics ... ok
+test courier_styles_follow_adobe_monospaced_metrics ... ok
+test times_styles_follow_adobe_implicit_metrics ... ok
+test declared_widths_override_implicit_metrics_for_all_fourteen_fonts ... ok
+test resolved_standard14_widths_match_frozen_afm_and_explicit_overrides ... ok
+test frozen_afm_sources_license_and_pdfs_are_unchanged ... ok
+test every_font_pair_and_return_transition_selects_the_current_metrics ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+     Running tests/text_symbolic_truetype_contract_test.rs (/tmp/oxidize-issue741/target/debug/deps/text_symbolic_truetype_contract_test-b5ab5c4d81495e42)
+
+running 12 tests
+test full_and_subset_preserve_selected_symbolic_contours ... ok
+test macintosh_byte_cmap_preserves_original_glyph_selection ... ok
+test all_symbolic_programs_and_pdfs_match_frozen_hashes ... ok
+test windows_symbol_cmap_preserves_private_codes_and_gids ... ok
+test windows_ucs4_cmap_retains_non_bmp_mapping_only_in_full_font ... ok
+test windows_unicode_bmp_cmap_preserves_gids_and_metrics ... ok
+test arbitrary_symbolic_truetype_has_no_implicit_adobe_symbol_unicode ... ok
+test explicit_symbolic_encodings_and_differences_remain_evidence ... ok
+test multi_scalar_tounicode_does_not_multiply_the_source_glyph_advance ... ok
+test symbolic_tounicode_preserves_sequences_independently_of_glyph_names ... ok
+test nonsymbolic_winansi_and_explicit_unicode_have_separate_contracts ... ok
+test arbitrary_symbolic_text_uses_replacement_without_losing_advance ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/text_symbolic_truetype_fallback_test.rs (/tmp/oxidize-issue741/target/debug/deps/text_symbolic_truetype_fallback_test-728994e47f7770ed)
+
+running 16 tests
+test invalid_direct_gid_does_not_hide_a_valid_symbol_prefix ... ok
+test malformed_cmap_ranges_do_not_discard_valid_later_entries ... ok
+test invalid_windows_gids_do_not_hide_valid_macintosh_glyphs ... ok
+test format_6_codes_do_not_wrap_to_byte_codes ... ok
+test missing_or_unparseable_program_keeps_the_strict_policy ... ok
+test codes_the_program_does_not_map_stay_replacement ... ok
+test default_and_disabled_keep_the_strict_replacement_policy ... ok
+test post_glyph_names_take_precedence_over_the_byte ... ok
+test tounicode_does_not_require_a_readable_font_program ... ok
+test tounicode_and_differences_still_win ... ok
+test null_tounicode_keeps_the_same_fallback_as_an_absent_entry ... ok
+test truncated_font_directory_returns_replacements_without_panicking ... ok
+test switching_fallback_rebuilds_cached_font_information ... ok
+test unnamed_glyphs_decode_as_the_byte_in_the_subtable_encoding ... ok
+test unnamed_high_bytes_use_the_selected_subtable_encoding ... ok
+test fallback_requires_gids_within_the_declared_glyph_count ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/text_type1_intrinsic_contract_test.rs (/tmp/oxidize-issue741/target/debug/deps/text_type1_intrinsic_contract_test-9f1097dac480db40)
+
+running 10 tests
+test pfb_records_are_removed_from_pdf_fontfile_payloads ... ok
+test all_program_and_pdf_bytes_match_the_independent_provenance ... ok
+test explicit_pdf_encoding_overrides_the_embedded_encoding ... ok
+test explicit_encoding_glyph_width_advances_the_text_pen ... ok
+test absent_pdf_encoding_uses_the_embedded_program_encoding ... ok
+test tounicode_overrides_pdf_differences_and_intrinsic_encoding ... ok
+test differences_without_base_inherits_unmodified_codes_from_the_program ... ok
+test intrinsic_glyph_width_advances_the_text_pen ... ok
+test differences_glyph_width_advances_the_text_pen ... ok
+test tounicode_does_not_change_glyph_advances ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
