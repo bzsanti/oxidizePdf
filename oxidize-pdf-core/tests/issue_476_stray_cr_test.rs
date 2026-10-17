@@ -13,9 +13,29 @@
 //! `sanitize_extracted_text` unit tests in `text_sanitization_test.rs`,
 //! to guard the fix at the level a real caller observes it.
 
-#[path = "common/mod.rs"]
-mod common;
-use common::synthetic_pdf::build_pdf_with_content_stream;
+#[path = "common/text_contracts.rs"]
+mod contract;
+
+// CR/LF are unassigned StandardEncoding glyph codes. Give them explicit
+// Unicode meaning so these tests exercise sanitization after decoding,
+// consistently with issue_476_carriage_return_policy_test.rs.
+fn build_pdf_with_content_stream(content: &[u8]) -> Vec<u8> {
+    let mapping = contract::assembler::stream_obj(
+        "",
+        b"/CIDInit /ProcSet findresource begin
+12 dict begin begincmap
+/CMapName /Issue476Controls def /CMapType 2 def
+1 begincodespacerange <00> <FF> endcodespacerange
+1 beginbfrange <20> <7E> <0020> endbfrange
+2 beginbfchar <0D> <000D> <0A> <000A> endbfchar
+endcmap CMapName currentdict /CMap defineresource pop end end",
+    );
+    contract::pdf(
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /ToUnicode 6 0 R >>",
+        content,
+        vec![mapping],
+    )
+}
 
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::{CarriageReturnHandling, ExtractionOptions, TextExtractor};

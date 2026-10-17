@@ -1,0 +1,16 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue762/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 32.80s
+     Running tests/issue_762_ordered_mutations_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_762_ordered_mutations_test-2f69caf6de2c9a46)
+
+running 8 tests
+test unchanged_batch_is_byte_identical ... ok
+test independent_attributes_and_elements_do_not_share_state ... ok
+test repeated_reparent_uses_current_parent_and_restores_original ... ok
+test independent_qpdf_observes_restored_value_and_generation ... ok
+test invalid_later_operations_fail_atomically_in_plan_and_apply ... ok
+test indices_use_current_children_after_moves_and_creations ... ok
+test parent_tree_remove_restore_and_repeated_assignments ... ok
+test assignments_and_removals_restore_original_or_absent_values ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+

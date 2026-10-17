@@ -1,0 +1,6 @@
+{
+  "oxidize-pdf-core/src/pdfa/xmp.rs": "ec7edda236160e73dc05395b1f72b2d083282b4490f5665edba7a8de9b4db5b4",
+  "oxidize-pdf-core/src/pdfa/xmp_packet.rs": "21dfe8bd3762e9ef2827610114e37ec4ef61401d707c24330d93c9f39ae835b7",
+  "oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs": "4d253066b02bdaa3e52df759c724e33886ad9c5749a2b0386162ed64363c2026",
+  ".github/workflows/interoperability.yml": "d1fbcba3c0f9e66155b2bcc3bc1fc5b678c51095e5c645646b95c91e5fee2712"
+}

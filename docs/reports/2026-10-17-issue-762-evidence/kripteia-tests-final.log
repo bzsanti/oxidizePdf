@@ -1,0 +1,59 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 11 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs       11     97
+
+--- Worst Offenders ---
+  independent_qpdf_observes_restored_value_and_generation (oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:328) - Score: 80
+    - Test 'independent_qpdf_observes_restored_value_and_generation' is marked as #[ignore]
+    i Test 'independent_qpdf_observes_restored_value_and_generation' has multiple assertions without diagnostic messages
+    i Test 'independent_qpdf_observes_restored_value_and_generation' uses .unwrap() which silently discards error information
+  unchanged_batch_is_byte_identical (oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:209) - Score: 90
+    - Test 'unchanged_batch_is_byte_identical' does not call any production code
+  assignments_and_removals_restore_original_or_absent_values (oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:162) - Score: 100
+    i Test 'assignments_and_removals_restore_original_or_absent_values' has multiple assertions without diagnostic messages
+    i Test 'assignments_and_removals_restore_original_or_absent_values' uses .unwrap() which silently discards error information
+  independent_attributes_and_elements_do_not_share_state (oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:192) - Score: 100
+    i Test 'independent_attributes_and_elements_do_not_share_state' has multiple assertions without diagnostic messages
+  parent_tree_remove_restore_and_repeated_assignments (oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:224) - Score: 100
+    i Test 'parent_tree_remove_restore_and_repeated_assignments' has multiple assertions without diagnostic messages
+
+--- Details ---
+oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs:
+  assignments_and_removals_restore_original_or_absent_values (line 162) - Score: 100
+    i Test 'assignments_and_removals_restore_original_or_absent_values' has multiple assertions without diagnostic messages
+    i Test 'assignments_and_removals_restore_original_or_absent_values' uses .unwrap() which silently discards error information
+  independent_attributes_and_elements_do_not_share_state (line 192) - Score: 100
+    i Test 'independent_attributes_and_elements_do_not_share_state' has multiple assertions without diagnostic messages
+  unchanged_batch_is_byte_identical (line 209) - Score: 90
+    - Test 'unchanged_batch_is_byte_identical' does not call any production code
+  parent_tree_remove_restore_and_repeated_assignments (line 224) - Score: 100
+    i Test 'parent_tree_remove_restore_and_repeated_assignments' has multiple assertions without diagnostic messages
+  repeated_reparent_uses_current_parent_and_restores_original (line 257) - Score: 100
+    i Test 'repeated_reparent_uses_current_parent_and_restores_original' has multiple assertions without diagnostic messages
+  indices_use_current_children_after_moves_and_creations (line 275) - Score: 100
+    i Test 'indices_use_current_children_after_moves_and_creations' has multiple assertions without diagnostic messages
+  invalid_later_operations_fail_atomically_in_plan_and_apply (line 305) - Score: 100
+    i Test 'invalid_later_operations_fail_atomically_in_plan_and_apply' has multiple assertions without diagnostic messages
+  independent_qpdf_observes_restored_value_and_generation (line 328) - Score: 80
+    - Test 'independent_qpdf_observes_restored_value_and_generation' is marked as #[ignore]
+    i Test 'independent_qpdf_observes_restored_value_and_generation' has multiple assertions without diagnostic messages
+    i Test 'independent_qpdf_observes_restored_value_and_generation' uses .unwrap() which silently discards error information
+  docmdp_forbids_even_restoring_batches_without_publishing_bytes (line 375) - Score: 100
+    i Test 'docmdp_forbids_even_restoring_batches_without_publishing_bytes' has multiple assertions without diagnostic messages
+  effective_plan_omits_only_noops_at_their_position (line 397) - Score: 100
+    i Test 'effective_plan_omits_only_noops_at_their_position' has multiple assertions without diagnostic messages
+  mixed_parent_tree_and_association_operations_observe_batch_state (line 432) - Score: 100
+    i Test 'mixed_parent_tree_and_association_operations_observe_batch_state' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
