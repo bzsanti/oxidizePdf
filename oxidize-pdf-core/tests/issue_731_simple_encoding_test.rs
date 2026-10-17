@@ -197,3 +197,14 @@ fn symbolic_flag_and_invalid_subset_prefix_do_not_infer_latin_encoding() {
         );
     }
 }
+
+#[test]
+fn unassigned_standard_codes_do_not_manufacture_line_endings() {
+    for encoding in ["", "/StandardEncoding"] {
+        check(
+            fixture("Helvetica", encoding, b"A\r\nB", "", vec![]),
+            b"A\r\nB",
+            "A��B",
+        );
+    }
+}

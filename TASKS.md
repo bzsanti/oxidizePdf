@@ -1509,3 +1509,6 @@ Validación #731: RED cinco fallos/un control PASS; GREEN final nueve contratos 
 
 
 Integración #731 con develop 075b5f7b: Rust/tests idénticos al QR; conflicto aditivo de workflow/TASKS resuelto conservando todo el historial y todos los jobs/steps previos. Check de YAML detectó una resolución temporal incompleta; corregida antes de publicación. Contratos combinados #731/#741: 21 PASS con Poppler y Python. Siguiente acción: publicar PR y verificar CI del head final.
+
+
+Corrección CI #731: fixture CR declara ToUnicode, todas las aserciones originales conservadas; nuevo control negativo de códigos StandardEncoding sin asignación. En target aislado: 43 tests PASS y Clippy focal estricto PASS; QR/Kripteia de ambos tests completo. Intento anterior con target compartido devolvió comportamiento de otra rama y queda excluido de evidencia. Código de producto sin cambios. Siguiente acción: publicar nuevo head de #773 y exigir nuevo CI verde.
