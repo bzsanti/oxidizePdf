@@ -1,3 +1,10 @@
+### #733 — DeviceCMYK y alpha — 2026-10-17
+
+Issue: #733 — fix(images): avoid exporting CMYK samples as RGBA — https://github.com/bzsanti/oxidizePdf/issues/733
+Estado: activa, reproducción sobre #732 revisada c5a5608a. Prioridad: P1. Responsable: Codex.
+Cierre: DeviceCMYK de 8 bits convertido a RGB opaco con alpha separado, nunca inferir RGBA por cuatro componentes; PNG independiente, cyan/negro/controles, error explícito en perfiles no soportados, QR y CI verde antes de merge.
+Última validación: OPEN/cuerpo confirmados; cuatro componentes se etiquetan RGBA. Siguiente acción: RED público y conversión DeviceCMYK no gestionada por perfil; rechazar otras fuentes de cuatro componentes en vez de inventar alpha. Indexed-CMYK/ICC no se declaran convertidos.
+
 ### #731 — codificaciones simples coherentes — 2026-10-17
 
 Issue: #731 — fix(text): preserve StandardEncoding and named simple-font mappings across extraction APIs — https://github.com/bzsanti/oxidizePdf/issues/731
@@ -1546,6 +1553,8 @@ Corrección CI #731: fixture CR declara ToUnicode, todas las aserciones original
 
 Validación #732: RED cinco fallos/cuatro controles; QR encontró conversión 257→1, demostrada RED y corregida. Final diez contratos nuevos (PNG independiente/qpdf/alpha), doce integración existentes y 63 unidades PASS. Clippy all-targets -D warnings, formato/diff-check y QR/Kripteia completos. Informe docs/reports/2026-10-17-issue-732-review.md. Siguiente acción: publicar PR a develop y esperar CI verde antes de merge; continuar #733 sobre la corrección revisada.
 
+Validación #733: RED cuatro fallos/dos controles; final seis contratos nuevos y 22 regresiones PASS; PNG independiente confirma colores/alpha y negativos explícitos. Clippy all-targets con external-images y QR manual/ambos Kripteia completos. Informe docs/reports/2026-10-17-issue-733-review.md. Estado: QR local completo, publicación/CI pendientes. Siguiente acción: incorporar develop con #732 integrada, publicar PR y fusionar tras CI verde.
+
 Validación #763: commit de código fe4631a5; RED 5 FAIL/2 controles PASS. Final 11 contratos nuevos (Python independiente incluido), 12 #741, 15 PDF/A integración, 55 validator y 3 comprimidos PASS; 70 unidades PDF/A PASS. Clippy all-targets -D warnings, formato/diff-check y QR/Kripteia calidad/seguridad completos sin hallazgos nuevos. Informe docs/reports/2026-10-17-issue-763-review.md. Siguiente acción: integrar #741 tras CI verde; rebasar #763 sobre develop y publicar su PR propio, comprobar CI y fusionar. Bundle y fuentes conservados fuera de /tmp.
 
 
@@ -1558,3 +1567,5 @@ Integración PR #775: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos li
 Integración PR #768: QR completo; CI previo 30 SUCCESS/2 SKIPPED. Conflictos limitados a seguimiento y pasos CI resueltos conservando ambos. Fuentes Rust de la corrección sin cambios; nuevo CI obligatorio sobre el merge de develop ef0c9698. Siguiente acción: fusionar a develop al quedar verde, según autorización del usuario. #741/#763 ya integradas (PR #769/#772).
 
 Integración #731: incorpora develop y candidatos revisados #732/#762; conflictos exclusivamente en seguimiento y pasos CI resueltos conservando ambos. Código #731 sin cambios respecto al QR/43 contratos PASS. Siguiente acción: fusionar PR #773 tras #775/#768 y CI verde del head final.
+
+Integración #733: incorpora candidatos revisados #732/#762/#731; conflictos de seguimiento y workflow resueltos conservando todos los contratos. Código propio sin cambios respecto al QR. Siguiente acción: publicar PR propio a develop tras esos merges y verificar CI del nuevo head.
