@@ -336,9 +336,15 @@ impl<'a> PngDecoder<'a> {
 
     fn decode_image_data(&self, raw_data: &[u8]) -> Result<(Vec<u8>, Option<Vec<u8>>)> {
         let bytes_per_pixel = (self.bit_depth as usize * self.color_type.channels()).div_ceil(8);
-        let bytes_per_row = (self.width as usize * bytes_per_pixel) + 1; // +1 for filter byte
+        let bytes_per_row = (self.width as usize)
+            .checked_mul(bytes_per_pixel)
+            .and_then(|bytes| bytes.checked_add(1)) // filter byte
+            .ok_or_else(|| PdfError::InvalidImage("PNG row size overflow".into()))?;
+        let required = (self.height as usize)
+            .checked_mul(bytes_per_row)
+            .ok_or_else(|| PdfError::InvalidImage("PNG image size overflow".into()))?;
 
-        if raw_data.len() < self.height as usize * bytes_per_row {
+        if raw_data.len() < required {
             return Err(PdfError::InvalidImage(
                 "Insufficient PNG image data".to_string(),
             ));
@@ -439,29 +445,19 @@ impl<'a> PngDecoder<'a> {
     }
 
     fn separate_alpha(&self, data: &[u8]) -> (Vec<u8>, Option<Vec<u8>>) {
-        match self.color_type {
-            PngColorType::GrayscaleAlpha => {
-                let mut gray = Vec::new();
-                let mut alpha = Vec::new();
-                for chunk in data.chunks_exact(2) {
-                    gray.push(chunk[0]);
-                    alpha.push(chunk[1]);
-                }
-                (gray, Some(alpha))
-            }
-            PngColorType::RgbAlpha => {
-                let mut rgb = Vec::new();
-                let mut alpha = Vec::new();
-                for chunk in data.chunks_exact(4) {
-                    rgb.push(chunk[0]);
-                    rgb.push(chunk[1]);
-                    rgb.push(chunk[2]);
-                    alpha.push(chunk[3]);
-                }
-                (rgb, Some(alpha))
-            }
-            _ => (data.to_vec(), None),
+        if !self.color_type.has_alpha() {
+            return (data.to_vec(), None);
         }
+        let bytes_per_sample = if self.bit_depth == 16 { 2 } else { 1 };
+        let pixel_bytes = self.color_type.channels() * bytes_per_sample;
+        let color_bytes = pixel_bytes - bytes_per_sample;
+        let mut image = Vec::new();
+        let mut alpha = Vec::new();
+        for pixel in data.chunks_exact(pixel_bytes) {
+            image.extend_from_slice(&pixel[..color_bytes]);
+            alpha.extend_from_slice(&pixel[color_bytes..]);
+        }
+        (image, Some(alpha))
     }
 }
 

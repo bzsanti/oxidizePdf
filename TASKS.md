@@ -1,3 +1,10 @@
+### #736 — profundidad PNG de 16 bits — 2026-10-17
+
+Issue: #736 — fix(images): preserve PNG sample depth or convert samples before declaring 8 bits — https://github.com/bzsanti/oxidizePdf/issues/736
+Estado: activa, reproducción. Prioridad: P1. Responsable: Codex.
+Cierre: preservar muestras de 16 bits y declarar 16 en imagen y máscara; separación de alpha por muestra, controles de 8 bits, PDF escrito/reabierto y qpdf/PNG independientes, QR y CI verde antes de merge.
+Última validación: OPEN y criterios leídos; importación declara siempre 8, separador alpha opera por bytes y SMask declara 8. Siguiente acción: RED con PNG generado por encoder independiente, luego conservar 16 bits sin conversión con pérdida. Palette/tRNS no se declaran completos.
+
 ## #741 — XMP namespace-aware PDF/A identifiers — 2026-10-17
 
 Issue: #741 — fix(pdfa): recognize RDF attribute-form PDF/A identifiers — https://github.com/bzsanti/oxidizePdf/issues/741
@@ -1496,3 +1503,5 @@ Las siguientes entradas son registros históricos; el estado vigente de 5.3.0 fi
 - Cierre verificable local: todos los widgets del campo timestamp tienen Rect cero válido, independientemente del seleccionado; errores explícitos para hermanos visibles/malformados; controles invisibles conservan prefijo, widgets y DocTimeStamp.
 - Última validación: RED 2 fallos previstos; GREEN/regresión 48 PASS en cuatro targets, incluyendo qpdf/OpenSSL; Clippy all-targets/signatures y formato PASS; Kripteia calidad/seguridad e inspección final terminados. Informe actualizado docs/reports/2026-10-12-issue-714-review.md, evidencias pr717 en docs/reports/2026-10-13-pr-717-718-evidence/corrections/.
 - Siguiente acción: publicar candidato y confirmar CI antes de fusión. No merge remoto ni release; preservar alcance externo TSA/trust/PAdES.
+
+Validación #736: RED 4 fallos/1 control; QR reprodujo overflow de geometría con CRC válido, corregido mediante arithmetic checked. Final seis contratos nuevos, once regresiones integración y 59 unidades PASS; qpdf independiente, Clippy all-targets -D warnings y ambos Kripteia completos. Informe docs/reports/2026-10-17-issue-736-review.md. Estado: QR local completo; siguiente acción publicar PR a develop y fusionar tras CI verde.

@@ -1,0 +1,180 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 53 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/graphics/pdf_image.rs                       53     96
+
+--- Worst Offenders ---
+  test_image_format_enum (oxidize-pdf-core/src/graphics/pdf_image.rs:1134) - Score: 60
+    i Test 'test_image_format_enum' has multiple assertions without diagnostic messages
+    - Test 'test_image_format_enum' does not call any production code
+    - Test 'test_image_format_enum' line 1135: assert_eq! with identical arguments: ImageFormat :: Jpeg 
+    - Test 'test_image_format_enum' line 1136: assert_eq! with identical arguments: ImageFormat :: Png 
+    - Test 'test_image_format_enum' line 1137: assert_eq! with identical arguments: ImageFormat :: Tiff 
+  test_image_format_variants (oxidize-pdf-core/src/graphics/pdf_image.rs:1148) - Score: 90
+    i Test 'test_image_format_variants' has multiple assertions without diagnostic messages
+    - Test 'test_image_format_variants' does not call any production code
+  test_image_format_debug (oxidize-pdf-core/src/graphics/pdf_image.rs:1164) - Score: 90
+    i Test 'test_image_format_debug' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_format_debug' has multiple assertions without diagnostic messages
+    - Test 'test_image_format_debug' does not call any production code
+  test_image_format_clone_copy (oxidize-pdf-core/src/graphics/pdf_image.rs:1175) - Score: 90
+    i Test 'test_image_format_clone_copy' has multiple assertions without diagnostic messages
+    - Test 'test_image_format_clone_copy' does not call any production code
+  test_color_space_variants (oxidize-pdf-core/src/graphics/pdf_image.rs:1185) - Score: 90
+    i Test 'test_color_space_variants' has multiple assertions without diagnostic messages
+    - Test 'test_color_space_variants' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/src/graphics/pdf_image.rs:
+  test_parse_jpeg_header (line 1010) - Score: 100
+    i Test 'test_parse_jpeg_header' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_jpeg_header' has multiple assertions without diagnostic messages
+    i Test 'test_parse_jpeg_header' uses .unwrap() which silently discards error information
+  test_parse_png_header (line 1040) - Score: 100
+    i Test 'test_parse_png_header' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_png_header' has multiple assertions without diagnostic messages
+    i Test 'test_parse_png_header' uses .unwrap() which silently discards error information
+  test_parse_tiff_header_little_endian (line 1075) - Score: 100
+    i Test 'test_parse_tiff_header_little_endian' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_tiff_header_little_endian' has multiple assertions without diagnostic messages
+    i Test 'test_parse_tiff_header_little_endian' uses .unwrap() which silently discards error information
+  test_parse_tiff_header_big_endian (line 1101) - Score: 100
+    i Test 'test_parse_tiff_header_big_endian' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_tiff_header_big_endian' has multiple assertions without diagnostic messages
+    i Test 'test_parse_tiff_header_big_endian' uses .unwrap() which silently discards error information
+  test_image_format_enum (line 1134) - Score: 60
+    i Test 'test_image_format_enum' has multiple assertions without diagnostic messages
+    - Test 'test_image_format_enum' does not call any production code
+    - Test 'test_image_format_enum' line 1135: assert_eq! with identical arguments: ImageFormat :: Jpeg 
+    - Test 'test_image_format_enum' line 1136: assert_eq! with identical arguments: ImageFormat :: Png 
+    - Test 'test_image_format_enum' line 1137: assert_eq! with identical arguments: ImageFormat :: Tiff 
+  test_image_format_variants (line 1148) - Score: 90
+    i Test 'test_image_format_variants' has multiple assertions without diagnostic messages
+    - Test 'test_image_format_variants' does not call any production code
+  test_image_format_debug (line 1164) - Score: 90
+    i Test 'test_image_format_debug' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_format_debug' has multiple assertions without diagnostic messages
+    - Test 'test_image_format_debug' does not call any production code
+  test_image_format_clone_copy (line 1175) - Score: 90
+    i Test 'test_image_format_clone_copy' has multiple assertions without diagnostic messages
+    - Test 'test_image_format_clone_copy' does not call any production code
+  test_color_space_variants (line 1185) - Score: 90
+    i Test 'test_color_space_variants' has multiple assertions without diagnostic messages
+    - Test 'test_color_space_variants' does not call any production code
+  test_color_space_debug (line 1201) - Score: 90
+    i Test 'test_color_space_debug' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_color_space_debug' has multiple assertions without diagnostic messages
+    - Test 'test_color_space_debug' does not call any production code
+  test_color_space_clone_copy (line 1212) - Score: 90
+    i Test 'test_color_space_clone_copy' has multiple assertions without diagnostic messages
+    - Test 'test_color_space_clone_copy' does not call any production code
+  test_image_from_jpeg_data (line 1222) - Score: 100
+    i Test 'test_image_from_jpeg_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_from_jpeg_data' has multiple assertions without diagnostic messages
+    i Test 'test_image_from_jpeg_data' uses .unwrap() which silently discards error information
+  test_image_from_png_data (line 1247) - Score: 90
+    i Test 'test_image_from_png_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_from_png_data' has multiple assertions without diagnostic messages
+    i Test 'test_image_from_png_data' uses .unwrap() which silently discards error information
+    - Test 'test_image_from_png_data' has low assert-to-setup ratio (19%): 7 asserts vs 30 setup lines
+  test_image_from_tiff_data (line 1305) - Score: 100
+    i Test 'test_image_from_tiff_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_from_tiff_data' has multiple assertions without diagnostic messages
+    i Test 'test_image_from_tiff_data' uses .unwrap() which silently discards error information
+  test_image_from_jpeg_file (line 1332) - Score: 100
+    i Test 'test_image_from_jpeg_file' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_from_jpeg_file' has multiple assertions without diagnostic messages
+    i Test 'test_image_from_jpeg_file' uses .unwrap() which silently discards error information
+  test_image_from_png_file (line 1362) - Score: 100
+    i Test 'test_image_from_png_file' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_from_png_file' has multiple assertions without diagnostic messages
+    i Test 'test_image_from_png_file' uses .unwrap() which silently discards error information
+  test_image_from_tiff_file (line 1422) - Score: 100
+    i Test 'test_image_from_tiff_file' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_from_tiff_file' has multiple assertions without diagnostic messages
+    i Test 'test_image_from_tiff_file' uses .unwrap() which silently discards error information
+  test_image_from_file_jpeg (line 1452) - Score: 100
+    i Test 'test_image_from_file_jpeg' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_image_from_file_jpeg' has multiple assertions without diagnostic messages
+    i Test 'test_image_from_file_jpeg' uses .unwrap() which silently discards error information
+  test_image_from_file_uppercase_extension (line 1468) - Score: 100
+    i Test 'test_image_from_file_uppercase_extension' uses .unwrap() which silently discards error information
+  test_image_from_file_unsupported_extension (line 1483) - Score: 100
+    i Test 'test_image_from_file_unsupported_extension' uses .unwrap() which silently discards error information
+  test_image_from_file_no_extension (line 1493) - Score: 100
+    i Test 'test_image_from_file_no_extension' uses .unwrap() which silently discards error information
+  test_image_to_pdf_object_jpeg (line 1503) - Score: 100
+    i Test 'test_image_to_pdf_object_jpeg' has multiple assertions without diagnostic messages
+    i Test 'test_image_to_pdf_object_jpeg' uses .unwrap() which silently discards error information
+  test_image_to_pdf_object_png (line 1548) - Score: 100
+    i Test 'test_image_to_pdf_object_png' has multiple assertions without diagnostic messages
+    i Test 'test_image_to_pdf_object_png' uses .unwrap() which silently discards error information
+  test_image_to_pdf_object_tiff (line 1614) - Score: 100
+    i Test 'test_image_to_pdf_object_tiff' has multiple assertions without diagnostic messages
+    i Test 'test_image_to_pdf_object_tiff' uses .unwrap() which silently discards error information
+  test_image_clone (line 1665) - Score: 100
+    i Test 'test_image_clone' has multiple assertions without diagnostic messages
+    i Test 'test_image_clone' uses .unwrap() which silently discards error information
+  test_image_debug (line 1690) - Score: 100
+    i Test 'test_image_debug' has multiple assertions without diagnostic messages
+    i Test 'test_image_debug' uses .unwrap() which silently discards error information
+  test_jpeg_grayscale_image (line 1715) - Score: 90
+    i Test 'test_jpeg_grayscale_image' uses .unwrap() which silently discards error information
+    - Test 'test_jpeg_grayscale_image' has low assert-to-setup ratio (13%): 2 asserts vs 13 setup lines
+  test_jpeg_cmyk_image (line 1743) - Score: 90
+    i Test 'test_jpeg_cmyk_image' uses .unwrap() which silently discards error information
+    - Test 'test_jpeg_cmyk_image' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+  test_png_grayscale_image (line 1772) - Score: 100
+    i Test 'test_png_grayscale_image' uses .unwrap() which silently discards error information
+  test_png_palette_image_incomplete (line 1789) - Score: 90
+    - Test 'test_png_palette_image_incomplete' has low assert-to-setup ratio (6%): 1 asserts vs 17 setup lines
+  test_tiff_big_endian (line 1811) - Score: 100
+    i Test 'test_tiff_big_endian' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_tiff_big_endian' has multiple assertions without diagnostic messages
+    i Test 'test_tiff_big_endian' uses .unwrap() which silently discards error information
+  test_tiff_cmyk_image (line 1836) - Score: 90
+    i Test 'test_tiff_cmyk_image' uses .unwrap() which silently discards error information
+    - Test 'test_tiff_cmyk_image' has low assert-to-setup ratio (11%): 2 asserts vs 16 setup lines
+  test_error_jpeg_unsupported_components (line 1909) - Score: 90
+    - Test 'test_error_jpeg_unsupported_components' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+  test_error_png_unsupported_color_type (line 1929) - Score: 90
+    - Test 'test_error_png_unsupported_color_type' has low assert-to-setup ratio (6%): 1 asserts vs 15 setup lines
+  test_error_nonexistent_file (line 1949) - Score: 100
+    i Test 'test_error_nonexistent_file' has multiple assertions without diagnostic messages
+  test_jpeg_no_dimensions (line 1961) - Score: 90
+    - Test 'test_jpeg_no_dimensions' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_png_no_ihdr (line 1972) - Score: 90
+    - Test 'test_png_no_ihdr' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_tiff_no_dimensions (line 1986) - Score: 90
+    - Test 'test_tiff_no_dimensions' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_different_bit_depths (line 2102) - Score: 100
+    i Test 'test_different_bit_depths' has multiple assertions without diagnostic messages
+    i Test 'test_different_bit_depths' uses .unwrap() which silently discards error information
+  test_performance_large_image_data (line 2131) - Score: 100
+    i Test 'test_performance_large_image_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_performance_large_image_data' has multiple assertions without diagnostic messages
+    i Test 'test_performance_large_image_data' uses .unwrap() which silently discards error information
+  test_memory_efficiency (line 2161) - Score: 100
+    i Test 'test_memory_efficiency' has multiple assertions without diagnostic messages
+    i Test 'test_memory_efficiency' uses .unwrap() which silently discards error information
+  test_complete_workflow (line 2188) - Score: 100
+    i Test 'test_complete_workflow' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_complete_workflow' has multiple assertions without diagnostic messages
+    i Test 'test_complete_workflow' uses .unwrap() which silently discards error information
+  test_png_to_pdf_object_stream_not_png_container (line 2371) - Score: 100
+    i Test 'test_png_to_pdf_object_stream_not_png_container' has multiple assertions without diagnostic messages
+    i Test 'test_png_to_pdf_object_stream_not_png_container' uses .unwrap() which silently discards error information
+  test_png_pdf_stream_pixel_values_correct (line 2411) - Score: 100
+    i Test 'test_png_pdf_stream_pixel_values_correct' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

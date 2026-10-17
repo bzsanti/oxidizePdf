@@ -1,0 +1,6 @@
+{
+  "oxidize-pdf-core/src/graphics/png_decoder.rs": "ca51b0f2a51ebd2121910b328a9d4d52d0db23be4b36f83405b9daffa6055692",
+  "oxidize-pdf-core/src/graphics/pdf_image.rs": "0a6f30f0828fc14d003322da8332ad29bd34596a7c3bdcb74c9e9570f112c3e4",
+  "oxidize-pdf-core/tests/issue_736_png_depth_test.rs": "0f40b53a05505f6400c3f82a3048fa48feb0211b964f4785dd559f44b519d334",
+  ".github/workflows/interoperability.yml": "a361b137627f117138b892c81d65aa4c5e3c3591ffb29ebf38a21acc1f131bbe"
+}

@@ -1,0 +1,14 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue736/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 02s
+     Running unittests src/lib.rs (target/debug/deps/oxidize_pdf-f7eaee7acec1d021)
+
+running 6 tests
+test graphics::png_decoder::tests::test_color_type_channels ... ok
+test graphics::png_decoder::tests::test_color_type_has_alpha ... ok
+test graphics::png_decoder::tests::test_invalid_png_signature ... ok
+test graphics::png_decoder::tests::test_minimal_valid_png ... ok
+test graphics::png_decoder::tests::test_paeth_predictor ... ok
+test graphics::png_decoder::tests::test_png_color_type ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 6735 filtered out; finished in 0.00s
+

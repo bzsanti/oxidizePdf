@@ -1,0 +1,52 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue736/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 2.03s
+     Running tests/issue_736_png_depth_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_736_png_depth_test-c2800d699d579027)
+
+running 5 tests
+test grayscale_16_bit_sample_boundaries_and_metadata ... FAILED
+test eight_bit_gray_rgb_and_alpha_controls ... ok
+test rgb_and_alpha_samples_keep_all_sixteen_bits ... FAILED
+test written_and_reopened_pdf_preserves_main_and_mask_samples ... FAILED
+test independent_qpdf_decodes_written_sixteen_bit_streams ... FAILED
+
+failures:
+
+---- grayscale_16_bit_sample_boundaries_and_metadata stdout ----
+
+thread 'grayscale_16_bit_sample_boundaries_and_metadata' (129) panicked at oxidize-pdf-core/tests/issue_736_png_depth_test.rs:52:5:
+assertion `left == right` failed
+  left: 8
+ right: 16
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- rgb_and_alpha_samples_keep_all_sixteen_bits stdout ----
+
+thread 'rgb_and_alpha_samples_keep_all_sixteen_bits' (131) panicked at oxidize-pdf-core/tests/issue_736_png_depth_test.rs:59:9:
+assertion `left == right` failed: L16
+  left: 8
+ right: 16
+
+---- written_and_reopened_pdf_preserves_main_and_mask_samples stdout ----
+
+thread 'written_and_reopened_pdf_preserves_main_and_mask_samples' (132) panicked at oxidize-pdf-core/tests/issue_736_png_depth_test.rs:130:5:
+assertion `left == right` failed
+  left: Some(8)
+ right: Some(16)
+
+---- independent_qpdf_decodes_written_sixteen_bit_streams stdout ----
+
+thread 'independent_qpdf_decodes_written_sixteen_bit_streams' (130) panicked at oxidize-pdf-core/tests/issue_736_png_depth_test.rs:130:5:
+assertion `left == right` failed
+  left: Some(8)
+ right: Some(16)
+
+
+failures:
+    grayscale_16_bit_sample_boundaries_and_metadata
+    independent_qpdf_decodes_written_sixteen_bit_streams
+    rgb_and_alpha_samples_keep_all_sixteen_bits
+    written_and_reopened_pdf_preserves_main_and_mask_samples
+
+test result: FAILED. 1 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_736_png_depth_test`

@@ -1,0 +1,63 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_736_png_depth_test.rs                6     93
+
+--- Worst Offenders ---
+  independent_qpdf_decodes_written_sixteen_bit_streams (oxidize-pdf-core/tests/issue_736_png_depth_test.rs:164) - Score: 80
+    - Test 'independent_qpdf_decodes_written_sixteen_bit_streams' is marked as #[ignore]
+    i Test 'independent_qpdf_decodes_written_sixteen_bit_streams' has multiple assertions without diagnostic messages
+    i Test 'independent_qpdf_decodes_written_sixteen_bit_streams' uses .unwrap() which silently discards error information
+  eight_bit_gray_rgb_and_alpha_controls (oxidize-pdf-core/tests/issue_736_png_depth_test.rs:77) - Score: 90
+    i Test 'eight_bit_gray_rgb_and_alpha_controls' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'eight_bit_gray_rgb_and_alpha_controls' has multiple assertions without diagnostic messages
+    i Test 'eight_bit_gray_rgb_and_alpha_controls' uses .unwrap() which silently discards error information
+    - Test 'eight_bit_gray_rgb_and_alpha_controls' has low assert-to-setup ratio (15%): 5 asserts vs 29 setup lines
+  oversized_sixteen_bit_geometry_returns_error_without_panicking (oxidize-pdf-core/tests/issue_736_png_depth_test.rs:202) - Score: 90
+    - Test 'oversized_sixteen_bit_geometry_returns_error_without_panicking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'oversized_sixteen_bit_geometry_returns_error_without_panicking' has multiple assertions without diagnostic messages
+  grayscale_16_bit_sample_boundaries_and_metadata (oxidize-pdf-core/tests/issue_736_png_depth_test.rs:51) - Score: 100
+    i Test 'grayscale_16_bit_sample_boundaries_and_metadata' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'grayscale_16_bit_sample_boundaries_and_metadata' has multiple assertions without diagnostic messages
+    i Test 'grayscale_16_bit_sample_boundaries_and_metadata' uses .unwrap() which silently discards error information
+  rgb_and_alpha_samples_keep_all_sixteen_bits (oxidize-pdf-core/tests/issue_736_png_depth_test.rs:57) - Score: 100
+    i Test 'rgb_and_alpha_samples_keep_all_sixteen_bits' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'rgb_and_alpha_samples_keep_all_sixteen_bits' has multiple assertions without diagnostic messages
+    i Test 'rgb_and_alpha_samples_keep_all_sixteen_bits' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_736_png_depth_test.rs:
+  grayscale_16_bit_sample_boundaries_and_metadata (line 51) - Score: 100
+    i Test 'grayscale_16_bit_sample_boundaries_and_metadata' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'grayscale_16_bit_sample_boundaries_and_metadata' has multiple assertions without diagnostic messages
+    i Test 'grayscale_16_bit_sample_boundaries_and_metadata' uses .unwrap() which silently discards error information
+  rgb_and_alpha_samples_keep_all_sixteen_bits (line 57) - Score: 100
+    i Test 'rgb_and_alpha_samples_keep_all_sixteen_bits' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'rgb_and_alpha_samples_keep_all_sixteen_bits' has multiple assertions without diagnostic messages
+    i Test 'rgb_and_alpha_samples_keep_all_sixteen_bits' uses .unwrap() which silently discards error information
+  eight_bit_gray_rgb_and_alpha_controls (line 77) - Score: 90
+    i Test 'eight_bit_gray_rgb_and_alpha_controls' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'eight_bit_gray_rgb_and_alpha_controls' has multiple assertions without diagnostic messages
+    i Test 'eight_bit_gray_rgb_and_alpha_controls' uses .unwrap() which silently discards error information
+    - Test 'eight_bit_gray_rgb_and_alpha_controls' has low assert-to-setup ratio (15%): 5 asserts vs 29 setup lines
+  written_and_reopened_pdf_preserves_main_and_mask_samples (line 152) - Score: 100
+    i Test 'written_and_reopened_pdf_preserves_main_and_mask_samples' uses .unwrap() which silently discards error information
+  independent_qpdf_decodes_written_sixteen_bit_streams (line 164) - Score: 80
+    - Test 'independent_qpdf_decodes_written_sixteen_bit_streams' is marked as #[ignore]
+    i Test 'independent_qpdf_decodes_written_sixteen_bit_streams' has multiple assertions without diagnostic messages
+    i Test 'independent_qpdf_decodes_written_sixteen_bit_streams' uses .unwrap() which silently discards error information
+  oversized_sixteen_bit_geometry_returns_error_without_panicking (line 202) - Score: 90
+    - Test 'oversized_sixteen_bit_geometry_returns_error_without_panicking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'oversized_sixteen_bit_geometry_returns_error_without_panicking' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

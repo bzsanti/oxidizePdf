@@ -120,7 +120,7 @@ impl Image {
                 width: decoded.width,
                 height: decoded.height,
                 color_space: ColorSpace::DeviceGray,
-                bits_per_component: 8,
+                bits_per_component: if decoded.bit_depth == 16 { 16 } else { 8 },
                 alpha_data: None,
                 soft_mask: None,
             }))
@@ -134,7 +134,7 @@ impl Image {
             width: decoded.width,
             height: decoded.height,
             color_space,
-            bits_per_component: 8, // Always 8 after decoding
+            bits_per_component: if decoded.bit_depth == 16 { 16 } else { 8 }, // Preserve 16-bit sample precision
             alpha_data: decoded.alpha_data,
             soft_mask,
         })
@@ -472,7 +472,10 @@ impl Image {
             mask_dict.set("Width", Object::Integer(mask.width as i64));
             mask_dict.set("Height", Object::Integer(mask.height as i64));
             mask_dict.set("ColorSpace", Object::Name("DeviceGray".to_string()));
-            mask_dict.set("BitsPerComponent", Object::Integer(8));
+            mask_dict.set(
+                "BitsPerComponent",
+                Object::Integer(mask.bits_per_component as i64),
+            );
             mask_dict.set("Filter", Object::Name("FlateDecode".to_string()));
 
             // Compress alpha channel data
