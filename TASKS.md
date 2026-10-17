@@ -1,3 +1,10 @@
+### #763 — propiedades XMP y escape XML — 2026-10-17
+
+Issue: #763 — fix(pdfa): preserve XMP properties and validate/escape XML in metadata round trips — https://github.com/bzsanti/oxidizePdf/issues/763
+Estado: activa, reproducción sobre #741 reconstruida. Prioridad: P1. Responsable: Codex.
+Cierre: todas las propiedades del modelo preservadas, listas/Unicode/entidades, namespaces por URI y controles negativos, escape de campos textuales, XML independiente, regresión y QR. Bloqueantes: regex de propiedades ordinarias, keywords omitidas, escape incompleto de amd/corr/fechas/IDs. XML malformado y límites reutilizan #741; no duplicar parser ni certificar integración FFI/.NET.
+Última validación: issue OPEN y criterios leídos en GitHub; base local #741 1f87b1ab. Siguiente acción: ejecutar contratos públicos RED y corregir lector/serializador. PR contra develop después de integrar #741.
+
 ## #741 — XMP namespace-aware PDF/A identifiers — 2026-10-17
 
 Issue: #741 — fix(pdfa): recognize RDF attribute-form PDF/A identifiers — https://github.com/bzsanti/oxidizePdf/issues/741
