@@ -89,6 +89,13 @@ jobs:
           independent_xml_reader_agrees_on_identifier_forms
           -- --ignored --exact
 
+      - name: Verify XMP round trips with an independent XML parser
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_763_xmp_roundtrip_test
+          independent_xml_reader_checks_every_serialized_property
+          -- --ignored --exact
+
       - name: Verify packed grayscale image samples and source PDFs
         run: >-
           cargo test --locked -p oxidize-pdf --features external-images

@@ -1,0 +1,59 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue763/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 30s
+     Running tests/issue_763_xmp_roundtrip_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_763_xmp_roundtrip_test-9424d307b1dc04c8)
+
+running 7 tests
+test amendment_cannot_inject_properties ... FAILED
+test malformed_xml_is_a_typed_error ... ok
+test all_supported_fields_preserve_unicode_entities_and_lists ... FAILED
+test keywords_survive_serialization ... FAILED
+test namespace_aliases_and_wrong_uri_controls ... FAILED
+test ordinary_unicode_identifier_control ... ok
+test empty_values_and_list_entries_remain_present ... FAILED
+
+failures:
+
+---- amendment_cannot_inject_properties stdout ----
+
+thread 'amendment_cannot_inject_properties' (351) panicked at oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:95:5:
+assertion failed: xml.contains("&lt;/pdfaid:amd&gt;")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- all_supported_fields_preserve_unicode_entities_and_lists stdout ----
+
+thread 'all_supported_fields_preserve_unicode_entities_and_lists' (350) panicked at oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:23:57:
+called `Result::unwrap()` on an `Err` value: XmpParseError("ill-formed document: entity or character reference not closed: `;` not found before end of input")
+
+---- keywords_survive_serialization stdout ----
+
+thread 'keywords_survive_serialization' (353) panicked at oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:41:5:
+assertion `left == right` failed
+  left: None
+ right: Some(["café", "日本語"])
+
+---- namespace_aliases_and_wrong_uri_controls stdout ----
+
+thread 'namespace_aliases_and_wrong_uri_controls' (355) panicked at oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:58:5:
+assertion `left == right` failed
+  left: None
+ right: Some("Namespace title")
+
+---- empty_values_and_list_entries_remain_present stdout ----
+
+thread 'empty_values_and_list_entries_remain_present' (352) panicked at oxidize-pdf-core/tests/issue_763_xmp_roundtrip_test.rs:79:5:
+assertion `left == right` failed
+  left: None
+ right: Some(["", "  "])
+
+
+failures:
+    all_supported_fields_preserve_unicode_entities_and_lists
+    amendment_cannot_inject_properties
+    empty_values_and_list_entries_remain_present
+    keywords_survive_serialization
+    namespace_aliases_and_wrong_uri_controls
+
+test result: FAILED. 2 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_763_xmp_roundtrip_test`
