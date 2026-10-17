@@ -75,6 +75,8 @@ regex = "1.10"
 memchr = "2.7"
 
 # XML parsing for XMP metadata
+# XML parsing for XMP metadata
+roxmltree = "0.21.1"
 quick-xml = { workspace = true }
 
 # Random number generation

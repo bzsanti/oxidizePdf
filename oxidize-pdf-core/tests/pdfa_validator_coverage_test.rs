@@ -127,7 +127,7 @@ fn metadata_obj(xmp: &str) -> Vec<u8> {
 
 fn xmp_with(part: &str, conformance: &str) -> String {
     format!(
-        "<?xpacket?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><rdf:RDF>\
+        "<?xpacket?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\
          <rdf:Description xmlns:pdfaid=\"http://www.aiim.org/pdfa/ns/id/\">\
          <pdfaid:part>{}</pdfaid:part>\
          <pdfaid:conformance>{}</pdfaid:conformance>\
@@ -149,7 +149,7 @@ fn metadata_missing_is_flagged() {
 
 #[test]
 fn metadata_present_without_pdfa_identifier_is_flagged() {
-    let xmp = "<?xpacket?><x:xmpmeta><rdf:RDF><rdf:Description/></rdf:RDF></x:xmpmeta>";
+    let xmp = "<?xpacket?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><rdf:Description/></rdf:RDF></x:xmpmeta>";
     let pdf = doc(
         "1.4",
         "/Metadata 5 0 R",
