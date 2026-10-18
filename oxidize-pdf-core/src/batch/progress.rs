@@ -10,7 +10,8 @@ pub struct ProgressInfo {
     pub total_jobs: usize,
     /// Number of completed jobs
     pub completed_jobs: usize,
-    /// Number of failed jobs
+    /// Jobs ended unsuccessfully (failed or cancelled); BatchSummary results
+    /// distinguish the two outcomes.
     pub failed_jobs: usize,
     /// Number of jobs currently running
     pub running_jobs: usize,
@@ -23,7 +24,8 @@ pub struct ProgressInfo {
 }
 
 impl ProgressInfo {
-    /// Get progress percentage (0.0 - 100.0)
+    /// Get the percentage of jobs completed successfully (0.0 - 100.0).
+    /// Use is_complete to include unsuccessful and cancelled outcomes.
     pub fn percentage(&self) -> f64 {
         if self.total_jobs == 0 {
             100.0
@@ -127,9 +129,20 @@ impl BatchProgress {
         self.completed_jobs.fetch_add(1, Ordering::SeqCst);
     }
 
-    /// Mark a job as failed
+    /// Mark a started job as unsuccessful (failed or cancelled).
     pub fn fail_job(&self) {
         self.running_jobs.fetch_sub(1, Ordering::SeqCst);
+        self.failed_jobs.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// Account for a missing worker outcome after every worker has joined.
+    /// Some workers may have terminated before marking their job as started.
+    pub(crate) fn fail_unreported_job(&self) {
+        let _ = self
+            .running_jobs
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |count| {
+                Some(count.saturating_sub(1))
+            });
         self.failed_jobs.fetch_add(1, Ordering::SeqCst);
     }
 

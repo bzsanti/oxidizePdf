@@ -7,7 +7,7 @@
 //!
 //! - **Parallel Processing**: Process multiple PDFs concurrently
 //! - **Progress Tracking**: Real-time progress updates for batch operations
-//! - **Resource Management**: Automatic thread pool and memory management
+//! - **Resource Management**: Bounded worker count; memory caps are unsupported
 //! - **Error Collection**: Aggregate errors without stopping the batch
 //! - **Cancellation**: Support for cancelling long-running operations
 //! - **Result Aggregation**: Collect and summarize batch results
@@ -51,7 +51,7 @@ use crate::error::Result;
 use std::path::{Path, PathBuf};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+    Arc,
 };
 use std::thread;
 use std::time::{Duration, Instant};
@@ -72,15 +72,16 @@ pub use worker::{WorkerOptions, WorkerPool};
 pub struct BatchOptions {
     /// Number of parallel workers
     pub parallelism: usize,
-    /// Maximum memory per worker (bytes)
+    /// Requested memory cap per worker. Zero means no cap; nonzero is rejected.
     pub memory_limit_per_worker: usize,
-    /// Progress update interval
+    /// Progress update interval; zero is normalized to one millisecond.
     pub progress_interval: Duration,
     /// Whether to stop on first error
     pub stop_on_error: bool,
     /// Progress callback
     pub progress_callback: Option<Arc<dyn ProgressCallback>>,
-    /// Timeout for individual jobs
+    /// Elapsed-time budget checked when a job returns. It does not interrupt
+    /// running work or roll back side effects. Zero prevents the job from starting.
     pub job_timeout: Option<Duration>,
 }
 
@@ -88,7 +89,7 @@ impl Default for BatchOptions {
     fn default() -> Self {
         Self {
             parallelism: num_cpus::get().min(8),
-            memory_limit_per_worker: 512 * 1024 * 1024, // 512MB
+            memory_limit_per_worker: 0, // No enforceable allocator/process cap
             progress_interval: Duration::from_millis(100),
             stop_on_error: false,
             progress_callback: None,
@@ -104,7 +105,7 @@ impl BatchOptions {
         self
     }
 
-    /// Set memory limit per worker
+    /// Request a memory cap (nonzero values currently return an execution error).
     pub fn with_memory_limit(mut self, bytes: usize) -> Self {
         self.memory_limit_per_worker = bytes;
         self
@@ -125,7 +126,7 @@ impl BatchOptions {
         self
     }
 
-    /// Set job timeout
+    /// Set the completion-checked time budget (zero prevents execution).
     pub fn with_job_timeout(mut self, timeout: Duration) -> Self {
         self.job_timeout = Some(timeout);
         self
@@ -179,26 +180,23 @@ impl BatchProcessor {
         let start_time = Instant::now();
         let total_jobs = self.jobs.len();
 
-        if total_jobs == 0 {
-            return Ok(BatchSummary::empty());
-        }
-
-        // Create worker pool
         let worker_options = WorkerOptions {
             num_workers: self.options.parallelism,
             memory_limit: self.options.memory_limit_per_worker,
             job_timeout: self.options.job_timeout,
         };
+        worker_options.validate()?;
+        if total_jobs == 0 {
+            return Ok(BatchSummary::empty());
+        }
 
         let pool = WorkerPool::new(worker_options);
-        let _results = Arc::new(Mutex::new(Vec::<JobResult>::new()));
-        let _errors = Arc::new(Mutex::new(Vec::<String>::new()));
 
         // Progress tracking thread
         let progress_handle = if let Some(callback) = &self.options.progress_callback {
             let progress = Arc::clone(&self.progress);
             let callback = Arc::clone(callback);
-            let interval = self.options.progress_interval;
+            let interval = self.options.progress_interval.max(Duration::from_millis(1));
             let cancelled = Arc::clone(&self.cancelled);
 
             Some(thread::spawn(move || {
@@ -210,7 +208,7 @@ impl BatchProcessor {
                         break;
                     }
 
-                    thread::sleep(interval);
+                    thread::park_timeout(interval);
                 }
             }))
         } else {
@@ -241,6 +239,7 @@ impl BatchProcessor {
 
         // Wait for progress thread
         if let Some(handle) = progress_handle {
+            handle.thread().unpark();
             let _ = handle.join();
         }
 
@@ -343,7 +342,7 @@ mod tests {
         let options = BatchOptions::default();
         assert!(options.parallelism > 0);
         assert!(options.parallelism <= 8);
-        assert_eq!(options.memory_limit_per_worker, 512 * 1024 * 1024);
+        assert_eq!(options.memory_limit_per_worker, 0);
         assert!(!options.stop_on_error);
     }
 
@@ -585,8 +584,8 @@ mod tests {
         });
 
         let summary = processor.execute().unwrap();
-        // Job should complete (timeout not implemented yet)
-        assert_eq!(summary.failed, 0);
+        assert_eq!(summary.failed, 1);
+        assert!(summary.results[0].error().unwrap().contains("timeout"));
     }
 
     #[test]
@@ -760,8 +759,9 @@ mod tests {
         });
 
         let summary = processor.execute().unwrap();
-        // Currently timeout is not enforced, but test the setup
         assert_eq!(summary.total_jobs, 1);
+        assert_eq!(summary.failed, 1);
+        assert!(summary.results[0].error().unwrap().contains("timeout"));
     }
 
     #[test]
@@ -785,8 +785,10 @@ mod tests {
             });
         }
 
-        let summary = processor.execute().unwrap();
-        assert_eq!(summary.total_jobs, 5);
+        assert!(matches!(
+            processor.execute(),
+            Err(crate::PdfError::InvalidOperation(_))
+        ));
     }
 
     #[test]
