@@ -138,11 +138,18 @@ impl BatchProgress {
     /// Account for a missing worker outcome after every worker has joined.
     /// Some workers may have terminated before marking their job as started.
     pub(crate) fn fail_unreported_job(&self) {
-        let _ = self
-            .running_jobs
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |count| {
-                Some(count.saturating_sub(1))
-            });
+        let mut count = self.running_jobs.load(Ordering::SeqCst);
+        while count != 0 {
+            match self.running_jobs.compare_exchange_weak(
+                count,
+                count - 1,
+                Ordering::SeqCst,
+                Ordering::SeqCst,
+            ) {
+                Ok(_) => break,
+                Err(current) => count = current,
+            }
+        }
         self.failed_jobs.fetch_add(1, Ordering::SeqCst);
     }
 
@@ -258,6 +265,24 @@ impl ProgressBar {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn missing_outcomes_finish_progress_with_and_without_a_started_job() {
+        let progress = BatchProgress::new();
+        progress.add_job();
+        progress.add_job();
+        progress.start_job();
+        progress.fail_unreported_job();
+        let first = progress.get_info();
+        assert_eq!(first.running_jobs, 0);
+        assert_eq!(first.failed_jobs, 1);
+        assert!(!first.is_complete());
+        progress.fail_unreported_job();
+        let final_info = progress.get_info();
+        assert_eq!(final_info.running_jobs, 0);
+        assert_eq!(final_info.failed_jobs, 2);
+        assert!(final_info.is_complete());
+    }
 
     #[test]
     fn test_progress_info() {
