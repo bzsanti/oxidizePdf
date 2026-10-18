@@ -253,7 +253,7 @@ fn test_batch_stop_on_error() {
 
     assert_eq!(summary.total_jobs, 3);
     assert_eq!(summary.failed, 1);
-    assert!(processed.load(Ordering::SeqCst) <= 2); // At most first job and maybe one more
+    assert_eq!(processed.load(Ordering::SeqCst), 1); // Serial failure prevents Job 3
 }
 
 #[test]
@@ -368,21 +368,24 @@ fn test_batch_cancellation() {
 
 #[test]
 fn test_batch_with_timeout() {
-    let options = BatchOptions::default().with_job_timeout(Duration::from_millis(100));
-
+    let options = BatchOptions::default().with_job_timeout(Duration::from_millis(1));
     let mut processor = BatchProcessor::new(options);
 
-    // Add a job that would timeout (if timeout was implemented)
+    // Sleeping may take longer under load, but cannot make this job meet 1 ms.
     processor.add_job(BatchJob::Custom {
-        name: "Quick job".to_string(),
+        name: "Exceeds timeout".to_string(),
         operation: Box::new(|| {
-            std::thread::sleep(Duration::from_millis(50));
+            std::thread::sleep(Duration::from_millis(30));
             Ok(())
         }),
     });
 
     let summary = processor.execute().unwrap();
-    assert_eq!(summary.successful, 1);
+    assert_eq!(summary.successful, 0);
+    assert_eq!(summary.failed, 1);
+    assert_eq!(summary.results.len(), 1);
+    assert_eq!(summary.results[0].job_name(), "Exceeds timeout");
+    assert!(summary.results[0].error().unwrap().contains("timeout"));
 }
 
 #[test]
@@ -415,10 +418,6 @@ fn test_batch_summary_report() {
 
 #[test]
 fn test_batch_parallelism() {
-    use std::time::Instant;
-
-    let start = Instant::now();
-
     let options = BatchOptions::default().with_parallelism(4); // Run 4 jobs in parallel
 
     let mut processor = BatchProcessor::new(options);
@@ -435,18 +434,15 @@ fn test_batch_parallelism() {
     }
 
     let summary = processor.execute().unwrap();
-    let duration = start.elapsed();
-
     assert_eq!(summary.successful, 8);
 
-    // With 4 parallel workers and 8 jobs of 100ms each,
-    // it should take approximately 200ms (2 batches)
-    // Allow generous overhead for CI runners
-    assert!(
-        duration.as_millis() < 800,
-        "Duration was {} ms",
-        duration.as_millis()
-    );
+    // Concurrency bounds and overlapping admission are verified with counters
+    // and barriers in issue_776_batch_contract_test, not wall-clock speed.
+    assert_eq!(summary.results.len(), 8);
+    for (index, result) in summary.results.iter().enumerate() {
+        assert_eq!(result.job_name(), format!("Parallel Job {index}"));
+        assert!(result.is_success());
+    }
 }
 
 #[test]
