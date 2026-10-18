@@ -8,6 +8,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.5.0] - 2026-10-18
+
+### Added
+
+- Expose generic incremental object/catalog edits and external document timestamp
+  preparation (#714).
+- Expose typed form/calculation results and recalculate transitive dependencies
+  with cycle detection and rollback on failure (#771).
+- Expose requested/effective memory and streaming configuration, unsupported
+  options and retained-page counts; apply lazy/eager loading and reader buffer
+  settings (#758). See [memory contracts](docs/MEMORY_OPTIONS.md).
+- Add fallible cryptographically secure AES IV generation on native and WASM,
+  retaining the existing compatibility wrapper (#711).
+
+### Fixed
+
+- Enforce inherited AcroForm ReadOnly flags and DocMDP permissions for incremental
+  notes and highlights; serialize file attachment payloads as EmbeddedFile streams
+  with Unicode filenames (#770, #712, #774).
+- Recover parser objects from actual input, preserve reference policies and page
+  identity, and support opt-in symbolic TrueType decoding (#720, #715).
+- Share simple-font encoding mappings; decode packed grayscale, distinguish CMYK
+  from alpha, parse inline-image grammar, validate raw dimensions and preserve
+  16-bit PNG image/alpha samples (#731–#736).
+- Load real pages/objects in lazy and streaming adapters, preserve chunk boundaries
+  and source spans, bound retained chunks and emit complete streaming PDF objects
+  and cross-reference tables (#724–#726, #728, #739, #740).
+- Parse PDF/A identifiers by XML namespace; preserve and escape XMP properties
+  and validate metadata dates (#741, #763).
+- Preserve ordered tagged mutations and bound sparse structure-owner allocation
+  during extraction (#757, #762).
+- Reject unsupported dashboard pivots, implicit overflow, out-of-page redaction
+  masks and redaction targets split across text operators (#727, #738, #737).
+- Validate PDF structure and external validator output; report unavailable
+  verification as unverified and reject unsupported legacy signing/verification
+  instead of claiming success (#721–#723, #729).
+- Enforce batch elapsed-time checks, stop-on-error and complete outcome reporting;
+  reject unsupported worker-memory limits explicitly (#776).
+
+### Migration and limitations
+
+- `BatchOptions::memory_limit_per_worker` now defaults to `0` (no cap); nonzero
+  limits return an unsupported-operation error. Timeouts are checked after jobs
+  return and do not interrupt execution or roll back side effects.
+- Unsupported memory mapping/streaming requests in `LazyDocument` remain visible
+  through effective configuration; they do not enable those capabilities.
+- This core release does not establish complete Python/.NET parity. Binding
+  adoption and acceptance tests, OCR fixes (#708) and certificate-based recipient
+  encryption (#642) remain separate work. See the
+  [release and bridge migration notes](docs/releases/5.5.0.md).
+
+
 ## [5.4.2] - 2026-10-10
 
 ### Performance
