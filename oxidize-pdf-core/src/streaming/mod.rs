@@ -56,7 +56,7 @@ pub use page_streamer::{PageStreamer, StreamingPage};
 pub use text_streamer::{stream_text, TextChunk, TextStreamOptions, TextStreamer};
 
 /// Options for streaming operations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StreamingOptions {
     /// Buffer size for reading
     pub buffer_size: usize,
@@ -121,17 +121,43 @@ impl StreamingOptions {
     }
 }
 
+/// Requested and normalized page-streaming configuration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StreamingConfiguration {
+    /// Original values supplied by the caller.
+    pub requested: StreamingOptions,
+    /// Applied values, with normalized buffer and unsupported hints disabled.
+    pub effective: StreamingOptions,
+    /// True if the caller requested the currently unsupported progressive hints.
+    pub progressive_hints_unsupported: bool,
+}
+
 /// Page-at-a-time document access using the seekable PDF reader.
 /// Content and text are materialized per page. `memory_usage` measures only this
 /// adapter's retained page payloads, not reader caches or caller-owned pages.
 pub struct StreamingDocument<R: Read + Seek> {
     streamer: PageStreamer<BufReader<R>>,
     options: StreamingOptions,
+    configuration: StreamingConfiguration,
     page_cache: VecDeque<StreamingPage>,
     memory_used: usize,
 }
 impl<R: Read + Seek> StreamingDocument<R> {
     pub fn new(reader: R, options: StreamingOptions) -> Result<Self> {
+        if options.buffer_size > isize::MAX as usize {
+            return Err(crate::PdfError::InvalidOperation(
+                "StreamingOptions buffer_size exceeds the addressable buffer size".into(),
+            ));
+        }
+        let mut effective = options.clone();
+        effective.buffer_size = options.buffer_size.max(1);
+        effective.progressive_hints = false;
+        let configuration = StreamingConfiguration {
+            progressive_hints_unsupported: options.progressive_hints,
+            requested: options,
+            effective: effective.clone(),
+        };
+        let options = effective;
         let mut streamer = PageStreamer::with_content_limit(
             BufReader::with_capacity(options.buffer_size.max(1), reader),
             options.max_content_stream_size,
@@ -140,10 +166,21 @@ impl<R: Read + Seek> StreamingDocument<R> {
         Ok(Self {
             streamer,
             options,
+            configuration,
             page_cache: VecDeque::new(),
             memory_used: 0,
         })
     }
+    /// Inspect the requested configuration and the values actually applied.
+    pub fn configuration(&self) -> &StreamingConfiguration {
+        &self.configuration
+    }
+
+    /// Number of page payloads retained by this adapter (excludes parser caches).
+    pub fn cached_pages(&self) -> usize {
+        self.page_cache.len()
+    }
+
     pub fn next_page(&mut self) -> Result<Option<StreamingPage>> {
         let Some(page) = self.streamer.next()? else {
             return Ok(None);

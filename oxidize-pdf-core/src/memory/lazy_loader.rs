@@ -4,7 +4,7 @@
 //! when working with large documents.
 
 use crate::error::{PdfError, Result};
-use crate::memory::{MemoryManager, MemoryOptions};
+use crate::memory::{MemoryConfiguration, MemoryManager, MemoryOptions};
 use crate::objects::ObjectId;
 use crate::parser::{ParsedPage, PdfDocument, PdfObject, PdfReader};
 use std::collections::HashSet;
@@ -30,6 +30,7 @@ pub struct LazyDocument<R: Read + Seek> {
     // Indirection preserves Unpin for readers that are not Unpin.
     document: Arc<Mutex<PdfDocument<R>>>,
     memory_manager: MemoryManager,
+    configuration: MemoryConfiguration,
     object_references: HashSet<(u32, u16)>,
     page_count: u32,
 }
@@ -46,24 +47,46 @@ impl<R: Read + Seek> LazyDocument<R> {
     /// Create a document from the reader's page tree and object index.
     ///
     /// Construction reads page-tree dictionaries to establish the actual page
-    /// count. Content streams and unrelated objects are parsed on demand.
-    /// Reader parsing options and its existing caches are preserved.
+    /// count. With lazy_loading=false, all indexed objects are parsed up front;
+    /// otherwise content streams and unrelated objects are parsed on demand.
+    /// Parsing options and existing caches are preserved; buffer_size replaces
+    /// the I/O buffer (zero normalizes to one byte).
     ///
-    /// `cache_size` bounds this adapter's object cache, not the parser's caches
-    /// or total process memory. Other memory options do not reconfigure the
-    /// supplied reader.
+    /// cache_size bounds this adapter's cache, not parser caches or total process
+    /// memory. Mapping and content streaming are unsupported here and reported by
+    /// configuration(); use streaming::StreamingDocument for page-at-a-time content.
     pub fn new(reader: PdfReader<R>, options: MemoryOptions) -> Result<Self> {
-        let object_references = reader.object_references().into_iter().collect();
+        let configuration = MemoryConfiguration::resolve(options)?;
+        let mut reader = reader
+            .with_buffer_capacity(configuration.effective.buffer_size)
+            .map_err(|e| PdfError::ParseError(e.to_string()))?;
+        let references = reader.object_references();
+        if !configuration.effective.lazy_loading {
+            // The parser retains these objects; the adapter cache budget does not
+            // cap eager loading or parser memory. Propagate the first parse error.
+            for &(number, generation) in &references {
+                reader
+                    .get_object(number, generation)
+                    .map_err(|e| PdfError::ParseError(e.to_string()))?;
+            }
+        }
+        let object_references = references.into_iter().collect();
         let document = PdfDocument::new(reader);
         let page_count = document
             .page_count()
             .map_err(|e| PdfError::ParseError(e.to_string()))?;
         Ok(Self {
             document: Arc::new(Mutex::new(document)),
-            memory_manager: MemoryManager::new(options),
+            memory_manager: MemoryManager::new(configuration.effective.clone()),
+            configuration,
             object_references,
             page_count,
         })
+    }
+
+    /// Inspect requested options, normalized effective values and unsupported modes.
+    pub fn configuration(&self) -> &MemoryConfiguration {
+        &self.configuration
     }
 
     /// Get the total number of pages

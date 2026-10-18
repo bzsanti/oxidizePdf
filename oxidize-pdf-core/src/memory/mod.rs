@@ -6,7 +6,7 @@
 //! # Features
 //!
 //! - **Lazy Loading**: Load PDF objects only when accessed
-//! - **Memory Mapping**: Use OS memory mapping for large files  
+//! - **Memory Mapping**: Separate low-level API; unsupported by LazyDocument
 //! - **Smart Caching**: LRU cache for frequently accessed objects
 //! - **Stream Processing**: Process content without loading entire file
 //! - **Resource Pooling**: Reuse buffers and temporary objects
@@ -22,7 +22,8 @@
 //! let options = MemoryOptions::default()
 //!     .with_cache_size(100) // Cache up to 100 objects
 //!     .with_lazy_loading(true)
-//!     .with_memory_mapping(true);
+//!     .with_memory_mapping(false)
+//!     .with_streaming(false);
 //!
 //! // Open document with lazy loading
 //! let reader = PdfReader::open("large_document.pdf")?;
@@ -51,19 +52,19 @@ pub use memory_mapped::{MappedReader, MemoryMappedFile};
 pub use stream_processor::{ProcessingAction, ProcessingEvent, StreamProcessor, StreamingOptions};
 
 /// Configuration options for memory optimization
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemoryOptions {
     /// Enable lazy loading of objects
     pub lazy_loading: bool,
-    /// Enable memory mapping for file access
+    /// Request memory mapping. LazyDocument reports this mode as unsupported.
     pub memory_mapping: bool,
     /// Maximum number of objects to cache
     pub cache_size: usize,
-    /// Enable streaming mode for content
+    /// Request streamed content. LazyDocument reports this mode as unsupported.
     pub streaming: bool,
-    /// Buffer size for streaming operations
+    /// Reader buffer bytes in LazyDocument; zero normalizes to one.
     pub buffer_size: usize,
-    /// Threshold for using memory mapping (bytes)
+    /// Mapping threshold in bytes; inactive in LazyDocument (no mapping).
     pub mmap_threshold: usize,
 }
 
@@ -111,7 +112,7 @@ impl MemoryOptions {
         self
     }
 
-    /// Enable memory mapping
+    /// Request memory mapping; inspect LazyDocument::configuration for support.
     pub fn with_memory_mapping(mut self, enabled: bool) -> Self {
         self.memory_mapping = enabled;
         self
@@ -123,27 +124,77 @@ impl MemoryOptions {
         self
     }
 
-    /// Enable streaming
+    /// Request streamed content; inspect LazyDocument::configuration for support.
     pub fn with_streaming(mut self, enabled: bool) -> Self {
         self.streaming = enabled;
         self
     }
 }
 
+/// LazyDocument modes that are requested but not implemented by that adapter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnsupportedMemoryOption {
+    /// No OS mapping is opened; mmap_threshold is consequently inactive.
+    MemoryMapping,
+    /// Objects and their stream payloads are materialized by the PDF parser.
+    Streaming,
+}
+
+/// Requested and actual configuration of a LazyDocument.
+///
+/// Unsupported modes are reported rather than silently advertised as enabled.
+/// Cache size counts adapter objects, not bytes or parser-owned objects.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MemoryConfiguration {
+    /// Original values, including unsupported requests.
+    pub requested: MemoryOptions,
+    /// Applied values; inactive mmap_threshold uses usize::MAX.
+    pub effective: MemoryOptions,
+    /// Requested modes that this adapter does not implement.
+    pub unsupported: Vec<UnsupportedMemoryOption>,
+}
+
+impl MemoryConfiguration {
+    pub(crate) fn resolve(requested: MemoryOptions) -> crate::Result<Self> {
+        if requested.buffer_size > isize::MAX as usize {
+            return Err(crate::PdfError::InvalidOperation(
+                "MemoryOptions buffer_size exceeds the addressable buffer size".into(),
+            ));
+        }
+        let mut effective = requested.clone();
+        effective.buffer_size = requested.buffer_size.max(1);
+        effective.memory_mapping = false;
+        effective.mmap_threshold = usize::MAX;
+        effective.streaming = false;
+        let mut unsupported = Vec::new();
+        if requested.memory_mapping {
+            unsupported.push(UnsupportedMemoryOption::MemoryMapping);
+        }
+        if requested.streaming {
+            unsupported.push(UnsupportedMemoryOption::Streaming);
+        }
+        Ok(Self {
+            requested,
+            effective,
+            unsupported,
+        })
+    }
+}
+
 /// Memory usage statistics
 #[derive(Debug, Clone, Default)]
 pub struct MemoryStats {
-    /// Total memory allocated
+    /// Manually recorded allocations; not total process or parser memory.
     pub allocated_bytes: usize,
-    /// Number of cached objects
+    /// Current number of objects retained in the adapter cache.
     pub cached_objects: usize,
     /// Number of cache hits
     pub cache_hits: usize,
     /// Number of cache misses
     pub cache_misses: usize,
-    /// Number of lazy loads
+    /// Reserved counter; not currently instrumented.
     pub lazy_loads: usize,
-    /// Memory mapped regions
+    /// Reserved counter; LazyDocument does not map files.
     pub mapped_regions: usize,
 }
 
@@ -173,10 +224,13 @@ impl MemoryManager {
 
     /// Get memory statistics
     pub fn stats(&self) -> MemoryStats {
-        self.stats
+        let mut stats = self
+            .stats
             .read()
             .map(|stats| stats.clone())
-            .unwrap_or_else(|_| MemoryStats::default())
+            .unwrap_or_else(|_| MemoryStats::default());
+        stats.cached_objects = self.cache.as_ref().map_or(0, |cache| cache.stats().size);
+        stats
     }
 
     /// Record a memory allocation
