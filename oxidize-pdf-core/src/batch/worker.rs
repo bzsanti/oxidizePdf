@@ -19,10 +19,27 @@ use std::time::{Duration, Instant};
 pub struct WorkerOptions {
     /// Number of worker threads
     pub num_workers: usize,
-    /// Memory limit per worker (bytes)
+    /// Requested memory cap; only zero (no cap) is supported.
     pub memory_limit: usize,
-    /// Timeout for individual jobs
+    /// Completion-checked elapsed-time budget; running jobs are not interrupted.
     pub job_timeout: Option<Duration>,
+}
+
+impl WorkerOptions {
+    /// Validate resource contracts before starting work.
+    pub fn validate(&self) -> Result<(), PdfError> {
+        if self.num_workers == 0 {
+            return Err(PdfError::InvalidOperation(
+                "batch requires at least one worker".into(),
+            ));
+        }
+        if self.memory_limit != 0 {
+            return Err(PdfError::InvalidOperation(
+                "per-worker memory limits are unsupported; use zero for no cap".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// Message sent to workers
@@ -35,29 +52,36 @@ enum WorkerMessage {
 pub struct WorkerPool {
     workers: Vec<Worker>,
     sender: mpsc::Sender<WorkerMessage>,
+    job_timeout: Option<Duration>,
+    configuration_error: Option<String>,
 }
 
 impl WorkerPool {
-    /// Create a new worker pool
+    /// Create a worker pool. Invalid options start no workers and are returned
+    /// as failed outcomes by process_jobs; validate options first for early errors.
     pub fn new(options: WorkerOptions) -> Self {
         let (sender, receiver) = mpsc::channel();
         let receiver = Arc::new(Mutex::new(receiver));
-
-        let mut workers = Vec::with_capacity(options.num_workers);
-
-        for id in 0..options.num_workers {
-            workers.push(Worker::new(
-                id,
-                Arc::clone(&receiver),
-                options.memory_limit,
-                options.job_timeout,
-            ));
+        let configuration_error = options.validate().err().map(|e| e.to_string());
+        let mut workers = Vec::new();
+        if configuration_error.is_none() {
+            for id in 0..options.num_workers {
+                workers.push(Worker::new(id, Arc::clone(&receiver)));
+            }
         }
-
-        Self { workers, sender }
+        Self {
+            workers,
+            sender,
+            job_timeout: options.job_timeout,
+            configuration_error,
+        }
     }
 
-    /// Process a batch of jobs
+    /// Process all jobs, retaining input order and an outcome for every job.
+    /// Cancellation skips jobs not yet admitted to execution. In-flight work
+    /// finishes normally; no thread is abandoned or forcibly interrupted.
+    /// Unwinding job panics become failed outcomes; process-aborting failures
+    /// cannot be recovered by this API.
     pub fn process_jobs(
         self,
         jobs: Vec<BatchJob>,
@@ -65,155 +89,125 @@ impl WorkerPool {
         cancelled: Arc<AtomicBool>,
         stop_on_error: bool,
     ) -> Vec<JobResult> {
-        let num_jobs = jobs.len();
-        let (result_sender, result_receiver) = mpsc::channel();
-
-        // Spawn result collector thread
-        let results = vec![None; num_jobs];
-        let results_handle = {
-            let mut results = results;
-            thread::spawn(move || {
-                for (idx, result) in result_receiver {
-                    results[idx] = Some(result);
-                }
-                results
-            })
-        };
-
-        // Send jobs to workers
-        for (idx, job) in jobs.into_iter().enumerate() {
-            if cancelled.load(Ordering::SeqCst) {
-                let _ = result_sender.send((
-                    idx,
-                    JobResult::Cancelled {
+        if let Some(error) = self.configuration_error {
+            return jobs
+                .into_iter()
+                .map(|job| {
+                    progress.start_job();
+                    progress.fail_job();
+                    JobResult::Failed {
                         job_name: job.display_name(),
-                    },
-                ));
-                continue;
-            }
-
+                        duration: Duration::ZERO,
+                        error: error.clone(),
+                    }
+                })
+                .collect();
+        }
+        let names: Vec<_> = jobs.iter().map(BatchJob::display_name).collect();
+        let mut results = vec![None; jobs.len()];
+        let (result_sender, result_receiver) = mpsc::channel();
+        for (idx, job) in jobs.into_iter().enumerate() {
             let job_name = job.display_name();
+            let dispatch_name = job_name.clone();
             let progress_clone = Arc::clone(&progress);
             let result_sender_clone = result_sender.clone();
             let cancelled_clone = Arc::clone(&cancelled);
-
-            // Wrap job with progress tracking
-            let wrapped_job = match job {
-                BatchJob::Custom { name, operation } => BatchJob::Custom {
-                    name,
-                    operation: Box::new(move || {
-                        progress_clone.start_job();
-                        let start = Instant::now();
-
-                        let result = if cancelled_clone.load(Ordering::SeqCst) {
-                            Err(PdfError::OperationCancelled)
-                        } else {
-                            operation()
-                        };
-
-                        let duration = start.elapsed();
-
-                        match result {
-                            Ok(()) => {
-                                progress_clone.complete_job();
-                                let _ = result_sender_clone.send((
-                                    idx,
-                                    JobResult::Success {
-                                        job_name: job_name.clone(),
-                                        duration,
-                                        output_files: vec![],
-                                    },
-                                ));
-                            }
-                            Err(ref e) => {
-                                progress_clone.fail_job();
-                                let _ = result_sender_clone.send((
-                                    idx,
-                                    JobResult::Failed {
-                                        job_name: job_name.clone(),
-                                        duration,
-                                        error: e.to_string(),
-                                    },
-                                ));
+            let timeout = self.job_timeout;
+            let wrapped_job = BatchJob::Custom {
+                name: job_name.clone(),
+                operation: Box::new(move || {
+                    progress_clone.start_job();
+                    if cancelled_clone.load(Ordering::SeqCst) {
+                        progress_clone.fail_job();
+                        let _ = result_sender_clone.send((idx, JobResult::Cancelled { job_name }));
+                        return Ok(());
+                    }
+                    let start = Instant::now();
+                    let mut outcome = if timeout == Some(Duration::ZERO) {
+                        Err(PdfError::InvalidOperation(
+                            "job timeout is zero; operation was not started".into(),
+                        ))
+                    } else {
+                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| execute_job(job)))
+                            .unwrap_or_else(|_| {
+                                Err(PdfError::InvalidOperation("batch job panicked".into()))
+                            })
+                    };
+                    let duration = start.elapsed();
+                    if timeout.is_some_and(|limit| !limit.is_zero() && duration >= limit) {
+                        let detail = outcome
+                            .err()
+                            .map(|error| format!("; original error: {error}"))
+                            .unwrap_or_default();
+                        outcome = Err(PdfError::InvalidOperation(format!(
+                            "job timeout exceeded after completion; operation was not interrupted{detail}"
+                        )));
+                    }
+                    let result = match outcome {
+                        Ok(output_files) => {
+                            progress_clone.complete_job();
+                            JobResult::Success {
+                                job_name,
+                                duration,
+                                output_files,
                             }
                         }
-
-                        result
-                    }),
-                },
-                _ => {
-                    // Handle other job types
-                    let progress_clone2 = Arc::clone(&progress);
-                    let result_sender_clone2 = result_sender.clone();
-
-                    BatchJob::Custom {
-                        name: job_name.clone(),
-                        operation: Box::new(move || {
-                            progress_clone2.start_job();
-                            let start = Instant::now();
-
-                            let result = execute_job(job);
-                            let duration = start.elapsed();
-
-                            match &result {
-                                Ok(output_files) => {
-                                    progress_clone2.complete_job();
-                                    let _ = result_sender_clone2.send((
-                                        idx,
-                                        JobResult::Success {
-                                            job_name: job_name.clone(),
-                                            duration,
-                                            output_files: output_files.clone(),
-                                        },
-                                    ));
-                                }
-                                Err(e) => {
-                                    progress_clone2.fail_job();
-                                    let _ = result_sender_clone2.send((
-                                        idx,
-                                        JobResult::Failed {
-                                            job_name: job_name.clone(),
-                                            duration,
-                                            error: e.to_string(),
-                                        },
-                                    ));
-
-                                    if stop_on_error {
-                                        cancelled_clone.store(true, Ordering::SeqCst);
-                                    }
-                                }
+                        Err(error) => {
+                            if stop_on_error {
+                                cancelled_clone.store(true, Ordering::SeqCst);
                             }
-
-                            result.map(|_| ())
-                        }),
-                    }
-                }
+                            progress_clone.fail_job();
+                            JobResult::Failed {
+                                job_name,
+                                duration,
+                                error: error.to_string(),
+                            }
+                        }
+                    };
+                    let _ = result_sender_clone.send((idx, result));
+                    Ok(())
+                }),
             };
-
             if self
                 .sender
                 .send(WorkerMessage::Job(idx, wrapped_job))
                 .is_err()
             {
-                break;
+                cancelled.store(true, Ordering::SeqCst);
+                progress.start_job();
+                progress.fail_job();
+                let _ = result_sender.send((
+                    idx,
+                    JobResult::Failed {
+                        job_name: dispatch_name,
+                        duration: Duration::ZERO,
+                        error: "batch worker channel closed before dispatch".into(),
+                    },
+                ));
             }
         }
-
-        // Drop the original sender to close the channel
         drop(result_sender);
         drop(self.sender);
-
-        // Wait for workers to finish
         for worker in self.workers {
             worker.join();
         }
-
-        // Collect results
-        let results = results_handle.join().unwrap_or_else(|_| {
-            tracing::debug!("Result collection thread panicked");
-            Vec::new()
-        });
-        results.into_iter().flatten().collect()
+        for (idx, result) in result_receiver {
+            results[idx] = Some(result);
+        }
+        results
+            .into_iter()
+            .zip(names)
+            .map(|(result, job_name)| {
+                result.unwrap_or_else(|| {
+                    progress.fail_unreported_job();
+                    JobResult::Failed {
+                        job_name,
+                        duration: Duration::ZERO,
+                        error: "worker terminated without an outcome".into(),
+                    }
+                })
+            })
+            .collect()
     }
 
     /// Shutdown the worker pool
@@ -237,41 +231,27 @@ struct Worker {
 
 impl Worker {
     /// Create a new worker
-    fn new(
-        id: usize,
-        receiver: Arc<Mutex<mpsc::Receiver<WorkerMessage>>>,
-        _memory_limit: usize,
-        job_timeout: Option<Duration>,
-    ) -> Self {
-        let thread = thread::spawn(move || {
-            loop {
-                let message = {
-                    let receiver = match receiver.lock() {
-                        Ok(r) => r,
-                        Err(_) => {
-                            tracing::debug!("Worker {} receiver lock poisoned", id);
-                            break;
-                        }
-                    };
-                    receiver.recv()
-                };
-
-                match message {
-                    Ok(WorkerMessage::Job(_idx, job)) => {
-                        // Execute job with optional timeout
-                        if let Some(_timeout) = job_timeout {
-                            // In a real implementation, we'd use a timeout mechanism
-                            // For now, just execute normally
-                            if let BatchJob::Custom { operation, .. } = job {
-                                let _ = operation();
-                            }
-                        } else if let BatchJob::Custom { operation, .. } = job {
-                            let _ = operation();
-                        }
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<WorkerMessage>>>) -> Self {
+        let thread = thread::spawn(move || loop {
+            let message = {
+                let receiver = match receiver.lock() {
+                    Ok(r) => r,
+                    Err(_) => {
+                        tracing::debug!("Worker {} receiver lock poisoned", id);
+                        break;
                     }
-                    Ok(WorkerMessage::Shutdown) => break,
-                    Err(_) => break,
+                };
+                receiver.recv()
+            };
+
+            match message {
+                Ok(WorkerMessage::Job(_idx, job)) => {
+                    if let BatchJob::Custom { operation, .. } = job {
+                        let _ = operation();
+                    }
                 }
+                Ok(WorkerMessage::Shutdown) => break,
+                Err(_) => break,
             }
         });
 
@@ -382,8 +362,9 @@ fn execute_job(job: BatchJob) -> std::result::Result<Vec<PathBuf>, PdfError> {
             Ok(vec![output])
         }
 
-        BatchJob::Custom { .. } => {
-            unreachable!("Custom jobs should be handled separately")
+        BatchJob::Custom { operation, .. } => {
+            operation()?;
+            Ok(Vec::new())
         }
     }
 }
@@ -474,7 +455,7 @@ mod tests {
     fn test_worker_pool_creation() {
         let options = WorkerOptions {
             num_workers: 2,
-            memory_limit: 1024 * 1024,
+            memory_limit: 0,
             job_timeout: None,
         };
 
@@ -488,7 +469,7 @@ mod tests {
     fn test_worker_pool_empty_jobs() {
         let options = WorkerOptions {
             num_workers: 2,
-            memory_limit: 1024 * 1024,
+            memory_limit: 0,
             job_timeout: None,
         };
 
@@ -504,7 +485,7 @@ mod tests {
     fn test_worker_pool_custom_jobs() {
         let options = WorkerOptions {
             num_workers: 2,
-            memory_limit: 1024 * 1024,
+            memory_limit: 0,
             job_timeout: None,
         };
 
@@ -536,7 +517,7 @@ mod tests {
     fn test_worker_pool_with_failures() {
         let options = WorkerOptions {
             num_workers: 1,
-            memory_limit: 1024 * 1024,
+            memory_limit: 0,
             job_timeout: None,
         };
 
@@ -570,7 +551,7 @@ mod tests {
         // Test graceful shutdown while jobs are running
         let options = WorkerOptions {
             num_workers: 2,
-            memory_limit: 1024 * 1024,
+            memory_limit: 0,
             job_timeout: None,
         };
 
@@ -600,7 +581,7 @@ mod tests {
         // Test that worker pool recovers from panicking jobs
         let options = WorkerOptions {
             num_workers: 1,
-            memory_limit: 1024 * 1024,
+            memory_limit: 0,
             job_timeout: None,
         };
 
@@ -611,10 +592,7 @@ mod tests {
         let jobs = vec![
             BatchJob::Custom {
                 name: "Panicking Job".to_string(),
-                operation: Box::new(|| {
-                    // Convert panic to error for testing
-                    Err(PdfError::InvalidStructure("Simulated panic".to_string()))
-                }),
+                operation: Box::new(|| panic!("actual job panic")),
             },
             BatchJob::Custom {
                 name: "Normal Job".to_string(),
@@ -658,8 +636,9 @@ mod tests {
 
         let results = pool.process_jobs(jobs, progress, cancelled, false);
         assert_eq!(results.len(), 1);
-        // Should succeed with small allocation
-        assert!(results[0].is_success());
+        // The allocator cannot enforce this cap: reject before executing.
+        assert!(results[0].is_failed());
+        assert!(results[0].error().unwrap().contains("unsupported"));
     }
 
     #[test]
@@ -670,7 +649,7 @@ mod tests {
 
         let options = WorkerOptions {
             num_workers: 1,
-            memory_limit: 1024 * 1024,
+            memory_limit: 0,
             job_timeout: None,
         };
 
@@ -713,8 +692,8 @@ mod tests {
         // Test job timeout handling
         let options = WorkerOptions {
             num_workers: 1,
-            memory_limit: 1024 * 1024,
-            job_timeout: Some(std::time::Duration::from_millis(10)), // Very short timeout
+            memory_limit: 0,
+            job_timeout: Some(Duration::ZERO), // Expired before either job starts
         };
 
         let pool = WorkerPool::new(options);
@@ -742,19 +721,20 @@ mod tests {
         let results = pool.process_jobs(jobs, Arc::clone(&progress), cancelled, false);
 
         assert_eq!(results.len(), 2);
-        assert_eq!(results.iter().filter(|r| r.is_success()).count(), 2);
-        assert_eq!(results.iter().filter(|r| r.is_failed()).count(), 0);
-
+        assert!(results
+            .iter()
+            .all(|result| result.is_failed() && result.error().unwrap().contains("timeout")));
         let info = progress.get_info();
-        assert_eq!(info.completed_jobs, 2);
-        assert_eq!(info.failed_jobs, 0);
+        assert_eq!(info.completed_jobs, 0);
+        assert_eq!(info.failed_jobs, 2);
+        assert_eq!(info.running_jobs, 0);
     }
 
     #[test]
     fn test_worker_pool_cancellation() {
         let options = WorkerOptions {
             num_workers: 1,
-            memory_limit: 1024 * 1024,
+            memory_limit: 0,
             job_timeout: None,
         };
 
