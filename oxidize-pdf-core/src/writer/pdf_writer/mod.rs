@@ -2978,6 +2978,34 @@ impl<W: Write> PdfWriter<W> {
                 annot_dict.set("AP", Object::Dictionary(updated_ap));
             }
 
+            // Attachment payloads must be indirect EmbeddedFile streams, not
+            // inline dictionaries. Preserve an explicitly supplied /UF mapping;
+            // otherwise both filename variants refer to the same payload.
+            if let Some(Object::Dictionary(spec)) = annot_dict.get("FS") {
+                if let Some(Object::Dictionary(embedded)) = spec.get("EF") {
+                    for (_, file) in embedded.iter() {
+                        if let Object::Stream(dictionary, _) = file {
+                            if let Some(Object::Name(mime)) = dictionary.get("Subtype") {
+                                if mime.contains('\0') || mime.contains("#00") {
+                                    return Err(PdfError::InvalidOperation(
+                                        "attachment MIME name cannot contain NUL".into(),
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    let mut embedded = self.externalize_streams_in_dict(embedded)?;
+                    if embedded.get("UF").is_none() {
+                        if let Some(reference @ Object::Reference(_)) = embedded.get("F") {
+                            embedded.set("UF", reference.clone());
+                        }
+                    }
+                    let mut spec = spec.clone();
+                    spec.set("EF", Object::Dictionary(embedded));
+                    annot_dict.set("FS", Object::Dictionary(spec));
+                }
+            }
+
             self.write_object(annot_id, Object::Dictionary(annot_dict))?;
             annot_refs.push(Object::Reference(annot_id));
 

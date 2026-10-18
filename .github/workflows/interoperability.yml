@@ -130,6 +130,11 @@ jobs:
           cargo test --locked -p oxidize-pdf --features external-images
           --test issue_734_inline_images_test
 
+      - name: Verify binary file attachments with qpdf and Poppler
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_774_file_attachment_test -- --include-ignored
+
       - name: Verify streaming writer object graph and xref with qpdf
         run: >-
           cargo test --locked -p oxidize-pdf --features performance
