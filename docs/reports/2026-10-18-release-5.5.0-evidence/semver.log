@@ -1,0 +1,12 @@
+    Building oxidize-pdf v5.5.0 (current)
+       Built [  56.717s] (current)
+     Parsing oxidize-pdf v5.5.0 (current)
+      Parsed [   0.786s] (current)
+    Building oxidize-pdf v5.4.2 (baseline)
+       Built [  55.357s] (baseline)
+     Parsing oxidize-pdf v5.4.2 (baseline)
+      Parsed [   0.682s] (baseline)
+    Checking oxidize-pdf v5.4.2 -> v5.5.0 (minor change)
+     Checked [   0.933s] 196 checks: 196 pass, 57 skip
+     Summary no semver update required
+    Finished [ 125.683s] oxidize-pdf

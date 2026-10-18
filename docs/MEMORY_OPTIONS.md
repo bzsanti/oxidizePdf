@@ -1,9 +1,9 @@
 # Effective memory and streaming options
 
-These contracts are in unreleased `develop` after core 5.4.2 (issue #758).
-No published version containing them is claimed yet. Bridges must adopt the
-subsequent published release, record its version/checksum and run their own
-binding acceptance tests; a git dependency is not the release handoff.
+These contracts are included in the core 5.5.0 release candidate (issue #758).
+Release preparation does not imply registry publication. Once 5.5.0 is published,
+bridges must adopt the published crate, record its version/checksum and run their
+own binding acceptance tests; a git dependency is not the release handoff.
 
 ## `memory::MemoryOptions` and `LazyDocument`
 
