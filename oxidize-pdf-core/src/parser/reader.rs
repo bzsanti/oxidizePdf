@@ -98,6 +98,14 @@ impl<R: Read + Seek> PdfReader<R> {
         &self.trailer
     }
 
+    /// Replace only the I/O buffer, preserving logical position and parser state.
+    pub(crate) fn with_buffer_capacity(mut self, capacity: usize) -> ParseResult<Self> {
+        let position = self.reader.stream_position()?;
+        self.reader.seek(SeekFrom::Start(position))?;
+        self.reader = BufReader::with_capacity(capacity.max(1), self.reader.into_inner());
+        Ok(self)
+    }
+
     /// Return the latest in-use indirect-object references known to the xref.
     pub(crate) fn object_references(&self) -> Vec<(u32, u16)> {
         self.xref.in_use_references()
