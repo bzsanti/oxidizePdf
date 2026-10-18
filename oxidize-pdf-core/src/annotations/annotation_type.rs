@@ -626,7 +626,8 @@ impl FileAttachmentAnnotation {
         }
     }
 
-    /// Set MIME type
+    /// Set MIME type. Delimiters are escaped during conversion; NUL is rejected
+    /// when the document is serialized because PDF names cannot contain it.
     pub fn with_mime_type(mut self, mime_type: String) -> Self {
         self.mime_type = Some(mime_type);
         self
@@ -650,22 +651,40 @@ impl FileAttachmentAnnotation {
         // Create file specification dictionary
         let mut fs_dict = crate::objects::Dictionary::new();
         fs_dict.set("Type", Object::Name("Filespec".to_string()));
-        fs_dict.set("F", Object::String(self.file_name.clone()));
-        fs_dict.set("UF", Object::String(self.file_name.clone()));
+        // /UF is a Unicode text string, not raw UTF-8 in a PDF 1.x literal.
+        let mut unicode_name = vec![0xFE, 0xFF];
+        for unit in self.file_name.encode_utf16() {
+            unicode_name.extend_from_slice(&unit.to_be_bytes());
+        }
+        let legacy_name = if self.file_name.is_ascii() {
+            Object::String(self.file_name)
+        } else {
+            Object::ByteString(unicode_name.clone())
+        };
+        fs_dict.set("F", legacy_name);
+        fs_dict.set("UF", Object::ByteString(unicode_name));
 
         // Create embedded file stream
         let mut ef_dict = crate::objects::Dictionary::new();
         let mut stream_dict = crate::objects::Dictionary::new();
         stream_dict.set("Type", Object::Name("EmbeddedFile".to_string()));
-        stream_dict.set("Length", Object::Integer(self.file_data.len() as i64));
-
         if let Some(mime) = self.mime_type {
-            stream_dict.set("Subtype", Object::Name(mime));
+            // Object::Name accepts serialized name tokens. Encode delimiters,
+            // whitespace and '#' so MIME names cannot change PDF structure.
+            let mut name = String::new();
+            for byte in mime.bytes() {
+                if (b'!'..=b'~').contains(&byte) && !b"#%()/<>[]{}".contains(&byte) {
+                    name.push(char::from(byte));
+                } else {
+                    name.push_str(&format!("#{byte:02X}"));
+                }
+            }
+            stream_dict.set("Subtype", Object::Name(name));
         }
 
-        // Note: In a real implementation, we'd create a proper stream object
-        // For now, we'll just reference it
-        ef_dict.set("F", Object::Dictionary(stream_dict));
+        // Preserve the actual bytes. The document writer assigns an indirect
+        // stream object and shares its reference between /EF/F and /EF/UF.
+        ef_dict.set("F", Object::Stream(stream_dict, self.file_data));
         fs_dict.set("EF", Object::Dictionary(ef_dict));
 
         annotation.properties.set("FS", Object::Dictionary(fs_dict));
