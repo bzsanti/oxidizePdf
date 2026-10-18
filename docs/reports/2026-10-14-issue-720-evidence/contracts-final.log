@@ -1,0 +1,31 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.13s
+     Running tests/issue_720_recovery_identity_test.rs (target/debug/deps/issue_720_recovery_identity_test-f5e7f7ff947d9189)
+
+running 8 tests
+test strict_page_count_propagates_malformed_tree ... ok
+test strict_does_not_repair_unindexed_objects ... ok
+test lenient_recovers_real_unindexed_dictionary_independently_of_identity ... ok
+test strict_rejects_malformed_dictionary_under_every_identity ... ok
+test malformed_stream_dictionary_is_not_replaced_with_an_empty_one ... ok
+test unrelated_n_entry_cannot_become_a_page_count ... ok
+test valid_dictionary_preserves_parent_fractional_geometry_and_unknown_keys ... ok
+test lenient_rejects_unrepairable_dictionary_under_every_identity ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/issue_722_structural_verification_test.rs (target/debug/deps/issue_722_structural_verification_test-82122be6f4ae7cd8)
+
+running 9 tests
+test empty_non_pdf_and_truncated_input_fail ... ok
+test larger_valid_control_passes ... ok
+test independent_xref_and_object_streams_pass ... ok
+test independent_335_byte_pdf_passes_structure_and_catalog ... ok
+test nested_page_counts_are_checked_per_subtree ... ok
+test recovery_of_missing_page_tree_is_not_structural_validity ... ok
+test padded_header_is_rejected_before_content_or_external_checks ... ok
+test library_writer_remains_accepted ... ok
+test broken_references_types_counts_and_cycles_are_rejected ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

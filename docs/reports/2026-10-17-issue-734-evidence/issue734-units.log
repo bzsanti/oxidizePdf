@@ -1,0 +1,69 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue732/oxidize-pdf-core)
+error[E0599]: no method named `detect_image_format_from_data` found for struct `extract_images::ImageExtractor<R>` in the current scope
+   --> oxidize-pdf-core/src/operations/extract_images_tests.rs:344:32
+    |
+344 |         let result = extractor.detect_image_format_from_data(&png_data);
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `extract_images::ImageExtractor<std::fs::File>`
+    |
+   ::: oxidize-pdf-core/src/operations/extract_images.rs:287:1
+    |
+287 | pub struct ImageExtractor<R: Read + Seek> {
+    | ----------------------------------------- method `detect_image_format_from_data` not found for this struct
+
+error[E0599]: no method named `detect_image_format_from_data` found for struct `extract_images::ImageExtractor<R>` in the current scope
+   --> oxidize-pdf-core/src/operations/extract_images_tests.rs:350:32
+    |
+350 |         let result = extractor.detect_image_format_from_data(&tiff_data);
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `extract_images::ImageExtractor<std::fs::File>`
+    |
+   ::: oxidize-pdf-core/src/operations/extract_images.rs:287:1
+    |
+287 | pub struct ImageExtractor<R: Read + Seek> {
+    | ----------------------------------------- method `detect_image_format_from_data` not found for this struct
+
+error[E0599]: no method named `detect_image_format_from_data` found for struct `extract_images::ImageExtractor<R>` in the current scope
+   --> oxidize-pdf-core/src/operations/extract_images_tests.rs:356:32
+    |
+356 |         let result = extractor.detect_image_format_from_data(&jpeg_data);
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `extract_images::ImageExtractor<std::fs::File>`
+    |
+   ::: oxidize-pdf-core/src/operations/extract_images.rs:287:1
+    |
+287 | pub struct ImageExtractor<R: Read + Seek> {
+    | ----------------------------------------- method `detect_image_format_from_data` not found for this struct
+
+error[E0599]: no method named `parse_inline_image_dict` found for struct `extract_images::ImageExtractor<R>` in the current scope
+   --> oxidize-pdf-core/src/operations/extract_images_tests.rs:720:41
+    |
+720 |         let (width, height) = extractor.parse_inline_image_dict(dict1);
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^ method not found in `extract_images::ImageExtractor<std::fs::File>`
+    |
+   ::: oxidize-pdf-core/src/operations/extract_images.rs:287:1
+    |
+287 | pub struct ImageExtractor<R: Read + Seek> {
+    | ----------------------------------------- method `parse_inline_image_dict` not found for this struct
+
+error[E0599]: no method named `parse_inline_image_dict` found for struct `extract_images::ImageExtractor<R>` in the current scope
+   --> oxidize-pdf-core/src/operations/extract_images_tests.rs:726:41
+    |
+726 |         let (width, height) = extractor.parse_inline_image_dict(dict2);
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^ method not found in `extract_images::ImageExtractor<std::fs::File>`
+    |
+   ::: oxidize-pdf-core/src/operations/extract_images.rs:287:1
+    |
+287 | pub struct ImageExtractor<R: Read + Seek> {
+    | ----------------------------------------- method `parse_inline_image_dict` not found for this struct
+
+error[E0599]: no method named `parse_inline_image_dict` found for struct `extract_images::ImageExtractor<R>` in the current scope
+   --> oxidize-pdf-core/src/operations/extract_images_tests.rs:732:41
+    |
+732 |         let (width, height) = extractor.parse_inline_image_dict(dict3);
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^ method not found in `extract_images::ImageExtractor<std::fs::File>`
+    |
+   ::: oxidize-pdf-core/src/operations/extract_images.rs:287:1
+    |
+287 | pub struct ImageExtractor<R: Read + Seek> {
+    | ----------------------------------------- method `parse_inline_image_dict` not found for this struct
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `oxidize-pdf` (lib test) due to 6 previous errors

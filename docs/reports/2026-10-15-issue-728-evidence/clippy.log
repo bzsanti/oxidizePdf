@@ -1,0 +1,48 @@
+    Blocking waiting for file lock on build directory
+    Checking oxidize-pdf v5.4.2 (/tmp/oxidize-issue728/oxidize-pdf-core)
+warning: unused variable: `thread_pool`
+   --> oxidize-pdf-core/src/performance/parallel_generation.rs:190:13
+    |
+190 |         let thread_pool: Option<rayon::ThreadPool> = None;
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_thread_pool`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `process_chunk` and `get_current_thread_id` are never used
+   --> oxidize-pdf-core/src/performance/parallel_generation.rs:279:8
+    |
+180 | impl ParallelPageGenerator {
+    | -------------------------- methods in this implementation
+...
+279 |     fn process_chunk(
+    |        ^^^^^^^^^^^^^
+...
+352 |     fn get_current_thread_id(&self) -> usize {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `oxidize-pdf` (lib) generated 2 warnings (run `cargo clippy --fix --lib -p oxidize-pdf -- -D clippy::all` to apply 1 suggestion)
+warning: `oxidize-pdf` (lib test) generated 2 warnings (2 duplicates)
+error: calling `as_bytes` after slicing a string
+   --> oxidize-pdf-core/examples/high_performance_demo.rs:609:5
+    |
+609 | /     text.repeat(size / text.len() + 1)[..size]
+610 | |         .as_bytes()
+    | |___________________^ help: try: `&text.repeat(size / text.len() + 1).as_bytes()[..size]`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#sliced_string_as_bytes
+    = note: `-D clippy::sliced-string-as-bytes` implied by `-D clippy::all`
+    = help: to override `-D clippy::all` add `#[allow(clippy::sliced_string_as_bytes)]`
+
+error: calling `as_bytes` after slicing a string
+   --> oxidize-pdf-core/examples/high_performance_demo.rs:618:5
+    |
+618 | /     commands.repeat(size / commands.len() + 1)[..size]
+619 | |         .as_bytes()
+    | |___________________^ help: try: `&commands.repeat(size / commands.len() + 1).as_bytes()[..size]`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#sliced_string_as_bytes
+
+error: could not compile `oxidize-pdf` (example "high_performance_demo") due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...

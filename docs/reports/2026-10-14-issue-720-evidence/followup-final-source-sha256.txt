@@ -1,0 +1,4 @@
+95ccd45d508dcef6ec98435985cb29fe5f971015770ffb3d9439f9636e1ba7ee  oxidize-pdf-core/src/parser/reader.rs
+768b4a1b70dca6794e41083c2e72041efcf8868c12faa807e69457542253d551  oxidize-pdf-core/src/signatures/permissions.rs
+3104b2f36690402efb107aed7a62eab8f84422ec642984d5c9f0ed8606e313c4  oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs
+32a7da48828868da3dff0531050ddfb8e940627c9a1f88b64403b96840847891  oxidize-pdf-core/tests/pdfa_validator_coverage_test.rs

@@ -1,0 +1,37 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue736/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 8.10s
+     Running tests/issue_736_png_depth_test.rs (target/debug/deps/issue_736_png_depth_test-c2800d699d579027)
+
+running 6 tests
+test oversized_sixteen_bit_geometry_returns_error_without_panicking ... ok
+test grayscale_16_bit_sample_boundaries_and_metadata ... ok
+test eight_bit_gray_rgb_and_alpha_controls ... ok
+test rgb_and_alpha_samples_keep_all_sixteen_bits ... ok
+test written_and_reopened_pdf_preserves_main_and_mask_samples ... ok
+test independent_qpdf_decodes_written_sixteen_bit_streams ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/png_rendering_test.rs (target/debug/deps/png_rendering_test-ed3a58afbba33340)
+
+running 2 tests
+test test_png_image_stream_contains_valid_flatedecode ... ok
+test test_png_image_roundtrip_valid_pdf ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/png_transparency_tests.rs (target/debug/deps/png_transparency_tests-137bb4a77bf3e60e)
+
+running 9 tests
+test test_image_with_mask_application ... ok
+test test_mask_type_enum ... ok
+test test_grayscale_png_with_alpha ... ok
+test test_mask_type_operations ... ok
+test test_stencil_mask_creation ... ok
+test test_image_without_transparency ... ok
+test test_png_soft_mask_creation ... ok
+test test_png_to_pdf_object_with_transparency ... ok
+test test_png_with_alpha_channel ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,110 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 93 | Tests: 55 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/pdfa_validator_coverage_test.rs           55     93
+
+--- Worst Offenders ---
+  metadata_present_without_pdfa_identifier_is_flagged (oxidize-pdf-core/tests/pdfa_validator_coverage_test.rs:151) - Score: 80
+    - Test 'metadata_present_without_pdfa_identifier_is_flagged' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'metadata_present_without_pdfa_identifier_is_flagged' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  additional_actions_without_javascript_is_not_flagged (oxidize-pdf-core/tests/pdfa_validator_coverage_test.rs:356) - Score: 80
+    - Test 'additional_actions_without_javascript_is_not_flagged' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'additional_actions_without_javascript_is_not_flagged' does not call any production code
+  conforming_extgstate_has_no_transparency_error (oxidize-pdf-core/tests/pdfa_validator_coverage_test.rs:701) - Score: 80
+    - Test 'conforming_extgstate_has_no_transparency_error' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'conforming_extgstate_has_no_transparency_error' does not call any production code
+  transparency_is_allowed_in_pdfa_2 (oxidize-pdf-core/tests/pdfa_validator_coverage_test.rs:716) - Score: 80
+    - Test 'transparency_is_allowed_in_pdfa_2' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+    - Test 'transparency_is_allowed_in_pdfa_2' does not call any production code
+  embedded_files_allowed_in_pdfa_3 (oxidize-pdf-core/tests/pdfa_validator_coverage_test.rs:841) - Score: 80
+    - Test 'embedded_files_allowed_in_pdfa_3' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'embedded_files_allowed_in_pdfa_3' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/pdfa_validator_coverage_test.rs:
+  a1b_accepts_pdf_1_4_version (line 93) - Score: 90
+    - Test 'a1b_accepts_pdf_1_4_version' does not call any production code
+  a2b_accepts_pdf_1_7_version (line 102) - Score: 90
+    - Test 'a2b_accepts_pdf_1_7_version' does not call any production code
+  a2b_rejects_pdf_1_3 (line 111) - Score: 90
+    - Test 'a2b_rejects_pdf_1_3' does not call any production code
+  metadata_present_without_pdfa_identifier_is_flagged (line 151) - Score: 80
+    - Test 'metadata_present_without_pdfa_identifier_is_flagged' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'metadata_present_without_pdfa_identifier_is_flagged' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  metadata_part_mismatch_is_flagged (line 170) - Score: 90
+    - Test 'metadata_part_mismatch_is_flagged' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  metadata_conformance_mismatch_is_flagged (line 191) - Score: 90
+    - Test 'metadata_conformance_mismatch_is_flagged' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  metadata_matching_identifier_passes (line 212) - Score: 90
+    - Test 'metadata_matching_identifier_passes' does not call any production code
+  javascript_in_names_tree_is_flagged (line 261) - Score: 90
+    - Test 'javascript_in_names_tree_is_flagged' does not call any production code
+  javascript_in_open_action_is_flagged (line 276) - Score: 90
+    - Test 'javascript_in_open_action_is_flagged' does not call any production code
+  javascript_in_additional_actions_is_flagged (line 291) - Score: 90
+    - Test 'javascript_in_additional_actions_is_flagged' does not call any production code
+  additional_actions_via_reference_is_flagged (line 337) - Score: 90
+    - Test 'additional_actions_via_reference_is_flagged' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  additional_actions_without_javascript_is_not_flagged (line 356) - Score: 80
+    - Test 'additional_actions_without_javascript_is_not_flagged' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'additional_actions_without_javascript_is_not_flagged' does not call any production code
+  dangling_metadata_reference_denies_conformance (line 391) - Score: 100
+    i Test 'dangling_metadata_reference_denies_conformance' has multiple assertions without diagnostic messages
+    i Test 'dangling_metadata_reference_denies_conformance' uses .unwrap() which silently discards error information
+  font_resources_via_reference_are_checked (line 430) - Score: 90
+    - Test 'font_resources_via_reference_are_checked' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  output_intents_via_reference_is_resolved (line 498) - Score: 90
+    - Test 'output_intents_via_reference_is_resolved' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  non_javascript_open_action_is_not_flagged_as_js (line 517) - Score: 90
+    - Test 'non_javascript_open_action_is_not_flagged_as_js' does not call any production code
+  xobject_transparency_group_is_flagged (line 658) - Score: 90
+    - Test 'xobject_transparency_group_is_flagged' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  image_xobject_with_smask_is_flagged (line 679) - Score: 90
+    - Test 'image_xobject_with_smask_is_flagged' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  conforming_extgstate_has_no_transparency_error (line 701) - Score: 80
+    - Test 'conforming_extgstate_has_no_transparency_error' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'conforming_extgstate_has_no_transparency_error' does not call any production code
+  transparency_is_allowed_in_pdfa_2 (line 716) - Score: 80
+    - Test 'transparency_is_allowed_in_pdfa_2' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+    - Test 'transparency_is_allowed_in_pdfa_2' does not call any production code
+  lzw_in_xobject_stream_is_flagged (line 756) - Score: 90
+    - Test 'lzw_in_xobject_stream_is_flagged' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  flate_content_stream_has_no_lzw_error (line 790) - Score: 90
+    - Test 'flate_content_stream_has_no_lzw_error' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  lzw_is_allowed_in_pdfa_2 (line 805) - Score: 90
+    - Test 'lzw_is_allowed_in_pdfa_2' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  embedded_files_allowed_in_pdfa_3 (line 841) - Score: 80
+    - Test 'embedded_files_allowed_in_pdfa_3' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+    - Test 'embedded_files_allowed_in_pdfa_3' does not call any production code
+  font_descriptor_without_fontfile_is_not_embedded (line 882) - Score: 90
+    - Test 'font_descriptor_without_fontfile_is_not_embedded' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  font_descriptor_with_fontfile_is_embedded (line 900) - Score: 90
+    - Test 'font_descriptor_with_fontfile_is_embedded' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  type0_descendant_without_fontfile_is_not_embedded (line 934) - Score: 90
+    - Test 'type0_descendant_without_fontfile_is_not_embedded' has low assert-to-setup ratio (13%): 2 asserts vs 13 setup lines
+  type0_descendant_with_fontfile_is_embedded (line 955) - Score: 90
+    - Test 'type0_descendant_with_fontfile_is_embedded' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+  level_a_type3_without_tounicode_lacks_unicode_mapping (line 977) - Score: 90
+    - Test 'level_a_type3_without_tounicode_lacks_unicode_mapping' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  level_a_type0_identity_encoding_without_tounicode_passes (line 997) - Score: 90
+    - Test 'level_a_type0_identity_encoding_without_tounicode_passes' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+  device_rgb_with_output_intent_dest_profile_is_valid (line 1049) - Score: 90
+    - Test 'device_rgb_with_output_intent_dest_profile_is_valid' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+  output_intent_pdfa_subtype_satisfies_device_colour (line 1067) - Score: 90
+    - Test 'output_intent_pdfa_subtype_satisfies_device_colour' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+  icc_based_array_colour_space_is_not_device_dependent (line 1083) - Score: 90
+    - Test 'icc_based_array_colour_space_is_not_device_dependent' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  image_xobject_device_cmyk_without_output_intent_is_invalid (line 1098) - Score: 90
+    - Test 'image_xobject_device_cmyk_without_output_intent_is_invalid' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

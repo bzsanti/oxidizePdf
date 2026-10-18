@@ -1,0 +1,12 @@
+{
+  "merge_commit": "275915e9",
+  "expected_base_jobs": [
+    "qpdf",
+    "wasm-encryption"
+  ],
+  "observed_jobs": [
+    "qpdf"
+  ],
+  "base_qpdf_steps": 22,
+  "observed_qpdf_steps": 13
+}

@@ -1,0 +1,36 @@
+[
+  {
+    "name": "pr718-library",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "-p",
+      "oxidize-pdf",
+      "--lib",
+      "encryption::"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "pr718-regression",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "-p",
+      "oxidize-pdf",
+      "--test",
+      "issue_711_aes_entropy_test",
+      "--test",
+      "encryption_write_test",
+      "--test",
+      "issue_492_aes256_perms_interop_test",
+      "--test",
+      "text_symbolic_truetype_fallback_test",
+      "--",
+      "--include-ignored"
+    ],
+    "exit_code": 101
+  }
+]

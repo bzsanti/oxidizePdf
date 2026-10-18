@@ -1,0 +1,165 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue724/oxidize-pdf-core)
+error[E0277]: `std::sync::MutexGuard<'static, ()>` cannot be sent between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:619:20
+    |
+619 |     require_sync::<StreamingDocument<SyncReader>>();
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `std::sync::MutexGuard<'static, ()>` cannot be sent between threads safely
+    |
+    = help: within `PdfReader<BufReader<SyncReader>>`, the trait `Send` is not implemented for `std::sync::MutexGuard<'static, ()>`
+note: required because it appears within the type `PhantomData<std::sync::MutexGuard<'static, ()>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/marker.rs:811:12
+    |
+811 | pub struct PhantomData<T: PointeeSized>;
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `SyncReader`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:615:12
+    |
+615 |     struct SyncReader(std::marker::PhantomData<std::sync::MutexGuard<'static, ()>>);
+    |            ^^^^^^^^^^
+note: required because it appears within the type `BufReader<SyncReader>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/io/buffered/bufreader.rs:51:12
+    |
+ 51 | pub struct BufReader<R: ?Sized> {
+    |            ^^^^^^^^^
+note: required by a bound in `require_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:618:24
+    |
+618 |     fn require_sync<T: Sync>() {}
+    |                        ^^^^ required by this bound in `require_sync`
+
+error[E0277]: `std::sync::MutexGuard<'static, ()>` cannot be sent between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:620:20
+    |
+620 |     require_sync::<StreamProcessor<SyncReader>>();
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `std::sync::MutexGuard<'static, ()>` cannot be sent between threads safely
+    |
+    = help: within `PdfReader<BufReader<SyncReader>>`, the trait `Send` is not implemented for `std::sync::MutexGuard<'static, ()>`
+note: required because it appears within the type `PhantomData<std::sync::MutexGuard<'static, ()>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/marker.rs:811:12
+    |
+811 | pub struct PhantomData<T: PointeeSized>;
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `SyncReader`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:615:12
+    |
+615 |     struct SyncReader(std::marker::PhantomData<std::sync::MutexGuard<'static, ()>>);
+    |            ^^^^^^^^^^
+note: required because it appears within the type `BufReader<SyncReader>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/io/buffered/bufreader.rs:51:12
+    |
+ 51 | pub struct BufReader<R: ?Sized> {
+    |            ^^^^^^^^^
+note: required by a bound in `require_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:618:24
+    |
+618 |     fn require_sync<T: Sync>() {}
+    |                        ^^^^ required by this bound in `require_sync`
+
+error[E0277]: `std::sync::MutexGuard<'static, ()>` cannot be sent between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:621:20
+    |
+621 |     require_sync::<oxidize_pdf::streaming::PageStreamer<SyncReader>>();
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `std::sync::MutexGuard<'static, ()>` cannot be sent between threads safely
+    |
+    = help: within `PdfReader<SyncReader>`, the trait `Send` is not implemented for `std::sync::MutexGuard<'static, ()>`
+note: required because it appears within the type `PhantomData<std::sync::MutexGuard<'static, ()>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/marker.rs:811:12
+    |
+811 | pub struct PhantomData<T: PointeeSized>;
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `SyncReader`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:615:12
+    |
+615 |     struct SyncReader(std::marker::PhantomData<std::sync::MutexGuard<'static, ()>>);
+    |            ^^^^^^^^^^
+note: required because it appears within the type `BufReader<SyncReader>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/io/buffered/bufreader.rs:51:12
+    |
+ 51 | pub struct BufReader<R: ?Sized> {
+    |            ^^^^^^^^^
+note: required because it appears within the type `PdfReader<SyncReader>`
+   --> oxidize-pdf-core/src/parser/reader.rs:49:12
+    |
+ 49 | pub struct PdfReader<R: Read + Seek> {
+    |            ^^^^^^^^^
+    = note: required for `RefCell<PdfReader<SyncReader>>` to implement `Send`
+note: required because it appears within the type `PdfDocument<SyncReader>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+    = note: required for `std::sync::Mutex<PdfDocument<SyncReader>>` to implement `Sync`
+note: required because it appears within the type `Option<std::sync::Mutex<PdfDocument<SyncReader>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<SyncReader>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:618:24
+    |
+618 |     fn require_sync<T: Sync>() {}
+    |                        ^^^^ required by this bound in `require_sync`
+
+error[E0277]: `std::sync::MutexGuard<'static, ()>` cannot be sent between threads safely
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:622:20
+    |
+622 |     require_sync::<PageIterator<SyncReader>>();
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^ `std::sync::MutexGuard<'static, ()>` cannot be sent between threads safely
+    |
+    = help: within `PdfReader<SyncReader>`, the trait `Send` is not implemented for `std::sync::MutexGuard<'static, ()>`
+note: required because it appears within the type `PhantomData<std::sync::MutexGuard<'static, ()>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/marker.rs:811:12
+    |
+811 | pub struct PhantomData<T: PointeeSized>;
+    |            ^^^^^^^^^^^
+note: required because it appears within the type `SyncReader`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:615:12
+    |
+615 |     struct SyncReader(std::marker::PhantomData<std::sync::MutexGuard<'static, ()>>);
+    |            ^^^^^^^^^^
+note: required because it appears within the type `BufReader<SyncReader>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/io/buffered/bufreader.rs:51:12
+    |
+ 51 | pub struct BufReader<R: ?Sized> {
+    |            ^^^^^^^^^
+note: required because it appears within the type `PdfReader<SyncReader>`
+   --> oxidize-pdf-core/src/parser/reader.rs:49:12
+    |
+ 49 | pub struct PdfReader<R: Read + Seek> {
+    |            ^^^^^^^^^
+    = note: required for `RefCell<PdfReader<SyncReader>>` to implement `Send`
+note: required because it appears within the type `PdfDocument<SyncReader>`
+   --> oxidize-pdf-core/src/parser/document.rs:216:12
+    |
+216 | pub struct PdfDocument<R: Read + Seek> {
+    |            ^^^^^^^^^^^
+    = note: required for `std::sync::Mutex<PdfDocument<SyncReader>>` to implement `Sync`
+note: required because it appears within the type `Option<std::sync::Mutex<PdfDocument<SyncReader>>>`
+   --> /home/santi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:10
+    |
+600 | pub enum Option<T> {
+    |          ^^^^^^
+note: required because it appears within the type `PageStreamer<SyncReader>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:79:12
+    |
+ 79 | pub struct PageStreamer<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required because it appears within the type `PageIterator<SyncReader>`
+   --> oxidize-pdf-core/src/streaming/page_streamer.rs:204:12
+    |
+204 | pub struct PageIterator<R: Read + Seek> {
+    |            ^^^^^^^^^^^^
+note: required by a bound in `require_sync`
+   --> oxidize-pdf-core/tests/issue_724_streaming_input_test.rs:618:24
+    |
+618 |     fn require_sync<T: Sync>() {}
+    |                        ^^^^ required by this bound in `require_sync`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `oxidize-pdf` (test "issue_724_streaming_input_test") due to 4 previous errors

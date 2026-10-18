@@ -27,7 +27,10 @@ pub struct TextChunk {
 pub struct TextStreamOptions {
     /// Minimum text size to include
     pub min_font_size: f64,
-    /// Maximum buffer size for text chunks
+    /// Maximum total UTF-8 text bytes retained in the batch buffer.
+    /// Oldest whole chunks are evicted until this limit is met. A chunk larger
+    /// than the limit is returned by `process_chunk` but is not retained.
+    /// Chunk metadata and separators added by `extract_text` are not counted.
     pub max_buffer_size: usize,
     /// Whether to preserve formatting
     pub preserve_formatting: bool,
@@ -210,11 +213,13 @@ impl TextStreamer {
     }
 
     fn check_buffer_size(&mut self) {
-        let total_size: usize = self.buffer.iter().map(|chunk| chunk.text.len()).sum();
+        let mut total_size: usize = self.buffer.iter().map(|chunk| chunk.text.len()).sum();
 
         // Remove oldest chunks if buffer is too large
         while total_size > self.options.max_buffer_size && !self.buffer.is_empty() {
-            self.buffer.pop_front();
+            if let Some(chunk) = self.buffer.pop_front() {
+                total_size -= chunk.text.len();
+            }
         }
     }
 }

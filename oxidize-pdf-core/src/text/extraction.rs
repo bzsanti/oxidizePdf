@@ -348,7 +348,7 @@ struct PendingActualText {
 
 #[derive(Default)]
 struct StructureActualText {
-    owners: Vec<crate::parser::objects::PdfObject>,
+    owners: HashMap<usize, crate::parser::objects::PdfObject>,
     cache: HashMap<u32, Option<String>>,
 }
 
@@ -362,7 +362,7 @@ impl StructureActualText {
         if let Some(cached) = self.cache.get(&mcid) {
             return Ok(cached.clone());
         }
-        let Some(owner) = self.owners.get(mcid as usize) else {
+        let Some(owner) = self.owners.get(&(mcid as usize)) else {
             self.cache.insert(mcid, None);
             return Ok(None);
         };
@@ -728,6 +728,9 @@ pub struct TextExtractor {
     carriage_return_handling: CarriageReturnHandling,
     /// Normalize non-breaking spaces (U+00A0, U+202F) to ASCII space (U+0020).
     normalize_non_breaking_spaces: bool,
+    /// Resolve symbolic simple TrueType codes through the embedded font
+    /// program instead of U+FFFD (issue #715).
+    symbolic_truetype_fallback: bool,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
     /// Narrowest usable CID width for Type0 fonts in the current page. Derived
@@ -750,6 +753,7 @@ impl TextExtractor {
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
             normalize_non_breaking_spaces: false,
+            symbolic_truetype_fallback: false,
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
@@ -767,6 +771,7 @@ impl TextExtractor {
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
             normalize_non_breaking_spaces: false,
+            symbolic_truetype_fallback: false,
             font_cache: HashMap::new(),
             type0_implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
@@ -840,6 +845,39 @@ impl TextExtractor {
     /// compatibility in downstream NLP/RAG pipelines (issue #687).
     pub fn with_non_breaking_space_normalization(mut self, enable: bool) -> Self {
         self.normalize_non_breaking_spaces = enable;
+        self
+    }
+
+    /// Enable (or disable) decoding symbolic simple TrueType fonts without
+    /// `/Encoding` or `/ToUnicode` through their embedded font program
+    /// (issue #715).
+    ///
+    /// Off by default: such codes are glyph selectors with no authoritative
+    /// Unicode assignment, so the strict policy emits U+FFFD for each one.
+    /// Office exports post-processed by Ghostscript commonly mark ordinary
+    /// Latin subset fonts this way, which makes whole pages unreadable.
+    ///
+    /// When enabled, each code is resolved to a glyph via the embedded
+    /// `FontFile2` (3,0) subtable (at `code` or `0xF000`/`0xF100`/`0xF200` +
+    /// `code`) or the (1,0) subtable, per ISO 32000-1 §9.6.6.4. The glyph's
+    /// `post` name is used when it has a Unicode assignment; unnamed glyphs
+    /// fall back to the code's WinAnsiEncoding (via (3,0)) or MacRomanEncoding
+    /// (via (1,0)) character. Codes the program does not map, glyphs the
+    /// `post` table names without a Unicode assignment, and fonts without a
+    /// parseable embedded program still yield U+FFFD. `/ToUnicode` and valid
+    /// `/Differences` names continue to take precedence.
+    ///
+    /// Genuinely symbolic fonts (dingbats, pictographs) without glyph names
+    /// may decode to plausible-looking but wrong Latin characters, which is
+    /// why this is opt-in.
+    pub fn with_symbolic_truetype_fallback(mut self, enable: bool) -> Self {
+        if self.symbolic_truetype_fallback != enable {
+            // FontInfo includes the decoded name layer, which depends on this policy.
+            self.font_object_cache.clear();
+            self.font_cache.clear();
+            self.type0_implicit_space_widths.clear();
+            self.symbolic_truetype_fallback = enable;
+        }
         self
     }
 
@@ -3509,7 +3547,9 @@ impl TextExtractor {
         font_dict: &PdfDictionary,
         document: &PdfDocument<R>,
     ) -> ParseResult<()> {
-        let font_info = CMapTextExtractor::new().extract_font_info(font_dict, document)?;
+        let font_info = CMapTextExtractor::new()
+            .with_symbolic_truetype_fallback(self.symbolic_truetype_fallback)
+            .extract_font_info(font_dict, document)?;
         self.cache_page_font(font_name, font_info);
         Ok(())
     }
@@ -3532,7 +3572,9 @@ impl TextExtractor {
                 position: 0,
                 message: "Font resource must be a dictionary".into(),
             })?;
-        let font_info = CMapTextExtractor::new().extract_font_info(font_dict, document)?;
+        let font_info = CMapTextExtractor::new()
+            .with_symbolic_truetype_fallback(self.symbolic_truetype_fallback)
+            .extract_font_info(font_dict, document)?;
         self.font_object_cache.insert(font_ref, font_info.clone());
         self.cache_page_font(font_name, font_info);
         Ok(())
@@ -4493,14 +4535,11 @@ fn resolve_structure_actual_text<R: Read + Seek>(
     ) else {
         return StructureActualText::default();
     };
-    let Ok(owner_array_object) = document.resolve(&owner_array_object) else {
-        return StructureActualText::default();
-    };
-    let PdfObject::Array(owners) = owner_array_object else {
+    let Ok(owners) = document.sparse_array(&owner_array_object) else {
         return StructureActualText::default();
     };
     StructureActualText {
-        owners: owners.0,
+        owners,
         cache: HashMap::new(),
     }
 }

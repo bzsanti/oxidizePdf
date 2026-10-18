@@ -1,0 +1,23 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue732/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 47.90s
+     Running tests/issue_732_packed_gray_test.rs (/tmp/oxidize-issue741/target/debug/deps/issue_732_packed_gray_test-d76bc9c65fe05f95)
+
+running 1 test
+test invalid_depth_cannot_wrap_into_supported_packed_depth ... FAILED
+
+failures:
+
+---- invalid_depth_cannot_wrap_into_supported_packed_depth stdout ----
+
+thread 'invalid_depth_cannot_wrap_into_supported_packed_depth' (174) panicked at oxidize-pdf-core/tests/issue_732_packed_gray_test.rs:140:9:
+depth 257
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    invalid_depth_cannot_wrap_into_supported_packed_depth
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_732_packed_gray_test`

@@ -1,0 +1,30 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue727/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 2m 33s
+     Running tests/dashboard_integration_test.rs (/tmp/oxidize-issue724/target/debug/deps/dashboard_integration_test-5410df857b8300ba)
+
+running 5 tests
+test dashboard_tests::test_kpi_card_with_all_features ... ok
+test dashboard_tests::test_empty_dashboard ... ok
+test dashboard_tests::test_dashboard_with_varied_data ... ok
+test dashboard_tests::test_dashboard_renders_to_pdf ... ok
+test dashboard_tests::test_large_dashboard ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_727_dashboard_overflow_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_727_dashboard_overflow_test-40240ba7d453c317)
+
+running 10 tests
+test invalid_grid_geometry_and_spans_are_errors ... ok
+test exact_fit_and_first_overflow ... ok
+test default_overflow_is_an_error_with_remaining_identities ... ok
+test multiple_rows_require_space_for_every_component ... ok
+test non_finite_bounds_cannot_bypass_overflow ... ok
+test first_row_overflow_and_empty_dashboard ... ok
+test omission_is_explicit_and_identifies_the_entire_remainder ... ok
+test larger_page_renders_all_indices_and_duplicate_labels_remain_distinct ... ok
+test overflow_leaves_existing_page_unchanged ... ok
+test independent_output_oracle ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+

@@ -1,0 +1,3 @@
+eeb2c0275bb909cfa5ef1692174eda28e06f7fa06848253c0ecae9be09f38a57  oxidize-pdf-core/src/parser/reader.rs
+83bf95c703d468eca4f89af990123c164b98ae842ae6a050593b0f28cfbb7613  oxidize-pdf-core/tests/issue_720_recovery_identity_test.rs
+827d4f481f60988ff6bc1a0d840518eb28f5ac4e2c09d4c9b30b592a03a9fc54  oxidize-pdf-core/src/verification/tagged_pdf.rs

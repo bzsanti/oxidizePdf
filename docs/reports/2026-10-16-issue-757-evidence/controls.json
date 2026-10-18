@@ -1,0 +1,110 @@
+[
+  {
+    "file": "issue_498_actual_text_interop.pdf",
+    "runs": {
+      "baseline": {
+        "code": 0,
+        "stderr": "pages=1\npage=0 bytes=27\nbytes=27\nmaxrss_kb=9472 elapsed=0.00\n",
+        "sha256": "bdc93929c5c44f9e1e040d2d35a6e894a6eff2688b532752b5134af317fb00af",
+        "bytes": 27
+      },
+      "candidate": {
+        "code": 0,
+        "stderr": "pages=1\npage=0 bytes=27\nbytes=27\nmaxrss_kb=9472 elapsed=0.00\n",
+        "sha256": "bdc93929c5c44f9e1e040d2d35a6e894a6eff2688b532752b5134af317fb00af",
+        "bytes": 27
+      }
+    },
+    "identical": true
+  },
+  {
+    "file": "issue_272_higgs_arxiv_1207_7214.pdf",
+    "runs": {
+      "baseline": {
+        "code": 0,
+        "stderr": "pages=38\npage=0 bytes=1383\nbytes=184683\nmaxrss_kb=15592 elapsed=0.17\n",
+        "sha256": "e711cabe9e0f26ad804bb374409360b1e1b20f7c80a524c024c261848ab695d3",
+        "bytes": 184683
+      },
+      "candidate": {
+        "code": 0,
+        "stderr": "pages=38\npage=0 bytes=1383\nbytes=184683\nmaxrss_kb=15464 elapsed=0.17\n",
+        "sha256": "e711cabe9e0f26ad804bb374409360b1e1b20f7c80a524c024c261848ab695d3",
+        "bytes": 184683
+      }
+    },
+    "identical": true
+  },
+  {
+    "file": "issue_272_boe_sumario_2025_01_15.pdf",
+    "runs": {
+      "baseline": {
+        "code": 0,
+        "stderr": "pages=12\npage=0 bytes=1486\nbytes=33482\nmaxrss_kb=11008 elapsed=0.02\n",
+        "sha256": "818e3ad91579c65c20b0e9c35b229a2f9492aa42efa43f0ba68b6860a8e05e11",
+        "bytes": 33482
+      },
+      "candidate": {
+        "code": 0,
+        "stderr": "pages=12\npage=0 bytes=1486\nbytes=33482\nmaxrss_kb=11008 elapsed=0.03\n",
+        "sha256": "818e3ad91579c65c20b0e9c35b229a2f9492aa42efa43f0ba68b6860a8e05e11",
+        "bytes": 33482
+      }
+    },
+    "identical": true
+  },
+  {
+    "file": "Cold_Email_Hacks.pdf",
+    "runs": {
+      "baseline": {
+        "code": 0,
+        "stderr": "pages=44\npage=0 bytes=3\nbytes=94184\nmaxrss_kb=15628 elapsed=0.15\n",
+        "sha256": "c8d2bf4f6f9580f90c6799bfc803afd87488d46acf69c0ca19bc12ddd16772c4",
+        "bytes": 94184
+      },
+      "candidate": {
+        "code": 0,
+        "stderr": "pages=44\npage=0 bytes=3\nbytes=94184\nmaxrss_kb=15824 elapsed=0.14\n",
+        "sha256": "c8d2bf4f6f9580f90c6799bfc803afd87488d46acf69c0ca19bc12ddd16772c4",
+        "bytes": 94184
+      }
+    },
+    "identical": true
+  },
+  {
+    "file": "synthetic_slide_deck.pdf",
+    "runs": {
+      "baseline": {
+        "code": 0,
+        "stderr": "pages=4\npage=0 bytes=81\nbytes=2223\nmaxrss_kb=9600 elapsed=0.00\n",
+        "sha256": "cb7a4bc2d1d2fffa192803daf53563f029fa85d0fc0f9d560aa6709f62683c9a",
+        "bytes": 2223
+      },
+      "candidate": {
+        "code": 0,
+        "stderr": "pages=4\npage=0 bytes=81\nbytes=2223\nmaxrss_kb=9600 elapsed=0.00\n",
+        "sha256": "cb7a4bc2d1d2fffa192803daf53563f029fa85d0fc0f9d560aa6709f62683c9a",
+        "bytes": 2223
+      }
+    },
+    "identical": true
+  },
+  {
+    "file": "incremental_metadata/compressed.pdf",
+    "runs": {
+      "baseline": {
+        "code": 0,
+        "stderr": "pages=2\npage=0 bytes=11\nbytes=22\nmaxrss_kb=9088 elapsed=0.00\n",
+        "sha256": "67b4e6bf699776fda43ebb39d42ac063bcb6b2b1985869052fc7616867898fe0",
+        "bytes": 22
+      },
+      "candidate": {
+        "code": 0,
+        "stderr": "pages=2\npage=0 bytes=11\nbytes=22\nmaxrss_kb=9216 elapsed=0.00\n",
+        "sha256": "67b4e6bf699776fda43ebb39d42ac063bcb6b2b1985869052fc7616867898fe0",
+        "bytes": 22
+      }
+    },
+    "identical": true
+  }
+]

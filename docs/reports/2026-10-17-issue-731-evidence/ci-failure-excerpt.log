@@ -1,0 +1,90 @@
+2026-10-17T19:40:04.8666675Z running 7 tests
+2026-10-17T19:40:04.9235989Z test r5_owner_password_recovers_the_same_key_from_padded_o_and_u_entries ... ok
+2026-10-17T19:40:04.9265428Z test an_entry_shorter_than_the_spec_length_is_reported_as_malformed_not_as_a_wrong_password ... ok
+2026-10-17T19:40:04.9285310Z test r5_empty_user_password_recovers_the_same_key_from_a_padded_u_entry ... ok
+2026-10-17T19:40:05.0065728Z test a_padded_entry_still_rejects_a_wrong_password ... ok
+2026-10-17T19:40:05.0545650Z test r6_empty_user_password_recovers_the_same_key_from_a_padded_u_entry ... ok
+2026-10-17T19:40:05.0716310Z test trailing_bytes_of_a_padded_entry_are_ignored_even_when_they_are_not_zero ... ok
+2026-10-17T19:40:05.1454754Z test r6_owner_password_recovers_the_same_key_from_padded_o_and_u_entries ... ok
+2026-10-17T19:40:05.1457011Z 
+2026-10-17T19:40:05.1457633Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+2026-10-17T19:40:05.1457829Z 
+2026-10-17T19:40:05.1469179Z [1m[92m     Running[0m `/home/runner/work/oxidizePdf/oxidizePdf/target/debug/deps/issue_459_text_string_consumers_test-73c310a5a631d71d`
+2026-10-17T19:40:05.1480928Z 
+2026-10-17T19:40:05.1481084Z running 2 tests
+2026-10-17T19:40:05.1487356Z test signature_metadata_written_in_pdfdocencoding_reaches_the_caller_as_text ... ok
+2026-10-17T19:40:05.1489689Z test an_acroform_field_named_with_accents_is_still_addressable_by_that_name ... ok
+2026-10-17T19:40:05.1489981Z 
+2026-10-17T19:40:05.1490191Z test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-10-17T19:40:05.1491867Z [1m[92m     Running[0m `/home/runner/work/oxidizePdf/oxidizePdf/target/debug/deps/issue_465_smask_preservation_test-7b3180556602307e`
+2026-10-17T19:40:05.1492140Z 
+2026-10-17T19:40:05.1502940Z 
+2026-10-17T19:40:05.1503098Z running 3 tests
+2026-10-17T19:40:05.1507520Z test merge_preserves_smask ... ok
+2026-10-17T19:40:05.1507928Z test extract_page_preserves_smask ... ok
+2026-10-17T19:40:05.1508174Z test split_preserves_smask ... ok
+2026-10-17T19:40:05.1508502Z 
+2026-10-17T19:40:05.1508725Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-10-17T19:40:05.1508974Z 
+2026-10-17T19:40:05.1510836Z [1m[92m     Running[0m `/home/runner/work/oxidizePdf/oxidizePdf/target/debug/deps/issue_476_carriage_return_policy_test-5ee26fbb3f2b15f9`
+2026-10-17T19:40:05.1534164Z 
+2026-10-17T19:40:05.1534351Z running 6 tests
+2026-10-17T19:40:05.1545218Z test extraction_can_preserve_standalone_cr_and_normalize_crlf ... ok
+2026-10-17T19:40:05.1545646Z test extraction_can_remove_carriage_returns ... ok
+2026-10-17T19:40:05.1546047Z test extraction_can_replace_carriage_returns_with_spaces ... ok
+2026-10-17T19:40:05.1550645Z test cmap_decoding_applies_the_selected_carriage_return_policy ... ok
+2026-10-17T19:40:05.1551099Z test extraction_removes_standalone_cr_and_normalizes_crlf_by_default ... ok
+2026-10-17T19:40:05.1552580Z test unassigned_winansi_codes_do_not_become_unicode_line_endings ... ok
+2026-10-17T19:40:05.1552839Z 
+2026-10-17T19:40:05.1553086Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-10-17T19:40:05.1553345Z 
+2026-10-17T19:40:05.1557258Z [1m[92m     Running[0m `/home/runner/work/oxidizePdf/oxidizePdf/target/debug/deps/issue_476_stray_cr_test-0dba21d7029078bd`
+2026-10-17T19:40:05.1580390Z 
+2026-10-17T19:40:05.1580475Z running 3 tests
+2026-10-17T19:40:05.1588932Z test a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word ... FAILED
+2026-10-17T19:40:05.1589385Z test a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy ... FAILED
+2026-10-17T19:40:05.1589824Z test a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline ... FAILED
+2026-10-17T19:40:05.1590097Z 
+2026-10-17T19:40:05.1590171Z failures:
+2026-10-17T19:40:05.1590275Z 
+2026-10-17T19:40:05.1590451Z ---- a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word stdout ----
+2026-10-17T19:40:05.1590700Z 
+2026-10-17T19:40:05.1591091Z thread 'a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word' (23191) panicked at oxidize-pdf-core/tests/issue_476_stray_cr_test.rs:62:5:
+2026-10-17T19:40:05.1593450Z the default policy must remove the stray CR without splitting the word, got: "rating-aa�a-exp-sf"
+2026-10-17T19:40:05.1593784Z note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+2026-10-17T19:40:05.1593960Z 
+2026-10-17T19:40:05.1594077Z ---- a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy stdout ----
+2026-10-17T19:40:05.1594239Z 
+2026-10-17T19:40:05.1594468Z thread 'a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy' (23192) panicked at oxidize-pdf-core/tests/issue_476_stray_cr_test.rs:98:5:
+2026-10-17T19:40:05.1595248Z the CR between text-showing calls must become one space, got: "rating-aa�a-exp-sf"
+2026-10-17T19:40:05.1595596Z 
+2026-10-17T19:40:05.1595717Z ---- a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline stdout ----
+2026-10-17T19:40:05.1595881Z 
+2026-10-17T19:40:05.1596114Z thread 'a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline' (23190) panicked at oxidize-pdf-core/tests/issue_476_stray_cr_test.rs:80:5:
+2026-10-17T19:40:05.1596520Z CRLF must collapse to a bare LF, got: "line one��line two"
+2026-10-17T19:40:05.1596655Z 
+2026-10-17T19:40:05.1596657Z 
+2026-10-17T19:40:05.1596707Z failures:
+2026-10-17T19:40:05.1596866Z     a_genuine_crlf_pair_in_a_tj_string_collapses_to_a_single_newline
+2026-10-17T19:40:05.1597099Z     a_stray_cr_mid_word_in_a_tj_string_does_not_split_the_word
+2026-10-17T19:40:05.1597320Z     a_stray_cr_split_across_two_tj_calls_obeys_the_space_policy
+2026-10-17T19:40:05.1597455Z 
+2026-10-17T19:40:05.1597599Z test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-10-17T19:40:05.1597788Z 
+2026-10-17T19:40:05.1597957Z [1m[91merror[0m: test failed, to rerun pass `--test issue_476_stray_cr_test`
+2026-10-17T19:40:05.1733542Z ##[error]Process completed with exit code 101.
+2026-10-17T19:40:05.1817794Z Post job cleanup.
+2026-10-17T19:40:05.2449575Z [command]/usr/bin/git version
+2026-10-17T19:40:05.2491339Z git version 2.55.0
+2026-10-17T19:40:05.2518479Z Temporarily overriding HOME='/home/runner/work/_temp/c6fff76b-eda6-4a57-b8f4-f24bbc8912e9' before making global git config changes
+2026-10-17T19:40:05.2519486Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-17T19:40:05.2523039Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/oxidizePdf/oxidizePdf
+2026-10-17T19:40:05.2558908Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-17T19:40:05.2594555Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-17T19:40:05.2813524Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-17T19:40:05.2846744Z http.https://github.com/.extraheader
+2026-10-17T19:40:05.2856664Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-17T19:40:05.2893533Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-17T19:40:05.3110907Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-17T19:40:05.3142849Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-17T19:40:05.3466792Z Cleaning up orphan processes

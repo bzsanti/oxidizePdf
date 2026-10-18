@@ -1,0 +1,22 @@
+    Blocking waiting for file lock on build directory
+    Finished `test` profile [unoptimized] target(s) in 9.34s
+     Running tests/issue_741_xmp_identifier_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_741_xmp_identifier_test-5d0627da890551b5)
+
+running 1 test
+test nesting_limit_precedes_recursive_xml_tree_parsing ... FAILED
+
+failures:
+
+---- nesting_limit_precedes_recursive_xml_tree_parsing stdout ----
+
+thread 'nesting_limit_precedes_recursive_xml_tree_parsing' (22) panicked at oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs:205:5:
+assertion failed: matches!(XmpMetadata::parse(&excessive),Err(PdfAError::XmpParseError(_)))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    nesting_limit_precedes_recursive_xml_tree_parsing
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_741_xmp_identifier_test`

@@ -1,0 +1,558 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 194 | Files: 12
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/dashboard/builder.rs                         5    100
+oxidize-pdf-core/src/dashboard/component.rs                      24     96
+oxidize-pdf-core/src/dashboard/data_aggregation.rs               19     97
+oxidize-pdf-core/src/dashboard/heatmap.rs                        27     94
+oxidize-pdf-core/src/dashboard/kpi_card.rs                        6    100
+oxidize-pdf-core/src/dashboard/layout.rs                         20     97
+oxidize-pdf-core/src/dashboard/mod.rs                             3    100
+oxidize-pdf-core/src/dashboard/pivot_table.rs                    23     98
+oxidize-pdf-core/src/dashboard/scatter_plot.rs                   16     99
+oxidize-pdf-core/src/dashboard/templates.rs                       6     93
+oxidize-pdf-core/src/dashboard/theme.rs                          21     99
+oxidize-pdf-core/src/dashboard/treemap.rs                        24     94
+
+--- Worst Offenders ---
+  test_aggregate_func_enum (oxidize-pdf-core/src/dashboard/data_aggregation.rs:319) - Score: 60
+    i Test 'test_aggregate_func_enum' has multiple assertions without diagnostic messages
+    - Test 'test_aggregate_func_enum' does not call any production code
+    - Test 'test_aggregate_func_enum' line 320: assert_eq! with identical arguments: AggregateFunc :: Sum 
+    - Test 'test_aggregate_func_enum' line 321: assert_eq! with identical arguments: AggregateFunc :: Avg 
+    - Test 'test_aggregate_func_enum' line 322: assert_eq! with identical arguments: AggregateFunc :: Count 
+    - Test 'test_aggregate_func_enum' line 323: assert_eq! with identical arguments: AggregateFunc :: Min 
+    - Test 'test_aggregate_func_enum' line 324: assert_eq! with identical arguments: AggregateFunc :: Max 
+  test_chart_data_variants (oxidize-pdf-core/src/dashboard/templates.rs:709) - Score: 60
+    - Test 'test_chart_data_variants' does not call any production code
+    - Test 'test_chart_data_variants' has no assertions
+  test_component_alignment_debug (oxidize-pdf-core/src/dashboard/component.rs:489) - Score: 80
+    - Test 'test_component_alignment_debug' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+    - Test 'test_component_alignment_debug' does not call any production code
+  test_layout_nodes_empty (oxidize-pdf-core/src/dashboard/treemap.rs:361) - Score: 80
+    - Test 'test_layout_nodes_empty' has identical neighborhood to 'test_layout_nodes_zero_total_value'
+    - Test 'test_layout_nodes_empty' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_layout_nodes_zero_total_value (oxidize-pdf-core/src/dashboard/treemap.rs:452) - Score: 80
+    - Test 'test_layout_nodes_zero_total_value' has identical neighborhood to 'test_layout_nodes_empty'
+    - Test 'test_layout_nodes_zero_total_value' has low assert-to-setup ratio (5%): 1 asserts vs 20 setup lines
+
+--- Details ---
+oxidize-pdf-core/src/dashboard/builder.rs:
+  test_dashboard_builder_basic (line 374) - Score: 100
+    i Test 'test_dashboard_builder_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_builder_basic' uses .unwrap() which silently discards error information
+  test_dashboard_builder_validation (line 388) - Score: 100
+    i Test 'test_dashboard_builder_validation' has multiple assertions without diagnostic messages
+  test_dashboard_config (line 399) - Score: 100
+    i Test 'test_dashboard_config' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_config' has multiple assertions without diagnostic messages
+  test_dashboard_builder_theming (line 413) - Score: 100
+    i Test 'test_dashboard_builder_theming' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_builder_theming' uses .unwrap() which silently discards error information
+  test_dashboard_builder_metadata (line 425) - Score: 100
+    i Test 'test_dashboard_builder_metadata' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_builder_metadata' uses .unwrap() which silently discards error information
+
+oxidize-pdf-core/src/dashboard/component.rs:
+  test_component_span (line 359) - Score: 100
+    i Test 'test_component_span' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_span' has multiple assertions without diagnostic messages
+  test_component_span_bounds (line 368) - Score: 90
+    i Test 'test_component_span_bounds' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_span_bounds' has multiple assertions without diagnostic messages
+    - Test 'test_component_span_bounds' does not call any production code
+  test_component_position (line 377) - Score: 100
+    i Test 'test_component_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_position' has multiple assertions without diagnostic messages
+  test_component_margin (line 387) - Score: 100
+    i Test 'test_component_margin' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_margin' has multiple assertions without diagnostic messages
+  test_component_config (line 398) - Score: 100
+    i Test 'test_component_config' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_config' has multiple assertions without diagnostic messages
+  test_component_position_top_left (line 411) - Score: 100
+    i Test 'test_component_position_top_left' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_position_top_left' has multiple assertions without diagnostic messages
+  test_component_position_bottom_right (line 419) - Score: 100
+    i Test 'test_component_position_bottom_right' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_position_bottom_right' has multiple assertions without diagnostic messages
+  test_component_position_with_padding (line 427) - Score: 100
+    i Test 'test_component_position_with_padding' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_position_with_padding' has multiple assertions without diagnostic messages
+  test_component_position_contains (line 438) - Score: 100
+    i Test 'test_component_position_contains' has multiple assertions without diagnostic messages
+  test_component_position_aspect_ratio_zero_height (line 456) - Score: 100
+    i Test 'test_component_position_aspect_ratio_zero_height' asserts against a hardcoded constant instead of a computed expected value
+  test_component_span_with_rows (line 462) - Score: 100
+    i Test 'test_component_span_with_rows' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_span_with_rows' has multiple assertions without diagnostic messages
+  test_component_span_is_quarter_width (line 474) - Score: 100
+    i Test 'test_component_span_is_quarter_width' has multiple assertions without diagnostic messages
+  test_component_span_from_u8 (line 482) - Score: 100
+    i Test 'test_component_span_from_u8' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_span_from_u8' has multiple assertions without diagnostic messages
+  test_component_alignment_debug (line 489) - Score: 80
+    - Test 'test_component_alignment_debug' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+    - Test 'test_component_alignment_debug' does not call any production code
+  test_component_alignment_default (line 504) - Score: 90
+    - Test 'test_component_alignment_default' does not call any production code
+  test_component_margin_new (line 510) - Score: 90
+    i Test 'test_component_margin_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_margin_new' has multiple assertions without diagnostic messages
+    - Test 'test_component_margin_new' does not call any production code
+  test_component_margin_default (line 519) - Score: 90
+    i Test 'test_component_margin_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_margin_default' has multiple assertions without diagnostic messages
+    - Test 'test_component_margin_default' does not call any production code
+  test_component_config_default (line 528) - Score: 100
+    i Test 'test_component_config_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_config_default' has multiple assertions without diagnostic messages
+  test_component_config_with_margin (line 538) - Score: 100
+    i Test 'test_component_config_with_margin' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_config_with_margin' has multiple assertions without diagnostic messages
+  test_component_config_clone (line 554) - Score: 100
+    i Test 'test_component_config_clone' has multiple assertions without diagnostic messages
+  test_component_position_clone_copy (line 566) - Score: 90
+    i Test 'test_component_position_clone_copy' has multiple assertions without diagnostic messages
+    - Test 'test_component_position_clone_copy' does not call any production code
+  test_component_span_equality (line 576) - Score: 90
+    i Test 'test_component_span_equality' has multiple assertions without diagnostic messages
+    - Test 'test_component_span_equality' does not call any production code
+  test_component_margin_clone_copy (line 586) - Score: 90
+    i Test 'test_component_margin_clone_copy' has multiple assertions without diagnostic messages
+    - Test 'test_component_margin_clone_copy' does not call any production code
+
+oxidize-pdf-core/src/dashboard/data_aggregation.rs:
+  test_sum (line 189) - Score: 100
+    i Test 'test_sum' asserts against a hardcoded constant instead of a computed expected value
+  test_avg (line 195) - Score: 100
+    i Test 'test_avg' asserts against a hardcoded constant instead of a computed expected value
+  test_count (line 201) - Score: 90
+    - Test 'test_count' has identical neighborhood to 'test_filter_all_records'
+    i Test 'test_count' asserts against a hardcoded constant instead of a computed expected value
+  test_min_max (line 207) - Score: 100
+    i Test 'test_min_max' has multiple assertions without diagnostic messages
+  test_group_by_sum (line 214) - Score: 100
+    i Test 'test_group_by_sum' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_group_by_sum' has multiple assertions without diagnostic messages
+  test_group_by_count (line 224) - Score: 100
+    i Test 'test_group_by_count' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_group_by_count' has multiple assertions without diagnostic messages
+  test_filter (line 234) - Score: 100
+    i Test 'test_filter' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_filter' has multiple assertions without diagnostic messages
+  test_avg_empty_data (line 243) - Score: 100
+    i Test 'test_avg_empty_data' asserts against a hardcoded constant instead of a computed expected value
+  test_min_max_empty_data (line 249) - Score: 100
+    i Test 'test_min_max_empty_data' has multiple assertions without diagnostic messages
+  test_sum_nonexistent_field (line 256) - Score: 100
+    i Test 'test_sum_nonexistent_field' asserts against a hardcoded constant instead of a computed expected value
+  test_avg_nonexistent_field (line 262) - Score: 100
+    i Test 'test_avg_nonexistent_field' asserts against a hardcoded constant instead of a computed expected value
+  test_group_by_avg (line 268) - Score: 100
+    i Test 'test_group_by_avg' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_group_by_avg' has multiple assertions without diagnostic messages
+  test_aggregate_with_custom_label (line 278) - Score: 100
+    i Test 'test_aggregate_with_custom_label' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_aggregate_with_custom_label' has multiple assertions without diagnostic messages
+  test_aggregate_with_count (line 294) - Score: 100
+    i Test 'test_aggregate_with_count' has multiple assertions without diagnostic messages
+  test_aggregate_with_min_max (line 305) - Score: 100
+    i Test 'test_aggregate_with_min_max' has multiple assertions without diagnostic messages
+  test_aggregate_func_enum (line 319) - Score: 60
+    i Test 'test_aggregate_func_enum' has multiple assertions without diagnostic messages
+    - Test 'test_aggregate_func_enum' does not call any production code
+    - Test 'test_aggregate_func_enum' line 320: assert_eq! with identical arguments: AggregateFunc :: Sum 
+    - Test 'test_aggregate_func_enum' line 321: assert_eq! with identical arguments: AggregateFunc :: Avg 
+    - Test 'test_aggregate_func_enum' line 322: assert_eq! with identical arguments: AggregateFunc :: Count 
+    - Test 'test_aggregate_func_enum' line 323: assert_eq! with identical arguments: AggregateFunc :: Min 
+    - Test 'test_aggregate_func_enum' line 324: assert_eq! with identical arguments: AggregateFunc :: Max 
+  test_group_by_missing_field (line 329) - Score: 100
+    i Test 'test_group_by_missing_field' asserts against a hardcoded constant instead of a computed expected value
+  test_filter_all_records (line 337) - Score: 90
+    - Test 'test_filter_all_records' has identical neighborhood to 'test_count'
+    i Test 'test_filter_all_records' asserts against a hardcoded constant instead of a computed expected value
+  test_filter_no_records (line 344) - Score: 100
+    i Test 'test_filter_no_records' asserts against a hardcoded constant instead of a computed expected value
+
+oxidize-pdf-core/src/dashboard/heatmap.rs:
+  test_heatmap_new (line 424) - Score: 90
+    i Test 'test_heatmap_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_heatmap_new' has multiple assertions without diagnostic messages
+    - Test 'test_heatmap_new' does not call any production code
+  test_heatmap_with_options (line 434) - Score: 100
+    i Test 'test_heatmap_with_options' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_heatmap_with_options' has multiple assertions without diagnostic messages
+  test_heatmap_with_color_scale (line 452) - Score: 100
+    i Test 'test_heatmap_with_color_scale' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_heatmap_with_color_scale' has multiple assertions without diagnostic messages
+  test_heatmap_options_default (line 468) - Score: 100
+    i Test 'test_heatmap_options_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_heatmap_options_default' has multiple assertions without diagnostic messages
+  test_color_scale_default (line 478) - Score: 100
+    i Test 'test_color_scale_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_color_scale_default' has multiple assertions without diagnostic messages
+  test_heatmap_builder (line 487) - Score: 100
+    i Test 'test_heatmap_builder' has multiple assertions without diagnostic messages
+  test_get_value_range_auto (line 497) - Score: 100
+    i Test 'test_get_value_range_auto' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_value_range_auto' has multiple assertions without diagnostic messages
+  test_get_value_range_with_explicit_values (line 508) - Score: 90
+    i Test 'test_get_value_range_with_explicit_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_value_range_with_explicit_values' has multiple assertions without diagnostic messages
+    - Test 'test_get_value_range_with_explicit_values' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  test_interpolate_color_at_minimum (line 524) - Score: 90
+    - Test 'test_interpolate_color_at_minimum' has a match arm with empty body, ignoring potential error cases
+  test_interpolate_color_at_maximum (line 542) - Score: 90
+    - Test 'test_interpolate_color_at_maximum' has a match arm with empty body, ignoring potential error cases
+  test_interpolate_color_at_midpoint (line 560) - Score: 90
+    - Test 'test_interpolate_color_at_midpoint' has a match arm with empty body, ignoring potential error cases
+  test_interpolate_color_same_min_max (line 578) - Score: 90
+    - Test 'test_interpolate_color_same_min_max' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_interpolate_color_single_color_scale (line 590) - Score: 90
+    - Test 'test_interpolate_color_single_color_scale' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_interpolate_color_single_color_scale' has multiple assertions without diagnostic messages
+  test_is_dark_color_with_black (line 612) - Score: 90
+    - Test 'test_is_dark_color_with_black' has identical neighborhood to 'test_is_dark_color_with_red'
+  test_is_dark_color_with_white (line 620) - Score: 90
+    - Test 'test_is_dark_color_with_white' does not call any production code
+  test_is_dark_color_with_red (line 628) - Score: 90
+    - Test 'test_is_dark_color_with_red' has identical neighborhood to 'test_is_dark_color_with_black'
+  test_is_dark_color_with_gray (line 637) - Score: 100
+    i Test 'test_is_dark_color_with_gray' has multiple assertions without diagnostic messages
+  test_is_dark_color_with_cmyk (line 648) - Score: 100
+    i Test 'test_is_dark_color_with_cmyk' has multiple assertions without diagnostic messages
+  test_heatmap_data_creation (line 659) - Score: 90
+    i Test 'test_heatmap_data_creation' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_heatmap_data_creation' does not call any production code
+  test_component_span (line 673) - Score: 100
+    i Test 'test_component_span' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_span' has multiple assertions without diagnostic messages
+  test_component_type (line 687) - Score: 100
+    i Test 'test_component_type' asserts against a hardcoded constant instead of a computed expected value
+  test_complexity_score (line 695) - Score: 100
+    i Test 'test_complexity_score' asserts against a hardcoded constant instead of a computed expected value
+  test_preferred_height (line 703) - Score: 100
+    i Test 'test_preferred_height' asserts against a hardcoded constant instead of a computed expected value
+  test_interpolate_color_multi_color_scale (line 711) - Score: 90
+    - Test 'test_interpolate_color_multi_color_scale' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_interpolate_color_multi_color_scale' has multiple assertions without diagnostic messages
+  test_get_value_range_empty_data (line 759) - Score: 90
+    i Test 'test_get_value_range_empty_data' has multiple assertions without diagnostic messages
+    - Test 'test_get_value_range_empty_data' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  test_get_value_range_negative_values (line 775) - Score: 90
+    i Test 'test_get_value_range_negative_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_value_range_negative_values' has multiple assertions without diagnostic messages
+    - Test 'test_get_value_range_negative_values' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  test_interpolate_color_clamping (line 790) - Score: 90
+    - Test 'test_interpolate_color_clamping' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_interpolate_color_clamping' has multiple assertions without diagnostic messages
+
+oxidize-pdf-core/src/dashboard/kpi_card.rs:
+  test_kpi_card_creation (line 825) - Score: 100
+    i Test 'test_kpi_card_creation' asserts against a hardcoded constant instead of a computed expected value
+  test_kpi_card_with_trend (line 833) - Score: 100
+    i Test 'test_kpi_card_with_trend' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_kpi_card_with_trend' has multiple assertions without diagnostic messages
+    i Test 'test_kpi_card_with_trend' uses .unwrap() which silently discards error information
+  test_kpi_card_formatting (line 845) - Score: 100
+    i Test 'test_kpi_card_formatting' asserts against a hardcoded constant instead of a computed expected value
+  test_kpi_card_builder (line 853) - Score: 100
+    i Test 'test_kpi_card_builder' asserts against a hardcoded constant instead of a computed expected value
+  test_sparkline_data (line 868) - Score: 100
+    i Test 'test_sparkline_data' has multiple assertions without diagnostic messages
+  test_kpi_color_theme (line 877) - Score: 100
+    i Test 'test_kpi_color_theme' has multiple assertions without diagnostic messages
+
+oxidize-pdf-core/src/dashboard/layout.rs:
+  test_grid_system (line 528) - Score: 90
+    i Test 'test_grid_system' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_grid_system' has multiple assertions without diagnostic messages
+    - Test 'test_grid_system' does not call any production code
+  test_grid_position (line 536) - Score: 100
+    i Test 'test_grid_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_grid_position' has multiple assertions without diagnostic messages
+  test_layout_manager_breakpoints (line 547) - Score: 100
+    i Test 'test_layout_manager_breakpoints' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_layout_manager_breakpoints' has multiple assertions without diagnostic messages
+  test_dashboard_layout_content_area (line 560) - Score: 100
+    i Test 'test_dashboard_layout_content_area' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_layout_content_area' has multiple assertions without diagnostic messages
+  test_grid_position_with_row_span (line 574) - Score: 100
+    i Test 'test_grid_position_with_row_span' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_grid_position_with_row_span' has multiple assertions without diagnostic messages
+  test_grid_position_column_end (line 583) - Score: 100
+    i Test 'test_grid_position_column_end' asserts against a hardcoded constant instead of a computed expected value
+  test_grid_position_overlaps_same_row (line 589) - Score: 100
+    i Test 'test_grid_position_overlaps_same_row' has multiple assertions without diagnostic messages
+  test_grid_position_no_overlap_different_rows (line 604) - Score: 90
+    - Test 'test_grid_position_no_overlap_different_rows' does not call any production code
+  test_grid_position_equality (line 611) - Score: 90
+    i Test 'test_grid_position_equality' has multiple assertions without diagnostic messages
+    - Test 'test_grid_position_equality' does not call any production code
+  test_layout_state_default (line 620) - Score: 90
+    i Test 'test_layout_state_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_layout_state_default' has multiple assertions without diagnostic messages
+    - Test 'test_layout_state_default' does not call any production code
+  test_layout_state_clone (line 628) - Score: 90
+    i Test 'test_layout_state_clone' has multiple assertions without diagnostic messages
+    - Test 'test_layout_state_clone' does not call any production code
+  test_layout_manager_default (line 641) - Score: 100
+    i Test 'test_layout_manager_default' asserts against a hardcoded constant instead of a computed expected value
+  test_layout_manager_no_breakpoints (line 647) - Score: 100
+    i Test 'test_layout_manager_no_breakpoints' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_layout_manager_no_breakpoints' has multiple assertions without diagnostic messages
+  test_layout_stats_debug (line 654) - Score: 100
+    i Test 'test_layout_stats_debug' has multiple assertions without diagnostic messages
+  test_layout_stats_clone (line 667) - Score: 90
+    i Test 'test_layout_stats_clone' has multiple assertions without diagnostic messages
+    - Test 'test_layout_stats_clone' does not call any production code
+  test_grid_system_clone (line 682) - Score: 90
+    i Test 'test_grid_system_clone' has multiple assertions without diagnostic messages
+    - Test 'test_grid_system_clone' does not call any production code
+  test_grid_system_debug (line 691) - Score: 100
+    i Test 'test_grid_system_debug' has multiple assertions without diagnostic messages
+
+oxidize-pdf-core/src/dashboard/mod.rs:
+  test_dashboard_creation (line 361) - Score: 100
+    i Test 'test_dashboard_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_creation' uses .unwrap() which silently discards error information
+  test_dashboard_stats (line 373) - Score: 100
+    i Test 'test_dashboard_stats' has multiple assertions without diagnostic messages
+    i Test 'test_dashboard_stats' uses .unwrap() which silently discards error information
+  test_dashboard_render (line 385) - Score: 100
+    i Test 'test_dashboard_render' uses .unwrap() which silently discards error information
+
+oxidize-pdf-core/src/dashboard/pivot_table.rs:
+  test_pivot_table_new (line 394) - Score: 100
+    i Test 'test_pivot_table_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pivot_table_new' has multiple assertions without diagnostic messages
+  test_pivot_table_new_empty (line 403) - Score: 100
+    i Test 'test_pivot_table_new_empty' has multiple assertions without diagnostic messages
+  test_pivot_table_with_config (line 411) - Score: 90
+    i Test 'test_pivot_table_with_config' has multiple assertions without diagnostic messages
+    - Test 'test_pivot_table_with_config' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+  test_pivot_table_aggregate_by_multiple (line 442) - Score: 100
+    i Test 'test_pivot_table_aggregate_by_multiple' has multiple assertions without diagnostic messages
+  test_pivot_table_aggregate_by_invalid_ignored (line 464) - Score: 100
+    i Test 'test_pivot_table_aggregate_by_invalid_ignored' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pivot_table_aggregate_by_invalid_ignored' has multiple assertions without diagnostic messages
+  test_pivot_table_aggregate_by_no_duplicates (line 476) - Score: 90
+    i Test 'test_pivot_table_aggregate_by_no_duplicates' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pivot_table_aggregate_by_no_duplicates' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_pivot_config_default (line 494) - Score: 100
+    i Test 'test_pivot_config_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pivot_config_default' has multiple assertions without diagnostic messages
+  test_aggregate_function_parse_count (line 510) - Score: 100
+    i Test 'test_aggregate_function_parse_count' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_count' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_sum (line 519) - Score: 100
+    i Test 'test_aggregate_function_parse_sum' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_sum' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_average (line 528) - Score: 100
+    i Test 'test_aggregate_function_parse_average' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_average' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_min (line 540) - Score: 100
+    i Test 'test_aggregate_function_parse_min' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_min' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_max (line 549) - Score: 100
+    i Test 'test_aggregate_function_parse_max' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_max' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_invalid (line 558) - Score: 100
+    i Test 'test_aggregate_function_parse_invalid' has multiple assertions without diagnostic messages
+  test_computed_pivot_data_structure (line 572) - Score: 90
+    i Test 'test_computed_pivot_data_structure' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_computed_pivot_data_structure' has multiple assertions without diagnostic messages
+    - Test 'test_computed_pivot_data_structure' does not call any production code
+  test_computed_pivot_data_no_totals (line 589) - Score: 90
+    - Test 'test_computed_pivot_data_no_totals' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_pivot_table_builder_chain (line 610) - Score: 100
+    i Test 'test_pivot_table_builder_chain' asserts against a hardcoded constant instead of a computed expected value
+  test_component_span (line 619) - Score: 100
+    i Test 'test_component_span' asserts against a hardcoded constant instead of a computed expected value
+  test_component_set_span (line 627) - Score: 100
+    i Test 'test_component_set_span' asserts against a hardcoded constant instead of a computed expected value
+  test_component_type (line 635) - Score: 100
+    i Test 'test_component_type' asserts against a hardcoded constant instead of a computed expected value
+  test_complexity_score (line 641) - Score: 100
+    i Test 'test_complexity_score' asserts against a hardcoded constant instead of a computed expected value
+  test_preferred_height (line 647) - Score: 100
+    i Test 'test_preferred_height' asserts against a hardcoded constant instead of a computed expected value
+
+oxidize-pdf-core/src/dashboard/scatter_plot.rs:
+  test_scatter_plot_new (line 322) - Score: 90
+    i Test 'test_scatter_plot_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_scatter_plot_new' has multiple assertions without diagnostic messages
+    - Test 'test_scatter_plot_new' does not call any production code
+  test_scatter_plot_with_options (line 332) - Score: 100
+    i Test 'test_scatter_plot_with_options' has multiple assertions without diagnostic messages
+  test_scatter_plot_options_default (line 350) - Score: 100
+    i Test 'test_scatter_plot_options_default' has multiple assertions without diagnostic messages
+  test_scatter_point_creation (line 368) - Score: 100
+    i Test 'test_scatter_point_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_scatter_point_creation' has multiple assertions without diagnostic messages
+  test_get_bounds_with_data (line 385) - Score: 100
+    i Test 'test_get_bounds_with_data' has multiple assertions without diagnostic messages
+  test_get_bounds_empty_data (line 400) - Score: 100
+    i Test 'test_get_bounds_empty_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_bounds_empty_data' has multiple assertions without diagnostic messages
+  test_get_bounds_single_point (line 412) - Score: 100
+    i Test 'test_get_bounds_single_point' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_get_bounds_single_point' has multiple assertions without diagnostic messages
+  test_map_to_plot_normal (line 432) - Score: 100
+    i Test 'test_map_to_plot_normal' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_map_to_plot_normal' has multiple assertions without diagnostic messages
+  test_map_to_plot_same_min_max (line 449) - Score: 100
+    i Test 'test_map_to_plot_same_min_max' asserts against a hardcoded constant instead of a computed expected value
+  test_component_span (line 458) - Score: 100
+    i Test 'test_component_span' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_span' has multiple assertions without diagnostic messages
+  test_component_type (line 472) - Score: 100
+    i Test 'test_component_type' asserts against a hardcoded constant instead of a computed expected value
+  test_complexity_score (line 479) - Score: 100
+    i Test 'test_complexity_score' asserts against a hardcoded constant instead of a computed expected value
+  test_preferred_height (line 486) - Score: 100
+    i Test 'test_preferred_height' asserts against a hardcoded constant instead of a computed expected value
+  test_get_bounds_negative_values (line 493) - Score: 90
+    i Test 'test_get_bounds_negative_values' has multiple assertions without diagnostic messages
+    - Test 'test_get_bounds_negative_values' has low assert-to-setup ratio (16%): 4 asserts vs 21 setup lines
+  test_map_to_plot_negative_range (line 522) - Score: 100
+    i Test 'test_map_to_plot_negative_range' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_map_to_plot_negative_range' has multiple assertions without diagnostic messages
+
+oxidize-pdf-core/src/dashboard/templates.rs:
+  test_template_data_builder (line 653) - Score: 100
+    i Test 'test_template_data_builder' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_template_data_builder' has multiple assertions without diagnostic messages
+  test_sales_dashboard_template_creation (line 664) - Score: 100
+    i Test 'test_sales_dashboard_template_creation' asserts against a hardcoded constant instead of a computed expected value
+  test_financial_report_template_creation (line 675) - Score: 100
+    i Test 'test_financial_report_template_creation' asserts against a hardcoded constant instead of a computed expected value
+  test_analytics_dashboard_template_creation (line 685) - Score: 100
+    i Test 'test_analytics_dashboard_template_creation' asserts against a hardcoded constant instead of a computed expected value
+  test_sales_dashboard_build_with_kpis (line 693) - Score: 100
+    i Test 'test_sales_dashboard_build_with_kpis' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_sales_dashboard_build_with_kpis' uses .unwrap() which silently discards error information
+  test_chart_data_variants (line 709) - Score: 60
+    - Test 'test_chart_data_variants' does not call any production code
+    - Test 'test_chart_data_variants' has no assertions
+
+oxidize-pdf-core/src/dashboard/theme.rs:
+  test_theme_creation (line 600) - Score: 100
+    i Test 'test_theme_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_theme_creation' has multiple assertions without diagnostic messages
+  test_theme_variants (line 607) - Score: 100
+    i Test 'test_theme_variants' has multiple assertions without diagnostic messages
+  test_typography_variants (line 620) - Score: 100
+    i Test 'test_typography_variants' asserts against a hardcoded constant instead of a computed expected value
+  test_theme_spacing (line 630) - Score: 90
+    - Test 'test_theme_spacing' has identical neighborhood to 'test_theme_spacing_corporate'
+    i Test 'test_theme_spacing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_theme_spacing' has multiple assertions without diagnostic messages
+  test_text_style_creation (line 640) - Score: 100
+    i Test 'test_text_style_creation' has multiple assertions without diagnostic messages
+  test_theme_backgrounds_corporate (line 649) - Score: 100
+    i Test 'test_theme_backgrounds_corporate' has multiple assertions without diagnostic messages
+  test_theme_backgrounds_minimal (line 658) - Score: 100
+    i Test 'test_theme_backgrounds_minimal' has multiple assertions without diagnostic messages
+  test_theme_backgrounds_dark (line 667) - Score: 100
+    i Test 'test_theme_backgrounds_dark' has multiple assertions without diagnostic messages
+  test_theme_backgrounds_colorful (line 676) - Score: 100
+    i Test 'test_theme_backgrounds_colorful' has multiple assertions without diagnostic messages
+  test_theme_backgrounds_default (line 685) - Score: 100
+    i Test 'test_theme_backgrounds_default' has multiple assertions without diagnostic messages
+  test_typography_dark (line 700) - Score: 100
+    i Test 'test_typography_dark' has multiple assertions without diagnostic messages
+  test_typography_colorful (line 709) - Score: 100
+    i Test 'test_typography_colorful' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_typography_colorful' has multiple assertions without diagnostic messages
+  test_theme_spacing_minimal (line 717) - Score: 100
+    i Test 'test_theme_spacing_minimal' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_theme_spacing_minimal' has multiple assertions without diagnostic messages
+  test_theme_spacing_corporate (line 727) - Score: 90
+    - Test 'test_theme_spacing_corporate' has identical neighborhood to 'test_theme_spacing'
+    i Test 'test_theme_spacing_corporate' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_theme_spacing_corporate' has multiple assertions without diagnostic messages
+  test_theme_spacing_colorful (line 737) - Score: 100
+    i Test 'test_theme_spacing_colorful' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_theme_spacing_colorful' has multiple assertions without diagnostic messages
+  test_theme_clone (line 754) - Score: 100
+    i Test 'test_theme_clone' has multiple assertions without diagnostic messages
+  test_typography_minimal (line 769) - Score: 100
+    i Test 'test_typography_minimal' asserts against a hardcoded constant instead of a computed expected value
+  test_typography_professional (line 778) - Score: 100
+    i Test 'test_typography_professional' asserts against a hardcoded constant instead of a computed expected value
+
+oxidize-pdf-core/src/dashboard/treemap.rs:
+  test_treemap_new (line 297) - Score: 90
+    i Test 'test_treemap_new' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_treemap_new' does not call any production code
+  test_treemap_with_options (line 307) - Score: 100
+    i Test 'test_treemap_with_options' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_treemap_with_options' has multiple assertions without diagnostic messages
+  test_treemap_options_default (line 323) - Score: 100
+    i Test 'test_treemap_options_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_treemap_options_default' has multiple assertions without diagnostic messages
+  test_treemap_node_creation (line 340) - Score: 100
+    i Test 'test_treemap_node_creation' asserts against a hardcoded constant instead of a computed expected value
+  test_layout_nodes_empty (line 361) - Score: 80
+    - Test 'test_layout_nodes_empty' has identical neighborhood to 'test_layout_nodes_zero_total_value'
+    - Test 'test_layout_nodes_empty' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  test_layout_nodes_single (line 371) - Score: 90
+    i Test 'test_layout_nodes_single' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_layout_nodes_single' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  test_layout_nodes_multiple (line 388) - Score: 100
+    i Test 'test_layout_nodes_multiple' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_layout_nodes_multiple' has multiple assertions without diagnostic messages
+  test_layout_nodes_proportional (line 407) - Score: 90
+    - Test 'test_layout_nodes_proportional' has low assert-to-setup ratio (4%): 1 asserts vs 24 setup lines
+  test_layout_nodes_zero_size (line 436) - Score: 100
+    i Test 'test_layout_nodes_zero_size' has multiple assertions without diagnostic messages
+  test_layout_nodes_zero_total_value (line 452) - Score: 80
+    - Test 'test_layout_nodes_zero_total_value' has identical neighborhood to 'test_layout_nodes_empty'
+    - Test 'test_layout_nodes_zero_total_value' has low assert-to-setup ratio (5%): 1 asserts vs 20 setup lines
+  test_is_dark_color_with_white (line 484) - Score: 90
+    - Test 'test_is_dark_color_with_white' does not call any production code
+  test_is_dark_color_with_gray (line 491) - Score: 100
+    i Test 'test_is_dark_color_with_gray' has multiple assertions without diagnostic messages
+  test_is_dark_color_with_cmyk (line 501) - Score: 100
+    i Test 'test_is_dark_color_with_cmyk' has multiple assertions without diagnostic messages
+  test_is_dark_color_with_primary_colors (line 511) - Score: 100
+    i Test 'test_is_dark_color_with_primary_colors' has multiple assertions without diagnostic messages
+  test_component_span (line 523) - Score: 100
+    i Test 'test_component_span' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_component_span' has multiple assertions without diagnostic messages
+  test_component_type (line 537) - Score: 100
+    i Test 'test_component_type' asserts against a hardcoded constant instead of a computed expected value
+  test_complexity_score (line 544) - Score: 100
+    i Test 'test_complexity_score' asserts against a hardcoded constant instead of a computed expected value
+  test_preferred_height (line 551) - Score: 100
+    i Test 'test_preferred_height' asserts against a hardcoded constant instead of a computed expected value
+  test_treemap_node_with_children (line 558) - Score: 80
+    i Test 'test_treemap_node_with_children' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_treemap_node_with_children' has multiple assertions without diagnostic messages
+    - Test 'test_treemap_node_with_children' has low assert-to-setup ratio (12%): 3 asserts vs 22 setup lines
+    - Test 'test_treemap_node_with_children' does not call any production code
+  test_layout_nodes_with_wide_rectangle (line 587) - Score: 80
+    - Test 'test_layout_nodes_with_wide_rectangle' has identical neighborhood to 'test_layout_nodes_with_tall_rectangle'
+    i Test 'test_layout_nodes_with_wide_rectangle' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_layout_nodes_with_wide_rectangle' has low assert-to-setup ratio (5%): 1 asserts vs 20 setup lines
+  test_layout_nodes_with_tall_rectangle (line 612) - Score: 80
+    - Test 'test_layout_nodes_with_tall_rectangle' has identical neighborhood to 'test_layout_nodes_with_wide_rectangle'
+    i Test 'test_layout_nodes_with_tall_rectangle' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_layout_nodes_with_tall_rectangle' has low assert-to-setup ratio (5%): 1 asserts vs 20 setup lines
+  test_layout_respects_padding (line 637) - Score: 90
+    i Test 'test_layout_respects_padding' has multiple assertions without diagnostic messages
+    - Test 'test_layout_respects_padding' has low assert-to-setup ratio (17%): 4 asserts vs 20 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

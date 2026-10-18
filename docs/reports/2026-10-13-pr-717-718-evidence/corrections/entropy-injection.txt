@@ -1,0 +1,1 @@
+Disposable copy only: replace the body of encryption::aes::try_generate_iv with Err(PdfError::EncryptionError("injected secure entropy failure".into())). GREEN uses corrected adapters; mutant restores Ok(self.encrypt_string(...)) / Ok(self.encrypt_stream(...)). Candidate sources are never injected.

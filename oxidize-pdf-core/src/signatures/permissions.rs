@@ -16,6 +16,7 @@ pub(crate) enum IncrementalModification {
     AddAnnotation,
     OcrTextLayer,
     TaggedStructure,
+    GenericObjects,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -49,12 +50,33 @@ pub(crate) fn ensure_modification_allowed<R: Read + Seek>(
         }
         let object = reader
             .get_object(reference.0, reference.1)
-            .map_err(|error| invalid_policy(format!("inspect signature object: {error}")))?
+            .map_err(|error| {
+                invalid_policy(format!(
+                    "inspect signature object {} {} R: {error}",
+                    reference.0, reference.1
+                ))
+            })?
             .clone();
         let mut signatures = Vec::new();
         let top_level_signature = signature_dictionary(&object).is_some();
         collect_signature_dictionaries(&object, 0, &mut signatures)?;
         for (index, dictionary) in signatures.into_iter().enumerate() {
+            if modification == IncrementalModification::GenericObjects {
+                if let Some(references) = dictionary.get("Reference") {
+                    for item in resolve_array(reader, references, "signature /Reference")? {
+                        let transform = resolve_dictionary(reader, &item, "signature transform")?;
+                        if transform
+                            .get("TransformMethod")
+                            .and_then(PdfObject::as_name)
+                            .is_some_and(|name| name.0 == "FieldMDP")
+                        {
+                            return Err(PdfError::PermissionDenied(
+                                "generic object edits cannot guarantee FieldMDP field locks".into(),
+                            ));
+                        }
+                    }
+                }
+            }
             if let Some((permission, byte_range)) = parse_docmdp_permission(reader, &dictionary)? {
                 let location = (top_level_signature && index == 0)
                     .then_some(reference)
@@ -352,6 +374,7 @@ fn enforce_permission(
         IncrementalModification::AddSignature => "adding signatures",
         IncrementalModification::AddAnnotation => "adding annotations",
         IncrementalModification::OcrTextLayer => "adding an OCR text layer",
+        IncrementalModification::GenericObjects => "editing arbitrary objects or catalog entries",
         IncrementalModification::TaggedStructure => "editing tagged-PDF structure",
     };
     Err(PdfError::PermissionDenied(format!(

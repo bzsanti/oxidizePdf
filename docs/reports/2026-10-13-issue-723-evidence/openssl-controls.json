@@ -1,0 +1,86 @@
+[
+  {
+    "algorithm": "rsa",
+    "content": "intact",
+    "exit_code": 0,
+    "stderr": "CMS Verification successful\n",
+    "command": [
+      "openssl",
+      "cms",
+      "-verify",
+      "-binary",
+      "-inform",
+      "DER",
+      "-in",
+      "/tmp/oxidize-issue742/oxidize-pdf-core/tests/fixtures/signatures/cms_rsa_sha256.der",
+      "-content",
+      "/tmp/oxidize-issue742/oxidize-pdf-core/tests/fixtures/signatures/cms_content.bin",
+      "-noverify",
+      "-out",
+      "/tmp/issue723-verified-content.bin"
+    ]
+  },
+  {
+    "algorithm": "rsa",
+    "content": "altered",
+    "exit_code": 4,
+    "stderr": "CMS Verification failure\n803BDE7C85770000:error:1700009E:CMS routines:CMS_SignerInfo_verify_content:verification failure:../crypto/cms/cms_sd.c:988:\n803BDE7C85770000:error:1700006D:CMS routines:CMS_verify:content verify error:../crypto/cms/cms_smime.c:457:\n",
+    "command": [
+      "openssl",
+      "cms",
+      "-verify",
+      "-binary",
+      "-inform",
+      "DER",
+      "-in",
+      "/tmp/oxidize-issue742/oxidize-pdf-core/tests/fixtures/signatures/cms_rsa_sha256.der",
+      "-content",
+      "/tmp/issue723-altered-content.bin",
+      "-noverify",
+      "-out",
+      "/tmp/issue723-verified-content.bin"
+    ]
+  },
+  {
+    "algorithm": "ecdsa",
+    "content": "intact",
+    "exit_code": 0,
+    "stderr": "CMS Verification successful\n",
+    "command": [
+      "openssl",
+      "cms",
+      "-verify",
+      "-binary",
+      "-inform",
+      "DER",
+      "-in",
+      "/tmp/oxidize-issue742/oxidize-pdf-core/tests/fixtures/signatures/cms_ecdsa_sha256.der",
+      "-content",
+      "/tmp/oxidize-issue742/oxidize-pdf-core/tests/fixtures/signatures/cms_content.bin",
+      "-noverify",
+      "-out",
+      "/tmp/issue723-verified-content.bin"
+    ]
+  },
+  {
+    "algorithm": "ecdsa",
+    "content": "altered",
+    "exit_code": 4,
+    "stderr": "CMS Verification failure\n80AB50650B790000:error:1700009E:CMS routines:CMS_SignerInfo_verify_content:verification failure:../crypto/cms/cms_sd.c:988:\n80AB50650B790000:error:1700006D:CMS routines:CMS_verify:content verify error:../crypto/cms/cms_smime.c:457:\n",
+    "command": [
+      "openssl",
+      "cms",
+      "-verify",
+      "-binary",
+      "-inform",
+      "DER",
+      "-in",
+      "/tmp/oxidize-issue742/oxidize-pdf-core/tests/fixtures/signatures/cms_ecdsa_sha256.der",
+      "-content",
+      "/tmp/issue723-altered-content.bin",
+      "-noverify",
+      "-out",
+      "/tmp/issue723-verified-content.bin"
+    ]
+  }
+]

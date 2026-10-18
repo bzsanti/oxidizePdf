@@ -10,7 +10,8 @@ pub struct ProgressInfo {
     pub total_jobs: usize,
     /// Number of completed jobs
     pub completed_jobs: usize,
-    /// Number of failed jobs
+    /// Jobs ended unsuccessfully (failed or cancelled); BatchSummary results
+    /// distinguish the two outcomes.
     pub failed_jobs: usize,
     /// Number of jobs currently running
     pub running_jobs: usize,
@@ -23,7 +24,8 @@ pub struct ProgressInfo {
 }
 
 impl ProgressInfo {
-    /// Get progress percentage (0.0 - 100.0)
+    /// Get the percentage of jobs completed successfully (0.0 - 100.0).
+    /// Use is_complete to include unsuccessful and cancelled outcomes.
     pub fn percentage(&self) -> f64 {
         if self.total_jobs == 0 {
             100.0
@@ -127,9 +129,27 @@ impl BatchProgress {
         self.completed_jobs.fetch_add(1, Ordering::SeqCst);
     }
 
-    /// Mark a job as failed
+    /// Mark a started job as unsuccessful (failed or cancelled).
     pub fn fail_job(&self) {
         self.running_jobs.fetch_sub(1, Ordering::SeqCst);
+        self.failed_jobs.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// Account for a missing worker outcome after every worker has joined.
+    /// Some workers may have terminated before marking their job as started.
+    pub(crate) fn fail_unreported_job(&self) {
+        let mut count = self.running_jobs.load(Ordering::SeqCst);
+        while count != 0 {
+            match self.running_jobs.compare_exchange_weak(
+                count,
+                count - 1,
+                Ordering::SeqCst,
+                Ordering::SeqCst,
+            ) {
+                Ok(_) => break,
+                Err(current) => count = current,
+            }
+        }
         self.failed_jobs.fetch_add(1, Ordering::SeqCst);
     }
 
@@ -245,6 +265,24 @@ impl ProgressBar {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn missing_outcomes_finish_progress_with_and_without_a_started_job() {
+        let progress = BatchProgress::new();
+        progress.add_job();
+        progress.add_job();
+        progress.start_job();
+        progress.fail_unreported_job();
+        let first = progress.get_info();
+        assert_eq!(first.running_jobs, 0);
+        assert_eq!(first.failed_jobs, 1);
+        assert!(!first.is_complete());
+        progress.fail_unreported_job();
+        let final_info = progress.get_info();
+        assert_eq!(final_info.running_jobs, 0);
+        assert_eq!(final_info.failed_jobs, 2);
+        assert!(final_info.is_complete());
+    }
 
     #[test]
     fn test_progress_info() {

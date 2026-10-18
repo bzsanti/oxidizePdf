@@ -5,12 +5,22 @@
 //! - Field dependencies and automatic recalculation
 //! - Calculation order management
 //! - Format validation
+//!
+//! This is a restricted calculation model, not a JavaScript interpreter.
+//! Missing numeric inputs retain the existing zero/omitted-input semantics;
+//! percentage-of with a zero base returns zero. Invalid date text produces an
+//! empty text value. Date calculations currently use ISO `%Y-%m-%d` regardless
+//! of their format field; number separator/currency settings and non-number /
+//! non-percent field formats are reserved. Unsupported custom scripts yield
+//! `FieldValue::Empty`; only the existing two-field addition subset is evaluated.
+//! Non-finite numeric results, invalid ranges and out-of-range dates return
+//! typed errors. Failed updates restore values, definitions and event history.
 
 use crate::error::PdfError;
 use crate::forms::calculations::{CalculationEngine, FieldValue};
 use crate::objects::{Dictionary, Object};
 use chrono::{DateTime, NaiveDate, Utc};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::fmt;
 
 /// Complete calculation system for PDF forms
@@ -148,7 +158,6 @@ pub enum SpecialFormat {
 
 /// Calculation event for logging
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct CalculationEvent {
     /// Timestamp
     timestamp: DateTime<Utc>,
@@ -160,6 +169,29 @@ pub struct CalculationEvent {
     old_value: Option<FieldValue>,
     /// New value
     new_value: Option<FieldValue>,
+}
+
+impl CalculationEvent {
+    /// UTC instant at which this event was recorded.
+    pub fn timestamp(&self) -> &DateTime<Utc> {
+        &self.timestamp
+    }
+    /// Field changed or calculated by the event.
+    pub fn field(&self) -> &str {
+        &self.field
+    }
+    /// Kind of event.
+    pub fn event_type(&self) -> &EventType {
+        &self.event_type
+    }
+    /// Value before the change, or None for a previously unset field.
+    pub fn old_value(&self) -> Option<&FieldValue> {
+        self.old_value.as_ref()
+    }
+    /// Value after the change.
+    pub fn new_value(&self) -> Option<&FieldValue> {
+        self.new_value.as_ref()
+    }
 }
 
 /// Event types
@@ -177,11 +209,12 @@ pub enum EventType {
 pub struct CalculationSettings {
     /// Enable automatic recalculation
     pub auto_recalculate: bool,
-    /// Maximum calculation depth (to prevent infinite loops)
+    /// Maximum number of dependent calculation levels per input update.
+    /// Zero rejects updates requiring any dependent calculation.
     pub max_depth: usize,
     /// Enable event logging
     pub log_events: bool,
-    /// Decimal precision
+    /// Reserved; currently unused. Use explicit per-field formatting instead.
     pub decimal_precision: usize,
 }
 
@@ -222,14 +255,34 @@ impl FormCalculationSystem {
         }
     }
 
-    /// Set a field value and trigger calculations
+    /// Read a typed system value without exposing the internal engine.
+    pub fn get_field_value(&self, field_name: &str) -> Option<&FieldValue> {
+        self.engine.get_field_value(field_name)
+    }
+
+    /// Inspect the system settings (decimal_precision is reserved).
+    pub fn settings(&self) -> &CalculationSettings {
+        &self.settings
+    }
+
+    /// Set a field value and trigger calculations in dependency order.
+    /// A calculation error restores all values and events from before the call.
     pub fn set_field_value(
         &mut self,
         field_name: impl Into<String>,
         value: FieldValue,
     ) -> Result<(), PdfError> {
         let field_name = field_name.into();
+        validate_calculation_value(&value)?;
 
+        let order = if self.settings.auto_recalculate {
+            self.recalculation_order(&field_name)?
+        } else {
+            Vec::new()
+        };
+        // No snapshot is needed for plain inputs or disabled recalculation.
+        let previous_engine = (!order.is_empty()).then(|| self.engine.clone());
+        let previous_events = self.events.len();
         // Log event if enabled
         if self.settings.log_events {
             let old_value = self.engine.get_field_value(&field_name).cloned();
@@ -245,15 +298,22 @@ impl FormCalculationSystem {
         // Set value in engine
         self.engine.set_field_value(field_name.clone(), value);
 
-        // Trigger JavaScript calculations if enabled
-        if self.settings.auto_recalculate {
-            self.recalculate_js_fields(&field_name)?;
+        for field in order {
+            if let Err(error) = self.calculate_js_field(&field) {
+                if let Some(previous_engine) = previous_engine {
+                    self.engine = previous_engine;
+                }
+                self.events.truncate(previous_events);
+                return Err(error);
+            }
         }
 
         Ok(())
     }
 
-    /// Add a JavaScript calculation
+    /// Add or replace a supported calculation and update its dependents.
+    /// Cycles or calculation errors leave definitions, values and events intact.
+    /// This is a restricted calculation model, not an arbitrary JavaScript runtime.
     pub fn add_js_calculation(
         &mut self,
         field_name: impl Into<String>,
@@ -272,11 +332,29 @@ impl FormCalculationSystem {
             )));
         }
 
-        // Store calculation
-        self.js_calculations.insert(field_name.clone(), calculation);
-
-        // Perform initial calculation
-        self.calculate_js_field(&field_name)?;
+        let previous_engine = self.engine.clone();
+        let previous_events = self.events.len();
+        let previous = self.js_calculations.insert(field_name.clone(), calculation);
+        let result = self.calculate_js_field(&field_name).and_then(|()| {
+            if self.settings.auto_recalculate {
+                self.recalculate_js_fields(&field_name)
+            } else {
+                Ok(())
+            }
+        });
+        if let Err(error) = result {
+            match previous {
+                Some(calculation) => {
+                    self.js_calculations.insert(field_name, calculation);
+                }
+                None => {
+                    self.js_calculations.remove(&field_name);
+                }
+            }
+            self.engine = previous_engine;
+            self.events.truncate(previous_events);
+            return Err(error);
+        }
 
         Ok(())
     }
@@ -369,6 +447,7 @@ impl FormCalculationSystem {
     fn calculate_js_field(&mut self, field_name: &str) -> Result<(), PdfError> {
         if let Some(calculation) = self.js_calculations.get(field_name).cloned() {
             let value = self.evaluate_js_calculation(&calculation)?;
+            validate_calculation_value(&value)?;
 
             // Apply format if specified
             let formatted_value = if let Some(format) = self.field_formats.get(field_name) {
@@ -377,6 +456,8 @@ impl FormCalculationSystem {
                 value
             };
 
+            validate_calculation_value(&formatted_value)?;
+            let old_value = self.engine.get_field_value(field_name).cloned();
             self.engine.set_field_value(field_name, formatted_value);
 
             if self.settings.log_events {
@@ -384,7 +465,7 @@ impl FormCalculationSystem {
                     timestamp: Utc::now(),
                     field: field_name.to_string(),
                     event_type: EventType::CalculationTriggered,
-                    old_value: None,
+                    old_value,
                     new_value: self.engine.get_field_value(field_name).cloned(),
                 });
             }
@@ -478,7 +559,12 @@ impl FormCalculationSystem {
                         0
                     };
 
-                    let result_date = date + chrono::Duration::days(days);
+                    let duration = chrono::Duration::try_days(days).ok_or_else(|| {
+                        PdfError::InvalidOperation("date offset exceeds supported range".into())
+                    })?;
+                    let result_date = date.checked_add_signed(duration).ok_or_else(|| {
+                        PdfError::InvalidOperation("calculated date exceeds supported range".into())
+                    })?;
                     Ok(FieldValue::Text(result_date.format("%Y-%m-%d").to_string()))
                 } else {
                     Ok(FieldValue::Text(String::new()))
@@ -491,6 +577,14 @@ impl FormCalculationSystem {
                     .map(|v| v.to_number())
                     .unwrap_or(0.0);
 
+                if min.is_some_and(|v| !v.is_finite())
+                    || max.is_some_and(|v| !v.is_finite())
+                    || matches!((min, max), (Some(lo), Some(hi)) if lo > hi)
+                {
+                    return Err(PdfError::InvalidOperation(
+                        "invalid calculation range".into(),
+                    ));
+                }
                 let clamped = match (min, max) {
                     (Some(min_val), Some(max_val)) => value.clamp(*min_val, *max_val),
                     (Some(min_val), None) => value.max(*min_val),
@@ -513,8 +607,7 @@ impl FormCalculationSystem {
                     .unwrap_or(0.0);
 
                 // Round to specified decimals
-                let factor = 10_f64.powi(*decimals as i32);
-                let rounded = (value * factor).round() / factor;
+                let rounded = round_calculation_number(value, *decimals)?;
 
                 Ok(FieldValue::Number(rounded))
             }
@@ -556,24 +649,83 @@ impl FormCalculationSystem {
         Ok(FieldValue::Empty)
     }
 
-    /// Recalculate JavaScript fields that depend on a changed field
+    /// Resolve the affected subgraph first, then evaluate each node exactly once.
     fn recalculate_js_fields(&mut self, changed_field: &str) -> Result<(), PdfError> {
-        let mut fields_to_recalc = Vec::new();
-
-        // Find fields that depend on the changed field
-        for (field_name, calc) in &self.js_calculations {
-            let deps = self.extract_js_dependencies(calc);
-            if deps.contains(changed_field) {
-                fields_to_recalc.push(field_name.clone());
-            }
-        }
-
-        // Recalculate dependent fields
-        for field in fields_to_recalc {
+        let order = self.recalculation_order(changed_field)?;
+        for field in order {
             self.calculate_js_field(&field)?;
         }
-
         Ok(())
+    }
+
+    fn recalculation_order(&self, changed_field: &str) -> Result<Vec<String>, PdfError> {
+        let dependencies: HashMap<_, _> = self
+            .js_calculations
+            .iter()
+            .map(|(name, calculation)| (name.as_str(), self.extract_js_dependencies(calculation)))
+            .collect();
+        let mut dependents: HashMap<&str, Vec<&str>> = HashMap::new();
+        for (&name, inputs) in &dependencies {
+            for input in inputs {
+                dependents.entry(input.as_str()).or_default().push(name);
+            }
+        }
+        let mut affected = HashSet::new();
+        let mut queue = VecDeque::from([changed_field]);
+        while let Some(input) = queue.pop_front() {
+            for &name in dependents.get(input).into_iter().flatten() {
+                if affected.insert(name) {
+                    queue.push_back(name);
+                }
+            }
+        }
+        let mut pending: HashMap<_, usize> = affected
+            .iter()
+            .map(|&name| {
+                let count = dependencies[name]
+                    .iter()
+                    .filter(|input| affected.contains(input.as_str()))
+                    .count();
+                (name, count)
+            })
+            .collect();
+        let mut ready: BTreeSet<_> = pending
+            .iter()
+            .filter_map(|(&name, &count)| (count == 0).then_some(name))
+            .collect();
+        let mut depths: HashMap<&str, usize> = HashMap::new();
+        let mut order = Vec::with_capacity(affected.len());
+        while let Some(name) = ready.pop_first() {
+            let depth = dependencies[name]
+                .iter()
+                .filter_map(|input| depths.get(input.as_str()))
+                .copied()
+                .max()
+                .unwrap_or(0)
+                + 1;
+            if depth > self.settings.max_depth {
+                return Err(PdfError::InvalidOperation(format!(
+                    "calculation depth exceeds {}",
+                    self.settings.max_depth
+                )));
+            }
+            depths.insert(name, depth);
+            order.push(name.to_string());
+            for &dependent in dependents.get(name).into_iter().flatten() {
+                if let Some(count) = pending.get_mut(dependent) {
+                    *count -= 1;
+                    if *count == 0 {
+                        ready.insert(dependent);
+                    }
+                }
+            }
+        }
+        if order.len() != affected.len() {
+            return Err(PdfError::InvalidStructure(
+                "cyclic calculation dependencies".into(),
+            ));
+        }
+        Ok(order)
     }
 
     /// Apply format to a field value
@@ -585,14 +737,12 @@ impl FormCalculationSystem {
         match format {
             FieldFormat::Number { decimals, .. } => {
                 let num = value.to_number();
-                let factor = 10_f64.powi(*decimals as i32);
-                let rounded = (num * factor).round() / factor;
+                let rounded = round_calculation_number(num, *decimals)?;
                 Ok(FieldValue::Number(rounded))
             }
             FieldFormat::Percent { decimals } => {
                 let num = value.to_number();
-                let factor = 10_f64.powi(*decimals as i32);
-                let rounded = (num * 100.0 * factor).round() / factor;
+                let rounded = round_calculation_number(num * 100.0, *decimals)?;
                 Ok(FieldValue::Text(format!("{}%", rounded)))
             }
             _ => Ok(value),
@@ -642,6 +792,28 @@ impl FormCalculationSystem {
 
         dict
     }
+}
+
+fn validate_calculation_value(value: &FieldValue) -> Result<(), PdfError> {
+    if matches!(value, FieldValue::Number(number) if !number.is_finite()) {
+        return Err(PdfError::InvalidOperation(
+            "non-finite calculation value".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn round_calculation_number(value: f64, decimals: usize) -> Result<f64, PdfError> {
+    let exponent = i32::try_from(decimals)
+        .map_err(|_| PdfError::InvalidOperation("unsupported decimal precision".into()))?;
+    let factor = 10_f64.powi(exponent);
+    let result = (value * factor).round() / factor;
+    if !factor.is_finite() || !result.is_finite() {
+        return Err(PdfError::InvalidOperation(
+            "numeric formatting overflow".into(),
+        ));
+    }
+    Ok(result)
 }
 
 /// Summary of calculation system state

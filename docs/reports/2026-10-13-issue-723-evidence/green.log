@@ -1,0 +1,17 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue742/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 9.28s
+     Running tests/issue_723_legacy_signature_test.rs (target/debug/deps/issue_723_legacy_signature_test-d3bf119045ac478d)
+
+running 9 tests
+test aggregate_validation_does_not_upgrade_presence_to_validity ... ok
+test already_present_value_is_not_overwritten ... ok
+test fabricated_signature_is_unverified ... ok
+test missing_field_still_reports_not_found ... ok
+test plausible_metadata_and_algorithms_cannot_authorize_verification ... ok
+test appearances_and_presence_remain_available_without_verification ... ok
+test rejected_handler_signing_preserves_locks_and_completion ... ok
+test signing_refuses_without_mutating_existing_metadata ... ok
+test unsigned_field_is_not_valid ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

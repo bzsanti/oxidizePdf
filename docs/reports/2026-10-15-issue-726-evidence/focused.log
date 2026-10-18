@@ -1,0 +1,43 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue726/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 19s
+     Running unittests src/lib.rs (/tmp/oxidize-issue724/target/debug/deps/oxidize_pdf-847e2ec85aed4fa9)
+
+running 30 tests
+test streaming::chunk_processor::tests::test_chunk_options_all_chunk_types ... ok
+test streaming::chunk_processor::tests::test_chunk_options_default ... ok
+test streaming::chunk_processor::tests::test_chunk_options_debug_clone ... ok
+test streaming::chunk_processor::tests::test_chunk_options_empty_chunk_types ... ok
+test streaming::chunk_processor::tests::test_chunk_options_validation ... ok
+test streaming::chunk_processor::tests::test_chunk_filtering ... ok
+test streaming::chunk_processor::tests::test_chunk_filtering_multiple_types ... ok
+test streaming::chunk_processor::tests::test_chunk_processor ... ok
+test streaming::chunk_processor::tests::test_chunk_processor_exact_chunk_size ... ok
+test streaming::chunk_processor::tests::test_chunk_processor_position_tracking ... ok
+test streaming::chunk_processor::tests::test_chunk_processor_with_zero_max_size ... ok
+test streaming::chunk_processor::tests::test_chunk_type_debug_clone_eq ... ok
+test streaming::chunk_processor::tests::test_content_chunk_as_text_with_invalid_utf8 ... ok
+test streaming::chunk_processor::tests::test_content_chunk ... ok
+test streaming::chunk_processor::tests::test_content_chunk_as_text_with_utf8 ... ok
+test streaming::chunk_processor::tests::test_content_chunk_debug_clone ... ok
+test streaming::chunk_processor::tests::test_content_chunk_image_methods ... ok
+test streaming::chunk_processor::tests::test_content_chunk_non_text_as_text ... ok
+test streaming::chunk_processor::tests::test_content_chunk_size_calculation ... ok
+test streaming::chunk_processor::tests::test_content_chunk_with_binary_data ... ok
+test streaming::chunk_processor::tests::test_page_tracking ... ok
+test streaming::chunk_processor::tests::test_large_content_splitting ... ok
+test streaming::chunk_processor::tests::test_process_in_chunks ... ok
+test streaming::chunk_processor::tests::test_process_in_chunks_empty_data ... ok
+test streaming::chunk_processor::tests::test_process_in_chunks_large_buffer ... ok
+test streaming::chunk_processor::tests::test_process_in_chunks_with_invalid_options ... ok
+test streaming::chunk_processor::tests::test_process_in_chunks_with_callback_error ... ok
+test streaming::chunk_processor::tests::test_processor_multiple_pages ... ok
+test streaming::chunk_processor::tests::test_process_in_chunks_with_io_error ... ok
+test streaming::chunk_processor::tests::test_processor_reset ... ok
+
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 6715 filtered out; finished in 0.00s
+
+     Running tests/issue_726_chunk_boundaries_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_726_chunk_boundaries_test-dd4251f615e5b912)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s

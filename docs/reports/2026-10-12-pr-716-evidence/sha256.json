@@ -1,0 +1,17 @@
+{
+  "clippy.log": "f21cd206dce1905c3ccff92f289cf2512d2a32620ef7505081bf588b6a5f2fb0",
+  "independent-latin.log": "1320e8892753c59d0cfcc453baf80ad74a9599a1a44a70ac818c3819a05558a8",
+  "kripteia-cmap.log": "e62f79fd00f509ff318ed5431aec5dd0930979b0b9f0d0e64529797b4a41d738",
+  "kripteia-extraction.log": "a4a0ba889fb4d5c934c9dc4a4acd525e60da3b2a2014c9ee575fb14193f0a388",
+  "kripteia-tests.log": "2bbc8dd7ed1f3216231326adf35de470e6039ab1a53d99c0b4ce931ffc2dcfd0",
+  "kripteia-truetype.log": "06ee7742fe66fe96c2ffc1796b9b52e52ee4f3fc5262cb305802e3e3492b4358",
+  "pr716-current.json": "832f2d873863eacdccf8a048355c4dce489255fa280d1c4a04a3f3d72b3c52ca",
+  "pr716-metadata.json": "1d3ac336cca7ba1500ccc281f32c57fef3dcef2a7648a32aeeac0ab7c1ff8c38",
+  "pr716.diff": "4f2dcefd895e23ff72c8d9844cc914a02052c2b40015c4300af744cbf66a2fd6",
+  "probe-Cargo.lock": "712e87e5797c689c432898664fb5d27a36d9d9ba7967bf66f5de2cadb90edbba",
+  "probe-Cargo.toml": "50ba886b7797dca931b68d2ffe6e2efc0b5d8b4761550276104ee6f41fe824be",
+  "probe-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "probe.rs": "2ae2a78b71d22e0c16baaee2e195ee3d7513e63f9cca9ef347a20ce5cf7b69ce",
+  "source-sha256.json": "da68400beaa1a523ddc10248fae92677058a4011be5e851245bea31408088f2d",
+  "tests.log": "e851f9de78ef392d1c9578f0879a90ef58c774abd38588d5ee9b828e7e35866a"
+}

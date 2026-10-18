@@ -1,0 +1,11 @@
+{
+  "base": "0b64412627709e97448822b3737520a1eaf5ac83",
+  "files": {
+    "oxidize-pdf-core/src/dashboard/pivot_table.rs": "490e8141e4bf18180ef2bad22fb5294682762c059b2a3cf6a439cd6ca105404f",
+    "oxidize-pdf-core/src/dashboard/mod.rs": "3abc8ae7f2a81d17badf0f9a9365c809ffa499ea5b83a09db2e957d3231cc764",
+    "oxidize-pdf-core/examples/pivot_table_simple_test.rs": "84b3df277a9bcde86a59c3c0382c732a953819609627cd976c818baa9a320d66",
+    "oxidize-pdf-core/examples/dashboard_sales_report.rs": "004f899395412be78e06afbb129cd0f2b111140719179b43199cc5591ba02193",
+    "oxidize-pdf-core/tests/issue_738_pivot_contract_test.rs": "f4932a6069c4e5c996559e32e1974df9a65696b852ca4844b2f0d2720a6367df",
+    ".github/workflows/interoperability.yml": "ad4e67c717051e56621031866210577bcc773f4e5fe0cc817b621f997a159a2f"
+  }
+}

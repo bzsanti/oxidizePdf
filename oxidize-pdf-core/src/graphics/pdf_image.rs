@@ -120,7 +120,7 @@ impl Image {
                 width: decoded.width,
                 height: decoded.height,
                 color_space: ColorSpace::DeviceGray,
-                bits_per_component: 8,
+                bits_per_component: if decoded.bit_depth == 16 { 16 } else { 8 },
                 alpha_data: None,
                 soft_mask: None,
             }))
@@ -134,7 +134,7 @@ impl Image {
             width: decoded.width,
             height: decoded.height,
             color_space,
-            bits_per_component: 8, // Always 8 after decoding
+            bits_per_component: if decoded.bit_depth == 16 { 16 } else { 8 }, // Preserve 16-bit sample precision
             alpha_data: decoded.alpha_data,
             soft_mask,
         })
@@ -241,16 +241,22 @@ impl Image {
     }
 
     /// Create an image from RGBA data (with alpha channel)
+    ///
+    /// # Errors
+    /// Returns [`PdfError::InvalidImage`] for zero dimensions, an unrepresentable
+    /// buffer size, or a buffer that does not contain exactly four bytes per pixel.
     pub fn from_rgba_data(rgba_data: Vec<u8>, width: u32, height: u32) -> Result<Self> {
-        if rgba_data.len() != (width * height * 4) as usize {
+        let expected_size = checked_raw_image_len(width, height, 4)?;
+        if rgba_data.len() != expected_size {
             return Err(PdfError::InvalidImage(
                 "RGBA data size doesn't match dimensions".to_string(),
             ));
         }
 
         // Split RGBA into RGB and alpha channels
-        let mut rgb_data = Vec::with_capacity((width * height * 3) as usize);
-        let mut alpha_data = Vec::with_capacity((width * height) as usize);
+        let rgb_size = checked_raw_image_len(width, height, 3)?;
+        let mut rgb_data = Vec::with_capacity(rgb_size);
+        let mut alpha_data = Vec::with_capacity(expected_size / 4);
 
         for chunk in rgba_data.chunks(4) {
             rgb_data.push(chunk[0]); // R
@@ -284,8 +290,13 @@ impl Image {
     }
 
     /// Create a grayscale image from gray data
+    ///
+    /// # Errors
+    /// Returns [`PdfError::InvalidImage`] for zero dimensions, an unrepresentable
+    /// buffer size, or a buffer that does not contain exactly one byte per pixel.
     pub fn from_gray_data(gray_data: Vec<u8>, width: u32, height: u32) -> Result<Self> {
-        if gray_data.len() != (width * height) as usize {
+        let expected_size = checked_raw_image_len(width, height, 1)?;
+        if gray_data.len() != expected_size {
             return Err(PdfError::InvalidImage(
                 "Gray data size doesn't match dimensions".to_string(),
             ));
@@ -461,7 +472,10 @@ impl Image {
             mask_dict.set("Width", Object::Integer(mask.width as i64));
             mask_dict.set("Height", Object::Integer(mask.height as i64));
             mask_dict.set("ColorSpace", Object::Name("DeviceGray".to_string()));
-            mask_dict.set("BitsPerComponent", Object::Integer(8));
+            mask_dict.set(
+                "BitsPerComponent",
+                Object::Integer(mask.bits_per_component as i64),
+            );
             mask_dict.set("Filter", Object::Name("FlateDecode".to_string()));
 
             // Compress alpha channel data
@@ -566,6 +580,24 @@ impl Image {
     pub fn alpha_data(&self) -> Option<&[u8]> {
         self.alpha_data.as_deref()
     }
+}
+
+// Validate before comparing buffers or reserving output storage. Vec<u8>
+// allocations must fit both usize and the isize::MAX allocation-size bound.
+fn checked_raw_image_len(width: u32, height: u32, components: u64) -> Result<usize> {
+    if width == 0 || height == 0 {
+        return Err(PdfError::InvalidImage(
+            "Image dimensions must be nonzero".to_string(),
+        ));
+    }
+    u64::from(width)
+        .checked_mul(u64::from(height))
+        .and_then(|pixels| pixels.checked_mul(components))
+        .and_then(|bytes| usize::try_from(bytes).ok())
+        .filter(|&bytes| bytes <= isize::MAX as usize)
+        .ok_or_else(|| {
+            PdfError::InvalidImage("Image dimensions exceed supported buffer size".to_string())
+        })
 }
 
 /// Parse JPEG header to extract image information

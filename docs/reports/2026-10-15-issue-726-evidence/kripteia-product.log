@@ -1,0 +1,146 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 30 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/streaming/chunk_processor.rs                30     91
+
+--- Worst Offenders ---
+  test_process_in_chunks (oxidize-pdf-core/src/streaming/chunk_processor.rs:712) - Score: 70
+    - Test 'test_process_in_chunks' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_in_chunks' uses .unwrap() which silently discards error information
+    - Test 'test_process_in_chunks' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+    - Test 'test_process_in_chunks' does not call any production code
+  test_process_in_chunks_empty_data (oxidize-pdf-core/src/streaming/chunk_processor.rs:943) - Score: 70
+    - Test 'test_process_in_chunks_empty_data' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_in_chunks_empty_data' uses .unwrap() which silently discards error information
+    - Test 'test_process_in_chunks_empty_data' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+    - Test 'test_process_in_chunks_empty_data' does not call any production code
+  test_process_in_chunks_large_buffer (oxidize-pdf-core/src/streaming/chunk_processor.rs:1049) - Score: 70
+    - Test 'test_process_in_chunks_large_buffer' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_in_chunks_large_buffer' has multiple assertions without diagnostic messages
+    i Test 'test_process_in_chunks_large_buffer' uses .unwrap() which silently discards error information
+    - Test 'test_process_in_chunks_large_buffer' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+    - Test 'test_process_in_chunks_large_buffer' does not call any production code
+  test_chunk_type_debug_clone_eq (oxidize-pdf-core/src/streaming/chunk_processor.rs:758) - Score: 80
+    i Test 'test_chunk_type_debug_clone_eq' has multiple assertions without diagnostic messages
+    - Test 'test_chunk_type_debug_clone_eq' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'test_chunk_type_debug_clone_eq' does not call any production code
+  test_chunk_processor_with_zero_max_size (oxidize-pdf-core/src/streaming/chunk_processor.rs:961) - Score: 80
+    - Test 'test_chunk_processor_with_zero_max_size' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_chunk_processor_with_zero_max_size' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+
+--- Details ---
+oxidize-pdf-core/src/streaming/chunk_processor.rs:
+  test_content_chunk (line 641) - Score: 100
+    i Test 'test_content_chunk' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_chunk' has multiple assertions without diagnostic messages
+  test_chunk_options_default (line 654) - Score: 90
+    i Test 'test_chunk_options_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_chunk_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_chunk_options_default' does not call any production code
+  test_chunk_processor (line 663) - Score: 90
+    - Test 'test_chunk_processor' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_chunk_processor' has multiple assertions without diagnostic messages
+    i Test 'test_chunk_processor' uses .unwrap() which silently discards error information
+  test_large_content_splitting (line 676) - Score: 90
+    - Test 'test_large_content_splitting' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_large_content_splitting' has multiple assertions without diagnostic messages
+    i Test 'test_large_content_splitting' uses .unwrap() which silently discards error information
+  test_chunk_filtering (line 692) - Score: 90
+    - Test 'test_chunk_filtering' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_chunk_filtering' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_chunk_filtering' has multiple assertions without diagnostic messages
+    i Test 'test_chunk_filtering' uses .unwrap() which silently discards error information
+  test_process_in_chunks (line 712) - Score: 70
+    - Test 'test_process_in_chunks' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_in_chunks' uses .unwrap() which silently discards error information
+    - Test 'test_process_in_chunks' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+    - Test 'test_process_in_chunks' does not call any production code
+  test_page_tracking (line 733) - Score: 90
+    - Test 'test_page_tracking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_page_tracking' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_tracking' has multiple assertions without diagnostic messages
+    i Test 'test_page_tracking' uses .unwrap() which silently discards error information
+  test_processor_reset (line 745) - Score: 100
+    i Test 'test_processor_reset' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_processor_reset' has multiple assertions without diagnostic messages
+  test_chunk_type_debug_clone_eq (line 758) - Score: 80
+    i Test 'test_chunk_type_debug_clone_eq' has multiple assertions without diagnostic messages
+    - Test 'test_chunk_type_debug_clone_eq' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'test_chunk_type_debug_clone_eq' does not call any production code
+  test_content_chunk_debug_clone (line 777) - Score: 100
+    i Test 'test_content_chunk_debug_clone' has multiple assertions without diagnostic messages
+  test_chunk_options_debug_clone (line 799) - Score: 100
+    i Test 'test_chunk_options_debug_clone' has multiple assertions without diagnostic messages
+  test_content_chunk_image_methods (line 818) - Score: 100
+    i Test 'test_content_chunk_image_methods' has multiple assertions without diagnostic messages
+  test_content_chunk_non_text_as_text (line 827) - Score: 100
+    i Test 'test_content_chunk_non_text_as_text' has multiple assertions without diagnostic messages
+  test_content_chunk_size_calculation (line 837) - Score: 100
+    i Test 'test_content_chunk_size_calculation' has multiple assertions without diagnostic messages
+  test_chunk_processor_position_tracking (line 848) - Score: 90
+    - Test 'test_chunk_processor_position_tracking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_chunk_processor_position_tracking' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_chunk_processor_position_tracking' has multiple assertions without diagnostic messages
+    i Test 'test_chunk_processor_position_tracking' uses .unwrap() which silently discards error information
+  test_chunk_options_all_chunk_types (line 862) - Score: 100
+    i Test 'test_chunk_options_all_chunk_types' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_chunk_options_all_chunk_types' has multiple assertions without diagnostic messages
+  test_chunk_filtering_multiple_types (line 885) - Score: 90
+    - Test 'test_chunk_filtering_multiple_types' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_chunk_filtering_multiple_types' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_chunk_filtering_multiple_types' has multiple assertions without diagnostic messages
+    i Test 'test_chunk_filtering_multiple_types' uses .unwrap() which silently discards error information
+  test_process_in_chunks_with_io_error (line 907) - Score: 90
+    - Test 'test_process_in_chunks_with_io_error' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+  test_process_in_chunks_with_callback_error (line 926) - Score: 90
+    - Test 'test_process_in_chunks_with_callback_error' has low assert-to-setup ratio (8%): 1 asserts vs 12 setup lines
+  test_process_in_chunks_empty_data (line 943) - Score: 70
+    - Test 'test_process_in_chunks_empty_data' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_in_chunks_empty_data' uses .unwrap() which silently discards error information
+    - Test 'test_process_in_chunks_empty_data' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+    - Test 'test_process_in_chunks_empty_data' does not call any production code
+  test_chunk_processor_with_zero_max_size (line 961) - Score: 80
+    - Test 'test_chunk_processor_with_zero_max_size' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_chunk_processor_with_zero_max_size' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_chunk_processor_exact_chunk_size (line 972) - Score: 90
+    - Test 'test_chunk_processor_exact_chunk_size' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_chunk_processor_exact_chunk_size' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_chunk_processor_exact_chunk_size' has multiple assertions without diagnostic messages
+    i Test 'test_chunk_processor_exact_chunk_size' uses .unwrap() which silently discards error information
+  test_content_chunk_with_binary_data (line 985) - Score: 100
+    i Test 'test_content_chunk_with_binary_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_chunk_with_binary_data' has multiple assertions without diagnostic messages
+  test_content_chunk_as_text_with_invalid_utf8 (line 1004) - Score: 100
+    i Test 'test_content_chunk_as_text_with_invalid_utf8' has multiple assertions without diagnostic messages
+  test_processor_multiple_pages (line 1015) - Score: 90
+    - Test 'test_processor_multiple_pages' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_processor_multiple_pages' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_processor_multiple_pages' has multiple assertions without diagnostic messages
+    i Test 'test_processor_multiple_pages' uses .unwrap() which silently discards error information
+  test_chunk_options_empty_chunk_types (line 1035) - Score: 90
+    - Test 'test_chunk_options_empty_chunk_types' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_chunk_options_empty_chunk_types' uses .unwrap() which silently discards error information
+  test_process_in_chunks_large_buffer (line 1049) - Score: 70
+    - Test 'test_process_in_chunks_large_buffer' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_in_chunks_large_buffer' has multiple assertions without diagnostic messages
+    i Test 'test_process_in_chunks_large_buffer' uses .unwrap() which silently discards error information
+    - Test 'test_process_in_chunks_large_buffer' has low assert-to-setup ratio (18%): 3 asserts vs 14 setup lines
+    - Test 'test_process_in_chunks_large_buffer' does not call any production code
+  test_chunk_options_validation (line 1072) - Score: 100
+    i Test 'test_chunk_options_validation' has multiple assertions without diagnostic messages
+  test_process_in_chunks_with_invalid_options (line 1089) - Score: 80
+    - Test 'test_process_in_chunks_with_invalid_options' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_in_chunks_with_invalid_options' has multiple assertions without diagnostic messages
+    - Test 'test_process_in_chunks_with_invalid_options' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -4,15 +4,18 @@
 //! when working with large documents.
 
 use crate::error::{PdfError, Result};
-use crate::memory::{MemoryManager, MemoryOptions};
+use crate::memory::{MemoryConfiguration, MemoryManager, MemoryOptions};
 use crate::objects::ObjectId;
-use crate::parser::{ParsedPage, PdfObject, PdfReader};
-use std::collections::HashMap;
+use crate::parser::{ParsedPage, PdfDocument, PdfObject, PdfReader};
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{Read, Seek};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 
-/// A lazily-loaded PDF object that loads its content on first access
+/// Public object-loading state representation.
+///
+/// `LazyDocument` delegates loading to the parser and does not expose or use
+/// these states internally.
 pub enum LazyObject {
     /// Not yet loaded - contains file offset
     NotLoaded { offset: u64 },
@@ -24,10 +27,11 @@ pub enum LazyObject {
 
 /// PDF document with lazy loading support
 pub struct LazyDocument<R: Read + Seek> {
-    #[allow(dead_code)]
-    reader: Arc<RwLock<PdfReader<R>>>,
-    memory_manager: Arc<MemoryManager>,
-    object_map: Arc<RwLock<HashMap<ObjectId, LazyObject>>>,
+    // Indirection preserves Unpin for readers that are not Unpin.
+    document: Arc<Mutex<PdfDocument<R>>>,
+    memory_manager: MemoryManager,
+    configuration: MemoryConfiguration,
+    object_references: HashSet<(u32, u16)>,
     page_count: u32,
 }
 
@@ -40,23 +44,49 @@ impl LazyDocument<File> {
 }
 
 impl<R: Read + Seek> LazyDocument<R> {
-    /// Create a new lazy document from a reader
+    /// Create a document from the reader's page tree and object index.
+    ///
+    /// Construction reads page-tree dictionaries to establish the actual page
+    /// count. With lazy_loading=false, all indexed objects are parsed up front;
+    /// otherwise content streams and unrelated objects are parsed on demand.
+    /// Parsing options and existing caches are preserved; buffer_size replaces
+    /// the I/O buffer (zero normalizes to one byte).
+    ///
+    /// cache_size bounds this adapter's cache, not parser caches or total process
+    /// memory. Mapping and content streaming are unsupported here and reported by
+    /// configuration(); use streaming::StreamingDocument for page-at-a-time content.
     pub fn new(reader: PdfReader<R>, options: MemoryOptions) -> Result<Self> {
-        let memory_manager = Arc::new(MemoryManager::new(options));
-
-        // For now, use a fixed page count
-        // In a real implementation, we would parse the catalog to get page count
-        let page_count = 0;
-
-        let reader = Arc::new(RwLock::new(reader));
-        let object_map = Arc::new(RwLock::new(HashMap::new()));
-
+        let configuration = MemoryConfiguration::resolve(options)?;
+        let mut reader = reader
+            .with_buffer_capacity(configuration.effective.buffer_size)
+            .map_err(|e| PdfError::ParseError(e.to_string()))?;
+        let references = reader.object_references();
+        if !configuration.effective.lazy_loading {
+            // The parser retains these objects; the adapter cache budget does not
+            // cap eager loading or parser memory. Propagate the first parse error.
+            for &(number, generation) in &references {
+                reader
+                    .get_object(number, generation)
+                    .map_err(|e| PdfError::ParseError(e.to_string()))?;
+            }
+        }
+        let object_references = references.into_iter().collect();
+        let document = PdfDocument::new(reader);
+        let page_count = document
+            .page_count()
+            .map_err(|e| PdfError::ParseError(e.to_string()))?;
         Ok(Self {
-            reader,
-            memory_manager,
-            object_map,
+            document: Arc::new(Mutex::new(document)),
+            memory_manager: MemoryManager::new(configuration.effective.clone()),
+            configuration,
+            object_references,
             page_count,
         })
+    }
+
+    /// Inspect requested options, normalized effective values and unsupported modes.
+    pub fn configuration(&self) -> &MemoryConfiguration {
+        &self.configuration
     }
 
     /// Get the total number of pages
@@ -72,66 +102,45 @@ impl<R: Read + Seek> LazyDocument<R> {
 
         self.memory_manager.record_cache_miss();
 
-        // For now, return an error as we can't easily clone the reader
-        // In a real implementation, we would need a different approach
-        Err(PdfError::ParseError(
-            "Lazy loading not fully implemented".to_string(),
-        ))
+        self.document
+            .lock()
+            .map_err(|_| PdfError::ParseError("Lazy document lock poisoned".into()))?
+            .get_page(index)
+            .map_err(|e| PdfError::ParseError(e.to_string()))
     }
 
-    /// Get an object by ID (loads on demand)
+    /// Get an indexed object by ID, parsing it on first access.
+    ///
+    /// Missing, free and mismatched-generation references return
+    /// `InvalidObjectReference`, even when the reader uses lenient syntax.
     pub fn get_object(&self, id: &ObjectId) -> Result<Arc<PdfObject>> {
-        // Check cache first
+        if !self
+            .object_references
+            .contains(&(id.number(), id.generation()))
+        {
+            return Err(PdfError::InvalidObjectReference(
+                id.number(),
+                id.generation(),
+            ));
+        }
         if let Some(cache) = self.memory_manager.cache() {
             if let Some(obj) = cache.get(id) {
                 self.memory_manager.record_cache_hit();
                 return Ok(obj);
             }
         }
-
         self.memory_manager.record_cache_miss();
-
-        // Check if we have this object in our map
-        if let Ok(mut map) = self.object_map.write() {
-            match map.get_mut(id) {
-                Some(LazyObject::Loaded(obj)) => {
-                    return Ok(obj.clone());
-                }
-                Some(LazyObject::Loading) => {
-                    return Err(PdfError::ParseError(
-                        "Circular reference detected".to_string(),
-                    ));
-                }
-                Some(LazyObject::NotLoaded { offset }) => {
-                    let offset = *offset;
-                    // Mark as loading to prevent recursion
-                    map.insert(*id, LazyObject::Loading);
-
-                    // Load the object
-                    let obj = self.load_object_at_offset(offset)?;
-                    let obj_arc = Arc::new(obj);
-
-                    // Cache it
-                    if let Some(cache) = self.memory_manager.cache() {
-                        cache.put(*id, obj_arc.clone());
-                    }
-
-                    // Update map
-                    map.insert(*id, LazyObject::Loaded(obj_arc.clone()));
-
-                    return Ok(obj_arc);
-                }
-                None => {
-                    // For now, return error as we can't easily access objects
-                    // In a real implementation, we would need direct object access
-                }
-            }
+        let obj = self
+            .document
+            .lock()
+            .map_err(|_| PdfError::ParseError("Lazy document lock poisoned".into()))?
+            .get_object(id.number(), id.generation())
+            .map_err(|e| PdfError::ParseError(e.to_string()))?;
+        let obj = Arc::new(obj);
+        if let Some(cache) = self.memory_manager.cache() {
+            cache.put(*id, obj.clone());
         }
-
-        Err(PdfError::InvalidObjectReference(
-            id.number(),
-            id.generation(),
-        ))
+        Ok(obj)
     }
 
     /// Preload objects for a specific page
@@ -145,7 +154,7 @@ impl<R: Read + Seek> LazyDocument<R> {
                 for font_ref in fonts.0.values() {
                     if let PdfObject::Reference(num, gen) = font_ref {
                         let id = ObjectId::new(*num, *gen);
-                        let _ = self.get_object(&id);
+                        self.get_object(&id)?;
                     }
                 }
             }
@@ -155,7 +164,7 @@ impl<R: Read + Seek> LazyDocument<R> {
                 for xobj_ref in xobjects.0.values() {
                     if let PdfObject::Reference(num, gen) = xobj_ref {
                         let id = ObjectId::new(*num, *gen);
-                        let _ = self.get_object(&id);
+                        self.get_object(&id)?;
                     }
                 }
             }
@@ -164,27 +173,19 @@ impl<R: Read + Seek> LazyDocument<R> {
         Ok(())
     }
 
-    /// Get memory statistics
+    /// Get adapter cache-access counters. These do not measure allocations or
+    /// caches retained by the underlying parser.
     pub fn memory_stats(&self) -> crate::memory::MemoryStats {
         self.memory_manager.stats()
     }
 
-    /// Clear all caches
+    /// Clear this adapter's object cache. Parsed values retained by the
+    /// underlying parser and values held by callers are unaffected.
+    /// References remain accessible after clearing or eviction.
     pub fn clear_cache(&self) {
         if let Some(cache) = self.memory_manager.cache() {
             cache.clear();
         }
-
-        if let Ok(mut map) = self.object_map.write() {
-            // Keep NotLoaded entries, only clear Loaded ones
-            map.retain(|_, obj| matches!(obj, LazyObject::NotLoaded { .. }));
-        }
-    }
-
-    fn load_object_at_offset(&self, _offset: u64) -> Result<PdfObject> {
-        // In a real implementation, this would seek to the offset and parse the object
-        // For now, return a placeholder
-        Ok(PdfObject::Null)
     }
 }
 
@@ -406,90 +407,6 @@ mod tests {
     }
 
     #[test]
-    fn test_lazy_document_get_object_circular_reference() {
-        let pdf_data = test_helpers::create_minimal_pdf();
-        let cursor = Cursor::new(pdf_data);
-        let reader = PdfReader::new(cursor).unwrap();
-        let options = MemoryOptions::default();
-
-        let lazy_doc = LazyDocument::new(reader, options).unwrap();
-        let obj_id = ObjectId::new(1, 0);
-
-        // Manually insert a Loading object to simulate circular reference
-        {
-            let mut map = lazy_doc.object_map.write().unwrap();
-            map.insert(obj_id, LazyObject::Loading);
-        }
-
-        let result = lazy_doc.get_object(&obj_id);
-        assert!(result.is_err());
-
-        match result {
-            Err(PdfError::ParseError(msg)) => {
-                assert!(msg.contains("Circular reference"));
-            }
-            _ => panic!("Expected ParseError for circular reference"),
-        }
-    }
-
-    #[test]
-    fn test_lazy_document_get_object_not_loaded_then_loaded() {
-        let pdf_data = test_helpers::create_minimal_pdf();
-        let cursor = Cursor::new(pdf_data);
-        let reader = PdfReader::new(cursor).unwrap();
-        let options = MemoryOptions::default();
-
-        let lazy_doc = LazyDocument::new(reader, options).unwrap();
-        let obj_id = ObjectId::new(1, 0);
-
-        // Manually insert a NotLoaded object
-        {
-            let mut map = lazy_doc.object_map.write().unwrap();
-            map.insert(obj_id, LazyObject::NotLoaded { offset: 100 });
-        }
-
-        let result = lazy_doc.get_object(&obj_id);
-        assert!(result.is_ok());
-
-        let obj = result.unwrap();
-        assert_eq!(*obj, PdfObject::Null); // load_object_at_offset returns Null
-
-        // Object should now be cached as Loaded
-        {
-            let map = lazy_doc.object_map.read().unwrap();
-            match map.get(&obj_id) {
-                Some(LazyObject::Loaded(_)) => {}
-                _ => panic!("Expected object to be cached as Loaded"),
-            }
-        }
-    }
-
-    #[test]
-    fn test_lazy_document_get_object_already_loaded() {
-        let pdf_data = test_helpers::create_minimal_pdf();
-        let cursor = Cursor::new(pdf_data);
-        let reader = PdfReader::new(cursor).unwrap();
-        let options = MemoryOptions::default();
-
-        let lazy_doc = LazyDocument::new(reader, options).unwrap();
-        let obj_id = ObjectId::new(1, 0);
-        let test_obj = Arc::new(PdfObject::Boolean(true));
-
-        // Manually insert a Loaded object
-        {
-            let mut map = lazy_doc.object_map.write().unwrap();
-            map.insert(obj_id, LazyObject::Loaded(test_obj.clone()));
-        }
-
-        let result = lazy_doc.get_object(&obj_id);
-        assert!(result.is_ok());
-
-        let obj = result.unwrap();
-        assert_eq!(*obj, PdfObject::Boolean(true));
-        assert!(Arc::ptr_eq(&obj, &test_obj));
-    }
-
-    #[test]
     fn test_lazy_document_preload_page_invalid_index() {
         let pdf_data = test_helpers::create_minimal_pdf();
         let cursor = Cursor::new(pdf_data);
@@ -554,47 +471,11 @@ mod tests {
         // Clear cache on empty document should not panic
         lazy_doc.clear_cache();
 
-        // Verify object map is still accessible
-        let map = lazy_doc.object_map.read().unwrap();
-        assert!(map.is_empty());
-    }
-
-    #[test]
-    fn test_lazy_document_clear_cache_with_objects() {
-        let pdf_data = test_helpers::create_minimal_pdf();
-        let cursor = Cursor::new(pdf_data);
-        let reader = PdfReader::new(cursor).unwrap();
-        let options = MemoryOptions::default().with_cache_size(10);
-
-        let lazy_doc = LazyDocument::new(reader, options).unwrap();
-        let obj_id1 = ObjectId::new(1, 0);
-        let obj_id2 = ObjectId::new(2, 0);
-        let obj_id3 = ObjectId::new(3, 0);
-
-        // Add different types of objects
-        {
-            let mut map = lazy_doc.object_map.write().unwrap();
-            map.insert(obj_id1, LazyObject::NotLoaded { offset: 100 });
-            map.insert(
-                obj_id2,
-                LazyObject::Loaded(Arc::new(PdfObject::Integer(42))),
-            );
-            map.insert(obj_id3, LazyObject::Loading);
-        }
-
-        lazy_doc.clear_cache();
-
-        // Verify that only NotLoaded objects remain
-        {
-            let map = lazy_doc.object_map.read().unwrap();
-            assert_eq!(map.len(), 1); // Only NotLoaded should remain
-            assert!(matches!(
-                map.get(&obj_id1),
-                Some(LazyObject::NotLoaded { .. })
-            ));
-            assert!(!map.contains_key(&obj_id2));
-            assert!(!map.contains_key(&obj_id3));
-        }
+        assert!(lazy_doc
+            .get_object(&ObjectId::new(1, 0))
+            .unwrap()
+            .as_dict()
+            .is_some());
     }
 
     #[test]
@@ -659,86 +540,6 @@ mod tests {
         let stats = lazy_doc.memory_stats();
         assert_eq!(stats.cache_hits, 0);
         assert_eq!(stats.cache_misses, 0);
-    }
-
-    #[test]
-    fn test_lazy_document_load_object_at_offset() {
-        let pdf_data = test_helpers::create_minimal_pdf();
-        let cursor = Cursor::new(pdf_data);
-        let reader = PdfReader::new(cursor).unwrap();
-        let options = MemoryOptions::default();
-
-        let lazy_doc = LazyDocument::new(reader, options).unwrap();
-
-        // Test the private method through public interface
-        let obj_id = ObjectId::new(1, 0);
-
-        // Add NotLoaded object to trigger load_object_at_offset
-        {
-            let mut map = lazy_doc.object_map.write().unwrap();
-            map.insert(obj_id, LazyObject::NotLoaded { offset: 1234 });
-        }
-
-        let result = lazy_doc.get_object(&obj_id);
-        assert!(result.is_ok());
-
-        let obj = result.unwrap();
-        assert_eq!(*obj, PdfObject::Null); // Current implementation returns Null
-    }
-
-    #[test]
-    fn test_lazy_document_cache_hit_path() {
-        let pdf_data = test_helpers::create_minimal_pdf();
-        let cursor = Cursor::new(pdf_data);
-        let reader = PdfReader::new(cursor).unwrap();
-        let options = MemoryOptions::default().with_cache_size(10);
-
-        let lazy_doc = LazyDocument::new(reader, options).unwrap();
-        let obj_id = ObjectId::new(1, 0);
-        let test_obj = Arc::new(PdfObject::Real(3.14));
-
-        // Manually add object to cache
-        if let Some(cache) = lazy_doc.memory_manager.cache() {
-            cache.put(obj_id, test_obj.clone());
-        }
-
-        let result = lazy_doc.get_object(&obj_id);
-        assert!(result.is_ok());
-
-        let obj = result.unwrap();
-        assert_eq!(*obj, PdfObject::Real(3.14));
-        assert!(Arc::ptr_eq(&obj, &test_obj));
-
-        // Should have recorded a cache hit
-        let stats = lazy_doc.memory_stats();
-        assert!(stats.cache_hits > 0);
-    }
-
-    #[test]
-    fn test_lazy_document_object_map_locking() {
-        let pdf_data = test_helpers::create_minimal_pdf();
-        let cursor = Cursor::new(pdf_data);
-        let reader = PdfReader::new(cursor).unwrap();
-        let options = MemoryOptions::default();
-
-        let lazy_doc = LazyDocument::new(reader, options).unwrap();
-        let obj_id = ObjectId::new(1, 0);
-
-        // Test that we can acquire read and write locks
-        {
-            let _read_lock = lazy_doc.object_map.read().unwrap();
-        }
-
-        {
-            let mut write_lock = lazy_doc.object_map.write().unwrap();
-            write_lock.insert(obj_id, LazyObject::NotLoaded { offset: 500 });
-        }
-
-        // Verify the insertion worked
-        {
-            let read_lock = lazy_doc.object_map.read().unwrap();
-            assert!(read_lock.contains_key(&obj_id));
-        }
     }
 
     #[test]

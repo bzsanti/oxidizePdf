@@ -1,0 +1,10 @@
+{
+  "Cargo.lock": "8a94456a84d22967a217ff4f7cc363eb0ff092eb8bb84d8fdf83632b1f7e7927",
+  "oxidize-pdf-core/Cargo.toml": "7ffae9f441eeed660bac5638f113e7ed0248ed25699198d6b7293dc7c7a0580b",
+  "oxidize-pdf-core/src/pdfa/mod.rs": "19ab079170553615d84a489013345a9fead257017b13d79db377f6ed9d660a5a",
+  "oxidize-pdf-core/src/pdfa/xmp.rs": "89d5ed08d6cf43c6c3f5fcdaba1ca74e1fc1f8059fe3b589edbd511d459bf22a",
+  "oxidize-pdf-core/src/pdfa/xmp_packet.rs": "78fad409de2a6cfb2ede4c5d093936f184b2020f249c8ea7a77f25f649730996",
+  "oxidize-pdf-core/tests/issue_741_xmp_identifier_test.rs": "b0eb1ea4e9068785df8011abbb2fde6932734d79375e58f6a3065540be27198b",
+  "oxidize-pdf-core/tests/pdfa_validator_coverage_test.rs": "95a22ba835d33678e4b887ed9bca432f5bfb48002974e795f444fa62d046dd02",
+  ".github/workflows/interoperability.yml": "d45d151efde5e224c496221659afbf3d63cc30362fd1ed49c549cbac3b084cd5"
+}

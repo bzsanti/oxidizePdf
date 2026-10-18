@@ -964,6 +964,29 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(obj)
     }
 
+    /// Resolve structure owners without retaining null-padded arrays.
+    pub(crate) fn sparse_array(
+        &self,
+        object: &PdfObject,
+    ) -> ParseResult<std::collections::HashMap<usize, PdfObject>> {
+        match object {
+            PdfObject::Reference(number, generation) => {
+                self.reader.borrow_mut().sparse_array(*number, *generation)
+            }
+            PdfObject::Array(array) => Ok(array
+                .0
+                .iter()
+                .enumerate()
+                .filter(|(_, value)| !matches!(value, PdfObject::Null))
+                .map(|(index, value)| (index, value.clone()))
+                .collect()),
+            _ => Err(super::ParseError::SyntaxError {
+                position: 0,
+                message: "Structure owners must be an array".to_string(),
+            }),
+        }
+    }
+
     /// Resolve a reference to get the actual object.
     ///
     /// If the input is a Reference, fetches the referenced object.

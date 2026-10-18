@@ -296,7 +296,8 @@ fn test_verification_levels() -> PdfResult<()> {
 
     for (level, expected_pass, description) in test_cases {
         let requirement = IsoRequirement {
-            id: format!("test.{}", level as u8),
+            // Exercise levels on an implemented requirement, not a fabricated ID.
+            id: "7.5.2.1".to_string(),
             name: format!("Test {}", description),
             description: description.to_string(),
             iso_reference: "Test".to_string(),

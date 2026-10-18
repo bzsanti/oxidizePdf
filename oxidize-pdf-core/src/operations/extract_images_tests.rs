@@ -324,44 +324,6 @@ mod tests {
     }
 
     #[test]
-    fn test_image_format_detection() {
-        // Test format detection from magic bytes
-        let temp_dir = TempDir::new().unwrap();
-        let mut doc = Document::new();
-        doc.add_page(Page::a4());
-        let input_path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
-
-        let options = ExtractImagesOptions {
-            output_dir: temp_dir.path().join("images"),
-            ..Default::default()
-        };
-
-        let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
-        let extractor = ImageExtractor::new(document, options);
-
-        // Test PNG detection
-        let png_data = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        let result = extractor.detect_image_format_from_data(&png_data);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), ImageFormat::Png);
-
-        // Test TIFF detection (little endian)
-        let tiff_data = vec![0x49, 0x49, 0x2A, 0x00, 0x00, 0x00, 0x00, 0x00];
-        let result = extractor.detect_image_format_from_data(&tiff_data);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), ImageFormat::Tiff);
-
-        // Test JPEG detection
-        let jpeg_data = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x00, 0x00, 0x00];
-        let result = extractor.detect_image_format_from_data(&jpeg_data);
-        if result.is_err() {
-            tracing::debug!("JPEG detection failed: {result:?}");
-        }
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), ImageFormat::Jpeg);
-    }
-
-    #[test]
     fn test_extended_file_extensions() {
         // Test that the new formats get the correct file extensions
         let temp_dir = TempDir::new().unwrap();
@@ -702,36 +664,6 @@ mod tests {
             "Stride {} would overflow data",
             detected_stride
         );
-    }
-
-    #[test]
-    fn test_parse_inline_image_dict() {
-        // Test parsing of inline image dictionaries
-        let temp_dir = TempDir::new().unwrap();
-        let mut doc = Document::new();
-        doc.add_page(Page::a4());
-        let input_path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
-
-        let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
-        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
-
-        // Test with /W and /H abbreviations
-        let dict1 = "/W 200\n/H 150\n/BPC 8";
-        let (width, height) = extractor.parse_inline_image_dict(dict1);
-        assert_eq!(width, 200);
-        assert_eq!(height, 150);
-
-        // Test with full names
-        let dict2 = "/Width 300\n/Height 250";
-        let (width, height) = extractor.parse_inline_image_dict(dict2);
-        assert_eq!(width, 300);
-        assert_eq!(height, 250);
-
-        // Test with missing values (should use defaults)
-        let dict3 = "/BPC 8";
-        let (width, height) = extractor.parse_inline_image_dict(dict3);
-        assert_eq!(width, 100); // Default
-        assert_eq!(height, 100); // Default
     }
 
     #[test]

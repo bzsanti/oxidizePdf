@@ -1,14 +1,9 @@
 //! PDF Verification Module
 //!
-//! This module provides REAL verification of generated PDFs against ISO 32000-1:2008
-//! standards. Unlike superficial tests, this module:
-//!
-//! 1. Parses the actual PDF bytes generated
-//! 2. Verifies internal object structure
-//! 3. Validates with external tools (qpdf, veraPDF)
-//! 4. Compares against ISO reference PDFs
-//!
-//! The goal is to provide HONEST assessment of ISO compliance, not just "API exists".
+//! Provides implemented requirement checks and external-tool results with explicit
+//! scopes. qpdf checks document structure; veraPDF checks the fixed PDF/A-1b
+//! profile. Neither the legacy level percentages nor these checks certify all
+//! requirements of ISO 32000. Unavailable checks must not count as success.
 
 pub mod comparators;
 pub mod compliance_report;
@@ -16,8 +11,10 @@ pub mod curated_matrix;
 pub mod iso_matrix;
 pub mod parser;
 pub mod semantic_comparison;
+mod structure;
 pub mod tagged_pdf;
 pub mod validators;
+mod verapdf_report;
 
 // Disabled vanity ISO compliance tests - these test PDF syntax rather than functionality
 // See CLAUDE.md: "Focus on practical PDF functionality, not compliance metrics"
@@ -34,11 +31,12 @@ pub enum VerificationLevel {
     NotImplemented = 0,
     /// Code exists, doesn't crash (25%)
     CodeExists = 1,
-    /// Generates valid PDF (50%)
+    /// Basic xref, catalog and page-tree structure verified (50%), not full conformance.
     GeneratesPdf = 2,
     /// Content verified with parser (75%)
     ContentVerified = 3,
-    /// ISO compliant with external validation (100%)
+    /// Legacy highest level (100%): qpdf structure and veraPDF PDF/A-1b pass.
+    /// This does not certify every ISO 32000 requirement.
     IsoCompliant = 4,
 }
 
@@ -65,7 +63,11 @@ impl VerificationLevel {
     }
 }
 
-/// Result of PDF verification
+/// Result of PDF verification.
+///
+/// `NotImplemented` with `passed == false` means verification is unavailable,
+/// not that the PDF failed an implemented check. Other levels with `passed == false`
+/// indicate a failed check. A successful lower level is not full ISO compliance.
 #[derive(Debug, Clone)]
 pub struct VerificationResult {
     pub level: VerificationLevel,
@@ -74,7 +76,10 @@ pub struct VerificationResult {
     pub external_validation: Option<ExternalValidationResult>,
 }
 
-/// Result from external validation tools
+/// Results from external tools, each with its own scope.
+/// Some(true) is a completed passing check, Some(false) a completed negative
+/// check, None an unavailable/incomplete check described in error_messages.
+/// qpdf checks structure; veraPDF checks PDF/A-1b, not full ISO 32000 conformance.
 #[derive(Debug, Clone)]
 pub struct ExternalValidationResult {
     pub qpdf_passed: Option<bool>,
@@ -97,11 +102,49 @@ pub struct IsoRequirement {
     pub notes: String,
 }
 
-/// Complete verification of a PDF against an ISO requirement
+// Resolve availability once, before any generic or external checks. An exhaustive
+// enum keeps dispatch and content checking in sync without a successful fallback.
+#[derive(Clone, Copy)]
+enum RequirementCheck {
+    Catalog,
+    DeviceRgb,
+    StandardFonts,
+}
+
+impl RequirementCheck {
+    fn for_id(id: &str) -> Option<Self> {
+        match id {
+            "7.5.2.1" => Some(Self::Catalog),
+            "8.6.3.1" => Some(Self::DeviceRgb),
+            "9.7.1.1" => Some(Self::StandardFonts),
+            _ => None,
+        }
+    }
+}
+
+/// Verify a PDF against an ISO requirement at the requested level.
+///
+/// Requirements without an implemented check return `NotImplemented`, `passed=false`
+/// and no external validation, regardless of the requested level or caller-supplied
+/// implementation/verified metadata. This result contributes no verified compliance.
+/// Supported checks currently cover catalog presence, DeviceRGB usage and standard
+/// font presence; they are not a complete structural or ISO conformance validator.
 pub fn verify_iso_requirement(
     pdf_bytes: &[u8],
     requirement: &IsoRequirement,
 ) -> Result<VerificationResult> {
+    let Some(check) = RequirementCheck::for_id(&requirement.id) else {
+        return Ok(VerificationResult {
+            level: VerificationLevel::NotImplemented,
+            passed: false,
+            details: format!(
+                "Requirement verification not implemented for {}",
+                requirement.id
+            ),
+            external_validation: None,
+        });
+    };
+
     match requirement.level {
         VerificationLevel::NotImplemented => Ok(VerificationResult {
             level: VerificationLevel::NotImplemented,
@@ -120,12 +163,14 @@ pub fn verify_iso_requirement(
             })
         }
         VerificationLevel::GeneratesPdf => verify_pdf_generation(pdf_bytes),
-        VerificationLevel::ContentVerified => verify_pdf_content(pdf_bytes, requirement),
-        VerificationLevel::IsoCompliant => verify_iso_compliance(pdf_bytes, requirement),
+        VerificationLevel::ContentVerified => verify_pdf_content(pdf_bytes, check),
+        VerificationLevel::IsoCompliant => verify_iso_compliance(pdf_bytes, check),
     }
 }
 
-/// Verify that PDF is generated with basic structure
+/// Verify cross-references, the referenced catalog and the page tree.
+/// Traversal exhaustion is reported as incomplete verification, not invalidity.
+/// This does not validate every resource, content operator or ISO requirement.
 fn verify_pdf_generation(pdf_bytes: &[u8]) -> Result<VerificationResult> {
     if pdf_bytes.is_empty() {
         return Ok(VerificationResult {
@@ -145,28 +190,22 @@ fn verify_pdf_generation(pdf_bytes: &[u8]) -> Result<VerificationResult> {
         });
     }
 
-    if pdf_bytes.len() < 1000 {
-        return Ok(VerificationResult {
-            level: VerificationLevel::GeneratesPdf,
-            passed: false,
-            details: format!("PDF too small: {} bytes", pdf_bytes.len()),
-            external_validation: None,
-        });
-    }
-
+    let outcome = structure::verify(pdf_bytes);
     Ok(VerificationResult {
         level: VerificationLevel::GeneratesPdf,
-        passed: true,
-        details: format!("Valid PDF generated: {} bytes", pdf_bytes.len()),
+        passed: outcome.is_ok(),
+        details: match outcome {
+            Ok(pages) => {
+                format!("PDF structure verified: {pages} pages (not full ISO conformance)")
+            }
+            Err(reason) => reason,
+        },
         external_validation: None,
     })
 }
 
 /// Verify PDF content structure with internal parser
-fn verify_pdf_content(
-    pdf_bytes: &[u8],
-    requirement: &IsoRequirement,
-) -> Result<VerificationResult> {
+fn verify_pdf_content(pdf_bytes: &[u8], check: RequirementCheck) -> Result<VerificationResult> {
     // First check basic generation
     let gen_result = verify_pdf_generation(pdf_bytes)?;
     if !gen_result.passed {
@@ -176,7 +215,7 @@ fn verify_pdf_content(
     // Parse PDF and verify content
     match parser::parse_pdf(pdf_bytes) {
         Ok(parsed_pdf) => {
-            let content_check = verify_requirement_content(&parsed_pdf, requirement);
+            let content_check = verify_requirement_content(&parsed_pdf, check);
             Ok(VerificationResult {
                 level: VerificationLevel::ContentVerified,
                 passed: content_check.0,
@@ -193,13 +232,10 @@ fn verify_pdf_content(
     }
 }
 
-/// Verify full ISO compliance with external validation
-fn verify_iso_compliance(
-    pdf_bytes: &[u8],
-    requirement: &IsoRequirement,
-) -> Result<VerificationResult> {
+/// Run the required external structural and PDF/A-1b checks.
+fn verify_iso_compliance(pdf_bytes: &[u8], check: RequirementCheck) -> Result<VerificationResult> {
     // First check content verification
-    let content_result = verify_pdf_content(pdf_bytes, requirement)?;
+    let content_result = verify_pdf_content(pdf_bytes, check)?;
     if !content_result.passed {
         return Ok(content_result);
     }
@@ -207,17 +243,17 @@ fn verify_iso_compliance(
     // Run external validation
     let external_result = validators::validate_external(pdf_bytes)?;
 
-    let all_passed = external_result.qpdf_passed.unwrap_or(false)
-        && external_result.verapdf_passed.unwrap_or(true); // veraPDF optional
+    let all_passed = external_checks_passed(&external_result);
 
     Ok(VerificationResult {
         level: VerificationLevel::IsoCompliant,
         passed: all_passed,
         details: if all_passed {
-            "Passed all external validation checks".to_string()
+            "qpdf structural and veraPDF PDF/A-1b checks passed; not full ISO conformance"
+                .to_string()
         } else {
             format!(
-                "External validation failed: {:?}",
+                "External validation failed or incomplete: {:?}",
                 external_result.error_messages
             )
         },
@@ -225,16 +261,21 @@ fn verify_iso_compliance(
     })
 }
 
+// Missing/failed execution cannot count as optional success at the highest level.
+fn external_checks_passed(result: &ExternalValidationResult) -> bool {
+    result.qpdf_passed == Some(true) && result.verapdf_passed == Some(true)
+}
+
 /// Verify specific requirement content in parsed PDF
 fn verify_requirement_content(
     parsed_pdf: &parser::ParsedPdf,
-    requirement: &IsoRequirement,
+    check: RequirementCheck,
 ) -> (bool, String) {
     // This is where we implement specific verification logic for each ISO requirement
     // For now, we'll implement a few key ones and expand over time
 
-    match requirement.id.as_str() {
-        "7.5.2.1" => {
+    match check {
+        RequirementCheck::Catalog => {
             // Document catalog must have /Type /Catalog
             if let Some(catalog) = &parsed_pdf.catalog {
                 if catalog.contains_key("Type") {
@@ -246,7 +287,7 @@ fn verify_requirement_content(
                 (false, "No document catalog found".to_string())
             }
         }
-        "8.6.3.1" => {
+        RequirementCheck::DeviceRgb => {
             // DeviceRGB color space verification
             if parsed_pdf.uses_device_rgb {
                 (true, "PDF uses DeviceRGB color space correctly".to_string())
@@ -257,7 +298,7 @@ fn verify_requirement_content(
                 )
             }
         }
-        "9.7.1.1" => {
+        RequirementCheck::StandardFonts => {
             // Standard 14 fonts verification
             let standard_fonts = &[
                 "Helvetica",
@@ -278,22 +319,30 @@ fn verify_requirement_content(
                 (false, "No standard fonts found".to_string())
             }
         }
-        _ => {
-            // For requirements we haven't implemented specific verification yet
-            (
-                true,
-                format!(
-                    "Content verification not yet implemented for {}",
-                    requirement.id
-                ),
-            )
-        }
     }
 }
 
 #[cfg(test)]
 mod unit_tests {
     use super::*;
+
+    #[test]
+    fn external_level_requires_both_completed_positive_checks() {
+        for qpdf in [None, Some(false), Some(true)] {
+            for vera in [None, Some(false), Some(true)] {
+                let result = ExternalValidationResult {
+                    qpdf_passed: qpdf,
+                    verapdf_passed: vera,
+                    adobe_preflight_passed: Some(true),
+                    error_messages: vec![],
+                };
+                assert_eq!(
+                    external_checks_passed(&result),
+                    qpdf == Some(true) && vera == Some(true)
+                );
+            }
+        }
+    }
 
     #[test]
     fn test_verification_level_percentage() {
@@ -331,17 +380,17 @@ mod unit_tests {
         assert!(!result.passed);
         assert!(result.details.contains("PDF header"));
 
-        // Test too small PDF
+        // An incomplete header is not a document, regardless of size
         let small_pdf = b"%PDF-1.4\n%%EOF";
         let result = verify_pdf_generation(small_pdf).unwrap();
         assert!(!result.passed);
-        assert!(result.details.contains("too small"));
+        assert!(result.details.contains("structural check"));
 
-        // Test valid PDF (mock)
+        // Padding a header does not create a valid PDF
         let valid_pdf = format!("%PDF-1.4\n{}\n%%EOF", "x".repeat(1000));
         let result = verify_pdf_generation(valid_pdf.as_bytes()).unwrap();
-        assert!(result.passed);
-        assert!(result.details.contains("Valid PDF generated"));
+        assert!(!result.passed);
+        assert!(result.details.contains("structural check"));
     }
 }
 

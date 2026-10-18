@@ -1,0 +1,48 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 98 | Tests: 6 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/forms/signature_field.rs                     6     98
+
+--- Worst Offenders ---
+  test_signature_field_creation (oxidize-pdf-core/src/forms/signature_field.rs:472) - Score: 90
+    i Test 'test_signature_field_creation' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_signature_field_creation' does not call any production code
+  test_signer_info (oxidize-pdf-core/src/forms/signature_field.rs:480) - Score: 100
+    i Test 'test_signer_info' has multiple assertions without diagnostic messages
+  test_sign_field_refuses_without_creating_a_value (oxidize-pdf-core/src/forms/signature_field.rs:491) - Score: 100
+    i Test 'test_sign_field_refuses_without_creating_a_value' has multiple assertions without diagnostic messages
+  test_signature_appearance (oxidize-pdf-core/src/forms/signature_field.rs:503) - Score: 100
+    i Test 'test_signature_appearance' has multiple assertions without diagnostic messages
+    i Test 'test_signature_appearance' uses .unwrap() which silently discards error information
+  test_lock_fields (oxidize-pdf-core/src/forms/signature_field.rs:513) - Score: 100
+    i Test 'test_lock_fields' asserts against a hardcoded constant instead of a computed expected value
+
+--- Details ---
+oxidize-pdf-core/src/forms/signature_field.rs:
+  test_signature_field_creation (line 472) - Score: 90
+    i Test 'test_signature_field_creation' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_signature_field_creation' does not call any production code
+  test_signer_info (line 480) - Score: 100
+    i Test 'test_signer_info' has multiple assertions without diagnostic messages
+  test_sign_field_refuses_without_creating_a_value (line 491) - Score: 100
+    i Test 'test_sign_field_refuses_without_creating_a_value' has multiple assertions without diagnostic messages
+  test_signature_appearance (line 503) - Score: 100
+    i Test 'test_signature_appearance' has multiple assertions without diagnostic messages
+    i Test 'test_signature_appearance' uses .unwrap() which silently discards error information
+  test_lock_fields (line 513) - Score: 100
+    i Test 'test_lock_fields' asserts against a hardcoded constant instead of a computed expected value
+  test_required_field (line 521) - Score: 100
+    i Test 'test_required_field' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_required_field' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

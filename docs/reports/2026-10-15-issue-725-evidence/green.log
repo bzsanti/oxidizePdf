@@ -1,0 +1,11 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue725/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.34s
+     Running tests/issue_725_lazy_document_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_725_lazy_document_test-7eb3a41bc8a37fc9)
+
+running 4 tests
+test missing_objects_remain_errors_on_repeated_access ... ok
+test shared_document_returns_real_values_concurrently ... ok
+test real_page_counts_and_pages ... ok
+test actual_objects_survive_cache_clear_and_eviction ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

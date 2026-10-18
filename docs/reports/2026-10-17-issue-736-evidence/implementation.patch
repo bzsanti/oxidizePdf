@@ -1,0 +1,337 @@
+diff --git a/.github/workflows/interoperability.yml b/.github/workflows/interoperability.yml
+index bb3a96e7..1d33383c 100644
+--- a/.github/workflows/interoperability.yml
++++ b/.github/workflows/interoperability.yml
+@@ -89,6 +89,11 @@ jobs:
+           independent_xml_reader_agrees_on_identifier_forms
+           -- --ignored --exact
+ 
++      - name: Verify 16-bit PNG samples through PDF streams
++        run: >-
++          cargo test --locked -p oxidize-pdf --features external-images
++          --test issue_736_png_depth_test -- --include-ignored
++
+       - name: Verify streaming writer object graph and xref with qpdf
+         run: >-
+           cargo test --locked -p oxidize-pdf --features performance
+diff --git a/TASKS.md b/TASKS.md
+index 7fd404a4..dfefc341 100644
+--- a/TASKS.md
++++ b/TASKS.md
+@@ -1,3 +1,10 @@
++### #736 — profundidad PNG de 16 bits — 2026-10-17
++
++Issue: #736 — fix(images): preserve PNG sample depth or convert samples before declaring 8 bits — https://github.com/bzsanti/oxidizePdf/issues/736
++Estado: activa, reproducción. Prioridad: P1. Responsable: Codex.
++Cierre: preservar muestras de 16 bits y declarar 16 en imagen y máscara; separación de alpha por muestra, controles de 8 bits, PDF escrito/reabierto y qpdf/PNG independientes, QR y CI verde antes de merge.
++Última validación: OPEN y criterios leídos; importación declara siempre 8, separador alpha opera por bytes y SMask declara 8. Siguiente acción: RED con PNG generado por encoder independiente, luego conservar 16 bits sin conversión con pérdida. Palette/tRNS no se declaran completos.
++
+ ## #741 — XMP namespace-aware PDF/A identifiers — 2026-10-17
+ 
+ Issue: #741 — fix(pdfa): recognize RDF attribute-form PDF/A identifiers — https://github.com/bzsanti/oxidizePdf/issues/741
+diff --git a/oxidize-pdf-core/src/graphics/pdf_image.rs b/oxidize-pdf-core/src/graphics/pdf_image.rs
+index b822fbed..b023b3b0 100644
+--- a/oxidize-pdf-core/src/graphics/pdf_image.rs
++++ b/oxidize-pdf-core/src/graphics/pdf_image.rs
+@@ -120,7 +120,7 @@ impl Image {
+                 width: decoded.width,
+                 height: decoded.height,
+                 color_space: ColorSpace::DeviceGray,
+-                bits_per_component: 8,
++                bits_per_component: if decoded.bit_depth == 16 { 16 } else { 8 },
+                 alpha_data: None,
+                 soft_mask: None,
+             }))
+@@ -134,7 +134,7 @@ impl Image {
+             width: decoded.width,
+             height: decoded.height,
+             color_space,
+-            bits_per_component: 8, // Always 8 after decoding
++            bits_per_component: if decoded.bit_depth == 16 { 16 } else { 8 }, // Preserve 16-bit sample precision
+             alpha_data: decoded.alpha_data,
+             soft_mask,
+         })
+@@ -472,7 +472,10 @@ impl Image {
+             mask_dict.set("Width", Object::Integer(mask.width as i64));
+             mask_dict.set("Height", Object::Integer(mask.height as i64));
+             mask_dict.set("ColorSpace", Object::Name("DeviceGray".to_string()));
+-            mask_dict.set("BitsPerComponent", Object::Integer(8));
++            mask_dict.set(
++                "BitsPerComponent",
++                Object::Integer(mask.bits_per_component as i64),
++            );
+             mask_dict.set("Filter", Object::Name("FlateDecode".to_string()));
+ 
+             // Compress alpha channel data
+diff --git a/oxidize-pdf-core/src/graphics/png_decoder.rs b/oxidize-pdf-core/src/graphics/png_decoder.rs
+index 4cb75c68..6174836d 100644
+--- a/oxidize-pdf-core/src/graphics/png_decoder.rs
++++ b/oxidize-pdf-core/src/graphics/png_decoder.rs
+@@ -439,29 +439,19 @@ impl<'a> PngDecoder<'a> {
+     }
+ 
+     fn separate_alpha(&self, data: &[u8]) -> (Vec<u8>, Option<Vec<u8>>) {
+-        match self.color_type {
+-            PngColorType::GrayscaleAlpha => {
+-                let mut gray = Vec::new();
+-                let mut alpha = Vec::new();
+-                for chunk in data.chunks_exact(2) {
+-                    gray.push(chunk[0]);
+-                    alpha.push(chunk[1]);
+-                }
+-                (gray, Some(alpha))
+-            }
+-            PngColorType::RgbAlpha => {
+-                let mut rgb = Vec::new();
+-                let mut alpha = Vec::new();
+-                for chunk in data.chunks_exact(4) {
+-                    rgb.push(chunk[0]);
+-                    rgb.push(chunk[1]);
+-                    rgb.push(chunk[2]);
+-                    alpha.push(chunk[3]);
+-                }
+-                (rgb, Some(alpha))
+-            }
+-            _ => (data.to_vec(), None),
++        if !self.color_type.has_alpha() {
++            return (data.to_vec(), None);
++        }
++        let bytes_per_sample = if self.bit_depth == 16 { 2 } else { 1 };
++        let pixel_bytes = self.color_type.channels() * bytes_per_sample;
++        let color_bytes = pixel_bytes - bytes_per_sample;
++        let mut image = Vec::new();
++        let mut alpha = Vec::new();
++        for pixel in data.chunks_exact(pixel_bytes) {
++            image.extend_from_slice(&pixel[..color_bytes]);
++            alpha.extend_from_slice(&pixel[color_bytes..]);
+         }
++        (image, Some(alpha))
+     }
+ }
+ 
+diff --git a/oxidize-pdf-core/tests/issue_736_png_depth_test.rs b/oxidize-pdf-core/tests/issue_736_png_depth_test.rs
+new file mode 100644
+index 00000000..f3594ca9
+--- /dev/null
++++ b/oxidize-pdf-core/tests/issue_736_png_depth_test.rs
+@@ -0,0 +1,220 @@
++#![cfg(feature = "external-images")]
++use image::{ExtendedColorType, ImageEncoder};
++use oxidize_pdf::parser::{ParseOptions, PdfReader};
++use oxidize_pdf::{Document, Image, Page};
++use std::io::Cursor;
++fn png16(color: ExtendedColorType, samples: &[u16]) -> Vec<u8> {
++    let native: Vec<u8> = samples.iter().flat_map(|s| s.to_ne_bytes()).collect();
++    let mut bytes = Vec::new();
++    image::codecs::png::PngEncoder::new(&mut bytes)
++        .write_image(&native, 2, 1, color)
++        .unwrap();
++    let independent = image::load_from_memory_with_format(&bytes, image::ImageFormat::Png).unwrap();
++    assert_eq!(independent.as_bytes(), native);
++    bytes
++}
++fn be(samples: &[u16]) -> Vec<u8> {
++    samples.iter().flat_map(|s| s.to_be_bytes()).collect()
++}
++fn cases() -> Vec<(ExtendedColorType, Vec<u16>, Vec<u16>, Option<Vec<u16>>)> {
++    vec![
++        (
++            ExtendedColorType::L16,
++            vec![0x1234, 0xabcd],
++            vec![0x1234, 0xabcd],
++            None,
++        ),
++        (
++            ExtendedColorType::La16,
++            vec![0x1234, 0, 0xabcd, 0xffff],
++            vec![0x1234, 0xabcd],
++            Some(vec![0, 0xffff]),
++        ),
++        (
++            ExtendedColorType::Rgb16,
++            vec![0x1234, 0x5678, 0x9abc, 0xabcd, 0xdef0, 0x0123],
++            vec![0x1234, 0x5678, 0x9abc, 0xabcd, 0xdef0, 0x0123],
++            None,
++        ),
++        (
++            ExtendedColorType::Rgba16,
++            vec![
++                0x1234, 0x5678, 0x9abc, 0x2468, 0xabcd, 0xdef0, 0x0123, 0xffff,
++            ],
++            vec![0x1234, 0x5678, 0x9abc, 0xabcd, 0xdef0, 0x0123],
++            Some(vec![0x2468, 0xffff]),
++        ),
++    ]
++}
++#[test]
++fn grayscale_16_bit_sample_boundaries_and_metadata() {
++    let img = Image::from_png_data(png16(ExtendedColorType::L16, &[0x1234, 0xabcd])).unwrap();
++    assert_eq!(img.bits_per_component(), 16);
++    assert_eq!(img.data(), &[0x12, 0x34, 0xab, 0xcd]);
++}
++#[test]
++fn rgb_and_alpha_samples_keep_all_sixteen_bits() {
++    for (color, samples, expected, alpha) in cases() {
++        let img = Image::from_png_data(png16(color, &samples)).unwrap();
++        assert_eq!(img.bits_per_component(), 16, "{color:?}");
++        assert_eq!(img.data(), be(&expected), "{color:?}");
++        assert_eq!(
++            img.alpha_data().map(<[u8]>::to_vec),
++            alpha.as_ref().map(|a| be(a)),
++            "{color:?}"
++        );
++        if let Some(alpha) = alpha {
++            let mask = img.soft_mask().unwrap();
++            assert_eq!(mask.bits_per_component(), 16);
++            assert_eq!(mask.data(), be(&alpha));
++        } else {
++            assert!(img.soft_mask().is_none());
++        }
++    }
++}
++#[test]
++fn eight_bit_gray_rgb_and_alpha_controls() {
++    for (color, samples, expected, alpha) in [
++        (
++            ExtendedColorType::L8,
++            vec![0x12, 0xab],
++            vec![0x12, 0xab],
++            None,
++        ),
++        (
++            ExtendedColorType::La8,
++            vec![0x12, 0, 0xab, 255],
++            vec![0x12, 0xab],
++            Some(vec![0, 255]),
++        ),
++        (
++            ExtendedColorType::Rgb8,
++            vec![1, 2, 3, 4, 5, 6],
++            vec![1, 2, 3, 4, 5, 6],
++            None,
++        ),
++        (
++            ExtendedColorType::Rgba8,
++            vec![1, 2, 3, 0, 4, 5, 6, 255],
++            vec![1, 2, 3, 4, 5, 6],
++            Some(vec![0, 255]),
++        ),
++    ] {
++        let mut png = Vec::new();
++        image::codecs::png::PngEncoder::new(&mut png)
++            .write_image(&samples, 2, 1, color)
++            .unwrap();
++        let img = Image::from_png_data(png).unwrap();
++        assert_eq!(img.bits_per_component(), 8);
++        assert_eq!(img.data(), expected);
++        assert_eq!(img.alpha_data().map(<[u8]>::to_vec), alpha);
++    }
++}
++fn written_pdf(img: Image) -> Vec<u8> {
++    let mut page = Page::new(100., 100.);
++    page.add_image("Sample", img);
++    page.draw_image("Sample", 0., 0., 20., 10.).unwrap();
++    let mut doc = Document::new();
++    doc.add_page(page);
++    doc.to_bytes().unwrap()
++}
++fn reopened(bytes: &[u8], expected: &[u8], alpha: Option<&[u8]>) -> Vec<(u32, Vec<u8>)> {
++    let doc = PdfReader::new(Cursor::new(bytes)).unwrap().into_document();
++    let page = doc.get_page(0).unwrap();
++    let resources = doc.get_page_resources(&page).unwrap().unwrap();
++    let xobjects = doc.resolve(resources.get("XObject").unwrap()).unwrap();
++    let object = xobjects.as_dict().unwrap().0.values().next().unwrap();
++    let id = object.as_reference().unwrap().0;
++    let main = doc.resolve(object).unwrap();
++    let main = main.as_stream().unwrap();
++    assert_eq!(
++        main.dict.get("BitsPerComponent").unwrap().as_integer(),
++        Some(16)
++    );
++    assert_eq!(main.decode(&ParseOptions::default()).unwrap(), expected);
++    let mut objects = vec![(id, expected.to_vec())];
++    if let Some(alpha) = alpha {
++        let reference = main.dict.get("SMask").unwrap();
++        let id = reference.as_reference().unwrap().0;
++        let mask = doc.resolve(reference).unwrap();
++        let mask = mask.as_stream().unwrap();
++        assert_eq!(
++            mask.dict.get("BitsPerComponent").unwrap().as_integer(),
++            Some(16)
++        );
++        assert_eq!(mask.decode(&ParseOptions::default()).unwrap(), alpha);
++        objects.push((id, alpha.to_vec()));
++    }
++    objects
++}
++#[test]
++fn written_and_reopened_pdf_preserves_main_and_mask_samples() {
++    for (color, samples, expected, alpha) in cases() {
++        let pdf = written_pdf(Image::from_png_data(png16(color, &samples)).unwrap());
++        reopened(
++            &pdf,
++            &be(&expected),
++            alpha.as_ref().map(|a| be(a)).as_deref(),
++        );
++    }
++}
++#[test]
++#[ignore = "requires qpdf; explicitly run in interoperability CI"]
++fn independent_qpdf_decodes_written_sixteen_bit_streams() {
++    let dir = tempfile::tempdir().unwrap();
++    for (index, (color, samples, expected, alpha)) in cases().into_iter().enumerate() {
++        let pdf = written_pdf(Image::from_png_data(png16(color, &samples)).unwrap());
++        let objects = reopened(
++            &pdf,
++            &be(&expected),
++            alpha.as_ref().map(|a| be(a)).as_deref(),
++        );
++        let path = dir.path().join(format!("image-{index}.pdf"));
++        std::fs::write(&path, pdf).unwrap();
++        for (id, expected) in objects {
++            let output = std::process::Command::new("qpdf")
++                .arg(format!("--show-object={id}"))
++                .arg("--filtered-stream-data")
++                .arg(&path)
++                .output()
++                .unwrap();
++            assert!(
++                output.status.success(),
++                "{}",
++                String::from_utf8_lossy(&output.stderr)
++            );
++            assert_eq!(output.stdout, expected);
++            let dictionary = std::process::Command::new("qpdf")
++                .arg(format!("--show-object={id}"))
++                .arg(&path)
++                .output()
++                .unwrap();
++            assert!(dictionary.status.success());
++            assert!(String::from_utf8(dictionary.stdout)
++                .unwrap()
++                .contains("/BitsPerComponent 16"));
++        }
++    }
++}
++
++#[test]
++fn oversized_sixteen_bit_geometry_returns_error_without_panicking() {
++    let mut png = png16(ExtendedColorType::Rgba16, &[0; 8]);
++    png[16..20].copy_from_slice(&0x7fff_ffffu32.to_be_bytes());
++    png[20..24].copy_from_slice(&0x7fff_ffffu32.to_be_bytes());
++    let mut crc = 0xffff_ffffu32;
++    for &byte in &png[12..29] {
++        crc ^= u32::from(byte);
++        for _ in 0..8 {
++            crc = if crc & 1 != 0 {
++                (crc >> 1) ^ 0xedb8_8320
++            } else {
++                crc >> 1
++            };
++        }
++    }
++    png[29..33].copy_from_slice(&(!crc).to_be_bytes());
++    let result = std::panic::catch_unwind(|| Image::from_png_data(png));
++    assert!(result.is_ok(), "invalid large image must not panic");
++    assert!(result.unwrap().is_err());
++}

@@ -1,0 +1,38 @@
+    Blocking waiting for file lock on build directory
+   Compiling equivalent v1.0.2
+   Compiling allocator-api2 v0.2.21
+   Compiling foldhash v0.1.5
+   Compiling hashbrown v0.15.5
+   Compiling whatlang v0.18.0
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue740/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 41s
+     Running tests/issue_740_source_spans_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_740_source_spans_test-2f6dfc9217cfc3f3)
+
+running 7 tests
+test empty_and_plain_text_controls ... ok
+test crossing_pages_uses_supplied_order_and_skips_empty_pages ... ok
+test empty_pages_still_count_in_source_coordinates ... ok
+test sparse_page_ids_are_not_synthesized ... ok
+test unicode_whitespace_offsets_refer_to_original_characters ... ok
+test source_slices_reconstruct_chunks_across_sentence_boundaries ... ok
+test repeated_overlap_keeps_third_page_provenance ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/language_detection_test.rs (/tmp/oxidize-issue724/target/debug/deps/language_detection_test-a63c35d975e1a35b)
+
+running 11 tests
+test document_language_empty_slice_is_none ... ok
+test document_language_none_when_no_chunk_has_language ... ok
+test document_language_skips_chunks_without_language ... ok
+test document_language_picks_dominant_by_length ... ok
+test detects_hebrew_synthetic ... ok
+test document_language_reliable_if_any_winner_chunk_reliable ... ok
+test detects_arabic_synthetic ... ok
+test no_detection_when_flag_off ... ok
+test empty_text_yields_no_chunks_and_short_text_is_unreliable ... ok
+test detects_english ... ok
+test detects_spanish ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

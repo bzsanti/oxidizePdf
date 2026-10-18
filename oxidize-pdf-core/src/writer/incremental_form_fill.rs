@@ -64,6 +64,12 @@ impl<'a> IncrementalFormFiller<'a> {
     /// Fill multiple fields in a single incremental update (one parse, one
     /// appended section). Field names are fully qualified
     /// (e.g. `"address.street"`).
+    ///
+    /// # Errors
+    /// Returns [`PdfError::PermissionDenied`] for a field whose effective `/Ff`
+    /// has ReadOnly set (including inherited flags). Malformed flag values or
+    /// inheritance return [`PdfError::InvalidStructure`]. A failed batch returns
+    /// no output; the original bytes are never modified.
     pub fn fill_many(&self, fields: &[(&str, &str)]) -> Result<Vec<u8>> {
         fill_many_impl(self.base_bytes, fields)
     }
@@ -191,6 +197,73 @@ fn collect_fields(
     Ok(())
 }
 
+/// Resolve the nearest non-null /Ff through the field's /Parent chain.
+/// Flags are inherited as a whole integer, not ORed with ancestor flags.
+/// Malformed or cyclic inheritance cannot silently authorize a write.
+fn effective_field_flags(
+    reader: &mut PdfReader<Cursor<&[u8]>>,
+    field: &PdfDictionary,
+) -> Result<u32> {
+    let mut node = field.clone();
+    let mut parents = std::collections::HashSet::new();
+    for _ in 0..MAX_FIELD_DEPTH {
+        let mut flags = node.get("Ff").cloned().unwrap_or(PdfObject::Null);
+        let mut references = std::collections::HashSet::new();
+        while let PdfObject::Reference(n, g) = flags {
+            if references.len() >= usize::from(MAX_FIELD_DEPTH) || !references.insert((n, g)) {
+                return Err(PdfError::InvalidStructure(
+                    "cyclic or excessive /Ff references".into(),
+                ));
+            }
+            flags = reader
+                .get_object(n, g)
+                .map_err(|e| PdfError::InvalidStructure(format!("resolve /Ff: {e}")))?
+                .clone();
+        }
+        match flags {
+            PdfObject::Integer(value) => {
+                return u32::try_from(value).map_err(|_| {
+                    PdfError::InvalidStructure(
+                        "field /Ff must be an unsigned 32-bit integer".into(),
+                    )
+                })
+            }
+            PdfObject::Null => {}
+            _ => {
+                return Err(PdfError::InvalidStructure(
+                    "field /Ff must be an integer".into(),
+                ))
+            }
+        }
+        match node.get("Parent") {
+            None | Some(PdfObject::Null) => return Ok(0),
+            Some(PdfObject::Reference(n, g)) => {
+                if !parents.insert((*n, *g)) {
+                    return Err(PdfError::InvalidStructure(
+                        "cyclic field /Parent chain".into(),
+                    ));
+                }
+                node = reader
+                    .get_object(*n, *g)
+                    .map_err(|e| PdfError::InvalidStructure(format!("resolve field /Parent: {e}")))?
+                    .as_dict()
+                    .cloned()
+                    .ok_or_else(|| {
+                        PdfError::InvalidStructure("field /Parent is not a dictionary".into())
+                    })?;
+            }
+            _ => {
+                return Err(PdfError::InvalidStructure(
+                    "field /Parent must be an indirect reference".into(),
+                ))
+            }
+        }
+    }
+    Err(PdfError::InvalidStructure(
+        "field /Parent chain exceeds maximum depth".into(),
+    ))
+}
+
 // ---------------------------------------------------------------------------
 // Incremental update assembly
 // ---------------------------------------------------------------------------
@@ -240,6 +313,11 @@ fn fill_many_impl(base_bytes: &[u8], fields: &[(&str, &str)]) -> Result<Vec<u8>>
             .ok_or_else(|| {
                 PdfError::InvalidStructure(format!("field {name} is not a dictionary"))
             })?;
+        if effective_field_flags(&mut reader, &field_dict)? & 1 != 0 {
+            return Err(PdfError::PermissionDenied(format!(
+                "field {name} is read-only"
+            )));
+        }
         field_dict.insert(
             "V".to_string(),
             PdfObject::String(PdfString(value.as_bytes().to_vec())),

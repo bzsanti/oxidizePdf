@@ -8,6 +8,7 @@ mod incremental_free_text;
 mod incremental_geometric;
 mod incremental_highlights;
 mod incremental_ink;
+mod incremental_objects;
 mod incremental_ocr_layer;
 mod incremental_tagged_pdf;
 mod incremental_text_notes;
@@ -39,6 +40,7 @@ pub use incremental_ink::{
     IncrementalInkEditor, Ink, InkColor, InkId, InkMutation, InkOpacity, InkStroke, InkUpdate,
     InkWidth,
 };
+pub use incremental_objects::IncrementalObjectEditor;
 pub use incremental_ocr_layer::{
     IncrementalOcrLayerEditor, OcrLayerFragment, OcrLayerPage, OcrLayerPlan, OcrLayerUpdate,
 };

@@ -1,0 +1,5 @@
+{
+  "oxidize-pdf-core/src/writer/incremental_tagged_pdf.rs": "c389b87a216466e31fc43fba4806e663e00f751c407287a4dd7cae70df251d9e",
+  "oxidize-pdf-core/tests/issue_762_ordered_mutations_test.rs": "b6b3072364e6e4dcddd4379e40b210a4cf1d8069b703c16d3e69f0c37e0dc30d",
+  ".github/workflows/interoperability.yml": "4d7cf001d3f7f83a200d3e58d77d6d05225140b4aaef1bf88b17feba408008ab"
+}

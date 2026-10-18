@@ -1,0 +1,11 @@
+{
+  "pr": 764,
+  "url": "https://github.com/bzsanti/oxidizePdf/pull/764",
+  "state": "OPEN",
+  "draft": true,
+  "base": "develop",
+  "head": "d1384445d6d68479d7d09e0082889226b1c3cc30",
+  "ci": "30 IN_PROGRESS, 2 SKIPPED at initial publication verification; not yet green",
+  "merged": false,
+  "release_published": false
+}

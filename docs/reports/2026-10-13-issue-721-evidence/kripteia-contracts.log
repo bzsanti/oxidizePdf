@@ -1,0 +1,51 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...df-core/tests/issue_721_unverified_requirements_test.rs        7    100
+
+--- Worst Offenders ---
+  unknown_requirements_are_unverified_at_every_requested_level (oxidize-pdf-core/tests/issue_721_unverified_requirements_test.rs:22) - Score: 100
+    i Test 'unknown_requirements_are_unverified_at_every_requested_level' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unknown_requirements_are_unverified_at_every_requested_level' uses .unwrap() which silently discards error information
+  unavailable_check_is_distinct_from_invalid_input (oxidize-pdf-core/tests/issue_721_unverified_requirements_test.rs:46) - Score: 100
+    i Test 'unavailable_check_is_distinct_from_invalid_input' has multiple assertions without diagnostic messages
+    i Test 'unavailable_check_is_distinct_from_invalid_input' uses .unwrap() which silently discards error information
+  implemented_catalog_check_still_passes_valid_pdf (oxidize-pdf-core/tests/issue_721_unverified_requirements_test.rs:63) - Score: 100
+    i Test 'implemented_catalog_check_still_passes_valid_pdf' uses .unwrap() which silently discards error information
+  implemented_checks_fail_when_required_content_is_absent (oxidize-pdf-core/tests/issue_721_unverified_requirements_test.rs:74) - Score: 100
+    i Test 'implemented_checks_fail_when_required_content_is_absent' uses .unwrap() which silently discards error information
+  implemented_requirement_can_still_be_requested_as_not_implemented (oxidize-pdf-core/tests/issue_721_unverified_requirements_test.rs:89) - Score: 100
+    i Test 'implemented_requirement_can_still_be_requested_as_not_implemented' has multiple assertions without diagnostic messages
+    i Test 'implemented_requirement_can_still_be_requested_as_not_implemented' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_721_unverified_requirements_test.rs:
+  unknown_requirements_are_unverified_at_every_requested_level (line 22) - Score: 100
+    i Test 'unknown_requirements_are_unverified_at_every_requested_level' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'unknown_requirements_are_unverified_at_every_requested_level' uses .unwrap() which silently discards error information
+  unavailable_check_is_distinct_from_invalid_input (line 46) - Score: 100
+    i Test 'unavailable_check_is_distinct_from_invalid_input' has multiple assertions without diagnostic messages
+    i Test 'unavailable_check_is_distinct_from_invalid_input' uses .unwrap() which silently discards error information
+  implemented_catalog_check_still_passes_valid_pdf (line 63) - Score: 100
+    i Test 'implemented_catalog_check_still_passes_valid_pdf' uses .unwrap() which silently discards error information
+  implemented_checks_fail_when_required_content_is_absent (line 74) - Score: 100
+    i Test 'implemented_checks_fail_when_required_content_is_absent' uses .unwrap() which silently discards error information
+  implemented_requirement_can_still_be_requested_as_not_implemented (line 89) - Score: 100
+    i Test 'implemented_requirement_can_still_be_requested_as_not_implemented' has multiple assertions without diagnostic messages
+    i Test 'implemented_requirement_can_still_be_requested_as_not_implemented' uses .unwrap() which silently discards error information
+  unknown_content_check_cannot_pass_a_valid_pdf (line 100) - Score: 100
+    i Test 'unknown_content_check_cannot_pass_a_valid_pdf' uses .unwrap() which silently discards error information
+  implemented_color_and_font_checks_still_pass_present_content (line 114) - Score: 100
+    i Test 'implemented_color_and_font_checks_still_pass_present_content' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

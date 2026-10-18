@@ -1,0 +1,90 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 23 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...-issue738/oxidize-pdf-core/src/dashboard/pivot_table.rs       23     97
+
+--- Worst Offenders ---
+  test_pivot_table_new (/tmp/oxidize-issue738/oxidize-pdf-core/src/dashboard/pivot_table.rs:195) - Score: 90
+    i Test 'test_pivot_table_new' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pivot_table_new' does not call any production code
+  test_pivot_table_new_empty (/tmp/oxidize-issue738/oxidize-pdf-core/src/dashboard/pivot_table.rs:203) - Score: 90
+    - Test 'test_pivot_table_new_empty' does not call any production code
+  test_pivot_table_with_config (/tmp/oxidize-issue738/oxidize-pdf-core/src/dashboard/pivot_table.rs:210) - Score: 90
+    i Test 'test_pivot_table_with_config' has multiple assertions without diagnostic messages
+    - Test 'test_pivot_table_with_config' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+  test_pivot_table_aggregate_by_no_duplicates (/tmp/oxidize-issue738/oxidize-pdf-core/src/dashboard/pivot_table.rs:274) - Score: 90
+    i Test 'test_pivot_table_aggregate_by_no_duplicates' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pivot_table_aggregate_by_no_duplicates' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_computed_pivot_data_structure (/tmp/oxidize-issue738/oxidize-pdf-core/src/dashboard/pivot_table.rs:370) - Score: 90
+    i Test 'test_computed_pivot_data_structure' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_computed_pivot_data_structure' has multiple assertions without diagnostic messages
+    - Test 'test_computed_pivot_data_structure' does not call any production code
+
+--- Details ---
+/tmp/oxidize-issue738/oxidize-pdf-core/src/dashboard/pivot_table.rs:
+  test_pivot_table_new (line 195) - Score: 90
+    i Test 'test_pivot_table_new' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pivot_table_new' does not call any production code
+  test_pivot_table_new_empty (line 203) - Score: 90
+    - Test 'test_pivot_table_new_empty' does not call any production code
+  test_pivot_table_with_config (line 210) - Score: 90
+    i Test 'test_pivot_table_with_config' has multiple assertions without diagnostic messages
+    - Test 'test_pivot_table_with_config' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+  test_pivot_table_aggregate_by_multiple (line 240) - Score: 100
+    i Test 'test_pivot_table_aggregate_by_multiple' has multiple assertions without diagnostic messages
+  test_pivot_table_aggregate_by_invalid_ignored (line 262) - Score: 100
+    i Test 'test_pivot_table_aggregate_by_invalid_ignored' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pivot_table_aggregate_by_invalid_ignored' has multiple assertions without diagnostic messages
+  test_pivot_table_aggregate_by_no_duplicates (line 274) - Score: 90
+    i Test 'test_pivot_table_aggregate_by_no_duplicates' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_pivot_table_aggregate_by_no_duplicates' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_pivot_config_default (line 292) - Score: 100
+    i Test 'test_pivot_config_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pivot_config_default' has multiple assertions without diagnostic messages
+  test_aggregate_function_parse_count (line 308) - Score: 100
+    i Test 'test_aggregate_function_parse_count' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_count' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_sum (line 317) - Score: 100
+    i Test 'test_aggregate_function_parse_sum' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_sum' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_average (line 326) - Score: 100
+    i Test 'test_aggregate_function_parse_average' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_average' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_min (line 338) - Score: 100
+    i Test 'test_aggregate_function_parse_min' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_min' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_max (line 347) - Score: 100
+    i Test 'test_aggregate_function_parse_max' has multiple assertions without diagnostic messages
+    i Test 'test_aggregate_function_parse_max' uses .unwrap() which silently discards error information
+  test_aggregate_function_parse_invalid (line 356) - Score: 100
+    i Test 'test_aggregate_function_parse_invalid' has multiple assertions without diagnostic messages
+  test_computed_pivot_data_structure (line 370) - Score: 90
+    i Test 'test_computed_pivot_data_structure' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_computed_pivot_data_structure' has multiple assertions without diagnostic messages
+    - Test 'test_computed_pivot_data_structure' does not call any production code
+  test_computed_pivot_data_no_totals (line 387) - Score: 90
+    - Test 'test_computed_pivot_data_no_totals' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_pivot_table_builder_chain (line 408) - Score: 100
+    i Test 'test_pivot_table_builder_chain' asserts against a hardcoded constant instead of a computed expected value
+  test_component_span (line 417) - Score: 100
+    i Test 'test_component_span' asserts against a hardcoded constant instead of a computed expected value
+  test_component_set_span (line 425) - Score: 100
+    i Test 'test_component_set_span' asserts against a hardcoded constant instead of a computed expected value
+  test_component_type (line 433) - Score: 100
+    i Test 'test_component_type' asserts against a hardcoded constant instead of a computed expected value
+  test_complexity_score (line 439) - Score: 100
+    i Test 'test_complexity_score' asserts against a hardcoded constant instead of a computed expected value
+  test_preferred_height (line 445) - Score: 100
+    i Test 'test_preferred_height' asserts against a hardcoded constant instead of a computed expected value
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

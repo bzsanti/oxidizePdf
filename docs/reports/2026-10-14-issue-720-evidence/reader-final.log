@@ -1,0 +1,94 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue730/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 2m 45s
+     Running unittests src/lib.rs (target/debug/deps/oxidize_pdf-ff79de59d27c30be)
+
+running 85 tests
+test parser::reader::tests::rigorous::test_find_byte_pattern_at_start ... ok
+test parser::reader::tests::rigorous::test_find_byte_pattern_basic ... ok
+test parser::reader::tests::rigorous::test_find_byte_pattern_not_found ... ok
+test parser::reader::tests::rigorous::test_is_encrypted_on_unencrypted ... ok
+test parser::reader::tests::rigorous::test_info_none_when_absent ... ok
+test parser::reader::tests::rigorous::test_clear_parse_context ... ok
+test parser::reader::tests::rigorous::test_info_fields_when_present ... ok
+test parser::reader::tests::rigorous::test_catalog_has_required_fields ... ok
+test parser::reader::tests::rigorous::test_get_all_pages_empty_pdf ... ok
+test parser::reader::tests::rigorous::test_get_all_pages_with_info ... ok
+test parser::reader::tests::rigorous::test_into_document_consumes_reader ... ok
+test parser::reader::tests::rigorous::test_is_unlocked_on_unencrypted ... ok
+test parser::reader::tests::rigorous::test_reader_empty_file ... ok
+test parser::reader::tests::rigorous::test_page_count_minimal_pdf ... ok
+test parser::reader::tests::rigorous::test_metadata_minimal_pdf ... ok
+test parser::reader::tests::rigorous::test_pages_returns_pages_dict ... ok
+test parser::reader::tests::rigorous::test_parse_context_mut_accessible ... ok
+test parser::reader::tests::rigorous::test_page_count_with_info_pdf ... ok
+test parser::reader::tests::rigorous::test_metadata_with_info ... ok
+test parser::reader::tests::rigorous::test_reader_get_nonexistent_object ... ok
+test parser::reader::tests::rigorous::test_reader_invalid_pdf_header ... ok
+test parser::reader::tests::rigorous::test_reader_malformed_version ... ok
+test parser::reader::tests::rigorous::test_reader_get_object_wrong_generation ... ok
+test parser::reader::tests::rigorous::test_reader_truncated_header ... ok
+test parser::reader::tests::rigorous::test_reader_with_strict_options ... ok
+test parser::reader::tests::rigorous::test_resolve_direct_object ... ok
+test parser::reader::tests::rigorous::test_reader_options_accessible ... ok
+test parser::reader::tests::rigorous::test_reader_with_lenient_options ... ok
+test parser::reader::tests::rigorous::test_resolve_stream_length_direct_integer ... ok
+test parser::reader::tests::rigorous::test_resolve_reference ... ok
+test parser::reader::tests::test_document_metadata_clone ... ok
+test parser::reader::tests::rigorous::test_try_empty_password_on_unencrypted ... ok
+test parser::reader::tests::test_document_metadata_default ... ok
+test parser::reader::tests::rigorous::test_version_exact_values ... ok
+test parser::reader::tests::rigorous::test_resolve_stream_length_negative_integer ... ok
+test parser::reader::tests::rigorous::test_version_pdf_20 ... ok
+test parser::reader::tests::rigorous::test_resolve_stream_length_non_integer ... ok
+test parser::reader::tests::test_document_metadata_struct ... ok
+test parser::reader::tests::test_parse_options_clone ... ok
+test parser::reader::tests::test_issue720_disabled_reconstruction_preserves_verification_boundary ... ok
+test parser::reader::tests::test_parse_options_default ... ok
+test parser::reader::tests::test_issue720_stream_length_cannot_allocate_beyond_file ... ok
+test parser::reader::tests::test_issue720_stream_recovery_rejects_stale_length_within_file ... ok
+test parser::reader::tests::test_reader_cache_behavior ... ok
+test parser::reader::tests::test_reader_catalog ... ok
+test parser::reader::tests::test_lenient_stream_parsing ... ok
+test parser::reader::tests::test_reader_empty_pdf ... ok
+test parser::reader::tests::test_reader_construction ... ok
+test parser::reader::tests::test_reader_corrupt_xref ... ok
+test parser::reader::tests::test_reader_encryption_handler_access ... ok
+test parser::reader::tests::test_reader_encryption_error_handling ... ok
+test parser::reader::tests::test_reader_encryption_detection ... ok
+test parser::reader::tests::test_reader_different_versions ... ok
+test parser::reader::tests::test_reader_encryption_integration_edge_cases ... ok
+test parser::reader::tests::test_reader_encryption_methods_unencrypted ... ok
+test parser::reader::tests::test_reader_encryption_state_consistency ... ok
+test parser::reader::tests::test_issue720_recovery_uses_bytes_and_reports_repair ... ok
+test parser::reader::tests::test_reader_encryption_with_options ... ok
+test parser::reader::tests::test_reader_get_free_object ... ok
+test parser::reader::tests::test_reader_get_invalid_object ... ok
+test parser::reader::tests::test_reader_get_object ... ok
+test parser::reader::tests::test_reader_info_none ... ok
+test parser::reader::tests::test_reader_invalid_pdf ... ok
+test parser::reader::tests::test_reader_info_present ... ok
+test parser::reader::tests::test_reader_metadata ... ok
+test parser::reader::tests::test_reader_into_document ... ok
+test parser::reader::tests::test_reader_metadata_empty ... ok
+test parser::reader::tests::test_reader_missing_trailer ... ok
+test parser::reader::tests::test_reader_multiple_password_attempts ... ok
+test parser::reader::tests::test_reader_object_number_mismatch ... ok
+test parser::reader::tests::test_reader_page_count ... ok
+test parser::reader::tests::test_reader_pages_dict ... ok
+test parser::reader::tests::test_reader_pdf_with_binary_data ... ok
+test parser::reader::tests::test_reader_resolve_non_reference ... ok
+test parser::reader::tests::test_reader_version ... ok
+test parser::reader::tests::test_reader_resolve_reference ... ok
+test parser::reader::tests::test_reader_with_options ... ok
+test parser::reader::tests::test_reader_wrong_generation ... ok
+test parser::reader::tests::test_reader_trailer_validation_error ... ok
+test parser::reader::tests::test_reconstruct_preserves_filter_array_and_decodeparms ... ok
+test parser::reader::tests::test_signature_verification_reads_full_file_intentionally ... ok
+test parser::reader::tests::test_reconstruct_malformed_dict_rejects_instead_of_discarding_keys ... ok
+test parser::reader::tests::test_reconstruct_preserves_non_flate_filter ... ok
+test parser::reader::tests::test_find_page_objects_bounded ... ok
+test parser::reader::tests::test_extract_stream_manually_bounded_honors_length ... ok
+
+test result: ok. 85 passed; 0 failed; 0 ignored; 0 measured; 6738 filtered out; finished in 0.12s
+

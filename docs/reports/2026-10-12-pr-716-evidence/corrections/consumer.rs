@@ -1,0 +1,2 @@
+use oxidize_pdf::{parser::{PdfReader,ParseOptions},text::TextExtractor};
+fn main(){for path in std::env::args().skip(1){for enabled in [false,true]{let result=std::panic::catch_unwind(||{let bytes=std::fs::read(&path).unwrap();let d=PdfReader::new_with_options(std::io::Cursor::new(bytes),ParseOptions::strict()).unwrap().into_document();TextExtractor::new().with_symbolic_truetype_fallback(enabled).extract_from_page(&d,0).map(|r|r.text)});println!("{} enabled={} => {:?}",path,enabled,result);}}}

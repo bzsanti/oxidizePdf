@@ -1,0 +1,7 @@
+    Finished `test` profile [unoptimized] target(s) in 0.18s
+     Running tests/issue_738_pivot_contract_test.rs (/tmp/oxidize-issue724/target/debug/deps/issue_738_pivot_contract_test-2b91ac3c9676cc99)
+
+running 1 test
+test independent_output_oracle ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.08s

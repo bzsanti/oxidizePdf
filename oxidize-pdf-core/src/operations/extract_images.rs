@@ -5,7 +5,8 @@
 
 use super::{OperationError, OperationResult};
 use crate::graphics::ImageFormat;
-use crate::parser::objects::{PdfArray, PdfName, PdfObject, PdfStream};
+use crate::parser::content::{ContentOperation, ContentParser};
+use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfStream, PdfString};
 use crate::parser::{PdfDocument, PdfReader};
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -451,7 +452,13 @@ impl<R: Read + Seek> ImageExtractor<R> {
         budget.check_pixels(width, height)?;
         let color_space = stream.dict.get("ColorSpace");
         let bits = match stream.dict.get("BitsPerComponent") {
-            Some(PdfObject::Integer(bits)) => *bits as u8,
+            Some(PdfObject::Integer(bits)) if matches!(*bits, 1 | 2 | 4 | 8 | 16) => *bits as u8,
+            Some(PdfObject::Integer(bits)) => {
+                return Err(OperationError::ParseError(format!(
+                    "Unsupported image sample depth: {bits}"
+                ))
+                .into());
+            }
             _ => 8,
         };
         let smask = self.extract_smask_alpha(&stream.dict, width, height);
@@ -515,43 +522,121 @@ impl<R: Read + Seek> ImageExtractor<R> {
     where
         F: FnMut(ExtractedImageData) -> ImageExtractionResult<()>,
     {
-        let mut position = 0;
-        while let Some(begin) = Self::find_bytes(stream_data, b"BI", position) {
-            let Some(id) = Self::find_bytes(stream_data, b"ID", begin + 2) else {
-                break;
+        let operations = ContentParser::parse_strict(stream_data)
+            .map_err(|error| OperationError::ParseError(error.to_string()))?;
+        for operation in operations {
+            let ContentOperation::InlineImage { params, data } = operation else {
+                continue;
             };
-            let Some(end) = Self::find_bytes(stream_data, b"EI", id + 2) else {
-                break;
+            let dimension = |key: &str| -> OperationResult<u32> {
+                params
+                    .get(key)
+                    .and_then(crate::objects::Object::as_integer)
+                    .and_then(|value| u32::try_from(value).ok())
+                    .filter(|value| *value > 0)
+                    .ok_or_else(|| {
+                        OperationError::ParseError(format!("Invalid or missing inline image {key}"))
+                    })
             };
+            let (width, height) = (dimension("Width")?, dimension("Height")?);
+            if self
+                .options
+                .min_size
+                .is_some_and(|minimum| width < minimum || height < minimum)
+            {
+                continue;
+            }
             budget.check_image_slot()?;
-            let dictionary = String::from_utf8_lossy(&stream_data[begin + 2..id]);
-            let (width, height) = self.parse_inline_image_dict(dictionary.trim());
             budget.check_pixels(width, height)?;
-            let data = stream_data[id + 2..end].to_vec();
-            budget.consume(data.len())?;
-            let format = self
-                .detect_image_format_from_data(&data)
-                .unwrap_or(ImageFormat::Raw);
-            visitor(ExtractedImageData {
+            let mut dict = PdfDictionary::new();
+            for (key, value) in &params {
+                dict.insert(key.clone(), Self::inline_parameter(value)?);
+            }
+            let mut stream = PdfStream { dict, data };
+            // Keep unsupported encodings explicitly raw. Missing color metadata
+            // and image masks must not be guessed to be ordinary RGB samples.
+            // DCT bytes are opaque here: the PDF filter declaration alone does
+            // not prove that they form a valid JPEG. Preserve them as raw.
+            let opaque_dct = match stream.dict.get("Filter") {
+                Some(PdfObject::Name(name)) => name.0 == "DCTDecode",
+                Some(PdfObject::Array(filters)) => filters
+                    .0
+                    .iter()
+                    .any(|filter| filter.as_name().is_some_and(|name| name.0 == "DCTDecode")),
+                _ => false,
+            };
+            let raw = opaque_dct
+                || !params.contains_key("ColorSpace")
+                || params.contains_key("ImageMask")
+                || params.contains_key("Decode");
+            let prepared = if raw {
+                None
+            } else {
+                // The ordinary image path dispatches by its first filter. Decode
+                // ASCII transport filters here, retaining the same sample encoder.
+                let transport = stream.dict.get("Filter").is_some_and(|filter| {
+                    let first = match filter {
+                        PdfObject::Array(a) => a.0.first(),
+                        _ => Some(filter),
+                    };
+                    first.and_then(PdfObject::as_name).is_some_and(|name| {
+                        matches!(
+                            name.0.as_str(),
+                            "ASCIIHexDecode" | "ASCII85Decode" | "RunLengthDecode"
+                        )
+                    })
+                });
+                if transport {
+                    stream.data = self.decode_image_stream(&stream)?;
+                    stream.dict.0.remove(&PdfName("Filter".into()));
+                    stream.dict.0.remove(&PdfName("DecodeParms".into()));
+                }
+                self.prepare_image_data(&stream, page_number, *image_index, budget)?
+            };
+            let image = prepared.unwrap_or(ExtractedImageData {
                 page_number,
                 image_index: *image_index,
                 width,
                 height,
-                format,
-                data,
-            })?;
+                format: ImageFormat::Raw,
+                data: stream.data,
+            });
+            budget.consume(image.data.len())?;
+            visitor(image)?;
             *image_index += 1;
-            position = end + 2;
         }
         Ok(())
     }
 
-    fn find_bytes(haystack: &[u8], needle: &[u8], start: usize) -> Option<usize> {
-        haystack
-            .get(start..)?
-            .windows(needle.len())
-            .position(|window| window == needle)
-            .map(|position| start + position)
+    fn inline_parameter(value: &crate::objects::Object) -> OperationResult<PdfObject> {
+        use crate::objects::Object;
+        Ok(match value {
+            Object::Null => PdfObject::Null,
+            Object::Boolean(v) => PdfObject::Boolean(*v),
+            Object::Integer(v) => PdfObject::Integer(*v),
+            Object::Real(v) => PdfObject::Real(*v),
+            Object::Name(v) => PdfObject::Name(PdfName(v.clone())),
+            Object::String(v) => PdfObject::String(PdfString(v.as_bytes().to_vec())),
+            Object::ByteString(v) => PdfObject::String(PdfString(v.clone())),
+            Object::Array(values) => PdfObject::Array(PdfArray(
+                values
+                    .iter()
+                    .map(Self::inline_parameter)
+                    .collect::<OperationResult<_>>()?,
+            )),
+            Object::Dictionary(values) => {
+                let mut dict = PdfDictionary::new();
+                for (key, value) in values.iter() {
+                    dict.insert(key.clone(), Self::inline_parameter(value)?);
+                }
+                PdfObject::Dictionary(dict)
+            }
+            _ => {
+                return Err(OperationError::ParseError(
+                    "Unsupported inline image parameter".into(),
+                ))
+            }
+        })
     }
 
     /// Extract all images from the document
@@ -629,46 +714,6 @@ impl<R: Read + Seek> ImageExtractor<R> {
         })
     }
 
-    /// Detect image format from raw data by examining magic bytes
-    fn detect_image_format_from_data(&self, data: &[u8]) -> OperationResult<ImageFormat> {
-        if data.is_empty() {
-            return Err(OperationError::ParseError(
-                "Image data too short to detect format".to_string(),
-            ));
-        }
-
-        // Check for PNG signature (needs 8 bytes)
-        if data.len() >= 8 && &data[0..8] == b"\x89PNG\r\n\x1a\n" {
-            return Ok(ImageFormat::Png);
-        }
-
-        // Check for TIFF signatures (needs 4 bytes)
-        if data.len() >= 4 {
-            if &data[0..2] == b"II" && &data[2..4] == b"\x2A\x00" {
-                return Ok(ImageFormat::Tiff); // Little endian TIFF
-            }
-            if &data[0..2] == b"MM" && &data[2..4] == b"\x00\x2A" {
-                return Ok(ImageFormat::Tiff); // Big endian TIFF
-            }
-        }
-
-        // Check for JPEG signature (needs 2 bytes)
-        if data.len() >= 2 && data[0] == 0xFF && data[1] == 0xD8 {
-            return Ok(ImageFormat::Jpeg);
-        }
-
-        // If data is too short for any meaningful detection
-        if data.len() < 2 {
-            return Err(OperationError::ParseError(
-                "Image data too short to detect format".to_string(),
-            ));
-        }
-
-        // Default to PNG for FlateDecode if no other format detected
-        // This is a fallback since FlateDecode is commonly used for PNG in PDFs
-        Ok(ImageFormat::Png)
-    }
-
     /// Apply rotation transformation
     #[cfg(feature = "external-images")]
     #[allow(dead_code)]
@@ -711,37 +756,6 @@ impl<R: Read + Seek> ImageExtractor<R> {
             // If scaling results in invalid dimensions, return original
             Ok(img)
         }
-    }
-
-    /// Parse inline image dictionary to extract width and height
-    fn parse_inline_image_dict(&self, dict_str: &str) -> (u32, u32) {
-        let mut width = 100; // Default width
-        let mut height = 100; // Default height
-
-        // Simple parsing - look for /W and /H parameters
-        for line in dict_str.lines() {
-            let line = line.trim();
-
-            // Parse width: /W 123 or /Width 123
-            if line.starts_with("/W ") || line.starts_with("/Width ") {
-                if let Some(value_str) = line.split_whitespace().nth(1) {
-                    if let Ok(w) = value_str.parse::<u32>() {
-                        width = w;
-                    }
-                }
-            }
-
-            // Parse height: /H 123 or /Height 123
-            if line.starts_with("/H ") || line.starts_with("/Height ") {
-                if let Some(value_str) = line.split_whitespace().nth(1) {
-                    if let Ok(h) = value_str.parse::<u32>() {
-                        height = h;
-                    }
-                }
-            }
-        }
-
-        (width, height)
     }
 
     /// Decode an image stream, resolving an indirect `/DecodeParms` (or `/DP`)
@@ -914,14 +928,49 @@ impl<R: Read + Seek> ImageExtractor<R> {
         let icc_n = self.icc_components(cs);
         let components = image_sample_components(cs, icc_n);
 
+        // PDF packs sub-byte grayscale samples independently in each row.
+        // Expand to 8-bit gray before PNG encoding and optional soft-mask composition.
+        if components == 1 && bits_per_component < 8 {
+            if !matches!(bits_per_component, 1 | 2 | 4) {
+                return Err(OperationError::ParseError(format!(
+                    "Unsupported grayscale sample depth: {bits_per_component}"
+                )));
+            }
+            let row_bytes = (width as usize)
+                .checked_mul(bits_per_component as usize)
+                .map(|bits| bits.div_ceil(8))
+                .ok_or_else(|| {
+                    OperationError::ParseError("Packed image row size overflow".into())
+                })?;
+            let required = row_bytes
+                .checked_mul(height as usize)
+                .ok_or_else(|| OperationError::ParseError("Packed image size overflow".into()))?;
+            (width as usize)
+                .checked_mul(height as usize)
+                .ok_or_else(|| OperationError::ParseError("Unpacked image size overflow".into()))?;
+            if data.len() < required {
+                return Err(OperationError::ParseError(format!(
+                    "Packed image data too small: expected {required}, got {}",
+                    data.len()
+                )));
+            }
+            let mut samples = unpack_indices(&data[..required], width, height, bits_per_component);
+            let maximum = (1u16 << bits_per_component) - 1;
+            for sample in &mut samples {
+                *sample = (u16::from(*sample) * 255 / maximum) as u8;
+            }
+            return self.encode_png_maybe_alpha(&samples, width, height, 1, 8, smask_alpha);
+        }
+
         // Calculate expected data size. Use usize arithmetic so large images
         // do not overflow the intermediate product (a u32 multiply wraps near
         // 4 GB and would let truncated data pass the check below).
         let bytes_per_sample = if bits_per_component <= 8 { 1 } else { 2 };
         let expected_size = (width as usize)
-            * (height as usize)
-            * (components as usize)
-            * (bytes_per_sample as usize);
+            .checked_mul(height as usize)
+            .and_then(|size| size.checked_mul(components as usize))
+            .and_then(|size| size.checked_mul(bytes_per_sample as usize))
+            .ok_or_else(|| OperationError::ParseError("Image sample size overflow".into()))?;
 
         // Validate data size
         if data.len() < expected_size {
@@ -930,6 +979,25 @@ impl<R: Read + Seek> ImageExtractor<R> {
                 expected_size,
                 data.len()
             )));
+        }
+
+        // DeviceCMYK has ink components, not an alpha channel. Use an unmanaged
+        // subtractive conversion for 8-bit device samples; ICC profiles are not
+        // interpreted by this path. Preserve a separate SMask after conversion.
+        if components == 4
+            && bits_per_component == 8
+            && cs
+                .and_then(PdfObject::as_name)
+                .is_some_and(|name| name.0 == "DeviceCMYK")
+        {
+            let mut rgb = Vec::with_capacity(expected_size / 4 * 3);
+            for pixel in data[..expected_size].chunks_exact(4) {
+                let lightness = 255 - u16::from(pixel[3]);
+                for &ink in &pixel[..3] {
+                    rgb.push((((255 - u16::from(ink)) * lightness + 127) / 255) as u8);
+                }
+            }
+            return self.encode_png_maybe_alpha(&rgb, width, height, 3, 8, smask_alpha);
         }
 
         // Convert to PNG format using simple PNG encoding
@@ -1014,8 +1082,9 @@ impl<R: Read + Seek> ImageExtractor<R> {
     /// Encode `samples` as PNG. When `alpha` is present and the samples are
     /// 8-bit grayscale or RGB, composite it as the alpha channel and emit an
     /// RGBA PNG (grayscale is expanded to RGB first); otherwise emit the image
-    /// as-is. Images that are 16-bit, DCT-encoded, or have 4 components (CMYK or
-    /// an already-RGBA base) are emitted without alpha (the soft mask is dropped).
+    /// as-is. Four-component source color samples must be converted explicitly
+    /// before this function; they are never assumed to be RGBA. Sixteen-bit
+    /// samples retain the existing behavior of omitting the soft mask.
     fn encode_png_maybe_alpha(
         &self,
         samples: &[u8],
@@ -1025,6 +1094,11 @@ impl<R: Read + Seek> ImageExtractor<R> {
         bits_per_component: u8,
         alpha: Option<&[u8]>,
     ) -> OperationResult<Vec<u8>> {
+        if components == 4 {
+            return Err(OperationError::ParseError(
+                "Unsupported four-component source color space or sample depth; explicit color conversion is required".into()
+            ));
+        }
         match alpha {
             Some(a) if bits_per_component == 8 && (components == 1 || components == 3) => {
                 let pixel_count = (width as usize) * (height as usize);
@@ -1784,126 +1858,6 @@ mod tests {
     }
 
     // Helper function to create minimal valid PDF for testing
-    fn create_minimal_pdf(temp_file: &std::path::Path) {
-        let minimal_pdf = b"%PDF-1.7\n\
-1 0 obj\n\
-<< /Type /Catalog /Pages 2 0 R >>\n\
-endobj\n\
-2 0 obj\n\
-<< /Type /Pages /Kids [] /Count 0 >>\n\
-endobj\n\
-xref\n\
-0 3\n\
-0000000000 65535 f \n\
-0000000009 00000 n \n\
-0000000055 00000 n \n\
-trailer\n\
-<< /Size 3 /Root 1 0 R >>\n\
-startxref\n\
-105\n\
-%%EOF";
-        std::fs::write(temp_file, minimal_pdf).unwrap();
-    }
-
-    #[test]
-    fn test_detect_image_format_png() {
-        // Create a minimal valid PDF document for testing
-        let temp_dir = TempDir::new().unwrap();
-        let temp_file = temp_dir.path().join("test.pdf");
-        create_minimal_pdf(&temp_file);
-
-        let document = PdfReader::open_document(&temp_file).unwrap();
-        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
-
-        // PNG magic bytes
-        let png_data = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0DIHDR";
-        let format = extractor.detect_image_format_from_data(png_data).unwrap();
-        assert_eq!(format, ImageFormat::Png);
-    }
-
-    #[test]
-    fn test_detect_image_format_jpeg() {
-        let temp_dir = TempDir::new().unwrap();
-        let temp_file = temp_dir.path().join("test.pdf");
-        create_minimal_pdf(&temp_file);
-
-        let document = PdfReader::open_document(&temp_file).unwrap();
-        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
-
-        // JPEG magic bytes
-        let jpeg_data = b"\xFF\xD8\xFF\xE0\x00\x10JFIF";
-        let format = extractor.detect_image_format_from_data(jpeg_data).unwrap();
-        assert_eq!(format, ImageFormat::Jpeg);
-    }
-
-    #[test]
-    fn test_detect_image_format_tiff_little_endian() {
-        let temp_dir = TempDir::new().unwrap();
-        let temp_file = temp_dir.path().join("test.pdf");
-        create_minimal_pdf(&temp_file);
-
-        let document = PdfReader::open_document(&temp_file).unwrap();
-        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
-
-        // TIFF little endian magic bytes
-        let tiff_data = b"II\x2A\x00\x08\x00\x00\x00";
-        let format = extractor.detect_image_format_from_data(tiff_data).unwrap();
-        assert_eq!(format, ImageFormat::Tiff);
-    }
-
-    #[test]
-    fn test_detect_image_format_tiff_big_endian() {
-        let temp_dir = TempDir::new().unwrap();
-        let temp_file = temp_dir.path().join("test.pdf");
-        create_minimal_pdf(&temp_file);
-
-        let document = PdfReader::open_document(&temp_file).unwrap();
-        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
-
-        // TIFF big endian magic bytes
-        let tiff_data = b"MM\x00\x2A\x00\x00\x00\x08";
-        let format = extractor.detect_image_format_from_data(tiff_data).unwrap();
-        assert_eq!(format, ImageFormat::Tiff);
-    }
-
-    #[test]
-    fn test_detect_image_format_unknown() {
-        let temp_dir = TempDir::new().unwrap();
-        let temp_file = temp_dir.path().join("test.pdf");
-        create_minimal_pdf(&temp_file);
-
-        let document = PdfReader::open_document(&temp_file).unwrap();
-        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
-
-        // Unknown format - should default to PNG
-        let unknown_data = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08";
-        let format = extractor
-            .detect_image_format_from_data(unknown_data)
-            .unwrap();
-        assert_eq!(format, ImageFormat::Png); // Default fallback
-    }
-
-    #[test]
-    fn test_detect_image_format_short_data() {
-        let temp_dir = TempDir::new().unwrap();
-        let temp_file = temp_dir.path().join("test.pdf");
-        create_minimal_pdf(&temp_file);
-
-        let document = PdfReader::open_document(&temp_file).unwrap();
-        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
-
-        // Too short data (less than 2 bytes)
-        let short_data = b"\xFF";
-        let result = extractor.detect_image_format_from_data(short_data);
-        assert!(result.is_err());
-        match result {
-            Err(OperationError::ParseError(msg)) => {
-                assert!(msg.contains("too short"));
-            }
-            _ => panic!("Expected ParseError"),
-        }
-    }
-
     #[test]
     fn test_filename_pattern_replacements() {
         let options = ExtractImagesOptions {
@@ -2040,35 +1994,6 @@ startxref\n\
             .replace("{format}", "png");
 
         assert_eq!(pattern, "static_name.jpg"); // No placeholders replaced
-    }
-
-    #[test]
-    fn test_detect_format_edge_cases() {
-        let temp_dir = TempDir::new().unwrap();
-        let temp_file = temp_dir.path().join("test.pdf");
-        create_minimal_pdf(&temp_file);
-
-        let document = PdfReader::open_document(&temp_file).unwrap();
-        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
-
-        // Empty data
-        let empty_data = b"";
-        assert!(extractor.detect_image_format_from_data(empty_data).is_err());
-
-        // Data exactly 8 bytes (minimum for PNG check)
-        let exact_8 = b"\x89PNG\r\n\x1a\n";
-        let format = extractor.detect_image_format_from_data(exact_8).unwrap();
-        assert_eq!(format, ImageFormat::Png);
-
-        // Data exactly 4 bytes (minimum for TIFF check)
-        let exact_4 = b"II\x2A\x00";
-        let format = extractor.detect_image_format_from_data(exact_4).unwrap();
-        assert_eq!(format, ImageFormat::Tiff);
-
-        // Data exactly 2 bytes (minimum for JPEG check)
-        let exact_2 = b"\xFF\xD8";
-        let format = extractor.detect_image_format_from_data(exact_2).unwrap();
-        assert_eq!(format, ImageFormat::Jpeg); // JPEG only needs 2 bytes
     }
 
     #[test]

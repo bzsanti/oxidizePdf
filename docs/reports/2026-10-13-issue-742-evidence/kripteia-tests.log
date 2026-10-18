@@ -1,0 +1,58 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 85 | Tests: 8 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs                8     85
+
+--- Worst Offenders ---
+  unicode_falls_back_without_panicking (oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:14) - Score: 80
+    - Test 'unicode_falls_back_without_panicking' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+    - Test 'unicode_falls_back_without_panicking' does not call any production code
+  invalid_calendar_dates_fall_back (oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:28) - Score: 80
+    - Test 'invalid_calendar_dates_fall_back' has low assert-to-setup ratio (7%): 1 asserts vs 13 setup lines
+    - Test 'invalid_calendar_dates_fall_back' does not call any production code
+  invalid_time_and_timezone_fall_back (oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:45) - Score: 80
+    - Test 'invalid_time_and_timezone_fall_back' has low assert-to-setup ratio (4%): 1 asserts vs 23 setup lines
+    - Test 'invalid_time_and_timezone_fall_back' does not call any production code
+  reduced_precision_and_leap_year_controls (oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:72) - Score: 80
+    - Test 'reduced_precision_and_leap_year_controls' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+    - Test 'reduced_precision_and_leap_year_controls' does not call any production code
+  time_precision_and_timezone_controls (oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:90) - Score: 80
+    - Test 'time_precision_and_timezone_controls' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'time_precision_and_timezone_controls' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/tests/issue_742_xmp_dates_test.rs:
+  unicode_falls_back_without_panicking (line 14) - Score: 80
+    - Test 'unicode_falls_back_without_panicking' has low assert-to-setup ratio (9%): 1 asserts vs 10 setup lines
+    - Test 'unicode_falls_back_without_panicking' does not call any production code
+  invalid_calendar_dates_fall_back (line 28) - Score: 80
+    - Test 'invalid_calendar_dates_fall_back' has low assert-to-setup ratio (7%): 1 asserts vs 13 setup lines
+    - Test 'invalid_calendar_dates_fall_back' does not call any production code
+  invalid_time_and_timezone_fall_back (line 45) - Score: 80
+    - Test 'invalid_time_and_timezone_fall_back' has low assert-to-setup ratio (4%): 1 asserts vs 23 setup lines
+    - Test 'invalid_time_and_timezone_fall_back' does not call any production code
+  reduced_precision_and_leap_year_controls (line 72) - Score: 80
+    - Test 'reduced_precision_and_leap_year_controls' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+    - Test 'reduced_precision_and_leap_year_controls' does not call any production code
+  time_precision_and_timezone_controls (line 90) - Score: 80
+    - Test 'time_precision_and_timezone_controls' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+    - Test 'time_precision_and_timezone_controls' does not call any production code
+  malformed_structure_and_truncations_fall_back (line 105) - Score: 80
+    - Test 'malformed_structure_and_truncations_fall_back' has low assert-to-setup ratio (6%): 1 asserts vs 17 setup lines
+    - Test 'malformed_structure_and_truncations_fall_back' does not call any production code
+  packet_import_validates_date_candidates (line 139) - Score: 100
+    i Test 'packet_import_validates_date_candidates' uses .unwrap() which silently discards error information
+  invalid_date_text_is_escaped_on_serialization (line 157) - Score: 100
+    i Test 'invalid_date_text_is_escaped_on_serialization' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

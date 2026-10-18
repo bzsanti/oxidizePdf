@@ -1,0 +1,81 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 15 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...pdf-core/tests/issue_714_incremental_primitives_test.rs       15     96
+
+--- Worst Offenders ---
+  compressed_objects_and_encryption_are_checked_by_independent_consumer (/tmp/oxidize-pr-fixes/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs:286) - Score: 80
+    - Test 'compressed_objects_and_encryption_are_checked_by_independent_consumer' is marked as #[ignore]
+    i Test 'compressed_objects_and_encryption_are_checked_by_independent_consumer' has multiple assertions without diagnostic messages
+    i Test 'compressed_objects_and_encryption_are_checked_by_independent_consumer' uses .unwrap() which silently discards error information
+  real_external_timestamp_token_covers_final_pdf_and_survives_later_revision (/tmp/oxidize-pr-fixes/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs:343) - Score: 80
+    - Test 'real_external_timestamp_token_covers_final_pdf_and_survives_later_revision' is marked as #[ignore]
+    i Test 'real_external_timestamp_token_covers_final_pdf_and_survives_later_revision' has multiple assertions without diagnostic messages
+    i Test 'real_external_timestamp_token_covers_final_pdf_and_survives_later_revision' uses .unwrap() which silently discards error information
+  timestamp_rejects_visible_widgets_regardless_of_selected_index (/tmp/oxidize-pr-fixes/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs:660) - Score: 90
+    - Test 'timestamp_rejects_visible_widgets_regardless_of_selected_index' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+  timestamp_rejects_malformed_or_missing_sibling_rectangles (/tmp/oxidize-pr-fixes/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs:731) - Score: 90
+    - Test 'timestamp_rejects_malformed_or_missing_sibling_rectangles' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  catalog_and_object_updates_preserve_revisions_and_unrelated_entries (/tmp/oxidize-pr-fixes/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs:25) - Score: 100
+    i Test 'catalog_and_object_updates_preserve_revisions_and_unrelated_entries' has multiple assertions without diagnostic messages
+    i Test 'catalog_and_object_updates_preserve_revisions_and_unrelated_entries' uses .unwrap() which silently discards error information
+
+--- Details ---
+/tmp/oxidize-pr-fixes/oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs:
+  catalog_and_object_updates_preserve_revisions_and_unrelated_entries (line 25) - Score: 100
+    i Test 'catalog_and_object_updates_preserve_revisions_and_unrelated_entries' has multiple assertions without diagnostic messages
+    i Test 'catalog_and_object_updates_preserve_revisions_and_unrelated_entries' uses .unwrap() which silently discards error information
+  rejects_invalid_references_unfilled_reservations_and_structural_overrides (line 77) - Score: 100
+    i Test 'rejects_invalid_references_unfilled_reservations_and_structural_overrides' has multiple assertions without diagnostic messages
+    i Test 'rejects_invalid_references_unfilled_reservations_and_structural_overrides' uses .unwrap() which silently discards error information
+  generic_updates_deny_all_certification_levels_and_timestamp_obeys_signing_policy (line 112) - Score: 100
+    i Test 'generic_updates_deny_all_certification_levels_and_timestamp_obeys_signing_policy' has multiple assertions without diagnostic messages
+    i Test 'generic_updates_deny_all_certification_levels_and_timestamp_obeys_signing_policy' uses .unwrap() which silently discards error information
+  timestamp_type_subfilter_and_byte_range_are_engine_owned (line 146) - Score: 100
+    i Test 'timestamp_type_subfilter_and_byte_range_are_engine_owned' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'timestamp_type_subfilter_and_byte_range_are_engine_owned' has multiple assertions without diagnostic messages
+    i Test 'timestamp_type_subfilter_and_byte_range_are_engine_owned' uses .unwrap() which silently discards error information
+  generic_update_preserves_approval_signature_dictionary (line 201) - Score: 100
+    i Test 'generic_update_preserves_approval_signature_dictionary' has multiple assertions without diagnostic messages
+    i Test 'generic_update_preserves_approval_signature_dictionary' uses .unwrap() which silently discards error information
+  replaces_nonzero_generations_without_renumbering_catalog_or_references (line 262) - Score: 100
+    i Test 'replaces_nonzero_generations_without_renumbering_catalog_or_references' has multiple assertions without diagnostic messages
+    i Test 'replaces_nonzero_generations_without_renumbering_catalog_or_references' uses .unwrap() which silently discards error information
+  compressed_objects_and_encryption_are_checked_by_independent_consumer (line 286) - Score: 80
+    - Test 'compressed_objects_and_encryption_are_checked_by_independent_consumer' is marked as #[ignore]
+    i Test 'compressed_objects_and_encryption_are_checked_by_independent_consumer' has multiple assertions without diagnostic messages
+    i Test 'compressed_objects_and_encryption_are_checked_by_independent_consumer' uses .unwrap() which silently discards error information
+  real_external_timestamp_token_covers_final_pdf_and_survives_later_revision (line 343) - Score: 80
+    - Test 'real_external_timestamp_token_covers_final_pdf_and_survives_later_revision' is marked as #[ignore]
+    i Test 'real_external_timestamp_token_covers_final_pdf_and_survives_later_revision' has multiple assertions without diagnostic messages
+    i Test 'real_external_timestamp_token_covers_final_pdf_and_survives_later_revision' uses .unwrap() which silently discards error information
+  timestamp_existing_field_and_fieldmdp_boundaries (line 467) - Score: 100
+    i Test 'timestamp_existing_field_and_fieldmdp_boundaries' has multiple assertions without diagnostic messages
+    i Test 'timestamp_existing_field_and_fieldmdp_boundaries' uses .unwrap() which silently discards error information
+  rejects_orphan_certification_and_signature_replacements (line 534) - Score: 100
+    i Test 'rejects_orphan_certification_and_signature_replacements' has multiple assertions without diagnostic messages
+    i Test 'rejects_orphan_certification_and_signature_replacements' uses .unwrap() which silently discards error information
+  real_approval_signature_remains_cryptographically_valid (line 572) - Score: 100
+    i Test 'real_approval_signature_remains_cryptographically_valid' uses .unwrap() which silently discards error information
+  timestamp_preserves_direct_and_indirect_catalog_extensions (line 596) - Score: 100
+    i Test 'timestamp_preserves_direct_and_indirect_catalog_extensions' has multiple assertions without diagnostic messages
+    i Test 'timestamp_preserves_direct_and_indirect_catalog_extensions' uses .unwrap() which silently discards error information
+  timestamp_rejects_visible_widgets_regardless_of_selected_index (line 660) - Score: 90
+    - Test 'timestamp_rejects_visible_widgets_regardless_of_selected_index' has low assert-to-setup ratio (7%): 1 asserts vs 14 setup lines
+  timestamp_accepts_all_invisible_widgets_and_preserves_them (line 684) - Score: 100
+    i Test 'timestamp_accepts_all_invisible_widgets_and_preserves_them' has multiple assertions without diagnostic messages
+    i Test 'timestamp_accepts_all_invisible_widgets_and_preserves_them' uses .unwrap() which silently discards error information
+  timestamp_rejects_malformed_or_missing_sibling_rectangles (line 731) - Score: 90
+    - Test 'timestamp_rejects_malformed_or_missing_sibling_rectangles' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

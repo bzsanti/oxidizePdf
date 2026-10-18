@@ -32,6 +32,37 @@
 
 use crate::{Document, Result};
 use std::collections::HashMap;
+use std::ops::Range;
+
+/// A whitespace-delimited token and its original Unicode scalar offsets.
+struct SourceToken<'a> {
+    text: &'a str,
+    chars: Range<usize>,
+}
+
+fn source_tokens(text: &str) -> Vec<SourceToken<'_>> {
+    let mut tokens = Vec::new();
+    let mut start = None;
+    // A trailing whitespace sentinel flushes the final token without slicing
+    // inside a UTF-8 character. Its character index is the source char count.
+    for (char_idx, (byte_idx, ch)) in text
+        .char_indices()
+        .chain(std::iter::once((text.len(), ' ')))
+        .enumerate()
+    {
+        if ch.is_whitespace() {
+            if let Some((start_byte, start_char)) = start.take() {
+                tokens.push(SourceToken {
+                    text: &text[start_byte..byte_idx],
+                    chars: start_char..char_idx,
+                });
+            }
+        } else if start.is_none() {
+            start = Some((byte_idx, char_idx));
+        }
+    }
+    tokens
+}
 
 /// A chunk of a PDF document suitable for LLM processing
 ///
@@ -48,7 +79,7 @@ pub struct DocumentChunk {
     /// Estimated number of tokens in this chunk
     pub tokens: usize,
 
-    /// Page numbers where this chunk's content appears (1-indexed)
+    /// Supplied page IDs contributing text to this chunk, in source order (1-indexed)
     pub page_numbers: Vec<usize>,
 
     /// Index of this chunk in the sequence (0-indexed)
@@ -116,10 +147,13 @@ pub struct ChunkMetadata {
 /// Position information for a chunk within the document
 #[derive(Debug, Clone, Default)]
 pub struct ChunkPosition {
-    /// Character offset where this chunk starts in the full document text
+    /// Inclusive Unicode scalar offset of the first token in the original text.
+    /// For page input, offsets include two newline characters between pages.
     pub start_char: usize,
 
-    /// Character offset where this chunk ends in the full document text
+    /// Exclusive Unicode scalar offset after the last token in the original text.
+    /// Whitespace normalization does not change these source coordinates;
+    /// overlapping chunks can have overlapping ranges.
     pub end_char: usize,
 
     /// First page number where this chunk appears (1-indexed)
@@ -294,7 +328,7 @@ impl DocumentChunker {
     /// ```
     pub fn chunk_text(&self, text: &str) -> Result<Vec<DocumentChunk>> {
         // For simple text chunking, we don't have page information
-        self.chunk_text_internal(text, &[], 0)
+        self.chunk_text_internal(text, &[])
     }
 
     /// Chunk text with page information for accurate page tracking
@@ -305,37 +339,38 @@ impl DocumentChunker {
     ///
     /// # Returns
     ///
-    /// A vector of `DocumentChunk` objects with page tracking
+    /// A vector of `DocumentChunk` objects with the supplied page IDs, in input
+    /// order. Source character offsets refer to page texts joined by `\n\n`,
+    /// including empty pages. Whitespace-only pages contribute no chunk text.
     pub fn chunk_text_with_pages(
         &self,
         page_texts: &[(usize, String)],
     ) -> Result<Vec<DocumentChunk>> {
-        // Combine all page texts with page markers
+        // Keep the original supplied IDs and character ranges. Separators
+        // belong to no page; whitespace-only pages contribute no chunk text.
         let mut full_text = String::new();
-        let mut page_boundaries = vec![0]; // Character positions where pages start
-
-        for (_page_num, text) in page_texts {
-            if !full_text.is_empty() {
-                full_text.push_str("\n\n"); // Page separator
+        let mut page_spans = Vec::new();
+        let mut char_offset = 0;
+        for (idx, (page_number, text)) in page_texts.iter().enumerate() {
+            if idx > 0 {
+                full_text.push_str("\n\n");
+                char_offset += 2;
             }
+            let start = char_offset;
             full_text.push_str(text);
-            page_boundaries.push(full_text.len());
+            char_offset += text.chars().count();
+            if !text.trim().is_empty() {
+                page_spans.push((*page_number, start..char_offset));
+            }
         }
-
-        let page_numbers: Vec<usize> = page_texts.iter().map(|(num, _)| *num).collect();
-
-        // `page_texts` may be empty (e.g. a PDF from which no text extracted);
-        // fall back to page 0 rather than indexing into an empty vec.
-        let first_page = page_numbers.first().copied().unwrap_or(0);
-        self.chunk_text_internal(&full_text, &page_boundaries, first_page)
+        self.chunk_text_internal(&full_text, &page_spans)
     }
 
-    /// Internal chunking implementation with page tracking
+    /// Internal chunking implementation with original character/page spans.
     fn chunk_text_internal(
         &self,
         text: &str,
-        page_boundaries: &[usize],
-        first_page: usize,
+        page_spans: &[(usize, Range<usize>)],
     ) -> Result<Vec<DocumentChunk>> {
         if text.is_empty() {
             return Ok(Vec::new());
@@ -346,7 +381,7 @@ impl DocumentChunker {
         // Priority: MEDIUM - Current whitespace split provides estimates
         // Accurate tokenization would require tiktoken-rs external dependency
         // Target: v1.7.0 for LLM integration improvements
-        let tokens: Vec<&str> = text.split_whitespace().collect();
+        let tokens = source_tokens(text);
 
         if tokens.is_empty() {
             return Ok(Vec::new());
@@ -361,7 +396,6 @@ impl DocumentChunker {
         let mut chunks = Vec::new();
         let mut start = 0;
         let mut chunk_idx = 0;
-        let mut char_offset = 0;
 
         while start < tokens.len() {
             // Calculate end position for this chunk
@@ -378,7 +412,7 @@ impl DocumentChunker {
                 let mut found_boundary = false;
 
                 for i in search_window {
-                    let token = tokens[i];
+                    let token = tokens[i].text;
                     if token.ends_with('.') || token.ends_with('!') || token.ends_with('?') {
                         end = i + 1; // Include the sentence-ending token
                         found_boundary = true;
@@ -394,7 +428,13 @@ impl DocumentChunker {
             let chunk_tokens = &tokens[start..end];
 
             // Join tokens back into text
-            let content = chunk_tokens.join(" ");
+            let mut content = String::new();
+            for token in chunk_tokens {
+                if !content.is_empty() {
+                    content.push(' ');
+                }
+                content.push_str(token.text);
+            }
 
             // Detect language for this chunk (no-op unless enabled + feature on)
             let language = if self.detect_language {
@@ -403,46 +443,24 @@ impl DocumentChunker {
                 None
             };
 
-            // Calculate character positions
-            let start_char = char_offset;
-            let end_char = char_offset + content.len();
-            char_offset = end_char;
-
-            // Determine page numbers for this chunk
-            let (page_nums, first_pg, last_pg) = if page_boundaries.is_empty() {
-                (Vec::new(), 0, 0)
-            } else {
-                let mut pages = Vec::new();
-                let mut first = first_page;
-                let mut last = first_page;
-
-                for (idx, &boundary) in page_boundaries.iter().enumerate().skip(1) {
-                    if start_char < boundary && end_char > page_boundaries[idx - 1] {
-                        let page_num = first_page + idx - 1;
-                        pages.push(page_num);
-                        if pages.len() == 1 {
-                            first = page_num;
-                        }
-                        last = page_num;
-                    }
-                }
-
-                if pages.is_empty() {
-                    // Chunk is beyond all tracked pages
-                    pages.push(first_page);
-                    first = first_page;
-                    last = first_page;
-                }
-
-                (pages, first, last)
-            };
+            // Coordinates come from the original tokens, never from joined
+            // content lengths or a cursor advanced through duplicated overlap.
+            let start_char = tokens[start].chars.start;
+            let end_char = tokens[end - 1].chars.end;
+            let page_nums: Vec<usize> = page_spans
+                .iter()
+                .filter(|(_, span)| start_char < span.end && end_char > span.start)
+                .map(|(page, _)| *page)
+                .collect();
+            let first_pg = page_nums.first().copied().unwrap_or(0);
+            let last_pg = page_nums.last().copied().unwrap_or(0);
 
             // Create chunk
             let chunk = DocumentChunk {
                 id: format!("chunk_{}", chunk_idx),
                 content,
                 tokens: chunk_tokens.len(),
-                page_numbers: page_nums.clone(),
+                page_numbers: page_nums,
                 chunk_index: chunk_idx,
                 metadata: ChunkMetadata {
                     position: ChunkPosition {
@@ -707,14 +725,16 @@ mod tests {
 
         let chunks = chunker.chunk_text(&text).unwrap();
 
-        // Check that positions are sequential and non-overlapping in character space
-        for i in 0..chunks.len() - 1 {
-            assert!(
-                chunks[i].metadata.position.end_char
-                    <= chunks[i + 1].metadata.position.start_char + 10,
-                "Chunks should have reasonable character positions"
-            );
-        }
+        assert_eq!(
+            chunks
+                .iter()
+                .map(|chunk| (
+                    chunk.metadata.position.start_char,
+                    chunk.metadata.position.end_char
+                ))
+                .collect::<Vec<_>>(),
+            [(0, 29), (24, 53), (48, 60)]
+        );
 
         // First chunk should start at position 0
         assert_eq!(chunks[0].metadata.position.start_char, 0);

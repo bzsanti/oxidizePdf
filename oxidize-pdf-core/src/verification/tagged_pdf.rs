@@ -2066,7 +2066,7 @@ mod tests {
             "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 5 0 R /Lang (en-US) >>",
             "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>",
-            "<< /Length 47 >>\nstream\n/Artifact <</Subtype /Pagination>> BDC EMC\nendstream",
+            "<< /Length 42 >>\nstream\n/Artifact <</Subtype /Pagination>> BDC EMC\nendstream",
             "<< /Type /StructTreeRoot /K [] /ParentTree 6 0 R >>",
             "<< /Nums [] >>",
         ]);

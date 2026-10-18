@@ -1,0 +1,189 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 90 | Tests: 46 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/streaming/text_streamer.rs                  46     90
+
+--- Worst Offenders ---
+  test_text_streamer_process_invalid_content (oxidize-pdf-core/src/streaming/text_streamer.rs:446) - Score: 70
+    - Test 'test_text_streamer_process_invalid_content' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_text_streamer_process_invalid_content' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_text_streamer_process_invalid_content' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_text_chunk_without_font_name (oxidize-pdf-core/src/streaming/text_streamer.rs:668) - Score: 80
+    - Test 'test_text_chunk_without_font_name' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+    - Test 'test_text_chunk_without_font_name' does not call any production code
+  test_process_chunk_error_propagation (oxidize-pdf-core/src/streaming/text_streamer.rs:960) - Score: 80
+    - Test 'test_process_chunk_error_propagation' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_process_chunk_error_propagation' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_text_chunk (oxidize-pdf-core/src/streaming/text_streamer.rs:246) - Score: 90
+    i Test 'test_text_chunk' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_text_chunk' does not call any production code
+  test_text_stream_options_default (oxidize-pdf-core/src/streaming/text_streamer.rs:263) - Score: 90
+    i Test 'test_text_stream_options_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_stream_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_text_stream_options_default' does not call any production code
+
+--- Details ---
+oxidize-pdf-core/src/streaming/text_streamer.rs:
+  test_text_chunk (line 246) - Score: 90
+    i Test 'test_text_chunk' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_text_chunk' does not call any production code
+  test_text_stream_options_default (line 263) - Score: 90
+    i Test 'test_text_stream_options_default' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_stream_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_text_stream_options_default' does not call any production code
+  test_text_streamer_creation (line 272) - Score: 90
+    i Test 'test_text_streamer_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_streamer_creation' has multiple assertions without diagnostic messages
+    - Test 'test_text_streamer_creation' does not call any production code
+  test_process_chunk_text (line 283) - Score: 90
+    - Test 'test_process_chunk_text' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_chunk_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_process_chunk_text' uses .unwrap() which silently discards error information
+  test_min_font_size_filter (line 296) - Score: 90
+    - Test 'test_min_font_size_filter' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_min_font_size_filter' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_min_font_size_filter' uses .unwrap() which silently discards error information
+  test_extract_text_sorted (line 314) - Score: 90
+    i Test 'test_extract_text_sorted' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_extract_text_sorted' has low assert-to-setup ratio (3%): 1 asserts vs 28 setup lines
+  test_buffer_management (line 347) - Score: 90
+    - Test 'test_buffer_management' has low assert-to-setup ratio (5%): 1 asserts vs 18 setup lines
+  test_stream_text_function (line 370) - Score: 100
+    i Test 'test_stream_text_function' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_stream_text_function' uses .unwrap() which silently discards error information
+  test_text_chunk_debug_clone (line 388) - Score: 100
+    i Test 'test_text_chunk_debug_clone' has multiple assertions without diagnostic messages
+  test_text_stream_options_custom (line 410) - Score: 90
+    i Test 'test_text_stream_options_custom' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_stream_options_custom' has multiple assertions without diagnostic messages
+    - Test 'test_text_stream_options_custom' does not call any production code
+  test_text_stream_options_debug_clone (line 425) - Score: 100
+    i Test 'test_text_stream_options_debug_clone' has multiple assertions without diagnostic messages
+  test_text_streamer_process_empty_chunk (line 439) - Score: 100
+    i Test 'test_text_streamer_process_empty_chunk' uses .unwrap() which silently discards error information
+  test_text_streamer_process_invalid_content (line 446) - Score: 70
+    - Test 'test_text_streamer_process_invalid_content' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_text_streamer_process_invalid_content' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_text_streamer_process_invalid_content' has low assert-to-setup ratio (14%): 1 asserts vs 6 setup lines
+  test_text_streamer_font_tracking (line 459) - Score: 90
+    - Test 'test_text_streamer_font_tracking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_text_streamer_font_tracking' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_streamer_font_tracking' has multiple assertions without diagnostic messages
+    i Test 'test_text_streamer_font_tracking' uses .unwrap() which silently discards error information
+  test_text_streamer_position_tracking (line 471) - Score: 90
+    - Test 'test_text_streamer_position_tracking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_text_streamer_position_tracking' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_streamer_position_tracking' has multiple assertions without diagnostic messages
+    i Test 'test_text_streamer_position_tracking' uses .unwrap() which silently discards error information
+  test_text_streamer_begin_text_resets_position (line 483) - Score: 90
+    - Test 'test_text_streamer_begin_text_resets_position' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_text_streamer_begin_text_resets_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_streamer_begin_text_resets_position' has multiple assertions without diagnostic messages
+    i Test 'test_text_streamer_begin_text_resets_position' uses .unwrap() which silently discards error information
+  test_text_streamer_clear_buffer (line 499) - Score: 90
+    i Test 'test_text_streamer_clear_buffer' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_streamer_clear_buffer' has multiple assertions without diagnostic messages
+    - Test 'test_text_streamer_clear_buffer' has low assert-to-setup ratio (10%): 2 asserts vs 18 setup lines
+  test_text_streamer_get_buffered_chunks (line 525) - Score: 90
+    i Test 'test_text_streamer_get_buffered_chunks' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_text_streamer_get_buffered_chunks' has low assert-to-setup ratio (12%): 3 asserts vs 21 setup lines
+  test_extract_text_no_sorting (line 553) - Score: 90
+    i Test 'test_extract_text_no_sorting' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_extract_text_no_sorting' has low assert-to-setup ratio (5%): 1 asserts vs 21 setup lines
+  test_extract_text_horizontal_sorting (line 579) - Score: 90
+    i Test 'test_extract_text_horizontal_sorting' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_extract_text_horizontal_sorting' has low assert-to-setup ratio (4%): 1 asserts vs 26 setup lines
+  test_check_buffer_size_edge_cases (line 610) - Score: 90
+    i Test 'test_check_buffer_size_edge_cases' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_check_buffer_size_edge_cases' has multiple assertions without diagnostic messages
+    - Test 'test_check_buffer_size_edge_cases' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+  test_stream_text_with_error_callback (line 642) - Score: 90
+    - Test 'test_stream_text_with_error_callback' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_stream_text_empty_streams (line 654) - Score: 90
+    i Test 'test_stream_text_empty_streams' uses .unwrap() which silently discards error information
+    - Test 'test_stream_text_empty_streams' does not call any production code
+  test_text_chunk_without_font_name (line 668) - Score: 80
+    - Test 'test_text_chunk_without_font_name' has low assert-to-setup ratio (11%): 1 asserts vs 8 setup lines
+    - Test 'test_text_chunk_without_font_name' does not call any production code
+  test_process_chunk_multiple_operations (line 681) - Score: 90
+    - Test 'test_process_chunk_multiple_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_chunk_multiple_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_process_chunk_multiple_operations' uses .unwrap() which silently discards error information
+  test_buffer_size_calculation (line 696) - Score: 90
+    - Test 'test_buffer_size_calculation' has low assert-to-setup ratio (3%): 1 asserts vs 31 setup lines
+  test_text_chunk_extreme_positions (line 732) - Score: 90
+    i Test 'test_text_chunk_extreme_positions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_chunk_extreme_positions' has multiple assertions without diagnostic messages
+    - Test 'test_text_chunk_extreme_positions' does not call any production code
+  test_text_streamer_accumulated_position (line 747) - Score: 90
+    - Test 'test_text_streamer_accumulated_position' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_text_streamer_accumulated_position' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_streamer_accumulated_position' has multiple assertions without diagnostic messages
+    i Test 'test_text_streamer_accumulated_position' uses .unwrap() which silently discards error information
+  test_process_chunk_with_multiple_font_changes (line 759) - Score: 90
+    - Test 'test_process_chunk_with_multiple_font_changes' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_process_chunk_with_multiple_font_changes' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_process_chunk_with_multiple_font_changes' has multiple assertions without diagnostic messages
+    i Test 'test_process_chunk_with_multiple_font_changes' uses .unwrap() which silently discards error information
+  test_empty_text_operations (line 772) - Score: 90
+    - Test 'test_empty_text_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_empty_text_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_empty_text_operations' uses .unwrap() which silently discards error information
+  test_text_with_special_characters (line 785) - Score: 90
+    - Test 'test_text_with_special_characters' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_text_with_special_characters' has multiple assertions without diagnostic messages
+    i Test 'test_text_with_special_characters' uses .unwrap() which silently discards error information
+  test_sorting_with_equal_positions (line 797) - Score: 90
+    i Test 'test_sorting_with_equal_positions' has multiple assertions without diagnostic messages
+    - Test 'test_sorting_with_equal_positions' has low assert-to-setup ratio (17%): 3 asserts vs 15 setup lines
+  test_max_buffer_size_zero (line 819) - Score: 90
+    - Test 'test_max_buffer_size_zero' has low assert-to-setup ratio (7%): 1 asserts vs 13 setup lines
+  test_font_name_with_spaces (line 837) - Score: 90
+    - Test 'test_font_name_with_spaces' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_font_name_with_spaces' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_font_name_with_spaces' has multiple assertions without diagnostic messages
+  test_stream_text_with_mixed_content (line 856) - Score: 90
+    - Test 'test_stream_text_with_mixed_content' has low assert-to-setup ratio (8%): 1 asserts vs 12 setup lines
+  test_preserve_formatting_option (line 874) - Score: 90
+    i Test 'test_preserve_formatting_option' has multiple assertions without diagnostic messages
+    - Test 'test_preserve_formatting_option' does not call any production code
+  test_very_large_font_size (line 884) - Score: 90
+    - Test 'test_very_large_font_size' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_very_large_font_size' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_very_large_font_size' uses .unwrap() which silently discards error information
+  test_negative_font_size (line 896) - Score: 90
+    - Test 'test_negative_font_size' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_negative_font_size' has multiple assertions without diagnostic messages
+    i Test 'test_negative_font_size' uses .unwrap() which silently discards error information
+  test_text_position_nan_handling (line 910) - Score: 90
+    - Test 'test_text_position_nan_handling' has low assert-to-setup ratio (4%): 1 asserts vs 23 setup lines
+  test_buffer_with_different_font_names (line 938) - Score: 90
+    i Test 'test_buffer_with_different_font_names' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_buffer_with_different_font_names' has multiple assertions without diagnostic messages
+    - Test 'test_buffer_with_different_font_names' has low assert-to-setup ratio (12%): 2 asserts vs 14 setup lines
+  test_process_chunk_error_propagation (line 960) - Score: 80
+    - Test 'test_process_chunk_error_propagation' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_process_chunk_error_propagation' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_extract_text_single_chunk (line 979) - Score: 90
+    i Test 'test_extract_text_single_chunk' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_extract_text_single_chunk' has low assert-to-setup ratio (8%): 1 asserts vs 11 setup lines
+  test_complex_content_operations (line 1002) - Score: 90
+    - Test 'test_complex_content_operations' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_complex_content_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_complex_content_operations' uses .unwrap() which silently discards error information
+  test_stream_text_callback_state (line 1017) - Score: 90
+    - Test 'test_stream_text_callback_state' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_stream_text_callback_state' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_stream_text_callback_state' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

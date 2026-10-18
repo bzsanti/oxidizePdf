@@ -1,0 +1,89 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 86 | Tests: 11 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/memory_optimization_tests.rs              11     86
+
+--- Worst Offenders ---
+  test_lazy_document_basic (oxidize-pdf-core/tests/memory_optimization_tests.rs:26) - Score: 70
+    - Test 'test_lazy_document_basic' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_lazy_document_basic' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_lazy_document_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_basic' has multiple assertions without diagnostic messages
+    - Test 'test_lazy_document_basic' has low assert-to-setup ratio (11%): 3 asserts vs 25 setup lines
+  test_lazy_document_cache_clear (oxidize-pdf-core/tests/memory_optimization_tests.rs:170) - Score: 70
+    - Test 'test_lazy_document_cache_clear' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_lazy_document_cache_clear' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_lazy_document_cache_clear' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_lazy_document_cache_clear' has low assert-to-setup ratio (4%): 1 asserts vs 27 setup lines
+  test_page_preloading (oxidize-pdf-core/tests/memory_optimization_tests.rs:239) - Score: 70
+    - Test 'test_page_preloading' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_page_preloading' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_page_preloading' has low assert-to-setup ratio (4%): 1 asserts vs 24 setup lines
+  test_stream_processor_basic (oxidize-pdf-core/tests/memory_optimization_tests.rs:83) - Score: 80
+    - Test 'test_stream_processor_basic' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_stream_processor_basic' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_stream_processor_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_stream_processor_basic' has multiple assertions without diagnostic messages
+  test_skip_processing (oxidize-pdf-core/tests/memory_optimization_tests.rs:216) - Score: 80
+    - Test 'test_skip_processing' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_skip_processing' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_skip_processing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_skip_processing' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/memory_optimization_tests.rs:
+  test_lazy_document_basic (line 26) - Score: 70
+    - Test 'test_lazy_document_basic' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_lazy_document_basic' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_lazy_document_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_lazy_document_basic' has multiple assertions without diagnostic messages
+    - Test 'test_lazy_document_basic' has low assert-to-setup ratio (11%): 3 asserts vs 25 setup lines
+  test_memory_options_configurations (line 61) - Score: 100
+    i Test 'test_memory_options_configurations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_memory_options_configurations' has multiple assertions without diagnostic messages
+  test_stream_processor_basic (line 83) - Score: 80
+    - Test 'test_stream_processor_basic' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_stream_processor_basic' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_stream_processor_basic' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_stream_processor_basic' has multiple assertions without diagnostic messages
+  test_streaming_options (line 109) - Score: 90
+    i Test 'test_streaming_options' has multiple assertions without diagnostic messages
+    - Test 'test_streaming_options' does not call any production code
+  test_processing_actions (line 128) - Score: 90
+    - Test 'test_processing_actions' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_processing_actions' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_processing_actions' uses .unwrap() which silently discards error information
+  test_extract_text_streaming (line 152) - Score: 100
+    i Test 'test_extract_text_streaming' has multiple assertions without diagnostic messages
+    i Test 'test_extract_text_streaming' uses .unwrap() which silently discards error information
+  test_lazy_document_cache_clear (line 170) - Score: 70
+    - Test 'test_lazy_document_cache_clear' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_lazy_document_cache_clear' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_lazy_document_cache_clear' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_lazy_document_cache_clear' has low assert-to-setup ratio (4%): 1 asserts vs 27 setup lines
+  test_memory_options_thresholds (line 202) - Score: 100
+    i Test 'test_memory_options_thresholds' has multiple assertions without diagnostic messages
+  test_skip_processing (line 216) - Score: 80
+    - Test 'test_skip_processing' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_skip_processing' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_skip_processing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_skip_processing' uses .unwrap() which silently discards error information
+  test_page_preloading (line 239) - Score: 70
+    - Test 'test_page_preloading' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_page_preloading' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_page_preloading' has low assert-to-setup ratio (4%): 1 asserts vs 24 setup lines
+  test_memory_strategies (line 269) - Score: 100
+    i Test 'test_memory_strategies' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_memory_strategies' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

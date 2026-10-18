@@ -1,0 +1,60 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-issue742/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 8.25s
+     Running tests/issue_723_legacy_signature_test.rs (target/debug/deps/issue_723_legacy_signature_test-d3bf119045ac478d)
+
+running 9 tests
+test already_present_value_is_not_overwritten ... ok
+test fabricated_signature_is_unverified ... FAILED
+test missing_field_still_reports_not_found ... ok
+test aggregate_validation_does_not_upgrade_presence_to_validity ... FAILED
+test appearances_and_presence_remain_available_without_verification ... FAILED
+test plausible_metadata_and_algorithms_cannot_authorize_verification ... FAILED
+test rejected_handler_signing_preserves_locks_and_completion ... FAILED
+test unsigned_field_is_not_valid ... ok
+test signing_refuses_without_mutating_existing_metadata ... FAILED
+
+failures:
+
+---- fabricated_signature_is_unverified stdout ----
+
+thread 'fabricated_signature_is_unverified' (352) panicked at oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:23:5:
+expected explicit unsupported error: Ok(true)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- aggregate_validation_does_not_upgrade_presence_to_validity stdout ----
+
+thread 'aggregate_validation_does_not_upgrade_presence_to_validity' (349) panicked at oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:80:9:
+fake was reported valid
+
+---- appearances_and_presence_remain_available_without_verification stdout ----
+
+thread 'appearances_and_presence_remain_available_without_verification' (351) panicked at oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:147:5:
+assertion failed: !handler.validate_all()[0].is_valid
+
+---- plausible_metadata_and_algorithms_cannot_authorize_verification stdout ----
+
+thread 'plausible_metadata_and_algorithms_cannot_authorize_verification' (354) panicked at oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:23:5:
+expected explicit unsupported error: Ok(true)
+
+---- rejected_handler_signing_preserves_locks_and_completion stdout ----
+
+thread 'rejected_handler_signing_preserves_locks_and_completion' (355) panicked at oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:23:5:
+expected explicit unsupported error: Ok(())
+
+---- signing_refuses_without_mutating_existing_metadata stdout ----
+
+thread 'signing_refuses_without_mutating_existing_metadata' (356) panicked at oxidize-pdf-core/tests/issue_723_legacy_signature_test.rs:23:5:
+expected explicit unsupported error: Ok(())
+
+
+failures:
+    aggregate_validation_does_not_upgrade_presence_to_validity
+    appearances_and_presence_remain_available_without_verification
+    fabricated_signature_is_unverified
+    plausible_metadata_and_algorithms_cannot_authorize_verification
+    rejected_handler_signing_preserves_locks_and_completion
+    signing_refuses_without_mutating_existing_metadata
+
+test result: FAILED. 3 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_723_legacy_signature_test`

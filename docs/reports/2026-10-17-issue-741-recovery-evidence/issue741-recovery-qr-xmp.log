@@ -1,0 +1,79 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 96 | Tests: 16 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/pdfa/xmp.rs                                 16     96
+
+--- Worst Offenders ---
+  test_xmp_metadata_parse_title (oxidize-pdf-core/src/pdfa/xmp.rs:411) - Score: 90
+    - Test 'test_xmp_metadata_parse_title' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_title' uses .unwrap() which silently discards error information
+  test_xmp_metadata_parse_pdfa_id (oxidize-pdf-core/src/pdfa/xmp.rs:418) - Score: 90
+    - Test 'test_xmp_metadata_parse_pdfa_id' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_pdfa_id' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_xmp_metadata_parse_pdfa_id' has multiple assertions without diagnostic messages
+    i Test 'test_xmp_metadata_parse_pdfa_id' uses .unwrap() which silently discards error information
+  test_xmp_metadata_parse_creator_list (oxidize-pdf-core/src/pdfa/xmp.rs:431) - Score: 90
+    - Test 'test_xmp_metadata_parse_creator_list' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_creator_list' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_xmp_metadata_parse_creator_list' uses .unwrap() which silently discards error information
+  test_xmp_metadata_parse_dates (oxidize-pdf-core/src/pdfa/xmp.rs:490) - Score: 90
+    - Test 'test_xmp_metadata_parse_dates' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_dates' has multiple assertions without diagnostic messages
+    i Test 'test_xmp_metadata_parse_dates' uses .unwrap() which silently discards error information
+  test_xmp_metadata_parse_simple_tag (oxidize-pdf-core/src/pdfa/xmp.rs:525) - Score: 90
+    - Test 'test_xmp_metadata_parse_simple_tag' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_simple_tag' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/pdfa/xmp.rs:
+  test_xmp_pdfa_identifier_new (line 386) - Score: 100
+    i Test 'test_xmp_pdfa_identifier_new' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_xmp_pdfa_identifier_new' has multiple assertions without diagnostic messages
+  test_xmp_pdfa_identifier_to_rdf (line 395) - Score: 100
+    i Test 'test_xmp_pdfa_identifier_to_rdf' has multiple assertions without diagnostic messages
+  test_xmp_metadata_new (line 403) - Score: 100
+    i Test 'test_xmp_metadata_new' has multiple assertions without diagnostic messages
+  test_xmp_metadata_parse_title (line 411) - Score: 90
+    - Test 'test_xmp_metadata_parse_title' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_title' uses .unwrap() which silently discards error information
+  test_xmp_metadata_parse_pdfa_id (line 418) - Score: 90
+    - Test 'test_xmp_metadata_parse_pdfa_id' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_pdfa_id' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_xmp_metadata_parse_pdfa_id' has multiple assertions without diagnostic messages
+    i Test 'test_xmp_metadata_parse_pdfa_id' uses .unwrap() which silently discards error information
+  test_xmp_metadata_parse_creator_list (line 431) - Score: 90
+    - Test 'test_xmp_metadata_parse_creator_list' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_creator_list' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_xmp_metadata_parse_creator_list' uses .unwrap() which silently discards error information
+  test_xmp_metadata_to_xml (line 449) - Score: 100
+    i Test 'test_xmp_metadata_to_xml' has multiple assertions without diagnostic messages
+  test_xml_escape (line 475) - Score: 100
+    i Test 'test_xml_escape' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_xml_escape' has multiple assertions without diagnostic messages
+  test_xmp_metadata_parse_dates (line 490) - Score: 90
+    - Test 'test_xmp_metadata_parse_dates' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_dates' has multiple assertions without diagnostic messages
+    i Test 'test_xmp_metadata_parse_dates' uses .unwrap() which silently discards error information
+  test_xmp_metadata_roundtrip (line 507) - Score: 100
+    i Test 'test_xmp_metadata_roundtrip' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_xmp_metadata_roundtrip' has multiple assertions without diagnostic messages
+    i Test 'test_xmp_metadata_roundtrip' uses .unwrap() which silently discards error information
+  test_xmp_metadata_parse_simple_tag (line 525) - Score: 90
+    - Test 'test_xmp_metadata_parse_simple_tag' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_xmp_metadata_parse_simple_tag' uses .unwrap() which silently discards error information
+  test_xmp_pdfa_identifier_clone (line 532) - Score: 90
+    - Test 'test_xmp_pdfa_identifier_clone' does not call any production code
+  test_xmp_metadata_clone (line 539) - Score: 90
+    - Test 'test_xmp_metadata_clone' does not call any production code
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

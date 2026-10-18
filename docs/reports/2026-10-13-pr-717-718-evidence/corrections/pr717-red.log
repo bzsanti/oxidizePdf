@@ -1,0 +1,35 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-pr-fixes/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 32.90s
+     Running tests/issue_714_incremental_primitives_test.rs (/tmp/oxidize-pr717-review/target/debug/deps/issue_714_incremental_primitives_test-1fe258840eac0e40)
+
+running 8 tests
+test real_external_timestamp_token_covers_final_pdf_and_survives_later_revision ... ignored, requires openssl and qpdf; run explicitly in interoperability CI
+test timestamp_rejects_malformed_or_missing_sibling_rectangles ... FAILED
+test timestamp_rejects_visible_widgets_regardless_of_selected_index ... FAILED
+test timestamp_preserves_direct_and_indirect_catalog_extensions ... ok
+test timestamp_accepts_all_invisible_widgets_and_preserves_them ... ok
+test timestamp_existing_field_and_fieldmdp_boundaries ... ok
+test generic_updates_deny_all_certification_levels_and_timestamp_obeys_signing_policy ... ok
+test timestamp_type_subfilter_and_byte_range_are_engine_owned ... ok
+
+failures:
+
+---- timestamp_rejects_malformed_or_missing_sibling_rectangles stdout ----
+
+thread 'timestamp_rejects_malformed_or_missing_sibling_rectangles' (376) panicked at oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs:703:9:
+rect=
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- timestamp_rejects_visible_widgets_regardless_of_selected_index stdout ----
+
+thread 'timestamp_rejects_visible_widgets_regardless_of_selected_index' (377) panicked at oxidize-pdf-core/tests/issue_714_incremental_primitives_test.rs:662:13:
+selected=0, first=/Rect [0 0 0 0], second=/Rect [10 10 110 40]
+
+
+failures:
+    timestamp_rejects_malformed_or_missing_sibling_rectangles
+    timestamp_rejects_visible_widgets_regardless_of_selected_index
+
+test result: FAILED. 5 passed; 2 failed; 1 ignored; 0 measured; 7 filtered out; finished in 0.07s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_714_incremental_primitives_test`

@@ -1,0 +1,6 @@
+docs/reports/2026-10-12-issue-715-evidence/symbolic.pdf enabled=false => Ok(Ok("���������������"))
+docs/reports/2026-10-12-issue-715-evidence/symbolic.pdf enabled=true => Ok(Ok("Hello World 123"))
+docs/reports/2026-10-12-issue-715-evidence/winansi.pdf enabled=false => Ok(Ok("Hello World 123"))
+docs/reports/2026-10-12-issue-715-evidence/winansi.pdf enabled=true => Ok(Ok("Hello World 123"))
+docs/reports/2026-10-12-issue-715-evidence/nonsymbolic.pdf enabled=false => Ok(Ok("Hello World 123"))
+docs/reports/2026-10-12-issue-715-evidence/nonsymbolic.pdf enabled=true => Ok(Ok("Hello World 123"))

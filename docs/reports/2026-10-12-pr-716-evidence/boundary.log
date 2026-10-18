@@ -1,0 +1,17 @@
+   Compiling pr716-boundary v0.1.0 (/tmp/pr716-review/boundary-probe)
+    Finished `dev` profile [unoptimized] target(s) in 2.03s
+     Running `/tmp/pr716-review/boundary-target/debug/pr716-boundary`
+transition false->true first="��" reused="��" fresh="AB"
+transition true->false first="AB" reused="AB" fresh="��"
+nonexistent glyphs (numGlyphs=1) enabled=true: "AB"
+truncated directory unicode=false enabled=false: Ok("��")
+
+thread 'main' (3) panicked at /tmp/pr716-review/source/oxidize-pdf-core/src/text/fonts/truetype.rs:229:21:
+index out of bounds: the len is 12 but the index is 12
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+truncated directory unicode=false enabled=true: Err(Any { .. })
+truncated directory unicode=true enabled=false: Ok("fi�")
+
+thread 'main' (3) panicked at /tmp/pr716-review/source/oxidize-pdf-core/src/text/fonts/truetype.rs:229:21:
+index out of bounds: the len is 12 but the index is 12
+truncated directory unicode=true enabled=true: Err(Any { .. })

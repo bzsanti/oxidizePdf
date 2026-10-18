@@ -1,23 +1,24 @@
 //! Stream processing for memory-efficient PDF operations
 //!
-//! Processes PDF content incrementally without loading entire documents
-//! into memory, ideal for large files or memory-constrained environments.
+//! Uses the seekable PDF reader and materializes content/text one page at a time.
+//! Reader caches and caller-owned values are not covered by max_stream_size.
 
 use crate::error::{PdfError, Result};
 use crate::parser::content::{ContentOperation, ContentParser};
 use crate::parser::PdfObject;
-use std::io::{BufRead, BufReader, Read, Seek, Write};
+use crate::streaming::PageStreamer;
+use std::io::{BufReader, Read, Seek, Write};
 
 /// Options for streaming operations
 #[derive(Debug, Clone)]
 pub struct StreamingOptions {
     /// Buffer size for reading
     pub buffer_size: usize,
-    /// Maximum content stream size to process at once
+    /// Maximum combined decoded page content (also the individual stream limit)
     pub max_stream_size: usize,
-    /// Whether to skip processing images
+    /// Reserved for resource enumeration. Page interpretation still resolves needed resources.
     pub skip_images: bool,
-    /// Whether to skip processing fonts
+    /// Reserved for resource enumeration. Text extraction still resolves its fonts.
     pub skip_fonts: bool,
 }
 
@@ -34,38 +35,51 @@ impl Default for StreamingOptions {
 
 /// Stream processor for incremental PDF processing
 pub struct StreamProcessor<R: Read + Seek> {
-    reader: BufReader<R>,
-    #[allow(dead_code)]
-    options: StreamingOptions,
+    streamer: PageStreamer<BufReader<R>>,
 }
 
 impl<R: Read + Seek> StreamProcessor<R> {
-    /// Create a new stream processor
+    /// Create a page-at-a-time processor. Input is validated on processing.
     pub fn new(reader: R, options: StreamingOptions) -> Self {
-        let buf_reader = BufReader::with_capacity(options.buffer_size, reader);
         Self {
-            reader: buf_reader,
-            options,
+            streamer: PageStreamer::with_content_limit(
+                BufReader::with_capacity(options.buffer_size.max(1), reader),
+                options.max_stream_size,
+            ),
         }
     }
-
-    /// Process a PDF incrementally with a callback
+    /// Emit start, source header, source pages and end. Stop terminates immediately;
+    /// callback/parser errors propagate without a success End event. Objects and
+    /// resources are not separately enumerated by this page-oriented adapter.
     pub fn process_with<F>(&mut self, mut callback: F) -> Result<()>
     where
         F: FnMut(ProcessingEvent) -> Result<ProcessingAction>,
     {
-        // Start processing
-        callback(ProcessingEvent::Start)?;
-
-        // Process header
-        self.process_header(&mut callback)?;
-
-        // Process objects incrementally
-        self.process_objects(&mut callback)?;
-
-        // End processing
+        if callback(ProcessingEvent::Start)? == ProcessingAction::Stop {
+            return Ok(());
+        }
+        let version = self.streamer.version()?;
+        if callback(ProcessingEvent::Header { version })? == ProcessingAction::Stop {
+            return Ok(());
+        }
+        while let Some(page) = self.streamer.next()? {
+            let mut content = Vec::new();
+            page.process_content(|chunk| {
+                content.extend_from_slice(chunk);
+                Ok(())
+            })?;
+            let data = PageData {
+                number: page.number(),
+                width: page.width() as f32,
+                height: page.height() as f32,
+                text: Some(page.extract_text_streaming()?),
+                operations: ContentParser::parse_strict(&content)?,
+            };
+            if callback(ProcessingEvent::Page(data))? == ProcessingAction::Stop {
+                return Ok(());
+            }
+        }
         callback(ProcessingEvent::End)?;
-
         Ok(())
     }
 
@@ -74,14 +88,8 @@ impl<R: Read + Seek> StreamProcessor<R> {
     where
         F: FnMut(u32, PageData) -> Result<ProcessingAction>,
     {
-        let mut page_index = 0;
-
         self.process_with(|event| match event {
-            ProcessingEvent::Page(data) => {
-                let action = page_callback(page_index, data)?;
-                page_index += 1;
-                Ok(action)
-            }
+            ProcessingEvent::Page(data) => page_callback(data.number, data),
             _ => Ok(ProcessingAction::Continue),
         })
     }
@@ -95,52 +103,6 @@ impl<R: Read + Seek> StreamProcessor<R> {
             }
             Ok(ProcessingAction::Continue)
         })
-    }
-
-    fn process_header<F>(&mut self, callback: &mut F) -> Result<()>
-    where
-        F: FnMut(ProcessingEvent) -> Result<ProcessingAction>,
-    {
-        let mut header = String::new();
-        self.reader.read_line(&mut header)?;
-
-        if !header.starts_with("%PDF-") {
-            return Err(PdfError::InvalidHeader);
-        }
-
-        let version = header.trim_start_matches("%PDF-").trim();
-        callback(ProcessingEvent::Header {
-            version: version.to_string(),
-        })?;
-
-        Ok(())
-    }
-
-    fn process_objects<F>(&mut self, callback: &mut F) -> Result<()>
-    where
-        F: FnMut(ProcessingEvent) -> Result<ProcessingAction>,
-    {
-        // In a real implementation, this would parse objects incrementally
-        // For now, we'll simulate streaming behavior
-
-        // Process some mock pages
-        for i in 0..3 {
-            let page_data = PageData {
-                number: i,
-                width: 595.0,
-                height: 842.0,
-                text: Some(format!("Page {} content", i + 1)),
-                operations: vec![],
-            };
-
-            match callback(ProcessingEvent::Page(page_data))? {
-                ProcessingAction::Continue => {}
-                ProcessingAction::Skip => continue,
-                ProcessingAction::Stop => break,
-            }
-        }
-
-        Ok(())
     }
 }
 
@@ -265,72 +227,6 @@ mod tests {
     }
 
     #[test]
-    fn test_processing_events() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        let mut events = Vec::new();
-
-        processor
-            .process_with(|event| {
-                match &event {
-                    ProcessingEvent::Start => events.push("start"),
-                    ProcessingEvent::Header { version } => {
-                        assert_eq!(version, "1.7");
-                        events.push("header");
-                    }
-                    ProcessingEvent::Page(_) => events.push("page"),
-                    ProcessingEvent::End => events.push("end"),
-                    _ => {}
-                }
-                Ok(ProcessingAction::Continue)
-            })
-            .unwrap();
-
-        assert!(events.contains(&"start"));
-        assert!(events.contains(&"header"));
-        assert!(events.contains(&"end"));
-    }
-
-    #[test]
-    fn test_process_pages() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        let mut page_count = 0;
-
-        processor
-            .process_pages(|index, page| {
-                assert_eq!(index, page_count);
-                assert_eq!(page.width, 595.0);
-                assert_eq!(page.height, 842.0);
-                page_count += 1;
-                Ok(ProcessingAction::Continue)
-            })
-            .unwrap();
-
-        assert!(page_count > 0);
-    }
-
-    #[test]
-    fn test_extract_text_streaming() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        let mut output = Vec::new();
-        processor.extract_text_streaming(&mut output).unwrap();
-
-        let text = String::from_utf8(output).unwrap();
-        assert!(text.contains("Page"));
-    }
-
-    #[test]
     fn test_processing_action() {
         assert_eq!(ProcessingAction::Continue, ProcessingAction::Continue);
         assert_eq!(ProcessingAction::Skip, ProcessingAction::Skip);
@@ -361,29 +257,6 @@ mod tests {
             .unwrap();
 
         assert!(op_count > 0);
-    }
-
-    #[test]
-    fn test_stop_processing() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        let mut page_count = 0;
-
-        processor
-            .process_pages(|_index, _page| {
-                page_count += 1;
-                if page_count >= 2 {
-                    Ok(ProcessingAction::Stop)
-                } else {
-                    Ok(ProcessingAction::Continue)
-                }
-            })
-            .unwrap();
-
-        assert_eq!(page_count, 2);
     }
 
     #[test]
@@ -520,74 +393,6 @@ mod tests {
             Err(PdfError::InvalidHeader) => {}
             _ => panic!("Expected InvalidHeader error"),
         }
-    }
-
-    #[test]
-    fn test_stream_processor_header_parsing() {
-        let data = b"%PDF-2.0\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        let mut header_version = String::new();
-
-        processor
-            .process_with(|event| {
-                if let ProcessingEvent::Header { version } = event {
-                    header_version = version;
-                }
-                Ok(ProcessingAction::Continue)
-            })
-            .unwrap();
-
-        assert_eq!(header_version, "2.0");
-    }
-
-    #[test]
-    fn test_skip_processing_action() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        let mut page_count = 0;
-        let mut skipped_count = 0;
-
-        processor
-            .process_pages(|index, _page| {
-                if index % 2 == 0 {
-                    page_count += 1;
-                    Ok(ProcessingAction::Continue)
-                } else {
-                    skipped_count += 1;
-                    Ok(ProcessingAction::Skip)
-                }
-            })
-            .unwrap();
-
-        assert!(page_count > 0);
-        assert!(skipped_count > 0);
-    }
-
-    #[test]
-    fn test_extract_text_streaming_with_output() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        let mut output = Vec::new();
-        processor.extract_text_streaming(&mut output).unwrap();
-
-        let text = String::from_utf8(output).unwrap();
-
-        // Should contain text from multiple pages
-        assert!(text.contains("Page 1 content"));
-        assert!(text.contains("Page 2 content"));
-        assert!(text.contains("Page 3 content"));
-
-        // Should have newlines between pages
-        assert!(text.contains('\n'));
     }
 
     #[test]
@@ -745,63 +550,6 @@ mod tests {
     }
 
     #[test]
-    fn test_stream_processor_with_custom_buffer_size() {
-        let options = StreamingOptions {
-            buffer_size: 128,
-            max_stream_size: 1024,
-            skip_images: false,
-            skip_fonts: false,
-        };
-
-        let data = b"%PDF-1.4\n";
-        let cursor = Cursor::new(data);
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        let mut header_found = false;
-
-        processor
-            .process_with(|event| {
-                if let ProcessingEvent::Header { version } = event {
-                    assert_eq!(version, "1.4");
-                    header_found = true;
-                }
-                Ok(ProcessingAction::Continue)
-            })
-            .unwrap();
-
-        assert!(header_found);
-    }
-
-    #[test]
-    fn test_processing_with_all_event_types() {
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        let mut event_types = Vec::new();
-
-        processor
-            .process_with(|event| {
-                match event {
-                    ProcessingEvent::Start => event_types.push("start"),
-                    ProcessingEvent::Header { .. } => event_types.push("header"),
-                    ProcessingEvent::Object { .. } => event_types.push("object"),
-                    ProcessingEvent::Page(_) => event_types.push("page"),
-                    ProcessingEvent::Resource { .. } => event_types.push("resource"),
-                    ProcessingEvent::End => event_types.push("end"),
-                }
-                Ok(ProcessingAction::Continue)
-            })
-            .unwrap();
-
-        assert!(event_types.contains(&"start"));
-        assert!(event_types.contains(&"header"));
-        assert!(event_types.contains(&"page"));
-        assert!(event_types.contains(&"end"));
-    }
-
-    #[test]
     fn test_page_data_with_operations() {
         let page_data = PageData {
             number: 0,
@@ -831,28 +579,6 @@ mod tests {
         assert_eq!(page_data.number, 1);
         assert_eq!(page_data.text, None);
         assert!(page_data.operations.is_empty());
-    }
-
-    #[test]
-    fn test_extract_text_streaming_no_text() {
-        // Mock a scenario where pages don't have text
-        let data = b"%PDF-1.7\n";
-        let cursor = Cursor::new(data);
-        let options = StreamingOptions::default();
-        let mut processor = StreamProcessor::new(cursor, options);
-
-        // Override the process_pages method behavior by testing direct page processing
-        let mut pages_processed = 0;
-
-        processor
-            .process_pages(|_index, page| {
-                pages_processed += 1;
-                assert!(page.text.is_some()); // Current implementation always has text
-                Ok(ProcessingAction::Continue)
-            })
-            .unwrap();
-
-        assert!(pages_processed > 0);
     }
 
     #[test]

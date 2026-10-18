@@ -1,0 +1,90 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 89 | Tests: 16 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/ai/chunking.rs                              16     89
+
+--- Worst Offenders ---
+  test_no_panic_when_chunk_size_below_search_window (oxidize-pdf-core/src/ai/chunking.rs:877) - Score: 70
+    - Test 'test_no_panic_when_chunk_size_below_search_window' only exercises the happy path — no None, Err, or edge-case inputs
+    - Helper 'chunk_text_bounded' starts a resource and is invoked by 5 tests
+    - Test 'test_no_panic_when_chunk_size_below_search_window' does not call any production code
+  test_zero_chunk_size_terminates_with_coverage (oxidize-pdf-core/src/ai/chunking.rs:897) - Score: 70
+    - Test 'test_zero_chunk_size_terminates_with_coverage' only exercises the happy path — no None, Err, or edge-case inputs
+    - Helper 'chunk_text_bounded' starts a resource and is invoked by 5 tests
+    - Test 'test_zero_chunk_size_terminates_with_coverage' does not call any production code
+  test_no_infinite_loop_when_sentence_boundary_at_chunk_start (oxidize-pdf-core/src/ai/chunking.rs:838) - Score: 80
+    - Test 'test_no_infinite_loop_when_sentence_boundary_at_chunk_start' only exercises the happy path — no None, Err, or edge-case inputs
+    - Helper 'chunk_text_bounded' starts a resource and is invoked by 5 tests
+  test_sentence_boundary_still_respected_after_loop_fix (oxidize-pdf-core/src/ai/chunking.rs:910) - Score: 80
+    - Test 'test_sentence_boundary_still_respected_after_loop_fix' only exercises the happy path — no None, Err, or edge-case inputs
+    - Helper 'chunk_text_bounded' starts a resource and is invoked by 5 tests
+    i Test 'test_sentence_boundary_still_respected_after_loop_fix' has multiple assertions without diagnostic messages
+  test_overlap_preserves_context (oxidize-pdf-core/src/ai/chunking.rs:561) - Score: 90
+    - Test 'test_overlap_preserves_context' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_overlap_preserves_context' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/src/ai/chunking.rs:
+  test_basic_chunking (line 528) - Score: 100
+    i Test 'test_basic_chunking' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_basic_chunking' uses .unwrap() which silently discards error information
+  test_overlap_preserves_context (line 561) - Score: 90
+    - Test 'test_overlap_preserves_context' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_overlap_preserves_context' uses .unwrap() which silently discards error information
+  test_empty_text (line 591) - Score: 100
+    i Test 'test_empty_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_empty_text' uses .unwrap() which silently discards error information
+  test_text_smaller_than_chunk_size (line 598) - Score: 90
+    - Test 'test_text_smaller_than_chunk_size' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_text_smaller_than_chunk_size' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_text_smaller_than_chunk_size' has multiple assertions without diagnostic messages
+    i Test 'test_text_smaller_than_chunk_size' uses .unwrap() which silently discards error information
+  test_token_estimation (line 609) - Score: 100
+    i Test 'test_token_estimation' asserts against a hardcoded constant instead of a computed expected value
+  test_chunk_ids_are_unique (line 635) - Score: 100
+    i Test 'test_chunk_ids_are_unique' uses .unwrap() which silently discards error information
+  test_sentence_boundary_detection (line 655) - Score: 90
+    - Test 'test_sentence_boundary_detection' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_sentence_boundary_detection' uses .unwrap() which silently discards error information
+  test_page_tracking (line 686) - Score: 100
+    i Test 'test_page_tracking' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_tracking' uses .unwrap() which silently discards error information
+  test_metadata_position_tracking (line 721) - Score: 90
+    - Test 'test_metadata_position_tracking' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_metadata_position_tracking' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_metadata_position_tracking' uses .unwrap() which silently discards error information
+  test_confidence_scores (line 752) - Score: 90
+    - Test 'test_confidence_scores' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_confidence_scores' uses .unwrap() which silently discards error information
+  test_performance_100_pages (line 769) - Score: 90
+    i Test 'test_performance_100_pages' uses .unwrap() which silently discards error information
+    - Test 'test_performance_100_pages' has low assert-to-setup ratio (13%): 2 asserts vs 13 setup lines
+  test_no_infinite_loop_when_sentence_boundary_at_chunk_start (line 838) - Score: 80
+    - Test 'test_no_infinite_loop_when_sentence_boundary_at_chunk_start' only exercises the happy path — no None, Err, or edge-case inputs
+    - Helper 'chunk_text_bounded' starts a resource and is invoked by 5 tests
+  test_no_infinite_loop_when_overlap_meets_or_exceeds_chunk_size (line 857) - Score: 90
+    - Helper 'chunk_text_bounded' starts a resource and is invoked by 5 tests
+  test_no_panic_when_chunk_size_below_search_window (line 877) - Score: 70
+    - Test 'test_no_panic_when_chunk_size_below_search_window' only exercises the happy path — no None, Err, or edge-case inputs
+    - Helper 'chunk_text_bounded' starts a resource and is invoked by 5 tests
+    - Test 'test_no_panic_when_chunk_size_below_search_window' does not call any production code
+  test_zero_chunk_size_terminates_with_coverage (line 897) - Score: 70
+    - Test 'test_zero_chunk_size_terminates_with_coverage' only exercises the happy path — no None, Err, or edge-case inputs
+    - Helper 'chunk_text_bounded' starts a resource and is invoked by 5 tests
+    - Test 'test_zero_chunk_size_terminates_with_coverage' does not call any production code
+  test_sentence_boundary_still_respected_after_loop_fix (line 910) - Score: 80
+    - Test 'test_sentence_boundary_still_respected_after_loop_fix' only exercises the happy path — no None, Err, or edge-case inputs
+    - Helper 'chunk_text_bounded' starts a resource and is invoked by 5 tests
+    i Test 'test_sentence_boundary_still_respected_after_loop_fix' has multiple assertions without diagnostic messages
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

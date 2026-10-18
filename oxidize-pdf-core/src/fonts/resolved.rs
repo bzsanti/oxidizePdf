@@ -215,7 +215,7 @@ impl ResolvedFontResource {
             .and_then(PdfObject::as_name)
             .map(|name| name.0.clone());
         let to_unicode = resolve_cmap(document, font.get("ToUnicode"))?;
-        let (encoding, differences, code_encoding, writing_mode) =
+        let (mut encoding, differences, code_encoding, writing_mode) =
             resolve_encoding(document, font.get("Encoding"), declared_subtype == "Type0")?;
 
         let descendant_storage;
@@ -305,6 +305,22 @@ impl ResolvedFontResource {
             .and_then(|object| object.as_integer())
             .is_some_and(|flags| flags & 4 != 0)
             || base_font.as_deref() == Some("Symbol");
+
+        if encoding.is_none() && declared_subtype == "Type1" {
+            let has_embedded_program = descriptor.as_ref().is_some_and(|dict| {
+                ["FontFile", "FontFile2", "FontFile3"]
+                    .iter()
+                    .any(|key| dict.get(key).is_some())
+            });
+            if !has_embedded_program {
+                encoding = base_font
+                    .as_deref()
+                    .and_then(|name| {
+                        crate::text::extraction_cmap::builtin_type1_encoding(name, symbolic)
+                    })
+                    .map(str::to_owned);
+            }
+        }
 
         let cid_widths = matches!(
             subtype,
@@ -481,6 +497,11 @@ impl ResolvedFontResource {
                         .unwrap_or_else(|| "\u{fffd}".into()),
                 );
             }
+            if let Some(character) = self.encoding.as_deref().and_then(|encoding| {
+                crate::text::extraction_cmap::decode_named_simple_encoding(encoding, value)
+            }) {
+                return Some(character.to_string());
+            }
             if self.symbolic {
                 // A symbolic TrueType cmap selects glyphs, not Adobe Symbol
                 // characters. Only explicit PDF Unicode/encoding evidence can
@@ -493,12 +514,7 @@ impl ResolvedFontResource {
                     return symbol_code_to_unicode(value).map(str::to_owned);
                 }
             }
-            let decoder = match self.encoding.as_deref() {
-                Some("WinAnsiEncoding") => TextEncoding::WinAnsiEncoding,
-                Some("MacRomanEncoding") => TextEncoding::MacRomanEncoding,
-                _ => TextEncoding::StandardEncoding,
-            };
-            return Some(decoder.decode(&[value]));
+            return Some(TextEncoding::StandardEncoding.decode(&[value]));
         }
         None
     }

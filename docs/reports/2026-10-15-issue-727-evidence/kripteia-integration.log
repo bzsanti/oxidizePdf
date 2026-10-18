@@ -1,0 +1,46 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 5 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/tests/dashboard_integration_test.rs              5    100
+
+--- Worst Offenders ---
+  test_dashboard_renders_to_pdf (oxidize-pdf-core/tests/dashboard_integration_test.rs:9) - Score: 100
+    i Test 'test_dashboard_renders_to_pdf' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_renders_to_pdf' uses .unwrap() which silently discards error information
+  test_kpi_card_with_all_features (oxidize-pdf-core/tests/dashboard_integration_test.rs:67) - Score: 100
+  test_dashboard_with_varied_data (oxidize-pdf-core/tests/dashboard_integration_test.rs:85) - Score: 100
+    i Test 'test_dashboard_with_varied_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_with_varied_data' uses .unwrap() which silently discards error information
+  test_empty_dashboard (oxidize-pdf-core/tests/dashboard_integration_test.rs:118) - Score: 100
+    i Test 'test_empty_dashboard' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_empty_dashboard' uses .unwrap() which silently discards error information
+  test_large_dashboard (oxidize-pdf-core/tests/dashboard_integration_test.rs:145) - Score: 100
+    i Test 'test_large_dashboard' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_large_dashboard' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/dashboard_integration_test.rs:
+  test_dashboard_renders_to_pdf (line 9) - Score: 100
+    i Test 'test_dashboard_renders_to_pdf' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_renders_to_pdf' uses .unwrap() which silently discards error information
+  test_dashboard_with_varied_data (line 85) - Score: 100
+    i Test 'test_dashboard_with_varied_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dashboard_with_varied_data' uses .unwrap() which silently discards error information
+  test_empty_dashboard (line 118) - Score: 100
+    i Test 'test_empty_dashboard' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_empty_dashboard' uses .unwrap() which silently discards error information
+  test_large_dashboard (line 145) - Score: 100
+    i Test 'test_large_dashboard' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_large_dashboard' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

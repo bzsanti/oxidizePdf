@@ -1,0 +1,136 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 80 | Tests: 22 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+oxidize-pdf-core/src/memory/stream_processor.rs                  22     80
+
+--- Worst Offenders ---
+  test_stream_processor_creation (oxidize-pdf-core/src/memory/stream_processor.rs:222) - Score: 60
+    - Test 'test_stream_processor_creation' does not call any production code
+    - Test 'test_stream_processor_creation' has no assertions
+  test_processing_action (oxidize-pdf-core/src/memory/stream_processor.rs:230) - Score: 60
+    i Test 'test_processing_action' has multiple assertions without diagnostic messages
+    - Test 'test_processing_action' does not call any production code
+    - Test 'test_processing_action' line 231: assert_eq! with identical arguments: ProcessingAction :: Continue
+    - Test 'test_processing_action' line 232: assert_eq! with identical arguments: ProcessingAction :: Skip
+    - Test 'test_processing_action' line 233: assert_eq! with identical arguments: ProcessingAction :: Stop
+  test_content_stream_processor_empty_stream (oxidize-pdf-core/src/memory/stream_processor.rs:417) - Score: 65
+    - Test 'test_content_stream_processor_empty_stream' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_content_stream_processor_empty_stream' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_stream_processor_empty_stream' uses .unwrap() which silently discards error information
+    - Test 'test_content_stream_processor_empty_stream' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+    - Test 'test_content_stream_processor_empty_stream' asserts values that resolve to the same constant via bindings
+  test_content_stream_processor_invalid_content (oxidize-pdf-core/src/memory/stream_processor.rs:514) - Score: 65
+    - Test 'test_content_stream_processor_invalid_content' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_content_stream_processor_invalid_content' executes production code without asserting on its behaviour
+  test_content_stream_processor (oxidize-pdf-core/src/memory/stream_processor.rs:238) - Score: 70
+    - Test 'test_content_stream_processor' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_content_stream_processor' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_content_stream_processor' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_stream_processor' has multiple assertions without diagnostic messages
+    i Test 'test_content_stream_processor' uses .unwrap() which silently discards error information
+    - Test 'test_content_stream_processor' has low assert-to-setup ratio (18%): 4 asserts vs 18 setup lines
+
+--- Details ---
+oxidize-pdf-core/src/memory/stream_processor.rs:
+  test_streaming_options_default (line 213) - Score: 90
+    i Test 'test_streaming_options_default' has multiple assertions without diagnostic messages
+    - Test 'test_streaming_options_default' does not call any production code
+  test_stream_processor_creation (line 222) - Score: 60
+    - Test 'test_stream_processor_creation' does not call any production code
+    - Test 'test_stream_processor_creation' has no assertions
+  test_processing_action (line 230) - Score: 60
+    i Test 'test_processing_action' has multiple assertions without diagnostic messages
+    - Test 'test_processing_action' does not call any production code
+    - Test 'test_processing_action' line 231: assert_eq! with identical arguments: ProcessingAction :: Continue
+    - Test 'test_processing_action' line 232: assert_eq! with identical arguments: ProcessingAction :: Skip
+    - Test 'test_processing_action' line 233: assert_eq! with identical arguments: ProcessingAction :: Stop
+  test_content_stream_processor (line 238) - Score: 70
+    - Test 'test_content_stream_processor' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_content_stream_processor' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_content_stream_processor' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_stream_processor' has multiple assertions without diagnostic messages
+    i Test 'test_content_stream_processor' uses .unwrap() which silently discards error information
+    - Test 'test_content_stream_processor' has low assert-to-setup ratio (18%): 4 asserts vs 18 setup lines
+  test_streaming_options_custom (line 263) - Score: 90
+    i Test 'test_streaming_options_custom' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_streaming_options_custom' has multiple assertions without diagnostic messages
+    - Test 'test_streaming_options_custom' does not call any production code
+  test_streaming_options_debug_clone (line 278) - Score: 100
+    i Test 'test_streaming_options_debug_clone' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_streaming_options_debug_clone' has multiple assertions without diagnostic messages
+  test_processing_event_debug (line 299) - Score: 80
+    - Test 'test_processing_event_debug' has low assert-to-setup ratio (4%): 1 asserts vs 25 setup lines
+    - Test 'test_processing_event_debug' does not call any production code
+  test_page_data_debug (line 330) - Score: 100
+    i Test 'test_page_data_debug' has multiple assertions without diagnostic messages
+  test_resource_type_debug_clone (line 347) - Score: 80
+    i Test 'test_resource_type_debug_clone' has multiple assertions without diagnostic messages
+    - Test 'test_resource_type_debug_clone' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+    - Test 'test_resource_type_debug_clone' does not call any production code
+  test_processing_action_debug_partial_eq (line 367) - Score: 70
+    i Test 'test_processing_action_debug_partial_eq' has multiple assertions without diagnostic messages
+    - Test 'test_processing_action_debug_partial_eq' line 373: assert_eq! with identical arguments: ProcessingAction :: Continue
+    - Test 'test_processing_action_debug_partial_eq' line 374: assert_eq! with identical arguments: ProcessingAction :: Skip
+    - Test 'test_processing_action_debug_partial_eq' line 375: assert_eq! with identical arguments: ProcessingAction :: Stop
+  test_stream_processor_invalid_header (line 383) - Score: 70
+    - Test 'test_stream_processor_invalid_header' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_stream_processor_invalid_header' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_stream_processor_invalid_header' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  test_content_stream_processor_creation (line 399) - Score: 100
+    i Test 'test_content_stream_processor_creation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_stream_processor_creation' has multiple assertions without diagnostic messages
+  test_content_stream_processor_empty_stream (line 417) - Score: 65
+    - Test 'test_content_stream_processor_empty_stream' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_content_stream_processor_empty_stream' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_stream_processor_empty_stream' uses .unwrap() which silently discards error information
+    - Test 'test_content_stream_processor_empty_stream' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+    - Test 'test_content_stream_processor_empty_stream' asserts values that resolve to the same constant via bindings
+  test_content_stream_processor_large_stream_error (line 436) - Score: 70
+    - Test 'test_content_stream_processor_large_stream_error' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_content_stream_processor_large_stream_error' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_content_stream_processor_large_stream_error' has multiple assertions without diagnostic messages
+    - Test 'test_content_stream_processor_large_stream_error' has low assert-to-setup ratio (12%): 2 asserts vs 15 setup lines
+  test_content_stream_processor_skip_action (line 462) - Score: 70
+    - Test 'test_content_stream_processor_skip_action' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_content_stream_processor_skip_action' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_content_stream_processor_skip_action' has multiple assertions without diagnostic messages
+    i Test 'test_content_stream_processor_skip_action' uses .unwrap() which silently discards error information
+    - Test 'test_content_stream_processor_skip_action' has low assert-to-setup ratio (13%): 3 asserts vs 20 setup lines
+  test_content_stream_processor_stop_action (line 490) - Score: 80
+    - Test 'test_content_stream_processor_stop_action' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_content_stream_processor_stop_action' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_content_stream_processor_stop_action' uses .unwrap() which silently discards error information
+    - Test 'test_content_stream_processor_stop_action' has low assert-to-setup ratio (11%): 2 asserts vs 17 setup lines
+  test_content_stream_processor_invalid_content (line 514) - Score: 65
+    - Test 'test_content_stream_processor_invalid_content' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_content_stream_processor_invalid_content' executes production code without asserting on its behaviour
+  test_content_stream_processor_callback_error (line 532) - Score: 80
+    - Test 'test_content_stream_processor_callback_error' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_content_stream_processor_callback_error' asserts against a hardcoded constant instead of a computed expected value
+    - Test 'test_content_stream_processor_callback_error' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  test_page_data_with_operations (line 553) - Score: 90
+    i Test 'test_page_data_with_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_data_with_operations' has multiple assertions without diagnostic messages
+    - Test 'test_page_data_with_operations' does not call any production code
+  test_page_data_without_text (line 570) - Score: 90
+    i Test 'test_page_data_without_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_page_data_without_text' has multiple assertions without diagnostic messages
+    - Test 'test_page_data_without_text' does not call any production code
+  test_stream_processor_io_error (line 585) - Score: 90
+    - Test 'test_stream_processor_io_error' has low assert-to-setup ratio (5%): 1 asserts vs 18 setup lines
+  test_content_stream_processor_buffer_reuse (line 608) - Score: 90
+    - Test 'test_content_stream_processor_buffer_reuse' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_content_stream_processor_buffer_reuse' has multiple assertions without diagnostic messages
+    i Test 'test_content_stream_processor_buffer_reuse' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

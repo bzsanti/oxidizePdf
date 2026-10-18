@@ -1,0 +1,64 @@
+//! Public contracts from #727: successful default rendering must not omit components.
+use oxidize_pdf::{
+    dashboard::{layout::GridSystem, ComponentSpan, Dashboard, DashboardBuilder, KpiCard},
+    Page,
+};
+
+fn dashboard(count: usize) -> Dashboard {
+    let mut builder = DashboardBuilder::new().title("audit");
+    for i in 0..count {
+        builder = builder.add_component(Box::new(KpiCard::new(format!("SENTINEL{i}X"), "1")));
+    }
+    builder.build().unwrap()
+}
+
+#[test]
+fn default_overflow_is_an_error_with_remaining_identities() {
+    let error = dashboard(10)
+        .render_to_page(&mut Page::a4())
+        .expect_err("must not silently omit seven cards");
+    assert!(error.to_string().contains("3..10"), "{error}");
+}
+
+#[test]
+fn exact_fit_and_first_overflow() {
+    let d = dashboard(1);
+    let grid = GridSystem::new(12, 0., 20.);
+    assert_eq!(
+        grid.layout_components(&d.components, 0., 120., 600., 120., 120.)
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(grid
+        .layout_components(&d.components, 0., 120., 600., 119.99, 120.)
+        .is_err());
+}
+
+#[test]
+fn multiple_rows_require_space_for_every_component() {
+    let mut d = dashboard(4);
+    for c in &mut d.components {
+        c.set_span(ComponentSpan::new(6));
+    }
+    let grid = GridSystem::new(12, 0., 20.);
+    assert_eq!(
+        grid.layout_components(&d.components, 0., 260., 600., 260., 120.)
+            .unwrap()
+            .len(),
+        4
+    );
+    let error = grid
+        .layout_components(&d.components, 0., 260., 600., 259.99, 120.)
+        .unwrap_err();
+    assert!(error.to_string().contains("2..4"), "{error}");
+}
+
+#[test]
+fn non_finite_bounds_cannot_bypass_overflow() {
+    let d = dashboard(10);
+    assert!(GridSystem::new(12, 0., 20.)
+        .layout_components(&d.components, 0., 120., 600., f64::NAN, 120.)
+        .is_err());
+}
+

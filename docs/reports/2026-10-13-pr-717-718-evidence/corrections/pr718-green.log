@@ -1,0 +1,13 @@
+   Compiling oxidize-pdf v5.4.2 (/tmp/oxidize-pr718-fix/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 29.32s
+     Running tests/issue_711_aes_entropy_test.rs (/tmp/oxidize-pr718-review/target/debug/deps/issue_711_aes_entropy_test-a7954dbc45187fda)
+
+running 5 tests
+test fallible_iv_and_encryption_errors_are_explicit ... ok
+test security_handler_trait_stream_propagates_aes_errors ... ok
+test security_handler_trait_string_propagates_aes_errors ... ok
+test security_handler_trait_encryption_recovers_plaintext_for_rc4_and_aes ... ok
+test direct_iv_and_all_authoring_algorithms_work_natively ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+

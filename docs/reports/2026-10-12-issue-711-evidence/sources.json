@@ -1,0 +1,20 @@
+{
+  "base": "206b688768cc49c3210472668e6e3c63959e043f",
+  "sha256": {
+    "oxidize-pdf-core/src/encryption/aes.rs": "879694fc916bd8851632097fbad16ff57ca3003f59f9e82d3310b211b1f754ba",
+    "oxidize-pdf-core/src/encryption/mod.rs": "45ce0a54c44117ba0c5922b22f0be3df2f33f7fc8cac9ee8cf1295d8cdd07f1c",
+    "oxidize-pdf-core/src/encryption/standard_security.rs": "76dd7412bc503d317f1a01338aa12bf3d1f3d5d188c14d3878ea5a9d73e18c47",
+    "oxidize-pdf-core/tests/issue_711_aes_entropy_test.rs": "75a440c4bdb834d0596e587cf079ee118d13e574814495b109cb799303daa99e",
+    "oxidize-pdf-core/tests/support/issue_711_contract.rs": "c8d30e2553336629fb6795176a0c1bd9262526e50151676ce2d9857e1b338b1e",
+    ".github/workflows/interoperability.yml": "879f7cf38d612afdbc5910128bde965c8072b94335a152ae9dfd1792cc5876bf",
+    "tools/wasm-encryption-regression/.gitignore": "d71069d1ad9f32e7a74e92477b85e485c6abc5090e1d5f6aba69d20bc82ae210",
+    "tools/wasm-encryption-regression/Cargo.toml": "6a70ecbfa9178f272d80e085568f38d73b983de91e1ef8c0eadc02a54bd56d6a",
+    "tools/wasm-encryption-regression/Cargo.lock": "bbdbd9e229456be79588ac0403e089ba9f3400e489ae6c7fbf82f44086334f22",
+    "tools/wasm-encryption-regression/src/lib.rs": "5d66aaeda028d6035443b67174f7933995cd0f8335af87abd13ee96e605c4479",
+    "tools/wasm-encryption-regression/browser.html": "b4cb525262638f210f32fc95ca50d58940feed8adb77087e53557d0a94ed8abc",
+    "tools/wasm-encryption-regression/browser_test.cjs": "b22afb3c8aa88e29a6d48df2100554f3ad8e4e2d39aeaa9f23a964cef104e074",
+    "tools/wasm-encryption-regression/node_test.cjs": "ad52c6997b23eb994eb19118d907be80d39372df24c52481139e7f783429b252",
+    "tools/wasm-encryption-regression/README.md": "ccedc91b49a41aef877d42fa62b284e64d6dd15b51d69d087427f8f5cf2547a0"
+  },
+  "validation_context": "Encryption source/consumers validated with #714 present; no functional dependency. PR tree excludes #714."
+}

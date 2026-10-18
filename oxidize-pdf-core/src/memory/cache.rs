@@ -20,8 +20,8 @@ impl<K: Clone + Eq + std::hash::Hash, V> LruCache<K, V> {
     pub fn new(capacity: usize) -> Self {
         Self {
             capacity,
-            map: HashMap::with_capacity(capacity),
-            order: VecDeque::with_capacity(capacity),
+            map: HashMap::new(),
+            order: VecDeque::new(),
         }
     }
 

@@ -101,6 +101,9 @@
 //!     .aggregate("revenue", AggregateFunction::Sum);
 //! ```
 
+//! `PivotTable` configuration is available, but rendering returns an explicit
+//! not-implemented error. No pivot aggregation results are currently supported.
+
 pub mod builder;
 pub mod component;
 pub mod data_aggregation;
@@ -131,6 +134,26 @@ pub use treemap::{TreeMap, TreeMapBuilder, TreeMapNode, TreeMapOptions};
 use crate::error::PdfError;
 use crate::page::Page;
 use crate::Font;
+
+/// Behavior when the next complete row does not fit on a dashboard page.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DashboardOverflowPolicy {
+    /// Reject overflow before drawing anything on the page (the default).
+    #[default]
+    Error,
+    /// Render the fitting prefix of complete rows and report all omitted indices.
+    Omit,
+}
+
+/// Component identities from a successful dashboard render.
+/// Indices are zero-based positions in [`Dashboard::components`], including duplicate labels.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DashboardRenderReport {
+    /// Indices of components whose render method completed successfully, in input order.
+    pub rendered_indices: Vec<usize>,
+    /// Indices of the remaining components, omitted only by explicit caller choice.
+    pub omitted_indices: Vec<usize>,
+}
 
 /// Main dashboard structure that contains all components and layout information
 #[derive(Debug, Clone)]
@@ -165,29 +188,48 @@ pub struct DashboardMetadata {
 }
 
 impl Dashboard {
-    /// Render the entire dashboard to a PDF page
+    /// Render every dashboard component to a PDF page.
+    ///
+    /// # Errors
+    /// Returns an error with the remaining zero-based component index range if a row
+    /// cannot fit. Layout errors leave the page unchanged. Component rendering errors
+    /// propagate and may leave a partially drawn page.
+    /// Use [`Self::render_to_page_with_overflow`] to explicitly opt into omission.
     pub fn render_to_page(&self, page: &mut Page) -> Result<(), PdfError> {
-        // Set up page layout
-        let page_bounds = page.content_area();
-        let content_area = self.layout.calculate_content_area(page_bounds);
+        self.render_to_page_with_overflow(page, DashboardOverflowPolicy::Error)
+            .map(|_| ())
+    }
 
-        // Render header (title, subtitle)
+    /// Render with an explicit overflow policy and report component identities.
+    ///
+    /// `Omit` draws only complete rows that fit, in input order. Once a row does not
+    /// fit, that row and every following component are reported as omitted. It does
+    /// not paginate or crop individual components. The existing row sizing applies.
+    ///
+    /// # Errors
+    /// Invalid layout or overflow with `Error` is rejected before any page mutation.
+    /// Header, component and footer rendering errors propagate; those errors may
+    /// leave a partially drawn page and do not produce a successful report.
+    pub fn render_to_page_with_overflow(
+        &self,
+        page: &mut Page,
+        policy: DashboardOverflowPolicy,
+    ) -> Result<DashboardRenderReport, PdfError> {
+        let content_area = self.layout.calculate_content_area(page.content_area());
+        let positions = self.layout.calculate_positions_with_overflow(
+            &self.components,
+            content_area,
+            policy,
+        )?;
         self.render_header(page, content_area)?;
-
-        // Calculate component positions using grid system
-        let component_positions = self
-            .layout
-            .calculate_positions(&self.components, content_area)?;
-
-        // Render each component
-        for (component, position) in self.components.iter().zip(component_positions.iter()) {
+        for (component, position) in self.components.iter().zip(&positions) {
             component.render(page, *position, &self.theme)?;
         }
-
-        // Render footer (metadata, page numbers)
         self.render_footer(page, content_area)?;
-
-        Ok(())
+        Ok(DashboardRenderReport {
+            rendered_indices: (0..positions.len()).collect(),
+            omitted_indices: (positions.len()..self.components.len()).collect(),
+        })
     }
 
     /// Render dashboard header with title and subtitle

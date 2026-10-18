@@ -204,6 +204,13 @@ impl SemanticRedactor {
     /// # Returns
     ///
     /// A tuple of (modified PDF bytes, redaction report).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SemanticRedactorError::PageReconstructionFailed`] without output
+    /// if any selected entity's 1-indexed page is zero or exceeds the document's
+    /// page count. Entities of unselected types are ignored, including their pages.
+    /// Parsing, page reconstruction, and output writing failures are also returned.
     pub fn redact(
         pdf_bytes: &[u8],
         entities: &[SemanticEntity],
@@ -246,6 +253,17 @@ impl SemanticRedactor {
         let page_count = document
             .page_count()
             .map_err(|e| SemanticRedactorError::PageReconstructionFailed(e.to_string()))?;
+
+        // Check every selected entity before constructing any output. Iterating
+        // only existing pages would silently omit out-of-range requests.
+        for entity in &to_redact {
+            let page = entity.bounds.page;
+            if page == 0 || page > page_count {
+                return Err(SemanticRedactorError::PageReconstructionFailed(format!(
+                    "selected entity page {page} is out of range for a document with {page_count} pages (1-indexed)"
+                )));
+            }
+        }
 
         let mut output_doc = crate::document::Document::new();
         let mut report_entries = Vec::new();
@@ -322,8 +340,13 @@ impl SemanticRedactor {
     /// replaces glyph data with a numeric adjustment that preserves the original advance,
     /// including AFM widths, kerning, character spacing, and word spacing. It
     /// rebuilds the document, dropping prior revisions and document-level
-    /// auxiliary data, and verifies that no target remains in any output page text
-    /// operation. Annotations, XObjects, inline images, abbreviated text-showing
+    /// auxiliary data, and verifies that no target remains in the concatenated
+    /// text operands of each output page. This check is conservative: operator,
+    /// stream, positioning, and text-state boundaries do not establish that
+    /// fragments are safe to retain. It may refuse separated runs that together
+    /// spell a target, rather than claim irreversible success. Recovered text
+    /// is bounded by the secure per-page content limit.
+    /// Annotations, XObjects, inline images, abbreviated text-showing
     /// operators, marked content, ambiguous matches, and malformed streams are
     /// rejected.
     pub fn redact_irreversible(
@@ -1277,6 +1300,10 @@ fn verify_targets_absent(
             ));
         }
         verified_ascii_fonts(&page, &document, page_idx + 1)?;
+        // Text can remain recoverable across Tj/TJ, BT/ET, positioning and
+        // content-stream boundaries. None of those is a safe match boundary.
+        // Keep one bounded sequence for the whole page, not one per operator.
+        let mut page_text = Vec::new();
         for stream in page
             .content_streams_with_document(&document)
             .map_err(|error| SemanticRedactorError::WriteFailed(error.to_string()))?
@@ -1303,18 +1330,26 @@ fn verify_targets_absent(
                     _ => None,
                 };
                 if let Some(recovered) = recovered {
-                    for entity in entities {
-                        if recovered
-                            .windows(entity.content.len())
-                            .any(|part| part == entity.content.as_bytes())
-                        {
-                            return secure_unsupported(format!(
-                                "forensic verification recovered entity '{}'",
-                                entity.id
-                            ));
-                        }
+                    if page_text.len().saturating_add(recovered.len()) > SECURE_PAGE_CONTENT_LIMIT {
+                        return secure_unsupported(format!(
+                            "forensic text on page {} exceeds the secure byte limit",
+                            page_idx + 1
+                        ));
                     }
+                    page_text.extend_from_slice(&recovered);
                 }
+            }
+        }
+        for entity in entities {
+            // redact_irreversible has already rejected empty targets.
+            if page_text
+                .windows(entity.content.len())
+                .any(|part| part == entity.content.as_bytes())
+            {
+                return secure_unsupported(format!(
+                    "forensic verification recovered entity '{}'",
+                    entity.id
+                ));
             }
         }
     }
