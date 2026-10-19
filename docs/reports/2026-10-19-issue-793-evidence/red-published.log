@@ -1,0 +1,61 @@
+    Blocking waiting for file lock on build directory
+   Compiling oxidize-pdf v5.5.0 (/tmp/issue792-published/oxidize-pdf-5.5.0)
+    Finished `test` profile [unoptimized] target(s) in 1m 12s
+     Running tests/issue_793_layout_capacity_test.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/issue_793_layout_capacity_test-d8493bff58abe61c)
+
+running 5 tests
+test identity_exhausts_resets_and_refuses_without_mutation ... FAILED
+test margins_spacing_boundary_and_overflow_are_consistent ... FAILED
+test screen_and_custom_flip_have_the_same_top_anchor ... FAILED
+test real_table_consumer_uses_top_not_bottom_or_spacing_offset ... FAILED
+test scaled_translated_custom_coordinates_use_local_units ... FAILED
+
+failures:
+
+---- identity_exhausts_resets_and_refuses_without_mutation stdout ----
+
+thread 'identity_exhausts_resets_and_refuses_without_mutation' (61) panicked at tests/issue_793_layout_capacity_test.rs:19:9:
+assertion `left == right` failed
+  left: Some(180.0)
+ right: Some(190.0)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- margins_spacing_boundary_and_overflow_are_consistent stdout ----
+
+thread 'margins_spacing_boundary_and_overflow_are_consistent' (62) panicked at tests/issue_793_layout_capacity_test.rs:87:9:
+assertion `left == right` failed
+  left: Some(155.0)
+ right: Some(160.0)
+
+---- screen_and_custom_flip_have_the_same_top_anchor stdout ----
+
+thread 'screen_and_custom_flip_have_the_same_top_anchor' (65) panicked at tests/issue_793_layout_capacity_test.rs:43:9:
+assertion `left == right` failed
+  left: Some(100.0)
+ right: Some(10.0)
+
+---- real_table_consumer_uses_top_not_bottom_or_spacing_offset stdout ----
+
+thread 'real_table_consumer_uses_top_not_bottom_or_spacing_offset' (63) panicked at tests/issue_793_layout_capacity_test.rs:107:5:
+assertion `left == right` failed
+  left: 180.0
+ right: 190.0
+
+---- scaled_translated_custom_coordinates_use_local_units stdout ----
+
+thread 'scaled_translated_custom_coordinates_use_local_units' (64) panicked at tests/issue_793_layout_capacity_test.rs:58:5:
+assertion `left == right` failed
+  left: 10.0
+ right: 0.0
+
+
+failures:
+    identity_exhausts_resets_and_refuses_without_mutation
+    margins_spacing_boundary_and_overflow_are_consistent
+    real_table_consumer_uses_top_not_bottom_or_spacing_offset
+    scaled_translated_custom_coordinates_use_local_units
+    screen_and_custom_flip_have_the_same_top_anchor
+
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test issue_793_layout_capacity_test`
