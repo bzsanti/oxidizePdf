@@ -105,6 +105,104 @@ pub(crate) fn ensure_modification_allowed<R: Read + Seek>(
     }
 }
 
+/// Enforce FieldMDP locks for a complete batch of fully-qualified field names.
+/// Shared by form filling and signature-field operations; this checks structural
+/// modification policy, not the cryptographic validity of a signature.
+pub(crate) fn ensure_field_modifications_allowed<R: Read + Seek>(
+    reader: &mut PdfReader<R>,
+    targets: &[&str],
+) -> Result<(), PdfError> {
+    let version = reader
+        .effective_version()
+        .map_err(|error| invalid_policy(format!("read field-name encoding: {error}")))?;
+    for reference in reader.object_references() {
+        if reader.object_storage_offset(reference.0) == Some(0) {
+            continue;
+        }
+        let object = reader
+            .get_object(reference.0, reference.1)
+            .map_err(|error| invalid_policy(format!("inspect FieldMDP signature: {error}")))?
+            .clone();
+        let top_level_signature = signature_dictionary(&object).is_some();
+        let mut signatures = Vec::new();
+        collect_signature_dictionaries(&object, 0, &mut signatures)?;
+        for (index, signature) in signatures.into_iter().enumerate() {
+            let Some(references) = signature.get("Reference") else {
+                continue;
+            };
+            for transform in resolve_array(reader, references, "signature /Reference")? {
+                let transform = resolve_dictionary(reader, &transform, "FieldMDP transform")?;
+                if transform
+                    .get("TransformMethod")
+                    .and_then(PdfObject::as_name)
+                    .is_none_or(|method| method.0 != "FieldMDP")
+                {
+                    continue;
+                }
+                if !top_level_signature || index != 0 {
+                    return Err(invalid_policy(
+                        "a FieldMDP signature must be an indirect object",
+                    ));
+                }
+                let range = validate_certification_signature(&signature)?;
+                ensure_definition_is_signed(reader, reference, &range)?;
+                let params = transform
+                    .get("TransformParams")
+                    .ok_or_else(|| invalid_policy("FieldMDP transform has no /TransformParams"))?;
+                let params = resolve_dictionary(reader, params, "FieldMDP /TransformParams")?;
+                let action = params
+                    .get("Action")
+                    .and_then(PdfObject::as_name)
+                    .ok_or_else(|| invalid_policy("FieldMDP /TransformParams requires /Action"))?;
+                let fields = match params.get("Fields") {
+                    None if action.0 == "All" => Vec::new(),
+                    None => {
+                        return Err(invalid_policy(
+                            "FieldMDP /Include and /Exclude require /Fields",
+                        ))
+                    }
+                    Some(value) => resolve_array(reader, value, "FieldMDP /Fields")?
+                        .into_iter()
+                        .map(|field| {
+                            field
+                                .as_string()
+                                .map(|value| value.to_text_with_version(&version))
+                                .ok_or_else(|| {
+                                    invalid_policy("FieldMDP /Fields must contain strings")
+                                })
+                        })
+                        .collect::<Result<Vec<_>, _>>()?,
+                };
+                match action.0.as_str() {
+                    "All" if !fields.is_empty() => {
+                        return Err(invalid_policy("FieldMDP /All must not specify /Fields"))
+                    }
+                    "All" | "Include" | "Exclude" => {}
+                    other => {
+                        return Err(invalid_policy(format!(
+                            "unsupported FieldMDP action /{other}"
+                        )))
+                    }
+                }
+                for target in targets {
+                    let listed = fields.iter().any(|field| field == target);
+                    let locked = match action.0.as_str() {
+                        "Include" => listed,
+                        "Exclude" => !listed,
+                        _ => true,
+                    };
+                    if locked {
+                        return Err(PdfError::PermissionDenied(format!(
+                            "FieldMDP locks field {target:?}"
+                        )));
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn catalog_certification_reference<R: Read + Seek>(
     reader: &mut PdfReader<R>,
     catalog: &PdfDictionary,
@@ -383,7 +481,10 @@ fn enforce_permission(
 }
 
 fn invalid_policy(message: impl Into<String>) -> PdfError {
-    PdfError::InvalidStructure(format!("invalid DocMDP policy: {}", message.into()))
+    PdfError::InvalidStructure(format!(
+        "invalid signature modification policy: {}",
+        message.into()
+    ))
 }
 
 #[cfg(test)]
