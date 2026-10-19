@@ -80,7 +80,9 @@ pub use cms::{
 };
 pub use detection::detect_signature_fields;
 pub use error::{SignatureError, SignatureResult};
-pub(crate) use permissions::{ensure_modification_allowed, IncrementalModification};
+pub(crate) use permissions::{
+    ensure_field_modifications_allowed, ensure_modification_allowed, IncrementalModification,
+};
 pub use signing::{
     prepare_document_timestamp, prepare_incremental_signature,
     prepare_incremental_signature_with_appearance, CertificationPermission,

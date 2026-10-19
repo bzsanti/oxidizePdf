@@ -38,7 +38,7 @@ use crate::error::{PdfError, Result};
 use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfString};
 use crate::parser::PdfReader;
 use crate::text::TextEncoding;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Cursor;
 
 use super::incremental_update::{format_real, write_dictionary, write_object};
@@ -66,7 +66,9 @@ impl<'a> IncrementalFormFiller<'a> {
     /// (e.g. `"address.street"`).
     ///
     /// # Errors
-    /// Returns [`PdfError::PermissionDenied`] for a field whose effective `/Ff`
+    /// Enforces DocMDP and FieldMDP through the shared signature policy checks.
+    /// Returns [`PdfError::PermissionDenied`] when certification or field locks
+    /// forbid filling, or for a field whose effective `/Ff`
     /// has ReadOnly set (including inherited flags). Malformed flag values or
     /// inheritance return [`PdfError::InvalidStructure`]. A failed batch returns
     /// no output; the original bytes are never modified.
@@ -278,6 +280,16 @@ fn fill_many_impl(base_bytes: &[u8], fields: &[(&str, &str)]) -> Result<Vec<u8>>
         ));
     }
 
+    let catalog = reader
+        .catalog()
+        .map_err(|error| PdfError::InvalidStructure(format!("read catalog: {error}")))?
+        .clone();
+    crate::signatures::ensure_modification_allowed(
+        &mut reader,
+        &catalog,
+        crate::signatures::IncrementalModification::FormFill,
+    )?;
+
     // Base trailer facts needed for the appended trailer.
     let base_startxref = reader.trailer().xref_offset;
     let base_root = reader
@@ -295,6 +307,25 @@ fn fill_many_impl(base_bytes: &[u8], fields: &[(&str, &str)]) -> Result<Vec<u8>>
 
     // Resolve field name -> object id (reusing the open reader, no second parse).
     let field_map = resolve_acroform_fields(&mut reader)?;
+
+    // A malformed field tree can expose one object under multiple names.
+    // Authorize every alias of the objects we will rewrite, not just the name
+    // supplied by the caller, so an alias cannot bypass a FieldMDP lock.
+    let target_objects: HashSet<_> = fields
+        .iter()
+        .map(|(name, _)| {
+            field_map
+                .get(*name)
+                .copied()
+                .ok_or_else(|| PdfError::FieldNotFound((*name).to_string()))
+        })
+        .collect::<Result<_>>()?;
+    let targets: Vec<_> = field_map
+        .iter()
+        .filter(|(_, reference)| target_objects.contains(reference))
+        .map(|(name, _)| name.as_str())
+        .collect();
+    crate::signatures::ensure_field_modifications_allowed(&mut reader, &targets)?;
 
     // Build the set of modified objects. Duplicate field names (or distinct
     // names resolving to the same object id) collapse to a single rewrite
