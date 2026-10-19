@@ -482,7 +482,7 @@ fn enforce_permission(
 
 fn invalid_policy(message: impl Into<String>) -> PdfError {
     PdfError::InvalidStructure(format!(
-        "invalid signature modification policy: {}",
+        "invalid DocMDP/FieldMDP policy: {}",
         message.into()
     ))
 }
