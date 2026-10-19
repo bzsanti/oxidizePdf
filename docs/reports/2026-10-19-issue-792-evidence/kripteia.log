@@ -1,0 +1,47 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 91 | Tests: 7 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...e792-review/tests/issue_792_redaction_resources_test.rs        7     91
+
+--- Worst Offenders ---
+  independent_resource_oracle (/tmp/issue792-review/tests/issue_792_redaction_resources_test.rs:176) - Score: 70
+    - Test 'independent_resource_oracle' has a match arm with empty body, ignoring potential error cases
+    - Test 'independent_resource_oracle' is marked as #[ignore]
+    i Test 'independent_resource_oracle' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'independent_resource_oracle' uses .unwrap() which silently discards error information
+  ordinary_standard14_fonts_remain_supported (/tmp/issue792-review/tests/issue_792_redaction_resources_test.rs:78) - Score: 90
+    - Test 'ordinary_standard14_fonts_remain_supported' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  rejects_font_payload_on_page_without_selected_entity (/tmp/issue792-review/tests/issue_792_redaction_resources_test.rs:108) - Score: 90
+    - Test 'rejects_font_payload_on_page_without_selected_entity' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  rejects_target_in_retained_font_names (/tmp/issue792-review/tests/issue_792_redaction_resources_test.rs:130) - Score: 90
+    - Test 'rejects_target_in_retained_font_names' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  rejects_unverified_font_fields_in_direct_indirect_and_unused_fonts (/tmp/issue792-review/tests/issue_792_redaction_resources_test.rs:54) - Score: 100
+    i Test 'rejects_unverified_font_fields_in_direct_indirect_and_unused_fonts' has multiple assertions without diagnostic messages
+
+--- Details ---
+/tmp/issue792-review/tests/issue_792_redaction_resources_test.rs:
+  rejects_unverified_font_fields_in_direct_indirect_and_unused_fonts (line 54) - Score: 100
+    i Test 'rejects_unverified_font_fields_in_direct_indirect_and_unused_fonts' has multiple assertions without diagnostic messages
+  ordinary_standard14_fonts_remain_supported (line 78) - Score: 90
+    - Test 'ordinary_standard14_fonts_remain_supported' has low assert-to-setup ratio (12%): 1 asserts vs 7 setup lines
+  rejects_font_payload_on_page_without_selected_entity (line 108) - Score: 90
+    - Test 'rejects_font_payload_on_page_without_selected_entity' has low assert-to-setup ratio (15%): 2 asserts vs 11 setup lines
+  rejects_target_in_retained_font_names (line 130) - Score: 90
+    - Test 'rejects_target_in_retained_font_names' has low assert-to-setup ratio (18%): 2 asserts vs 9 setup lines
+  independent_resource_oracle (line 176) - Score: 70
+    - Test 'independent_resource_oracle' has a match arm with empty body, ignoring potential error cases
+    - Test 'independent_resource_oracle' is marked as #[ignore]
+    i Test 'independent_resource_oracle' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'independent_resource_oracle' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

@@ -1,0 +1,31 @@
+    Checking oxidize-pdf v5.5.0 (/tmp/oxidize-issue792/oxidize-pdf-core)
+error: literal with an empty format string
+   --> oxidize-pdf-core/examples/pdf_to_llm_formats.rs:153:24
+    |
+153 |     println!("  - {}", "examples/results/exported_json.json");
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#print_literal
+    = note: `-D clippy::print-literal` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::print_literal)]`
+help: try
+    |
+153 -     println!("  - {}", "examples/results/exported_json.json");
+153 +     println!("  - examples/results/exported_json.json");
+    |
+
+error: literal with an empty format string
+   --> oxidize-pdf-core/examples/pdf_to_llm_formats.rs:155:24
+    |
+155 |     println!("  - {}", "examples/results/exported_chunks.json");
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#print_literal
+help: try
+    |
+155 -     println!("  - {}", "examples/results/exported_chunks.json");
+155 +     println!("  - examples/results/exported_chunks.json");
+    |
+
+error: could not compile `oxidize-pdf` (example "pdf_to_llm_formats") due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...

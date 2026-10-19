@@ -77,6 +77,13 @@ jobs:
           independent_output_oracle
           -- --ignored --exact
 
+      - name: Verify retained font resources with qpdf and Poppler
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_792_redaction_resources_test
+          independent_resource_oracle
+          -- --ignored --exact
+
       - name: Verify unsupported pivot output and real dashboard controls
         run: >-
           cargo test --locked -p oxidize-pdf
