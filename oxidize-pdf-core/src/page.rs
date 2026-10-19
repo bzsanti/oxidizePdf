@@ -3812,136 +3812,191 @@ pub struct LayoutManager {
     pub element_spacing: f64,
 }
 
-impl LayoutManager {
-    /// Create a new layout manager for the given page
-    pub fn new(page: &Page, coordinate_system: crate::coordinate_system::CoordinateSystem) -> Self {
-        let current_y = match coordinate_system {
-            crate::coordinate_system::CoordinateSystem::PdfStandard => {
-                // PDF coordinates: start from top (high Y value)
-                page.height() - page.margins().top
-            }
-            crate::coordinate_system::CoordinateSystem::ScreenSpace => {
-                // Screen coordinates: start from top (low Y value)
-                page.margins().top
-            }
-            crate::coordinate_system::CoordinateSystem::Custom(_) => {
-                // For custom systems, start conservatively in the middle
-                page.height() / 2.0
-            }
-        };
+struct LayoutBounds {
+    top: f64,
+    bottom: f64,
+    left: f64,
+    right: f64,
+}
 
-        Self {
+impl LayoutManager {
+    /// Create a layout manager. Positions, heights and spacing are in the
+    /// selected coordinate system; page dimensions and margins remain PDF points.
+    ///
+    /// Custom transforms must be finite, invertible and axis-aligned (no shear
+    /// or rotation coupling X and Y). Scaling, translation and axis reflections
+    /// are supported. Unsupported geometry has no capacity: reservations return
+    /// `None`, remaining space is zero and X helpers return NaN. Use
+    /// [`Self::try_new`] to receive an explicit construction error instead.
+    pub fn new(page: &Page, coordinate_system: crate::coordinate_system::CoordinateSystem) -> Self {
+        let mut layout = Self {
             coordinate_system,
-            current_y,
+            current_y: 0.0,
             page_width: page.width(),
             page_height: page.height(),
             margins: page.margins().clone(),
             element_spacing: 10.0,
-        }
+        };
+        layout.new_page();
+        layout
     }
 
-    /// Set custom spacing between elements
+    /// Construct a manager, rejecting unsupported transforms or invalid geometry.
+    pub fn try_new(
+        page: &Page,
+        coordinate_system: crate::coordinate_system::CoordinateSystem,
+    ) -> Result<Self> {
+        let layout = Self::new(page, coordinate_system);
+        if layout.bounds().is_none() {
+            return Err(crate::error::PdfError::InvalidOperation(
+                "layout requires valid page bounds and a finite, invertible, axis-aligned transform"
+                    .into(),
+            ));
+        }
+        Ok(layout)
+    }
+
+    // Recompute because the manager's geometry and coordinate system are public.
+    fn bounds(&self) -> Option<LayoutBounds> {
+        if [
+            self.page_width,
+            self.page_height,
+            self.margins.left,
+            self.margins.right,
+            self.margins.top,
+            self.margins.bottom,
+            self.element_spacing,
+        ]
+        .iter()
+        .any(|v| !v.is_finite() || *v < 0.0)
+            || self.page_width <= 0.0
+            || self.page_height <= 0.0
+            || self.margins.left + self.margins.right > self.page_width
+            || self.margins.top + self.margins.bottom > self.page_height
+        {
+            return None;
+        }
+        let m = self
+            .coordinate_system
+            .to_pdf_standard_matrix(self.page_height);
+        if [m.a, m.b, m.c, m.d, m.e, m.f]
+            .iter()
+            .any(|v| !v.is_finite())
+            || m.a == 0.0
+            || m.d == 0.0
+            || m.b != 0.0
+            || m.c != 0.0
+        {
+            return None;
+        }
+        let top = (self.page_height - self.margins.top - m.f) / m.d;
+        let bottom = (self.margins.bottom - m.f) / m.d;
+        let x1 = (self.margins.left - m.e) / m.a;
+        let x2 = (self.page_width - self.margins.right - m.e) / m.a;
+        if [top, bottom, x1, x2, top - bottom, x1 - x2]
+            .iter()
+            .any(|v| !v.is_finite())
+        {
+            return None;
+        }
+        Some(LayoutBounds {
+            top,
+            bottom,
+            left: x1.min(x2),
+            right: x1.max(x2),
+        })
+    }
+
+    /// Set spacing in local units. Non-finite or negative spacing disables reservations.
     pub fn with_element_spacing(mut self, spacing: f64) -> Self {
         self.element_spacing = spacing;
         self
     }
 
-    /// Check if an element of given height will fit on the current page
-    pub fn will_fit(&self, element_height: f64) -> bool {
-        let required_space = element_height + self.element_spacing;
-
-        match self.coordinate_system {
-            crate::coordinate_system::CoordinateSystem::PdfStandard => {
-                // In PDF coords, we subtract height and check against bottom margin
-                self.current_y - required_space >= self.margins.bottom
-            }
-            crate::coordinate_system::CoordinateSystem::ScreenSpace => {
-                // In screen coords, we add height and check against page height
-                self.current_y + required_space <= self.page_height - self.margins.bottom
-            }
-            crate::coordinate_system::CoordinateSystem::Custom(_) => {
-                // Conservative check for custom coordinate systems
-                required_space <= (self.page_height - self.margins.top - self.margins.bottom) / 2.0
-            }
-        }
-    }
-
-    /// Get the current available space remaining on the page
-    pub fn remaining_space(&self) -> f64 {
-        match self.coordinate_system {
-            crate::coordinate_system::CoordinateSystem::PdfStandard => {
-                (self.current_y - self.margins.bottom).max(0.0)
-            }
-            crate::coordinate_system::CoordinateSystem::ScreenSpace => {
-                (self.page_height - self.margins.bottom - self.current_y).max(0.0)
-            }
-            crate::coordinate_system::CoordinateSystem::Custom(_) => {
-                self.page_height / 2.0 // Conservative estimate
-            }
-        }
-    }
-
-    /// Reserve space for an element and return its Y position
-    ///
-    /// Returns `None` if the element doesn't fit on the current page.
-    /// If it fits, returns the Y coordinate where the element should be placed
-    /// and updates the internal current_y for the next element.
-    pub fn add_element(&mut self, element_height: f64) -> Option<f64> {
-        if !self.will_fit(element_height) {
+    fn next_y(&self, element_height: f64) -> Option<f64> {
+        let bounds = self.bounds()?;
+        let required = element_height + self.element_spacing;
+        if !element_height.is_finite()
+            || element_height <= 0.0
+            || !required.is_finite()
+            || required > self.remaining_space()
+        {
             return None;
         }
-
-        let position_y = match self.coordinate_system {
-            crate::coordinate_system::CoordinateSystem::PdfStandard => {
-                // Position element at current_y (top of element)
-                // Then move current_y down by element height + spacing
-                let y_position = self.current_y - element_height;
-                self.current_y = y_position - self.element_spacing;
-                self.current_y + element_height // Return the bottom Y of the element area
-            }
-            crate::coordinate_system::CoordinateSystem::ScreenSpace => {
-                // Position element at current_y (top of element)
-                // Then move current_y down by element height + spacing
-                let y_position = self.current_y;
-                self.current_y += element_height + self.element_spacing;
-                y_position
-            }
-            crate::coordinate_system::CoordinateSystem::Custom(_) => {
-                // Simple implementation for custom coordinate systems
-                let y_position = self.current_y;
-                self.current_y -= element_height + self.element_spacing;
-                y_position
-            }
+        let direction = if self.coordinate_system.grows_upward() {
+            -1.0
+        } else {
+            1.0
         };
-
-        Some(position_y)
+        let next = self.current_y + direction * required;
+        // Reject arithmetic that cannot advance the cursor, as well as overflow.
+        if !next.is_finite()
+            || next == self.current_y
+            || next < bounds.top.min(bounds.bottom)
+            || next > bounds.top.max(bounds.bottom)
+        {
+            return None;
+        }
+        Some(next)
     }
 
-    /// Reset the layout manager for a new page
+    /// Whether a positive finite height and its trailing spacing fit.
+    /// This is exactly the same predicate used by [`Self::add_element`].
+    pub fn will_fit(&self, element_height: f64) -> bool {
+        self.next_y(element_height).is_some()
+    }
+
+    /// Remaining capacity in local units, including space needed for trailing spacing.
+    /// Invalid geometry or a cursor outside usable bounds has zero capacity.
+    pub fn remaining_space(&self) -> f64 {
+        let Some(bounds) = self.bounds() else {
+            return 0.0;
+        };
+        if !self.current_y.is_finite()
+            || self.current_y < bounds.top.min(bounds.bottom)
+            || self.current_y > bounds.top.max(bounds.bottom)
+        {
+            return 0.0;
+        }
+        (self.current_y - bounds.bottom).abs()
+    }
+
+    /// Reserve height plus trailing spacing and return the element's **top** Y
+    /// in local coordinates, before advancing the cursor toward the page bottom.
+    /// This is not a bottom coordinate or a text baseline. For PdfStandard it is
+    /// the anchor consumed by `AdvancedTableExt::add_advanced_table`; consumers
+    /// expecting PDF coordinates must convert ScreenSpace/Custom positions and sizes.
+    /// Returns `None` without changing the cursor if the reservation is invalid,
+    /// unsupported, or does not fit. Heights must be positive and finite.
+    pub fn add_element(&mut self, element_height: f64) -> Option<f64> {
+        let next = self.next_y(element_height)?;
+        let top = self.current_y;
+        self.current_y = next;
+        Some(top)
+    }
+
+    /// Reset to the usable page top in local coordinates (zero for invalid geometry).
     pub fn new_page(&mut self) {
-        self.current_y = match self.coordinate_system {
-            crate::coordinate_system::CoordinateSystem::PdfStandard => {
-                self.page_height - self.margins.top
-            }
-            crate::coordinate_system::CoordinateSystem::ScreenSpace => self.margins.top,
-            crate::coordinate_system::CoordinateSystem::Custom(_) => self.page_height / 2.0,
-        };
+        self.current_y = self.bounds().map_or(0.0, |bounds| bounds.top);
     }
 
-    /// Get the X position for centering an element of given width
+    /// Center a local-width element within the usable local X interval.
     pub fn center_x(&self, element_width: f64) -> f64 {
-        let available_width = self.page_width - self.margins.left - self.margins.right;
-        self.margins.left + (available_width - element_width) / 2.0
+        self.bounds().map_or(f64::NAN, |bounds| {
+            bounds.left + (bounds.right - bounds.left - element_width) / 2.0
+        })
     }
 
-    /// Get the left margin X position
+    /// Start of the usable local X interval. With X reflection this maps to
+    /// the physical right edge. Returns NaN for unsupported geometry.
     pub fn left_x(&self) -> f64 {
-        self.margins.left
+        self.bounds().map_or(f64::NAN, |bounds| bounds.left)
     }
 
-    /// Get the right margin X position minus element width
+    /// End of the usable local X interval minus the element's local width.
     pub fn right_x(&self, element_width: f64) -> f64 {
-        self.page_width - self.margins.right - element_width
+        self.bounds()
+            .map_or(f64::NAN, |bounds| bounds.right - element_width)
     }
 }
 
