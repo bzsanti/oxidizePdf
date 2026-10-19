@@ -1,0 +1,69 @@
+   Compiling oxidize-pdf v5.5.0 (/tmp/oxidize-issue792/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 9.53s
+     Running tests/issue_730_redaction_boundaries_test.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/issue_730_redaction_boundaries_test-bb118f3c24f64bdb)
+
+running 11 tests
+test same_page_residual_split ... ok
+test safe_control ... ok
+test split_hex_strings ... ok
+test split_arrays ... ok
+test split_array_tj ... ok
+test split_content_streams ... ok
+test split_text_states ... ok
+test split_tj ... ok
+test split_tj_tj_array ... ok
+test unsplit_duplicate ... ok
+test independent_output_oracle ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/issue_792_redaction_resources_test.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/issue_792_redaction_resources_test-73fd3a0e0da0911c)
+
+running 7 tests
+test rejects_payload_in_type_field ... ok
+test rejects_font_payload_on_page_without_selected_entity ... ok
+test rejects_target_in_retained_font_names ... ok
+test checks_names_added_by_writer_in_serialized_output ... ok
+test rejects_unverified_font_fields_in_direct_indirect_and_unused_fonts ... ok
+test ordinary_standard14_fonts_remain_supported ... ok
+test independent_resource_oracle ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/semantic_redactor_test.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/semantic_redactor_test-f9522925acea9188)
+
+running 31 tests
+test irreversible_redaction_rejects_marked_content ... ok
+test irreversible_api_fails_closed_without_returning_masked_bytes ... ok
+test irreversible_redaction_rejects_empty_entity_content ... ok
+test irreversible_redaction_rejects_unaudited_shading_resource_path ... ok
+test irreversible_redaction_rejects_annotations ... ok
+test irreversible_redaction_rejects_target_spanning_part_of_tj_array ... ok
+test irreversible_redaction_rejects_partial_text_operand_match ... ok
+test irreversible_redaction_rejects_text_outside_entity_bounds ... ok
+test irreversible_redaction_rejects_symbol_font_even_when_operand_bytes_match ... ok
+test irreversible_tj_redaction_preserves_character_and_word_spacing_advance ... ok
+test irreversible_redaction_enforces_entity_budget ... ok
+test irreversible_redaction_drops_document_metadata_copy_of_target ... ok
+test irreversible_redaction_removes_complete_tj_array ... ok
+test irreversible_tj_redaction_preserves_following_text_position ... ok
+test test_redact_filters_by_entity_type ... ok
+test test_redact_no_entities_returns_original ... ok
+test test_redact_entity_page_1_indexed_to_0_indexed ... ok
+test test_redact_multiple_entities_same_page ... ok
+test test_redaction_config_with_entity_types ... ok
+test irreversible_tj_redaction_preserves_tj_advance ... ok
+test test_redaction_config_default_redacts_nothing ... ok
+test test_redaction_style_black_box_is_default ... ok
+test test_redaction_style_placeholder_stores_text ... ok
+test test_semantic_redactor_error_messages ... ok
+test irreversible_redaction_removes_exact_direct_text_and_reports_success ... ok
+test test_redaction_report_by_type ... ok
+test test_redact_produces_valid_pdf ... ok
+test test_redaction_report_count ... ok
+test test_redaction_report_pages_affected ... ok
+test test_redact_preserves_page_count ... ok
+test visual_mask_report_never_claims_irreversible_redaction ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

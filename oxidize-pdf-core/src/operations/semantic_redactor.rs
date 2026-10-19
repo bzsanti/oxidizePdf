@@ -346,6 +346,14 @@ impl SemanticRedactor {
     /// fragments are safe to retain. It may refuse separated runs that together
     /// spell a target, rather than claim irreversible success. Recovered text
     /// is bounded by the secure per-page content limit.
+    /// Retained fonts must be Standard-14 Type1 dictionaries containing only
+    /// `/Type /Font`, `/Subtype`, `/BaseFont`, and an optional audited name
+    /// `/Encoding`. Additional fields (including private data, descriptors,
+    /// embedded font programs, and ToUnicode maps) are rejected, even on unused
+    /// fonts or pages without a selected entity. They are not silently stripped:
+    /// their effect on rendering and recoverable data has not been audited.
+    /// Retained font names and identifiers are also checked for target text,
+    /// both before reconstruction and in the serialized output.
     /// Annotations, XObjects, inline images, abbreviated text-showing
     /// operators, marked content, ambiguous matches, and malformed streams are
     /// rejected.
@@ -461,7 +469,8 @@ impl SemanticRedactor {
                 content.extend_from_slice(&stream);
                 content.push(b'\n');
             }
-            let verified_fonts = verified_ascii_fonts(&parsed_page, &document, page_idx + 1)?;
+            let verified_fonts =
+                verified_ascii_fonts(&parsed_page, &document, page_idx + 1, &to_redact)?;
 
             if let Some(page_entities) = by_page.get(&(page_idx + 1)) {
                 for entity in page_entities {
@@ -563,6 +572,7 @@ fn verified_ascii_fonts<R: Read + Seek>(
     page: &crate::parser::page_tree::ParsedPage,
     document: &crate::parser::document::PdfDocument<R>,
     page_number: u32,
+    entities: &[&SemanticEntity],
 ) -> SemanticRedactorResult<HashMap<String, VerifiedTextFont>> {
     let Some(resources) = page.get_resources() else {
         return Ok(HashMap::new());
@@ -599,6 +609,30 @@ fn verified_ascii_fonts<R: Read + Seek>(
                 resource_name.0
             ));
         };
+        // Page reconstruction preserves the entire dictionary. Validating only
+        // BaseFont/Encoding would let arbitrary retained data bypass the text
+        // verification. Close the dictionary before copying any of its values.
+        for (field, _) in &font.0 {
+            if !matches!(
+                field.0.as_str(),
+                "Type" | "Subtype" | "BaseFont" | "Encoding"
+            ) {
+                return secure_unsupported(format!(
+                    "page {page_number} font /{} contains unsupported font field /{}",
+                    resource_name.0, field.0
+                ));
+            }
+        }
+        if !font
+            .get("Type")
+            .and_then(PdfObject::as_name)
+            .is_some_and(|name| name.0 == "Font")
+        {
+            return secure_unsupported(format!(
+                "page {page_number} font /{} has invalid /Type (expected /Font)",
+                resource_name.0
+            ));
+        }
         let subtype_is_type1 = font
             .get("Subtype")
             .and_then(PdfObject::as_name)
@@ -626,6 +660,24 @@ fn verified_ascii_fonts<R: Read + Seek>(
                 "page {page_number} font /{} uses an unsupported encoding",
                 resource_name.0
             ));
+        }
+        // All retained values are now audited names, so no recursive resource
+        // traversal is needed. Check identifiers too: /SECRET can disclose the
+        // target just as a string payload can. This also runs on serialized
+        // output, including any Standard-14 fonts inserted by the writer.
+        for entity in entities {
+            let target = entity.content.as_str();
+            if resource_name.0.contains(target)
+                || font.0.iter().any(|(field, value)| {
+                    field.0.contains(target)
+                        || value.as_name().is_some_and(|name| name.0.contains(target))
+                })
+            {
+                return secure_unsupported(format!(
+                    "forensic verification recovered entity '{}' in font resources on page {page_number}",
+                    entity.id
+                ));
+            }
         }
         if let Some(verified_font) = verified_ascii_standard14_font(&font) {
             verified.insert(resource_name.0.clone(), verified_font);
@@ -1299,7 +1351,7 @@ fn verify_targets_absent(
                 page_idx + 1
             ));
         }
-        verified_ascii_fonts(&page, &document, page_idx + 1)?;
+        verified_ascii_fonts(&page, &document, page_idx + 1, entities)?;
         // Text can remain recoverable across Tj/TJ, BT/ET, positioning and
         // content-stream boundaries. None of those is a safe match boundary.
         // Keep one bounded sequence for the whole page, not one per operator.
