@@ -2,10 +2,17 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,53 +27,15 @@ jobs:
       version_tag: ${{ steps.check_conditions.outputs.version_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
           
       - name: Check release conditions
         id: check_conditions
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Checking release conditions..."
-          
-          # Check if this is a tag push
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION_TAG="${{ github.ref_name }}"
-            echo "✅ Tag push detected: $VERSION_TAG"
-            
-            # Check if tag is on main branch
-            if git merge-base --is-ancestor ${{ github.sha }} origin/main; then
-              echo "✅ Tag is on main branch"
-              
-              # Check if this commit came from a merged PR
-              PR_NUMBER=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" --jq '.[0].number' 2>/dev/null || echo "")
-              
-              if [ -n "$PR_NUMBER" ]; then
-                PR_STATE=$(gh pr view "$PR_NUMBER" --json state --jq '.state')
-                if [ "$PR_STATE" = "MERGED" ]; then
-                  echo "✅ Commit came from merged PR #$PR_NUMBER"
-                  echo "should_release=true" >> $GITHUB_OUTPUT
-                  echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
-                else
-                  echo "❌ PR #$PR_NUMBER is not merged (state: $PR_STATE)"
-                  echo "should_release=false" >> $GITHUB_OUTPUT
-                fi
-              else
-                # If no PR found, allow release if tag is on main (covers direct pushes and tag releases)
-                echo "⚠️ No associated PR found, but tag is on main branch - allowing release"
-                echo "should_release=true" >> $GITHUB_OUTPUT
-                echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
-              fi
-            else
-              echo "❌ Tag is not on main branch"
-              echo "should_release=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "❌ Not a tag push"
-            echo "should_release=false" >> $GITHUB_OUTPUT
-          fi
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci_release_conditions.py
 
   # Then verify that all CI checks are passing
   check-ci-status:
@@ -76,60 +45,12 @@ jobs:
     if: needs.verify-release-conditions.outputs.should_release == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - name: Wait for CI checks to complete
+      - name: Require complete current-main validation
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          COMMIT_SHA=$(git rev-parse HEAD)
-          echo "Waiting for CI status for commit: $COMMIT_SHA"
-
-          # Wait up to 30 minutes for CI to complete
-          MAX_WAIT_SECONDS=1800
-          WAIT_INTERVAL=30
-          ELAPSED=0
-
-          while [ $ELAPSED -lt $MAX_WAIT_SECONDS ]; do
-            echo ""
-            echo "⏱️ Checking CI status (elapsed: ${ELAPSED}s / max: ${MAX_WAIT_SECONDS}s)..."
-
-            # Get all check runs for this commit
-            gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/check-runs \
-              --jq '.check_runs[] | select(.name != "Verify CI Status" and .name != "Verify Release Conditions") | {name: .name, status: .status, conclusion: .conclusion}' > check_results.json
-
-            # Display results
-            echo "CI Check Results:"
-            cat check_results.json | jq -r '"  - \(.name): \(.status) (\(.conclusion // "pending"))"'
-
-            # Check if any required checks failed (ignore Code Coverage and Generate Coverage Report)
-            FAILED_CHECKS=$(cat check_results.json | jq -r 'select(.conclusion == "failure" and .name != "Code Coverage" and .name != "Generate Coverage Report") | .name' | wc -l)
-            PENDING_CHECKS=$(cat check_results.json | jq -r 'select((.status == "in_progress" or .status == "queued") and .name != "Code Coverage" and .name != "Generate Coverage Report") | .name' | wc -l)
-
-            if [ "$FAILED_CHECKS" -gt 0 ]; then
-              echo ""
-              echo "❌ Release blocked: $FAILED_CHECKS CI checks failed"
-              cat check_results.json | jq -r 'select(.conclusion == "failure" and .name != "Code Coverage" and .name != "Generate Coverage Report") | "  - \(.name)"'
-              exit 1
-            fi
-
-            if [ "$PENDING_CHECKS" -eq 0 ]; then
-              echo ""
-              echo "✅ All CI checks passed. Release can proceed."
-              exit 0
-            fi
-
-            echo "⏳ $PENDING_CHECKS CI checks still pending, waiting ${WAIT_INTERVAL}s..."
-            sleep $WAIT_INTERVAL
-            ELAPSED=$((ELAPSED + WAIT_INTERVAL))
-          done
-
-          # Timeout reached
-          echo ""
-          echo "❌ Timeout: CI checks did not complete within ${MAX_WAIT_SECONDS}s"
-          echo "Pending checks:"
-          cat check_results.json | jq -r 'select((.status == "in_progress" or .status == "queued") and .name != "Code Coverage" and .name != "Generate Coverage Report") | "  - \(.name)"'
-          exit 1
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci_release_gate.py
 
   release:
     name: Release
@@ -139,33 +60,41 @@ jobs:
     permissions:
       contents: write
       packages: write
+      actions: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo index
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run tests
-        run: cargo test --all --release
+      - name: Find equivalent optimized validation
+        id: optimized
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci_evidence.py --role optimized --job 'Optimized release tests' --workflow ci.yml
+
+      - name: Validate changed optimized build inputs
+        if: steps.optimized.outputs.hit != 'true'
+        run: cargo test --locked --all --release
 
       - name: Build release binaries
-        run: cargo build --all --release
+        run: cargo build --locked --all --release
 
       - name: Extract version from tag
         id: get_version
@@ -173,6 +102,52 @@ jobs:
           VERSION_TAG="${{ needs.verify-release-conditions.outputs.version_tag }}"
           VERSION="${VERSION_TAG#v}"  # Remove 'v' prefix
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify tag and package version, prepare immutable package
+        env:
+          RELEASE_TAG: ${{ needs.verify-release-conditions.outputs.version_tag }}
+        run: |
+          python3 - <<'PYVERSION'
+          import os, tomllib
+          with open('Cargo.toml', 'rb') as source:
+              version = tomllib.load(source)['workspace']['package']['version']
+          if os.environ['RELEASE_TAG'] != 'v' + version:
+              raise SystemExit('Tag differs from workspace package version')
+          PYVERSION
+          cargo package --locked -p oxidize-pdf
+
+      # Check if packages need new versions before publishing
+      - name: Check version changes
+        id: version_check
+        run: |
+          # Get current version from workspace Cargo.toml
+          CORE_VERSION=$(grep -A5 "^\[workspace\.package\]" Cargo.toml | grep "^version = " | cut -d'"' -f2)
+
+          echo "core_version=$CORE_VERSION" >> $GITHUB_OUTPUT
+
+          # Check if version exists on crates.io
+          echo "Checking if version exists on crates.io..."
+          echo "Core version to check: $CORE_VERSION"
+
+          # Check core package
+          STATUS=$(curl --silent --show-error --location --output registry-version.json --write-out '%{http_code}' "https://crates.io/api/v1/crates/oxidize-pdf/$CORE_VERSION")
+          case "$STATUS" in
+            200) echo "core_needs_publish=false" >> "$GITHUB_OUTPUT" ;;
+            404) echo "core_needs_publish=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Registry lookup failed: HTTP $STATUS"; exit 1 ;;
+          esac
+
+      # Publish to crates.io (only if the exact version is absent)
+      - name: Publish oxidize-pdf to crates.io
+        if: steps.version_check.outputs.core_needs_publish == 'true'
+        run: cargo publish --locked -p oxidize-pdf
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Verify published package identity
+        env:
+          PACKAGE_VERSION: ${{ steps.version_check.outputs.core_version }}
+        run: python3 scripts/ci_verify_package.py
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
@@ -193,69 +168,12 @@ jobs:
             oxidize-pdf = "${{ steps.get_version.outputs.VERSION }}"
             ```
 
-      # Detect which packages changed
-      - name: Detect changed packages
-        id: changes
-        run: |
-          # Get the previous tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-
-          if [ -z "$PREVIOUS_TAG" ]; then
-            echo "No previous tag found, assuming core package changed"
-            echo "core_changed=true" >> $GITHUB_OUTPUT
-          else
-            CURRENT_TAG="${{ needs.verify-release-conditions.outputs.version_tag }}"
-            echo "Comparing changes from $PREVIOUS_TAG to $CURRENT_TAG"
-
-            # Check if core package changed
-            if git diff --name-only "$PREVIOUS_TAG".."$CURRENT_TAG" | grep -q "^oxidize-pdf-core/"; then
-              echo "core_changed=true" >> $GITHUB_OUTPUT
-            else
-              echo "core_changed=false" >> $GITHUB_OUTPUT
-            fi
-
-          fi
-
-      # Check if packages need new versions before publishing
-      - name: Check version changes
-        id: version_check
-        run: |
-          # Get current version from workspace Cargo.toml
-          CORE_VERSION=$(grep -A5 "^\[workspace\.package\]" Cargo.toml | grep "^version = " | cut -d'"' -f2)
-
-          echo "core_version=$CORE_VERSION" >> $GITHUB_OUTPUT
-
-          # Check if version exists on crates.io
-          echo "Checking if version exists on crates.io..."
-          echo "Core version to check: $CORE_VERSION"
-
-          # Check core package
-          CORE_PUBLISHED=$(curl -s "https://crates.io/api/v1/crates/oxidize-pdf" | jq -r '.crate.max_version')
-          if [ "$CORE_PUBLISHED" = "$CORE_VERSION" ]; then
-            echo "✅ oxidize-pdf v$CORE_VERSION already published"
-            echo "core_needs_publish=false" >> $GITHUB_OUTPUT
-          else
-            echo "🚀 oxidize-pdf v$CORE_VERSION needs publishing (current: $CORE_PUBLISHED)"
-            echo "core_needs_publish=true" >> $GITHUB_OUTPUT
-          fi
-
-      # Publish to crates.io (only if version doesn't exist and package changed)
-      - name: Publish oxidize-pdf to crates.io
-        if: steps.changes.outputs.core_changed == 'true' && steps.version_check.outputs.core_needs_publish == 'true'
-        run: cargo publish -p oxidize-pdf
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
-      - name: Wait for crates.io (core)
-        if: steps.changes.outputs.core_changed == 'true' && steps.version_check.outputs.core_needs_publish == 'true'
-        run: sleep 60
-
       - name: Release Summary
         run: |
           echo "🎉 Release v${{ steps.get_version.outputs.VERSION }} completed successfully!"
           echo ""
           echo "✅ Released packages:"
-          if [ "${{ steps.changes.outputs.core_changed }}" == "true" ] && [ "${{ steps.version_check.outputs.core_needs_publish }}" == "true" ]; then
+          if [ "${{ steps.version_check.outputs.core_needs_publish }}" == "true" ]; then
             echo "  - oxidize-pdf v${{ steps.get_version.outputs.VERSION }}"
           fi
           echo ""

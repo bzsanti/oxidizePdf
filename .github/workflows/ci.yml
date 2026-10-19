@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, develop, develop_santi ]
   pull_request:
@@ -8,6 +9,14 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -21,27 +30,35 @@ jobs:
         rust: [stable]
         # beta temporarily disabled - needs API updates for benchmarks
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: ${{ matrix.rust }}
           components: rustfmt, clippy
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo index
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Find equivalent validation
+        id: reuse
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci_evidence.py --role 'tests' --job 'Test (${{ matrix.os }}, ${{ matrix.rust }})' --workflow 'ci.yml'
+
       - name: Check formatting
+        if: steps.reuse.outputs.hit != 'true'
         # Drive rustfmt directly in xargs-chunked batches instead of `cargo fmt`.
         # `cargo fmt --all` passes every workspace target root (~400+ examples/tests)
         # to a single rustfmt invocation; on windows-latest that command line exceeds
@@ -54,7 +71,7 @@ jobs:
           | xargs -0 -r -n 60 rustfmt --edition 2021 --check
 
       - name: Check for backup files
-        if: matrix.os != 'windows-latest'
+        if: steps.reuse.outputs.hit != 'true' && (matrix.os != 'windows-latest')
         run: |
           if find . -name "*.backup" -o -name "*_old.rs" | grep .; then
             echo "ERROR: Backup files found in repository"
@@ -62,7 +79,7 @@ jobs:
           fi
 
       - name: Check for backup files (Windows)
-        if: matrix.os == 'windows-latest'
+        if: steps.reuse.outputs.hit != 'true' && (matrix.os == 'windows-latest')
         shell: pwsh
         run: |
           $backups = Get-ChildItem -Recurse -Include "*.backup","*_old.rs" -ErrorAction SilentlyContinue
@@ -72,52 +89,65 @@ jobs:
           }
 
       - name: Run clippy
-        run: cargo clippy --all -- -D warnings
+        if: steps.reuse.outputs.hit != 'true'
+        run: cargo clippy --all --locked -- -D warnings
 
       - name: Build
-        run: cargo build --all --verbose
+        if: steps.reuse.outputs.hit != 'true'
+        run: cargo build --all --locked --verbose
 
       - name: Run tests (macOS beta - lib only)
-        if: matrix.os == 'macos-latest' && matrix.rust == 'beta'
-        run: cargo test --lib --verbose
+        if: steps.reuse.outputs.hit != 'true' && (matrix.os == 'macos-latest' && matrix.rust == 'beta')
+        run: cargo test --lib --locked --verbose
 
       - name: Run tests (all others)
-        if: matrix.os != 'macos-latest' || matrix.rust != 'beta'
-        run: cargo test --all --features internal-testing --verbose
+        if: steps.reuse.outputs.hit != 'true' && (matrix.os != 'macos-latest' || matrix.rust != 'beta')
+        run: cargo test --all --locked --features internal-testing --verbose
 
       # The analysis SPI is gated behind `unstable-spi` (+ `semantic` for the
       # enricher/extra bag), so the default test step above never compiles its
       # tests. Exercise the SPI feature matrix on Linux/stable (spec §10.6).
       - name: Run analysis SPI tests (unstable-spi)
-        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
-        run: cargo test -p oxidize-pdf --features "internal-testing,unstable-spi" --verbose
+        if: steps.reuse.outputs.hit != 'true' && (matrix.os == 'ubuntu-latest' && matrix.rust == 'stable')
+        run: cargo test -p oxidize-pdf --locked --features "internal-testing,unstable-spi" --verbose
 
       - name: Run analysis SPI tests (unstable-spi + semantic)
-        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
-        run: cargo test -p oxidize-pdf --features "internal-testing,unstable-spi,semantic" --verbose
+        if: steps.reuse.outputs.hit != 'true' && (matrix.os == 'ubuntu-latest' && matrix.rust == 'stable')
+        run: cargo test -p oxidize-pdf --locked --features "internal-testing,unstable-spi,semantic" --verbose
 
       - name: Build documentation
-        run: cargo doc --all --no-deps
+        if: steps.reuse.outputs.hit != 'true'
+        run: cargo doc --all --locked --no-deps
+
+      - name: Record validation evidence
+        if: steps.reuse.outputs.hit != 'true' && steps.reuse.outputs.artifact != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ steps.reuse.outputs.artifact }}
+          path: .ci-evidence/inputs.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2
 
   examples:
     name: Examples compile
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      # The `test` job runs `cargo build --all`, which builds workspace
+      # The `test` job runs `cargo build --all --locked`, which builds workspace
       # packages' default targets only — examples are NOT default targets, so a
       # broken or removed-API example is invisible to CI without this job. The
       # script's compile gate (`cargo check --examples --all-features`) closes
       # that gap. The output gate (`--run`) is skipped here: it needs the corpus
       # cache, which requires network the CI runner does not use.
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-examples-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
@@ -129,19 +159,19 @@ jobs:
     name: MSRV (1.88)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # Pin the declared MSRV. This job is the gate that catches dependency
       # drift past the MSRV (the lack of which let edition-2024 deps silently
       # break the previously-declared 1.77). `--locked` fails if the committed
       # Cargo.lock resolves to versions incompatible with 1.88.
       - name: Install Rust 1.88 (MSRV)
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: "1.88"
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-msrv-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
@@ -155,7 +185,7 @@ jobs:
     name: SemVer (no undeclared breaking changes)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # Gate that catches breaking public-API changes that would be published
       # without the corresponding major bump. The baseline is the crate's latest
@@ -171,12 +201,12 @@ jobs:
       # compiles the crate; the optional OCR executable is not needed, same as
       # the MSRV and examples compile gates.
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-semver-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
@@ -192,3 +222,122 @@ jobs:
           # minor release; release/main checks derive the required bump from
           # Cargo.toml and the published baseline.
           release-type: ${{ (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'semver-major') && 'major') || (((github.event_name == 'pull_request' && github.base_ref == 'develop') || github.ref == 'refs/heads/develop') && 'minor') || '' }}
+
+  release-profile:
+    name: Optimized release tests
+    if: github.base_ref == 'main' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.cargo/registry
+          key: release-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Find equivalent validation
+        id: reuse
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci_evidence.py --role 'optimized' --job 'Optimized release tests' --workflow 'ci.yml'
+
+      - name: Run optimized tests
+        if: steps.reuse.outputs.hit != 'true'
+        run: cargo test --locked --all --release
+
+      - name: Record validation evidence
+        if: steps.reuse.outputs.hit != 'true' && steps.reuse.outputs.artifact != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ steps.reuse.outputs.artifact }}
+          path: .ci-evidence/inputs.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2
+
+
+  evidence-contract:
+    name: CI evidence contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Verify evidence and release gates
+        run: python3 -m unittest discover -s scripts -p 'test_ci_*.py' -v
+
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    needs: [test, examples, msrv, semver]
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install PDF tools
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@671164c891d3e20f5b8ece04798d0154d1262d65 # cargo-llvm-cov
+
+      - name: Cache cargo
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-llvmcov-${{ hashFiles('**/Cargo.lock') }}
+
+      # Coverage from BOTH unit tests (in src/) AND integration tests (in
+      # tests/). The previous tarpaulin invocation used `--run-types Lib`, which
+      # counted only unit tests; the ~1900 integration tests that validate the
+      # parser, writer, font and extraction code (e.g. cff_subsetter.rs has zero
+      # unit tests but several integration tests) contributed nothing, so files
+      # like cff_subsetter.rs reported 0% despite being well tested.
+      #
+      # The heavy corpus tier (t1_spec / t3_stress, ~2700 PDFs) self-skips with
+      # an early return when `test-corpus/` is absent — we do not download it
+      # here — so it adds no time. cargo-llvm-cov runs lib + integration tests
+      # of the oxidize-pdf package by default.
+      - name: Find equivalent validation
+        id: reuse
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci_evidence.py --role 'coverage' --job 'Generate Coverage Report' --workflow 'ci.yml' --extra "$(cargo llvm-cov --version) $(pdftotext -v 2>&1)"
+
+      - name: Generate coverage
+        if: steps.reuse.outputs.hit != 'true'
+        run: |
+          cargo llvm-cov \
+            -p oxidize-pdf \
+            --lcov \
+            --output-path lcov.info \
+            --ignore-filename-regex '(/tests/|/examples/|/benches/|/dev-tools/)'
+        timeout-minutes: 45
+
+      - name: Upload coverage to Codecov
+        if: steps.reuse.outputs.hit != 'true'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          flags: lib-and-integration
+          name: codecov-umbrella
+
+      - name: Record validation evidence
+        if: steps.reuse.outputs.hit != 'true' && steps.reuse.outputs.artifact != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ steps.reuse.outputs.artifact }}
+          path: .ci-evidence/inputs.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2
