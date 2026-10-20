@@ -60,6 +60,9 @@ jobs:
           (temp / "verapdf-auto.xml").write_text(template.replace("@INSTALL_PATH@", str(temp / "verapdf")))
           PYINSTALL
           java -jar "$RUNNER_TEMP/verapdf-installer/verapdf-greenfield-1.30.3/verapdf-izpack-installer-1.30.3.jar" "$RUNNER_TEMP/verapdf-auto.xml"
+          # The CLI creates its config files on first launch without an atomic
+          # check/create sequence. Initialize before parallel validator tests.
+          "$RUNNER_TEMP/verapdf/verapdf" --version
           echo "$RUNNER_TEMP/verapdf" >> "$GITHUB_PATH"
 
       - name: Verify external validator wrappers with real qpdf and veraPDF

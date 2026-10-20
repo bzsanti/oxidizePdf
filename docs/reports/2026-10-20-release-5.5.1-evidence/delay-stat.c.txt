@@ -1,0 +1,27 @@
+#define _GNU_SOURCE
+#include <sys/stat.h>
+#include <dlfcn.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+// Scheduling probe only: retain the real stat result and errno, pausing after
+// the second observation of a missing validator configuration file.
+int stat64(const char *path, struct stat64 *buf) {
+    static int (*real_stat)(const char *, struct stat64 *);
+    static int delayed;
+    static int missing_observations;
+    if (!real_stat) real_stat=dlsym(RTLD_NEXT,"stat64");
+    int result=real_stat(path,buf), saved=errno;
+    const char *marker=getenv("RELEASE551_STAT_MARKER");
+    if (result<0 && saved==ENOENT && marker && !delayed && strstr(path,"/config/validator.xml")) {
+        if (++missing_observations != 2) { errno=saved; return result; }
+        delayed=1;
+        int fd=open(marker,O_WRONLY|O_CREAT|O_EXCL,0600);
+        if(fd>=0) close(fd);
+        usleep(1500000);
+    }
+    errno=saved;
+    return result;
+}

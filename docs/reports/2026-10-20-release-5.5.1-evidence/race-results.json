@@ -1,0 +1,14 @@
+[
+  {
+    "warm": false,
+    "missing_config_observed": true,
+    "aggregate_exit": 101,
+    "direct_exit": 0
+  },
+  {
+    "warm": true,
+    "missing_config_observed": false,
+    "aggregate_exit": 0,
+    "direct_exit": 0
+  }
+]
