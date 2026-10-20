@@ -1,0 +1,53 @@
+   Compiling oxidize-pdf v5.5.1 (/tmp/oxidize-release551/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 40.03s
+     Running tests/issue_729_external_validators_test.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/issue_729_external_validators_test-c4031a76fb561b69)
+
+running 3 tests
+test real_qpdf_accepts_structure_and_rejects_garbage ... ok
+test real_verapdf_accepts_pdfa_and_rejects_nonconforming_control ... ok
+test real_aggregate_preserves_each_validation_scope ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.74s
+
+     Running tests/issue_792_redaction_resources_test.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/issue_792_redaction_resources_test-35f64f1a4898952a)
+
+running 7 tests
+test rejects_payload_in_type_field ... ok
+test rejects_target_in_retained_font_names ... ok
+test rejects_font_payload_on_page_without_selected_entity ... ok
+test checks_names_added_by_writer_in_serialized_output ... ok
+test rejects_unverified_font_fields_in_direct_indirect_and_unused_fonts ... ok
+test ordinary_standard14_fonts_remain_supported ... ok
+test independent_resource_oracle ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/issue_793_layout_capacity_test.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/issue_793_layout_capacity_test-b792afe4d52b15e4)
+
+running 9 tests
+test identity_exhausts_resets_and_refuses_without_mutation ... ok
+test invalid_reservations_and_public_state_do_not_advance ... ok
+test margins_spacing_boundary_and_overflow_are_consistent ... ok
+test reflections_preserve_physical_usable_bounds ... ok
+test scaled_translated_custom_coordinates_use_local_units ... ok
+test screen_and_custom_flip_have_the_same_top_anchor ... ok
+test unsupported_transforms_are_explicit_and_have_no_capacity ... ok
+test real_table_consumer_uses_top_not_bottom_or_spacing_offset ... ok
+test converted_local_anchors_place_real_tables_at_the_same_physical_top ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/issue_794_form_policy_test.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/issue_794_form_policy_test-544502c30a12f21a)
+
+running 8 tests
+test locks_cover_aliases_of_the_same_field_object ... ok
+test readonly_and_missing_field_controls_remain_errors ... ok
+test inline_or_unsigned_field_policy_definitions_fail_closed ... ok
+test indirect_transform_and_pdf20_names_use_the_field_resolution_encoding ... ok
+test p1_rejects_single_and_batch_before_any_output ... ok
+test malformed_policy_cannot_authorize_a_fill ... ok
+test p2_p3_and_approval_controls_allow_incremental_values_and_appearances ... ok
+test field_locks_reject_only_applicable_targets_and_abort_mixed_batches ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
