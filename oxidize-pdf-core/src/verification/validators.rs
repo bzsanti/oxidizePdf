@@ -643,12 +643,37 @@ mod process_contracts {
     }
 
     #[cfg(unix)]
-    fn script(dir: &std::path::Path, content: &str) -> std::path::PathBuf {
+    fn script(dir: &std::path::Path, content: &str) -> tempfile::TempPath {
         use std::os::unix::fs::PermissionsExt;
-        let path = dir.join("validator");
-        std::fs::write(&path, format!("#!/bin/sh\n{content}\n")).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
-        path
+        // Each case owns a distinct executable inode. Rewriting a previous
+        // executable can race outstanding handles and cause ETXTBSY on Linux.
+        let mut file = NamedTempFile::new_in(dir).unwrap();
+        writeln!(file, "#!/bin/sh\n{content}").unwrap();
+        file.as_file()
+            .set_permissions(std::fs::Permissions::from_mode(0o700))
+            .unwrap();
+        // Close the writable handle before exec; retain automatic path cleanup.
+        file.into_temp_path()
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn validator_fixture_remains_executable_while_previous_case_has_a_writer() {
+        let file = input();
+        let dir = tempfile::tempdir().unwrap();
+        let first = script(dir.path(), "exit 2");
+        let previous_writer = std::fs::OpenOptions::new()
+            .write(true)
+            .open(&first)
+            .unwrap();
+        let next = script(dir.path(), "exit 0");
+        assert!(run_qpdf(next.as_os_str(), file.path()).unwrap());
+        assert_eq!(
+            std::fs::read_to_string(&first).unwrap(),
+            "#!/bin/sh\nexit 2\n"
+        );
+        drop(previous_writer);
+        assert!(!run_qpdf(first.as_os_str(), file.path()).unwrap());
     }
 
     #[test]
