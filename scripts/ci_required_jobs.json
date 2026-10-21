@@ -31,7 +31,8 @@
     "Contracts (windows-latest, stable, minimal)"
   ],
   "corpus-tests.yml": [
-    "T0 + T1: Regression & Spec Compliance"
+    "T0 + T1: Regression & Spec Compliance",
+    "T2 + T3: Real-World & Stress"
   ],
   "ci.yml": [
     "SemVer (no undeclared breaking changes)",

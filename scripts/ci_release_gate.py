@@ -18,6 +18,19 @@ def coverage_status(api, sha, required, now):
     if not required or any(not jobs for jobs in required.values()):
         raise ValueError('Empty release coverage policy')
     pending = []
+    # Push coverage is necessary, but cannot override a failed or still running
+    # scheduled/manual validation of the same release candidate. Rerun that
+    # execution successfully or validate a corrected commit before publication.
+    for run in api.pages(f'actions/runs?head_sha={sha}', 'workflow_runs'):
+        if (run['head_sha'] != sha or run['head_branch'] != 'main'
+                or run['event'] not in ('schedule', 'workflow_dispatch')
+                or run['head_repository']['full_name'] != api.repository
+                or run['path'] not in {f'.github/workflows/{name}' for name in required}):
+            continue
+        if run['status'] != 'completed':
+            pending.append(f'Additional validation {run["id"]}: {run["status"]}')
+        elif run['conclusion'] != 'success':
+            raise ValueError(f'Additional validation {run["id"]}: {run["conclusion"]}')
     for workflow, expected in required.items():
         runs = api.get(f'actions/workflows/{workflow}/runs?event=push&head_sha={sha}&per_page=100')['workflow_runs']
         candidates = [r for r in runs if r['head_sha'] == sha

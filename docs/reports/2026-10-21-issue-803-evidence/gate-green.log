@@ -1,0 +1,12 @@
+...................
+----------------------------------------------------------------------
+Ran 19 tests in 0.006s
+
+OK
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Evidence unavailable; run validation: OSError: API unavailable
+No equivalent completed evidence: execute validation.

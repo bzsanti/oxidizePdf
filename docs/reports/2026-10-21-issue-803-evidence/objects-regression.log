@@ -1,0 +1,66 @@
+   Compiling oxidize-pdf v5.5.1 (/tmp/oxidize-release551/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 1m 19s
+     Running unittests src/lib.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/oxidize_pdf-75361cbc2ac08181)
+
+running 58 tests
+test parser::objects::tests::comprehensive_tests::test_debug_formatting ... ok
+test parser::objects::tests::comprehensive_tests::test_clone_and_equality ... ok
+test parser::objects::tests::comprehensive_tests::test_parse_complex_nested_structures ... ok
+test parser::objects::tests::comprehensive_tests::test_parse_edge_cases ... ok
+test parser::objects::tests::comprehensive_tests::test_parse_empty_structures ... ok
+test parser::objects::tests::comprehensive_tests::test_parse_literal_strings ... ok
+test parser::objects::tests::comprehensive_tests::test_error_handling ... ok
+test parser::objects::tests::comprehensive_tests::test_parse_hex_strings ... ok
+test parser::objects::tests::comprehensive_tests::test_parse_names_with_special_chars ... ok
+test parser::objects::tests::comprehensive_tests::test_parse_references ... ok
+test parser::objects::tests::comprehensive_tests::test_parse_complex_dictionary ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_array_methods ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_name_methods ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_array ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_dictionary_methods ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_boolean ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_dictionary ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_integer ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_name ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_null ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_real ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_reference ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_stream ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_object_string ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_string_methods ... ok
+test parser::objects::tests::comprehensive_tests::test_parse_string_with_escapes ... ok
+test parser::objects::tests::comprehensive_tests::test_pdf_stream_methods ... ok
+test parser::objects::tests::comprehensive_tests::test_performance_large_array ... ok
+test parser::objects::tests::test_array_bounds_checking ... ok
+test parser::objects::tests::test_deep_nesting_limits ... ok
+test parser::objects::tests::test_dictionary_case_sensitivity ... ok
+test parser::objects::tests::test_concurrent_object_access ... ok
+test parser::objects::tests::test_lenient_stream_parsing_too_long ... ok
+test parser::objects::tests::test_lenient_stream_no_endstream_found ... ok
+test parser::objects::tests::test_lenient_stream_parsing_too_short ... ok
+test parser::objects::tests::test_name_object_hash_consistency ... ok
+test parser::objects::tests::test_object_reference_validation ... ok
+test parser::objects::tests::test_parse_array ... ok
+test parser::objects::tests::test_parse_array_with_references ... ok
+test parser::objects::tests::test_parse_dictionary ... ok
+test parser::objects::tests::test_parse_simple_objects ... ok
+test parser::objects::tests::test_parsing_simple_error_cases ... ok
+test parser::objects::tests::test_object_cloning_and_equality ... ok
+test parser::objects::tests::test_pdf_array_nested_structures ... ok
+test parser::objects::tests::test_pdf_array_type_mixing ... ok
+test parser::objects::tests::test_pdf_array_large_capacity ... ok
+test parser::objects::tests::test_pdf_dictionary_complex_values ... ok
+test parser::objects::tests::test_pdf_dictionary_key_operations ... ok
+test parser::objects::tests::test_pdf_name_edge_cases ... ok
+test parser::objects::tests::test_pdf_name_special_characters ... ok
+test parser::objects::tests::test_pdf_object_type_checking ... ok
+test parser::objects::tests::test_pdf_dictionary_memory_efficiency ... ok
+test parser::objects::tests::test_pdf_string_binary_data ... ok
+test parser::objects::tests::test_pdf_string_encoding_validation ... ok
+test parser::objects::tests::test_special_numeric_values ... ok
+test parser::objects::tests::test_stream_data_edge_cases ... ok
+test parser::objects::tests::test_unicode_string_handling ... ok
+test parser::objects::tests::comprehensive_tests::test_performance_large_dictionary ... ok
+
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 6675 filtered out; finished in 0.00s
+
