@@ -660,6 +660,10 @@ impl PdfObject {
 
         // Skip the newline after 'stream' keyword
         lexer.read_newline()?;
+        // The lexer can start at an object offset in the underlying file;
+        // its logical position is then relative, whereas seeks are absolute.
+        let (reader_position, buffered) = lexer.save_position()?;
+        let stream_start = reader_position - u64::from(buffered.is_some());
 
         // Read the actual stream data
         let mut stream_data = if length == usize::MAX || length == usize::MAX - 1 {
@@ -779,6 +783,42 @@ impl PdfObject {
 
         // Check if we have the endstream keyword where expected
         let peek_result = lexer.peek_token();
+
+        // A malformed /Length can stop inside the endstream keyword. Forward
+        // recovery cannot find a marker that has already been partly consumed.
+        // Only inspect that boundary: do not reinterpret arbitrary marker-like
+        // bytes inside an otherwise valid payload or scan previous objects.
+        if options.lenient_streams
+            && length < usize::MAX - 1
+            && !matches!(peek_result, Ok(Token::EndStream))
+        {
+            let saved = lexer.save_position()?;
+            let first = stream_data
+                .len()
+                .saturating_sub(8.min(options.max_recovery_bytes));
+            for offset in first..stream_data.len() {
+                if stream_data[offset] != b'e'
+                    || (offset > 0 && !matches!(stream_data[offset - 1], b'\n' | b'\r'))
+                {
+                    continue;
+                }
+                lexer.restore_position((stream_start + offset as u64, None))?;
+                let marker = lexer.read_bytes(9);
+                if marker.as_deref().ok() != Some(b"endstream".as_slice()) {
+                    continue;
+                }
+                let marker_end = stream_start + offset as u64 + 9;
+                if !matches!(lexer.read_byte(), Ok(b' ' | b'\t' | b'\r' | b'\n'))
+                    || !matches!(lexer.next_token(), Ok(Token::EndObj))
+                {
+                    continue;
+                }
+                lexer.restore_position((marker_end, None))?;
+                stream_data.truncate(offset);
+                return Ok(stream_data);
+            }
+            lexer.restore_position(saved)?;
+        }
 
         match peek_result {
             Ok(Token::EndStream) => {

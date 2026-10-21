@@ -116,6 +116,11 @@ jobs:
           PYVERSION
           cargo package --locked -p oxidize-pdf
 
+      - name: Recheck candidate CI immediately before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci_release_gate.py
+
       # Check if packages need new versions before publishing
       - name: Check version changes
         id: version_check

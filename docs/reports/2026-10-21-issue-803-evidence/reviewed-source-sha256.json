@@ -1,0 +1,12 @@
+{
+  ".github/workflows/corpus-tests.yml": "0a54f709e29ff2d6155c6549eefe19841d6602d50b8c6c25093eb4232665bda0",
+  ".github/workflows/release.yml": "9814a9606c79eb6e1dde26fc660ba545bc29d113c3415b9e7269f194f367af7f",
+  "CHANGELOG.md": "649dd0688c4318a71cfec749be3b331ae0ec0cd66b427ef1f55fb3dbed75dc82",
+  "docs/CI_EVIDENCE.md": "1c52e42b1255085cf05590347a682a03522550377bbf5953b3742ec6d68bcd8c",
+  "docs/releases/5.5.1.md": "000e0692456ee1860fa4d7b6342f03d7bd7cc8875a9d2a4cfb4e6c15781b6569",
+  "oxidize-pdf-core/src/parser/objects.rs": "9f946ca9dffa47c6364265890fdfaa99ab6b29486ac2554aa14d9119223b92e0",
+  "oxidize-pdf-core/tests/issue_803_stream_length_recovery_test.rs": "a0dbd06a87edaf9c40f7ddb0645e5d37a28d2287f6dfb77f0ca61a5a9352a434",
+  "scripts/ci_release_gate.py": "5c4640f7d30fe74c05abe1ee43bb711deae7525988a085fea0a6974de8b3b59d",
+  "scripts/ci_required_jobs.json": "54a3b202c57426b9cd5f5b14444e32e385dfd155e015b4cff2c15afbbc45239b",
+  "scripts/test_ci_evidence.py": "a126919b97a2c062a8b0846ab650923fed25f8f6171e43a0768668ee616cd7c1"
+}

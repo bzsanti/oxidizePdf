@@ -1,0 +1,86 @@
+   Compiling oxidize-pdf v5.5.1 (/tmp/oxidize-release551/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 0.79s
+     Running tests/t3_stress.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/t3_stress-5ff7d6c40865d2f0)
+
+running 22 tests
+
+=== Corpus Report: test ===
+  Total: 0  Parsed: 0 (0.0%)  Panics: 0  Timeouts: 0
+  Text extracted: 0  Graceful failures: 0
+  Duration: 0.0s
+
+=== Corpus Report: test ===
+  Total: 1  Parsed: 1 (100.0%)  Panics: 0  Timeouts: 0
+  Text extracted: 0  Graceful failures: 0
+  Duration: 1.0s
+  By PDF version:
+    1.7      1/1 (100.0%)
+test corpus_support::tests::test_corpus_report_generation_empty ... ok
+test corpus_support::tests::test_corpus_report_generation_mixed ... ok
+test corpus_support::tests::test_corpus_report_print_summary_no_panic ... ok
+test corpus_support::tests::test_failure_entry_serialization ... ok
+test corpus_support::tests::test_corpus_report_performance_percentiles ... ok
+test corpus_support::tests::test_find_pdfs_nonexistent_dir ... ok
+test corpus_support::tests::test_format_failures ... ok
+test corpus_support::tests::test_manifest_entry_defaults ... ok
+test corpus_support::tests::test_find_pdfs_empty_dir ... ok
+test corpus_support::tests::test_manifest_roundtrip ... ok
+test corpus_support::tests::test_corpus_report_save_and_load ... ok
+test corpus_support::tests::test_percentile_calculation ... ok
+
+thread 'corpus_support::tests::test_run_corpus_test_with_panics' (179) panicked at oxidize-pdf-core/tests/corpus_support.rs:1398:17:
+Intentional test panic
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test corpus_support::tests::test_manifest_save_and_load ... ok
+test corpus_support::tests::test_tier_available_nonexistent ... ok
+test corpus_support::tests::test_find_pdfs_with_files ... ok
+test corpus_support::tests::test_run_corpus_test_with_panics ... ok
+test corpus_support::tests::test_test_result_default ... ok
+test corpus_support::tests::test_performance_baseline_roundtrip ... ok
+test t3_error_context_quality has been running for over 60 seconds
+test t3_error_recovery_rate has been running for over 60 seconds
+test t3_text_extraction_coverage has been running for over 60 seconds
+test t3_zero_panics_on_stress_corpus has been running for over 60 seconds
+T3 error quality: 100.0% of 41 errors have context
+test t3_error_context_quality ... ok
+
+=== T3 Error Recovery ===
+  Total files: 1802
+  Successfully parsed: 1761 (97.7%)
+  Text extraction succeeded: 1552
+  Graceful failures: 41
+test t3_error_recovery_rate ... ok
+
+=== Corpus Report: t3-stress ===
+  Total: 1802  Parsed: 1761 (97.7%)  Panics: 0  Timeouts: 0
+  Text extracted: 1552  Graceful failures: 41
+  Duration: 150.2s
+  By PDF version:
+    1.0      1/1 (100.0%)
+    1.1      2/2 (100.0%)
+    1.2      28/28 (100.0%)
+    1.3      393/393 (100.0%)
+    1.4      386/386 (100.0%)
+    1.5      176/176 (100.0%)
+    1.6      94/94 (100.0%)
+    1.7      595/595 (100.0%)
+    2.0      35/35 (100.0%)
+    unknown  51/92 (55.4%)
+  Failures (showing 10/41):
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/format-corpus/preserve_T01_001_header-invalid-major-version.pdf - Unsupported PDF version: 2.4
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/format-corpus/preserve_T01_002_header-invalid-minor-version.pdf - Unsupported PDF version: 1.9
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/format-corpus/preserve_T01_004_header_invalid-syntax-no-dash.pdf - Invalid PDF header
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/format-corpus/preserve_T01_005_header-invalid-syntax-replace-char.pdf - Invalid PDF header
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/format-corpus/preserve_T01_006_header-invalid-syntax-no-pdf.pdf - Invalid PDF header
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/format-corpus/preserve_T01_007_header-no-version-info.pdf - Invalid PDF header
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/format-corpus/preserve_minimal_test.pdf - Invalid xref table
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/format-corpus/preserve_pdf-17-header18.pdf - Unsupported PDF version: 1.8
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/pdfium/pdfium_FRC_3.5_CF_Strf_stmf_DefaultCryptFilter.pdf - PDF is encrypted and could not be decrypted (unsupported encryption or password required)
+    [ERROR] /tmp/oxidize-release551/test-corpus/t3-stress/pdfium/pdfium_FRC_3.5_EncryptMetadata_T.pdf - PDF is encrypted and could not be decrypted (unsupported encryption or password required)
+test t3_zero_panics_on_stress_corpus ... ok
+T3 strict_success=1552; successful_with_flate_recovery=54; full diagnostics retained separately
+T3 explicit recovery extraction: 1606/1761 parsed PDFs (91.2%)
+test t3_text_extraction_coverage ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 222.66s
+

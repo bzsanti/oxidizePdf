@@ -38,7 +38,8 @@ optimized release tests, and optional coverage. Every compilation in a reused
 full-test job uses locked resolution. Examples, MSRV and SemVer keep running;
 SemVer depends on registry state and branch policy. Interoperability and corpus
 jobs retain live external-tool/corpus validation rather than asserting that
-external inputs are fixed. Scheduled heavy corpus tiers are unchanged.
+external inputs are fixed. T2/T3 and their differential gates also run on release PRs and main pushes;
+the weekly T4/T5/T6 schedule remains unchanged.
 
 ## Normal release
 
@@ -55,7 +56,7 @@ external inputs are fixed. Scheduled heavy corpus tiers are unchanged.
 4. Merge the reviewed release into `main`. The main push resolves current inputs
    again and normally reuses both debug and optimized receipts. Wait for all
    required workflows in `scripts/ci_required_jobs.json`, including every matrix
-   member. Missing, skipped, failed, cancelled or stale required validation blocks
+   member and the T2/T3 corpus job. Missing, skipped, failed, cancelled or stale required validation blocks
    publication. No branch protections/rulesets were configured at inventory time;
    the explicit release policy does not assume they exist or modify them.
 5. Push the matching version tag. Release runs only on version tags, with serial
@@ -64,7 +65,11 @@ external inputs are fixed. Scheduled heavy corpus tiers are unchanged.
    for successful current-main push runs, with a 30-minute bounded wait. The tag
    checks the optimized receipt again after resolving its own compiler/image;
    missing or changed inputs run the optimized suite before publishing.
-6. Keep release build/package validation, locked publication and registry checks.
+6. Recheck the candidate CI after build/package validation, immediately before
+   publication. Failed or pending scheduled/manual runs of required workflows on
+   the same main commit also block publication, even when push runs are green.
+   Resolve and rerun the failed execution successfully, or validate a corrected
+   commit. Keep locked publication and registry checks.
    An exact-version 404 permits publication; other lookup errors block it. Verify
    the registry version, non-yanked state and SHA256 against the local `.crate`
    before creating the GitHub Release. Existing versions must match too.
@@ -86,7 +91,8 @@ move an already published tag to work around a failure. Workflow/toolchain,
 source or lockfile changes require new evidence automatically.
 
 Update the required-job policy when changing mandatory workflow coverage. Keep
-unrelated scheduled tiers and optional coverage out of the publication policy.
+optional coverage out of the required-job matrix; never ignore a known failed
+scheduled run of a required workflow on the release candidate.
 Run `python3 -m unittest discover -s scripts -p 'test_ci_*.py' -v` and actionlint
 when changing this protocol. Test absent evidence, platform omissions, pagination,
 changed inputs, expiry, forks, cancellation and registry/tag identity.

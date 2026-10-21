@@ -40,9 +40,12 @@ class FixtureAPI(evidence.GitHub):
         self.no_artifacts = False
         self.no_jobs = False
         self.second_page = False
+        self.additional_runs = []
 
     def get(self, path):
         self.calls.append(path)
+        if path.startswith('actions/runs?'):
+            return {'workflow_runs': self.additional_runs}
         if path.startswith('actions/artifacts?'):
             return {'artifacts': [] if self.no_artifacts else [self.artifact]}
         if path == 'actions/runs/42':
@@ -169,6 +172,22 @@ class PublicationContracts(unittest.TestCase):
     def test_complete_expected_current_main_coverage_passes(self):
         self.assertEqual(self.status(), [])
         self.api.second_page = True
+        self.assertEqual(self.status(), [])
+
+    def test_scheduled_failure_on_candidate_cannot_be_hidden_by_green_push(self):
+        self.api.additional_runs = [self.api.run | {'id': 43, 'event': 'schedule', 'conclusion': 'failure'}]
+        with self.assertRaisesRegex(ValueError, '43'):
+            self.status()
+
+    def test_additional_running_validation_waits_and_successful_rerun_passes(self):
+        scheduled = self.api.run | {'id': 43, 'event': 'schedule', 'status': 'in_progress', 'conclusion': None}
+        self.api.additional_runs = [scheduled]
+        self.assertTrue(self.status())
+        scheduled.update(status='completed', conclusion='success')
+        self.assertEqual(self.status(), [])
+
+    def test_other_commit_scheduled_failure_does_not_block_candidate(self):
+        self.api.additional_runs = [self.api.run | {'id': 43, 'event': 'schedule', 'head_sha': 'f'*40, 'conclusion': 'failure'}]
         self.assertEqual(self.status(), [])
 
     def test_empty_policy_or_missing_matrix_member_blocks(self):

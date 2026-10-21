@@ -1,0 +1,14 @@
+   Compiling oxidize-pdf v5.5.1 (/tmp/oxidize-release551/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 6.31s
+     Running tests/issue_803_stream_length_recovery_test.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/issue_803_stream_length_recovery_test-7e2f667b9cabe23f)
+
+running 6 tests
+test recovery_rejects_marker_without_object_termination ... ok
+test recovery_respects_backward_distance_budget ... ok
+test recovery_uses_absolute_reader_offset_after_object_seek ... ok
+test strict_rejects_overdeclared_length ... ok
+test valid_length_preserves_embedded_marker_bytes ... ok
+test overdeclared_length_recovers_partial_marker_and_preserves_next_object ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

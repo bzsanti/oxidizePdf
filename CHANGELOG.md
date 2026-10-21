@@ -25,11 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   retain aggregate failure diagnostics. Remove two semantic-example Clippy
   warnings without changing its output (#800).
 
+- Recover a partially consumed `endstream` marker when a malformed stream
+  length overshoots it, using bounded tolerant parsing and validated object
+  termination. Preserve strict rejection and valid stream payloads (#803).
+
 ### CI
 
 - Reuse validation only for identical resolved inputs and trusted successful
   producers. Require complete current-main coverage before tag publication and
   verify the published package checksum before creating the GitHub release (#790).
+- Require T2/T3 and differential corpus gates for releases, reject failed or pending
+  scheduled/manual checks on the candidate, and recheck CI before publication (#803).
 
 See [5.5.1 migration and validation notes](docs/releases/5.5.1.md) for changed
 layout anchors, redaction restrictions and bridge adoption requirements.
