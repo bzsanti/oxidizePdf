@@ -8,6 +8,7 @@ Receipts are never renewed on a hit. API failures result in running validation.
 import argparse
 import datetime as dt
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -126,7 +127,7 @@ def probe(args):
         Path('.ci-evidence/inputs.json').write_text(json.dumps(inputs, indent=2))
         api = GitHub(os.environ['GITHUB_REPOSITORY'], os.environ['GH_TOKEN'])
         hit = find_evidence(api, name, inputs, args.workflow, dt.datetime.now(dt.timezone.utc))
-    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
+    except (OSError, http.client.HTTPException, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         print(f'Evidence unavailable; run validation: {type(error).__name__}: {error}')
     output = f"hit={'true' if hit else 'false'}\nartifact={name}\n"
     with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
