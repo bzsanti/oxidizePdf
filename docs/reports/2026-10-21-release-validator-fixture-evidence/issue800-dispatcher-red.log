@@ -1,0 +1,22 @@
+   Compiling oxidize-pdf v5.5.1 (/tmp/oxidize-release551/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 22.29s
+     Running unittests src/lib.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/oxidize_pdf-75361cbc2ac08181)
+
+running 1 test
+test verification::validators::process_contracts::validator_fixture_scenarios_are_data_even_while_open_for_writing ... FAILED
+
+failures:
+
+---- verification::validators::process_contracts::validator_fixture_scenarios_are_data_even_while_open_for_writing stdout ----
+
+thread 'verification::validators::process_contracts::validator_fixture_scenarios_are_data_even_while_open_for_writing' (301) panicked at oxidize-pdf-core/src/verification/validators.rs:669:59:
+called `Result::unwrap()` on an `Err` value: ExternalValidationError("qpdf execution error: Text file busy (os error 26)")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    verification::validators::process_contracts::validator_fixture_scenarios_are_data_even_while_open_for_writing
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6733 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --lib`

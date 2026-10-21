@@ -1,0 +1,7 @@
+{
+  "threads_per_binary": 8,
+  "parallel_binaries": 8,
+  "iterations": 1000,
+  "failures": [],
+  "elapsed_seconds": 9.112176547001582
+}
