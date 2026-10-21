@@ -5,6 +5,14 @@ on:
   push:
     branches: [main, develop]
 
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   product:
     strategy:
@@ -19,19 +27,40 @@ jobs:
             target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.12'
+      - name: Find equivalent validation
+        id: reuse
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci_evidence.py --role 'native-product' --job 'product (${{ matrix.os }}, ${{ matrix.target }})' --workflow 'no-native-dependencies.yml'
+
       - name: Test dependency policy
+        if: steps.reuse.outputs.hit != 'true'
         run: python scripts/test_no_native_dependencies.py
       - name: Inspect and build the complete Rust product without C/C++ compilation
+        if: steps.reuse.outputs.hit != 'true'
         run: python scripts/check_no_native_dependencies.py --product-features --target ${{ matrix.target }} --build
       - name: Validate certificates from a consumer without dev-dependencies
+        if: steps.reuse.outputs.hit != 'true'
         run: python scripts/check_certificate_product.py --target ${{ matrix.target }}
       - name: Verify certificate chains and CRLs
+        if: steps.reuse.outputs.hit != 'true'
         run: cargo test --locked -p oxidize-pdf --features signatures --test issue_526_signature_validation_test --test issue_627_certificate_provider_test --test signature_integration_test
+
+      - name: Record validation evidence
+        if: steps.reuse.outputs.hit != 'true' && steps.reuse.outputs.artifact != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ steps.reuse.outputs.artifact }}
+          path: .ci-evidence/inputs.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2
 
   binding-targets:
     runs-on: ubuntu-latest
@@ -39,9 +68,9 @@ jobs:
       matrix:
         target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, x86_64-pc-windows-msvc, x86_64-apple-darwin, aarch64-apple-darwin]
     steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.12'
       - name: Inspect the Python core feature selection

@@ -3,24 +3,51 @@ on:
   pull_request:
     branches: [main, develop]
   push:
-    branches: [develop]
+    branches: [main, develop]
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.12'
+      - name: Find equivalent validation
+        id: reuse
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci_evidence.py --role 'omnidoc' --job 'contract' --workflow 'omnidocbench-contract.yml'
+
       - name: Prepare dependencies and temporary directory
+        if: steps.reuse.outputs.hit != 'true'
         run: |
           mkdir -p "$GITHUB_WORKSPACE/target/contract-tmp"
           cargo fetch --locked
       - name: Verify exporter and provenance contract
+        if: steps.reuse.outputs.hit != 'true'
         env:
           TMPDIR: ${{ github.workspace }}/target/contract-tmp
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
           cargo test --locked --offline -p oxidize-pdf --example omnidocbench_export
           python3 -m unittest tools/benchmarks/omnidocbench_gate_test.py
+
+      - name: Record validation evidence
+        if: steps.reuse.outputs.hit != 'true' && steps.reuse.outputs.artifact != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ steps.reuse.outputs.artifact }}
+          path: .ci-evidence/inputs.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2

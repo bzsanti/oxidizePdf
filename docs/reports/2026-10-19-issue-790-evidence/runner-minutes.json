@@ -1,0 +1,216 @@
+{
+  "scope": "26 runs selected by preparation/develop/main SHA; excludes successful workflow_run coverage runs with default-branch head SHA; raw wall runner minutes, not billed multipliers",
+  "baseline_runner_minutes": 591.01,
+  "projected_saved_step_minutes": 288.36,
+  "rows": [
+    {
+      "id": 39173470531,
+      "workflow": "Code Coverage",
+      "event": "workflow_run",
+      "sha": "55284b4821869141b291f772a7c909bd670e348e",
+      "observed_runner_minutes": 0.0,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39172823119,
+      "workflow": "Release",
+      "event": "push",
+      "sha": "55284b4821869141b291f772a7c909bd670e348e",
+      "observed_runner_minutes": 103.72,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39172157679,
+      "workflow": "Release",
+      "event": "push",
+      "sha": "55284b4821869141b291f772a7c909bd670e348e",
+      "observed_runner_minutes": 0.22,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39172157671,
+      "workflow": "Corpus Tests",
+      "event": "push",
+      "sha": "55284b4821869141b291f772a7c909bd670e348e",
+      "observed_runner_minutes": 4.43,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39172157668,
+      "workflow": "No native product dependencies",
+      "event": "push",
+      "sha": "55284b4821869141b291f772a7c909bd670e348e",
+      "observed_runner_minutes": 15.73,
+      "projected_reusable_step_minutes": 12.6
+    },
+    {
+      "id": 39172157665,
+      "workflow": "Text contracts",
+      "event": "push",
+      "sha": "55284b4821869141b291f772a7c909bd670e348e",
+      "observed_runner_minutes": 40.15,
+      "projected_reusable_step_minutes": 35.32
+    },
+    {
+      "id": 39172157663,
+      "workflow": "Interoperability",
+      "event": "push",
+      "sha": "55284b4821869141b291f772a7c909bd670e348e",
+      "observed_runner_minutes": 4.25,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39172157652,
+      "workflow": "CI",
+      "event": "push",
+      "sha": "55284b4821869141b291f772a7c909bd670e348e",
+      "observed_runner_minutes": 45.92,
+      "projected_reusable_step_minutes": 38.27
+    },
+    {
+      "id": 39170178971,
+      "workflow": "Interoperability",
+      "event": "pull_request",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 4.55,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39170178859,
+      "workflow": "Text contracts",
+      "event": "pull_request",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 44.83,
+      "projected_reusable_step_minutes": 39.82
+    },
+    {
+      "id": 39170178855,
+      "workflow": "CI",
+      "event": "pull_request",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 55.27,
+      "projected_reusable_step_minutes": 46.7
+    },
+    {
+      "id": 39170178854,
+      "workflow": "No native product dependencies",
+      "event": "pull_request",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 13.15,
+      "projected_reusable_step_minutes": 9.88
+    },
+    {
+      "id": 39170178832,
+      "workflow": "OmniDocBench contract",
+      "event": "pull_request",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 4.38,
+      "projected_reusable_step_minutes": 4.02
+    },
+    {
+      "id": 39170178826,
+      "workflow": "Corpus Tests",
+      "event": "pull_request",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 4.45,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39170157631,
+      "workflow": "Text contracts",
+      "event": "push",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 42.75,
+      "projected_reusable_step_minutes": 37.73
+    },
+    {
+      "id": 39170157623,
+      "workflow": "OmniDocBench contract",
+      "event": "push",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 4.3,
+      "projected_reusable_step_minutes": 3.97
+    },
+    {
+      "id": 39170157617,
+      "workflow": "No native product dependencies",
+      "event": "push",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 13.65,
+      "projected_reusable_step_minutes": 10.65
+    },
+    {
+      "id": 39170157609,
+      "workflow": "Corpus Tests",
+      "event": "push",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 4.68,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39170157608,
+      "workflow": "Interoperability",
+      "event": "push",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 4.45,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39170157607,
+      "workflow": "CI",
+      "event": "push",
+      "sha": "3a6225229f5a52088da161470baae0470770b50c",
+      "observed_runner_minutes": 56.1,
+      "projected_reusable_step_minutes": 49.4
+    },
+    {
+      "id": 39168290106,
+      "workflow": "No native product dependencies",
+      "event": "pull_request",
+      "sha": "4cdd5f881460211a8788c3d95c35737a07324e4a",
+      "observed_runner_minutes": 12.95,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39168290087,
+      "workflow": "Interoperability",
+      "event": "pull_request",
+      "sha": "4cdd5f881460211a8788c3d95c35737a07324e4a",
+      "observed_runner_minutes": 5.02,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39168290084,
+      "workflow": "OmniDocBench contract",
+      "event": "pull_request",
+      "sha": "4cdd5f881460211a8788c3d95c35737a07324e4a",
+      "observed_runner_minutes": 3.47,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39168290080,
+      "workflow": "Text contracts",
+      "event": "pull_request",
+      "sha": "4cdd5f881460211a8788c3d95c35737a07324e4a",
+      "observed_runner_minutes": 45.42,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39168290077,
+      "workflow": "Corpus Tests",
+      "event": "pull_request",
+      "sha": "4cdd5f881460211a8788c3d95c35737a07324e4a",
+      "observed_runner_minutes": 4.82,
+      "projected_reusable_step_minutes": 0.0
+    },
+    {
+      "id": 39168290063,
+      "workflow": "CI",
+      "event": "pull_request",
+      "sha": "4cdd5f881460211a8788c3d95c35737a07324e4a",
+      "observed_runner_minutes": 52.35,
+      "projected_reusable_step_minutes": 0.0
+    }
+  ],
+  "projected_remaining_minutes_before_probe_overhead": 302.65
+}

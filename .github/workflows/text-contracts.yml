@@ -8,7 +8,12 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   contracts:
@@ -26,25 +31,43 @@ jobs:
           - {os: ubuntu-latest, rust: '1.88', profile: minimal}
           - {os: ubuntu-latest, rust: '1.88', profile: spi}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: actions/cache@v5
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
           key: text-contracts-${{ runner.os }}-${{ matrix.rust }}-${{ hashFiles('Cargo.lock') }}
+      - name: Find equivalent validation
+        id: reuse
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci_evidence.py --role 'text' --job 'Contracts (${{ matrix.os }}, ${{ matrix.rust }}, ${{ matrix.profile }})' --workflow 'text-contracts.yml'
+
       - name: Run deterministic text contracts
+        if: steps.reuse.outputs.hit != 'true'
         run: python tools/text_contracts/run_fast.py --profile ${{ matrix.profile }} --output target/text-contract-results
       - name: Preserve commands and results
-        if: always()
-        uses: actions/upload-artifact@v6
+        if: always() && steps.reuse.outputs.hit != 'true'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: text-contracts-${{ matrix.os }}-${{ matrix.rust }}-${{ matrix.profile }}
           path: target/text-contract-results/
           if-no-files-found: error
+
+      - name: Record validation evidence
+        if: steps.reuse.outputs.hit != 'true' && steps.reuse.outputs.artifact != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ steps.reuse.outputs.artifact }}
+          path: .ci-evidence/inputs.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2

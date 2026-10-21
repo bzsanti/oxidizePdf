@@ -1,0 +1,17 @@
+
+running 1 test
+
+thread 'real_aggregate_preserves_each_validation_scope' (8) panicked at oxidize-pdf-core/tests/issue_729_external_validators_test.rs:35:5:
+assertion `left == right` failed: ExternalValidationResult { qpdf_passed: Some(true), verapdf_passed: None, adobe_preflight_passed: None, error_messages: ["veraPDF error: External validation error: veraPDF report error: no validation report", "Adobe Preflight not available"] }
+  left: None
+ right: Some(true)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test real_aggregate_preserves_each_validation_scope ... FAILED
+
+failures:
+
+failures:
+    real_aggregate_preserves_each_validation_scope
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 1.60s
+

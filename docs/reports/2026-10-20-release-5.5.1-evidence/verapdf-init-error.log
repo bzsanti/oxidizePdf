@@ -1,0 +1,10 @@
+Exception in thread "main" java.lang.ExceptionInInitializerError
+	at org.verapdf.apps.GreenfieldCliWrapper.main(GreenfieldCliWrapper.java:54)
+Caused by: java.lang.IllegalArgumentException: /tmp/release551-scheduled-race-2/config/validator.xml must be a creatable or readable file
+	at org.verapdf.processor.app.ConfigManagerImpl.getConfigFile(ConfigManagerImpl.java:265)
+	at org.verapdf.processor.app.ConfigManagerImpl.<init>(ConfigManagerImpl.java:74)
+	at org.verapdf.processor.app.ConfigManagerImpl.create(ConfigManagerImpl.java:224)
+	at org.verapdf.apps.Applications.createConfigManager(Applications.java:107)
+	at org.verapdf.apps.Applications.createAppConfigManager(Applications.java:124)
+	at org.verapdf.cli.VeraPdfCli.<clinit>(VeraPdfCli.java:58)
+	... 1 more

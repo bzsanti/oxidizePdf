@@ -1,0 +1,8 @@
+{
+  ".github/workflows/interoperability.yml": "09085584adb4c3c03c684a06cd85fbe6803bef550740b1dc7562926055c503ec",
+  "oxidize-pdf-core/tests/issue_729_external_validators_test.rs": "3399fc53fc93b20e0a39c17416c667cd34ef18012cbc57d7b2885def145c9dfd",
+  "oxidize-pdf-core/examples/pdf_to_llm_formats.rs": "a83563dc1580d9e32240892b028ae08887ec6f969998ea070eb88c28d37d92f7",
+  "Cargo.toml": "c0153386a82f42c4c54ae4bf972c0c90b8a40b6101d4f63109b0f0bd726cdf8f",
+  "Cargo.lock": "9eb458a90f74c3fcc2161c304e866f9ed7ad39ba314324b5adc0c2ae88c144a8",
+  "tools/wasm-encryption-regression/Cargo.lock": "f3d45a9bc2269c98d6525c5914a81c8e71544849c651ea69b9fac24a55332c6a"
+}

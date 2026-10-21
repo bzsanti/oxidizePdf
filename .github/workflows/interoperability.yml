@@ -10,19 +10,27 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   qpdf:
     name: qpdf external validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-qpdf-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
@@ -52,6 +60,9 @@ jobs:
           (temp / "verapdf-auto.xml").write_text(template.replace("@INSTALL_PATH@", str(temp / "verapdf")))
           PYINSTALL
           java -jar "$RUNNER_TEMP/verapdf-installer/verapdf-greenfield-1.30.3/verapdf-izpack-installer-1.30.3.jar" "$RUNNER_TEMP/verapdf-auto.xml"
+          # The CLI creates its config files on first launch without an atomic
+          # check/create sequence. Initialize before parallel validator tests.
+          "$RUNNER_TEMP/verapdf/verapdf" --version
           echo "$RUNNER_TEMP/verapdf" >> "$GITHUB_PATH"
 
       - name: Verify external validator wrappers with real qpdf and veraPDF
@@ -67,6 +78,13 @@ jobs:
           cargo test -p oxidize-pdf
           --test issue_730_redaction_boundaries_test
           independent_output_oracle
+          -- --ignored --exact
+
+      - name: Verify retained font resources with qpdf and Poppler
+        run: >-
+          cargo test --locked -p oxidize-pdf
+          --test issue_792_redaction_resources_test
+          independent_resource_oracle
           -- --ignored --exact
 
       - name: Verify unsupported pivot output and real dashboard controls
@@ -206,8 +224,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           targets: wasm32-unknown-unknown
       - uses: actions/setup-node@v4

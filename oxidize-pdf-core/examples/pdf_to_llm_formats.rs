@@ -150,9 +150,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  - {}", md_path);
     println!("  - {}", ctx_path);
     #[cfg(feature = "semantic")]
-    println!("  - {}", "examples/results/exported_json.json");
+    println!("  - examples/results/exported_json.json");
     #[cfg(feature = "semantic")]
-    println!("  - {}", "examples/results/exported_chunks.json");
+    println!("  - examples/results/exported_chunks.json");
     println!("  - {}", prompt_path);
     println!();
     println!("Next steps:");

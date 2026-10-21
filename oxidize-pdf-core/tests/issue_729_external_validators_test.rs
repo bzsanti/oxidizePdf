@@ -31,12 +31,12 @@ fn real_aggregate_preserves_each_validation_scope() {
     use oxidize_pdf::verification::validators::validate_external;
     let conforming = std::fs::read(fixture("pdfa-1b.pdf")).unwrap();
     let result = validate_external(&conforming).unwrap();
-    assert_eq!(result.qpdf_passed, Some(true));
-    assert_eq!(result.verapdf_passed, Some(true));
+    assert_eq!(result.qpdf_passed, Some(true), "{result:?}");
+    assert_eq!(result.verapdf_passed, Some(true), "{result:?}");
     let nonconforming = std::fs::read(fixture("non-pdfa.pdf")).unwrap();
     let result = validate_external(&nonconforming).unwrap();
-    assert_eq!(result.qpdf_passed, Some(true));
-    assert_eq!(result.verapdf_passed, Some(false));
+    assert_eq!(result.qpdf_passed, Some(true), "{result:?}");
+    assert_eq!(result.verapdf_passed, Some(false), "{result:?}");
     assert!(result
         .error_messages
         .iter()

@@ -1,0 +1,46 @@
+{
+  "no-native-dependencies.yml": [
+    "product (macos-latest, aarch64-apple-darwin)",
+    "binding-targets (x86_64-pc-windows-msvc)",
+    "product (windows-latest, x86_64-pc-windows-msvc)",
+    "binding-targets (aarch64-apple-darwin)",
+    "binding-targets (x86_64-unknown-linux-gnu)",
+    "product (ubuntu-latest, x86_64-unknown-linux-gnu)",
+    "binding-targets (aarch64-unknown-linux-gnu)",
+    "binding-targets (x86_64-apple-darwin)"
+  ],
+  "interoperability.yml": [
+    "WASM encryption in Node and Chrome",
+    "qpdf external validation"
+  ],
+  "omnidocbench-contract.yml": [
+    "contract"
+  ],
+  "text-contracts.yml": [
+    "Contracts (ubuntu-latest, stable, minimal)",
+    "Contracts (ubuntu-latest, 1.88, default)",
+    "Contracts (ubuntu-latest, 1.88, spi)",
+    "Contracts (macos-latest, stable, minimal)",
+    "Contracts (ubuntu-latest, stable, spi)",
+    "Contracts (macos-latest, stable, spi)",
+    "Contracts (windows-latest, stable, spi)",
+    "Contracts (ubuntu-latest, 1.88, minimal)",
+    "Contracts (windows-latest, stable, default)",
+    "Contracts (macos-latest, stable, default)",
+    "Contracts (ubuntu-latest, stable, default)",
+    "Contracts (windows-latest, stable, minimal)"
+  ],
+  "corpus-tests.yml": [
+    "T0 + T1: Regression & Spec Compliance"
+  ],
+  "ci.yml": [
+    "SemVer (no undeclared breaking changes)",
+    "Test (macos-latest, stable)",
+    "Examples compile",
+    "MSRV (1.88)",
+    "Test (windows-latest, stable)",
+    "Test (ubuntu-latest, stable)",
+    "Optimized release tests",
+    "CI evidence contracts"
+  ]
+}

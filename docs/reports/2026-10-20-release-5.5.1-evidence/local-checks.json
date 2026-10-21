@@ -1,0 +1,22 @@
+[
+  {
+    "check": "ci-contracts",
+    "exit": 0
+  },
+  {
+    "check": "actionlint",
+    "exit": 0
+  },
+  {
+    "check": "kripteia",
+    "exit": 0
+  },
+  {
+    "check": "format",
+    "exit": 0
+  },
+  {
+    "check": "diff-check",
+    "exit": 0
+  }
+]

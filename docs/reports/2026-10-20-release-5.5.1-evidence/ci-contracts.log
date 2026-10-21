@@ -1,0 +1,25 @@
+test_complete_expected_current_main_coverage_passes (test_ci_evidence.PublicationContracts.test_complete_expected_current_main_coverage_passes) ... ok
+test_empty_policy_or_missing_matrix_member_blocks (test_ci_evidence.PublicationContracts.test_empty_policy_or_missing_matrix_member_blocks) ... ok
+test_failed_cancelled_missing_and_skipped_jobs_block (test_ci_evidence.PublicationContracts.test_failed_cancelled_missing_and_skipped_jobs_block) ... ok
+test_no_runs_pending_wrong_sha_and_wrong_branch_wait (test_ci_evidence.PublicationContracts.test_no_runs_pending_wrong_sha_and_wrong_branch_wait) ... ok
+test_registry_identity_and_yank_are_checked (test_ci_evidence.PublicationContracts.test_registry_identity_and_yank_are_checked) ... ok
+test_stale_evidence_and_api_outage_do_not_authorize_release (test_ci_evidence.PublicationContracts.test_stale_evidence_and_api_outage_do_not_authorize_release) ... ok
+test_tag_version_and_main_merge_identity (test_ci_evidence.PublicationContracts.test_tag_version_and_main_merge_identity) ... ok
+test_api_outage_runs_full_validation (test_ci_evidence.ReuseContracts.test_api_outage_runs_full_validation) ... ok
+test_changed_tree_or_workflow_is_not_reusable (test_ci_evidence.ReuseContracts.test_changed_tree_or_workflow_is_not_reusable) ... ok
+test_current_run_cannot_attest_itself (test_ci_evidence.ReuseContracts.test_current_run_cannot_attest_itself) ... ok
+test_failed_cancelled_pending_and_fork_runs_are_rejected (test_ci_evidence.ReuseContracts.test_failed_cancelled_pending_and_fork_runs_are_rejected) ... ok
+test_fingerprint_tracks_tree_environment_toolchain_and_role (test_ci_evidence.ReuseContracts.test_fingerprint_tracks_tree_environment_toolchain_and_role) ... ok
+test_identical_tree_accepts_different_commit_identity (test_ci_evidence.ReuseContracts.test_identical_tree_accepts_different_commit_identity) ... ok
+test_incomplete_job_or_reused_receipt_cannot_renew_evidence (test_ci_evidence.ReuseContracts.test_incomplete_job_or_reused_receipt_cannot_renew_evidence) ... ok
+test_jobs_are_paginated (test_ci_evidence.ReuseContracts.test_jobs_are_paginated) ... ok
+test_receipt_missing_expired_stale_or_future_is_rejected (test_ci_evidence.ReuseContracts.test_receipt_missing_expired_stale_or_future_is_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.007s
+
+OK
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Evidence unavailable; run validation: OSError: API unavailable
+No equivalent completed evidence: execute validation.

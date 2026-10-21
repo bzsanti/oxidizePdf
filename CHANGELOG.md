@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.5.1] - 2026-10-20
+
+### Fixed
+
+- Reject irreversible-redaction success when retained font dictionaries or font
+  identifiers can expose target text. Unsupported font fields are rejected before
+  output, including unused fonts and pages without selected entities (#792).
+- Consume finite Custom layout capacity and return consistent top anchors across
+  coordinate systems. Support axis-aligned scales, translations and reflections;
+  reject unsupported geometry explicitly with `LayoutManager::try_new` (#793).
+- Enforce shared DocMDP and FieldMDP policy before incremental form filling,
+  including field aliases and mixed batches; preserve permitted updates and
+  existing ReadOnly checks (#794).
+- Initialize veraPDF configuration before parallel external-validator tests and
+  retain aggregate failure diagnostics. Remove two semantic-example Clippy
+  warnings without changing its output (#800).
+
+### CI
+
+- Reuse validation only for identical resolved inputs and trusted successful
+  producers. Require complete current-main coverage before tag publication and
+  verify the published package checksum before creating the GitHub release (#790).
+
+See [5.5.1 migration and validation notes](docs/releases/5.5.1.md) for changed
+layout anchors, redaction restrictions and bridge adoption requirements.
+
 ## [5.5.0] - 2026-10-18
 
 ### Added
