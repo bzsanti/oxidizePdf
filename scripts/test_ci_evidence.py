@@ -1,5 +1,7 @@
 import copy
 import datetime as dt
+import http.client
+import io
 import json
 import os
 from pathlib import Path
@@ -143,6 +145,29 @@ class ReuseContracts(unittest.TestCase):
             self.assertNotEqual(evidence.fingerprint('optimized', 'job', '')[1], baseline)
             self.assertNotEqual(evidence.fingerprint('tests', 'other-platform', '')[1], baseline)
             self.assertNotEqual(evidence.fingerprint('tests', 'job', 'changed-external-tool')[1], baseline)
+
+    def test_truncated_http_response_runs_full_validation(self):
+        class TruncatedSocket:
+            def makefile(self, *args, **kwargs):
+                return io.BytesIO(b'HTTP/1.1 200 OK\r\nContent-Length: 40339\r\n\r\n{}')
+
+        response = http.client.HTTPResponse(TruncatedSocket())
+        response.begin()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)/'output'
+            summary = Path(directory)/'summary'
+            previous = Path.cwd()
+            try:
+                os.chdir(directory)
+                environment = {'GITHUB_OUTPUT': str(output), 'GITHUB_STEP_SUMMARY': str(summary),
+                               'GITHUB_REPOSITORY': 'owner/repo', 'GH_TOKEN': 'fixture-token'}
+                with patch.dict(os.environ, environment), patch.object(evidence, 'fingerprint', return_value=(self.inputs, 'receipt')), patch.object(evidence.urllib.request, 'urlopen', return_value=response):
+                    evidence.probe(SimpleNamespace(role='tests', job='Test', workflow='ci.yml', extra=''))
+            finally:
+                os.chdir(previous)
+            self.assertEqual(output.read_text(), 'hit=false\nartifact=receipt\n')
+            self.assertIn('execute validation', summary.read_text())
+            self.assertNotIn('Reused validation', summary.read_text())
 
     def test_api_outage_runs_full_validation(self):
         with tempfile.TemporaryDirectory() as directory:

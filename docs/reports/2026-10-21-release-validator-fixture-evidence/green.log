@@ -1,0 +1,31 @@
+   Compiling oxidize-pdf v5.5.1 (/tmp/oxidize-release551/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 22.67s
+     Running unittests src/lib.rs (/tmp/oxidize-bridges-release-20261018/target/debug/deps/oxidize_pdf-75361cbc2ac08181)
+
+running 23 tests
+test verification::validators::process_contracts::nonexecutable_tool_is_execution_error_not_unavailable ... ok
+test verification::validators::tests::test_get_install_instructions ... ok
+test verification::validators::tests::test_get_install_instructions_pdftk_content ... ok
+test verification::validators::process_contracts::missing_tool_and_missing_input_are_distinct_errors ... ok
+test verification::validators::tests::test_get_install_instructions_verapdf_content ... ok
+test verification::validators::tests::test_install_instructions_completeness ... ok
+test verification::validators::process_contracts::validator_fixture_remains_executable_while_previous_case_has_a_writer ... ok
+test verification::validators::tests::test_validate_external_with_mock_pdf ... ok
+test verification::validators::tests::test_validate_with_adobe_preflight_not_available ... ok
+test verification::validators::tests::test_validate_with_pdftk_nonexistent_file ... ok
+test verification::validators::tests::test_validate_with_pdftk_not_available ... ok
+test verification::validators::process_contracts::qpdf_statuses_and_arguments_are_structural_only ... ok
+test verification::validators::tests::test_check_available_validators_returns_vec ... ok
+test verification::validators::tests::test_validate_with_qpdf_nonexistent_file ... ok
+test verification::validators::tests::test_check_available_validators ... ok
+test verification::validators::tests::test_external_validation_result_fields ... ok
+test verification::validators::tests::test_validate_with_verapdf_not_available ... ok
+test verification::validators::tests::test_validate_external_result_structure ... ok
+test verification::validators::process_contracts::verapdf_checks_arguments_exit_and_report_separately ... ok
+test verification::validators::tests::test_validate_with_qpdf_valid_pdf ... ok
+test verification::validators::tests::test_validate_with_qpdf_invalid_pdf ... ok
+test verification::validators::tests::test_validate_with_qpdf_truncated_pdf ... ok
+test verification::validators::tests::test_validate_external_empty_pdf ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 6711 filtered out; finished in 0.06s
+

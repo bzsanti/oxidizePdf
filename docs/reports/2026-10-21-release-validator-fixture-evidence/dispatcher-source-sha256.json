@@ -1,0 +1,4 @@
+{
+  "oxidize-pdf-core/src/verification/validators.rs": "2190bbf7875d18fa6d2501f21d0d3bff02a9b24bb95b943810e61128ac9c0a1c",
+  "oxidize-pdf-core/tests/fixtures/issue_729/validator-dispatch.sh": "038145fa03ed94897cdc5d445eb9d61563d25c115bcbbe5a1a677e7821406931"
+}

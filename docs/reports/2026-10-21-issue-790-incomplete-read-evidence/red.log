@@ -1,0 +1,39 @@
+...................E
+======================================================================
+ERROR: test_truncated_http_response_runs_full_validation (test_ci_evidence.ReuseContracts.test_truncated_http_response_runs_full_validation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/oxidize-release551/scripts/test_ci_evidence.py", line 165, in test_truncated_http_response_runs_full_validation
+    evidence.probe(SimpleNamespace(role='tests', job='Test', workflow='ci.yml', extra=''))
+  File "/tmp/oxidize-release551/scripts/ci_evidence.py", line 128, in probe
+    hit = find_evidence(api, name, inputs, args.workflow, dt.datetime.now(dt.timezone.utc))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/oxidize-release551/scripts/ci_evidence.py", line 87, in find_evidence
+    for artifact in api.pages(path, 'artifacts'):
+  File "/tmp/oxidize-release551/scripts/ci_evidence.py", line 73, in pages
+    items = self.get(f'{path}{separator}per_page=100&page={page}')[key]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/oxidize-release551/scripts/ci_evidence.py", line 67, in get
+    return json.load(response)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+                 ^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 500, in read
+    s = self._safe_read(self.length)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 650, in _safe_read
+    raise IncompleteRead(data, amt - len(data))
+http.client.IncompleteRead: IncompleteRead(2 bytes read, 40337 more expected)
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.019s
+
+FAILED (errors=1)
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Evidence unavailable; run validation: OSError: API unavailable
+No equivalent completed evidence: execute validation.
