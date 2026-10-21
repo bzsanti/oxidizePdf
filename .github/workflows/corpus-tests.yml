@@ -76,7 +76,7 @@ jobs:
   # ═══════════════════════════════════════════════════════════════
   tier-nightly:
     name: "T2 + T3: Real-World & Stress"
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '0 3 * * *')
+    if: github.base_ref == 'main' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '0 3 * * *')
     runs-on: ubuntu-latest
     # T2 + T3 ~35 min; + two differential gates, each a full extract-and-compare
     # pass with poppler over ~1800 PDFs (per-file timeouts capped at 15 s).
@@ -116,11 +116,20 @@ jobs:
       - name: Download T3 corpus
         run: bash test-corpus/t3-stress/download.sh || echo "T3 download skipped"
 
+      - name: Require T2 and T3 corpus inputs
+        run: |
+          for corpus in test-corpus/t2-realworld test-corpus/t3-stress; do
+            if [ -z "$(find "$corpus" -type f -name '*.pdf' -print -quit)" ]; then
+              echo "Required corpus is missing or empty: $corpus" >&2
+              exit 1
+            fi
+          done
+
       - name: Run T2 — Real-World
-        run: cargo test --test t2_realworld -- --nocapture
+        run: cargo test --locked --test t2_realworld -- --nocapture
 
       - name: Run T3 — Stress
-        run: cargo test --test t3_stress -- --nocapture
+        run: cargo test --locked --test t3_stress -- --nocapture
 
       # Differential word-fusion gate: our flat extractor vs poppler pdftotext
       # over the T3 stress corpus. Reality-derived oracle for the separator
@@ -131,13 +140,13 @@ jobs:
 
       # OXIDIZE_DIFF_REQUIRE_CORPUS turns the gates' skip paths into failures.
       # They skip by design when poppler or the corpus is missing, which keeps
-      # them inert on PRs — but here the corpus download is best-effort, so
+      # them inert in local runs — but here the corpus download is best-effort, so
       # without this a failed download would leave the job green having
       # measured nothing.
       - name: Run differential word-fusion gate (T3 vs poppler)
         env:
           OXIDIZE_DIFF_REQUIRE_CORPUS: "1"
-        run: cargo test --test differential_fusion_test -- --nocapture
+        run: cargo test --locked --test differential_fusion_test -- --nocapture
 
       # Reading-ORDER gate: the fusion gate above is structurally blind to
       # order (interleaved columns and out-of-order blocks all score zero
@@ -146,7 +155,7 @@ jobs:
       - name: Run differential reading-order gate (T3 vs poppler)
         env:
           OXIDIZE_DIFF_REQUIRE_CORPUS: "1"
-        run: cargo test --test differential_order_test -- --nocapture
+        run: cargo test --locked --test differential_order_test -- --nocapture
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:

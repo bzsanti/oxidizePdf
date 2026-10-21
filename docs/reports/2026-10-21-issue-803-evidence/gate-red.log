@@ -1,0 +1,28 @@
+F......F...........
+======================================================================
+FAIL: test_additional_running_validation_waits_and_successful_rerun_passes (test_ci_evidence.PublicationContracts.test_additional_running_validation_waits_and_successful_rerun_passes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/oxidize-release551/scripts/test_ci_evidence.py", line 185, in test_additional_running_validation_waits_and_successful_rerun_passes
+    self.assertTrue(self.status())
+AssertionError: [] is not true
+
+======================================================================
+FAIL: test_scheduled_failure_on_candidate_cannot_be_hidden_by_green_push (test_ci_evidence.PublicationContracts.test_scheduled_failure_on_candidate_cannot_be_hidden_by_green_push)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/oxidize-release551/scripts/test_ci_evidence.py", line 179, in test_scheduled_failure_on_candidate_cannot_be_hidden_by_green_push
+    with self.assertRaisesRegex(ValueError, '43'):
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.007s
+
+FAILED (failures=2)
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Validated ci.yml: https://github.com/owner/repo/actions/runs/42
+Evidence unavailable; run validation: OSError: API unavailable
+No equivalent completed evidence: execute validation.

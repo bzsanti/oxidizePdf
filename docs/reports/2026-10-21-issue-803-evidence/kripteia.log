@@ -1,0 +1,240 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 95 | Tests: 64 | Files: 2
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...803-review-scope/oxidize-pdf-core/src/parser/objects.rs       58     94
+...pdf-core/tests/issue_803_stream_length_recovery_test.rs        6     97
+
+--- Worst Offenders ---
+  test_lenient_stream_parsing_too_short (/tmp/issue803-review-scope/oxidize-pdf-core/src/parser/objects.rs:2117) - Score: 80
+    - Test 'test_lenient_stream_parsing_too_short' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_lenient_stream_parsing_too_short' has multiple assertions without diagnostic messages
+    i Test 'test_lenient_stream_parsing_too_short' uses .unwrap() which silently discards error information
+    - Test 'test_lenient_stream_parsing_too_short' has low assert-to-setup ratio (8%): 3 asserts vs 34 setup lines
+  test_lenient_stream_parsing_too_long (/tmp/issue803-review-scope/oxidize-pdf-core/src/parser/objects.rs:2163) - Score: 80
+    - Test 'test_lenient_stream_parsing_too_long' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_lenient_stream_parsing_too_long' has low assert-to-setup ratio (3%): 1 asserts vs 31 setup lines
+  test_lenient_stream_no_endstream_found (/tmp/issue803-review-scope/oxidize-pdf-core/src/parser/objects.rs:2199) - Score: 80
+    - Test 'test_lenient_stream_no_endstream_found' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_lenient_stream_no_endstream_found' uses .unwrap() which silently discards error information
+    - Test 'test_lenient_stream_no_endstream_found' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  test_parsing_simple_error_cases (/tmp/issue803-review-scope/oxidize-pdf-core/src/parser/objects.rs:2478) - Score: 80
+    - Test 'test_parsing_simple_error_cases' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_parsing_simple_error_cases' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_unicode_string_handling (/tmp/issue803-review-scope/oxidize-pdf-core/src/parser/objects.rs:2492) - Score: 80
+    - Test 'test_unicode_string_handling' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_unicode_string_handling' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+
+--- Details ---
+/tmp/issue803-review-scope/oxidize-pdf-core/src/parser/objects.rs:
+  test_parse_simple_objects (line 1397) - Score: 90
+    - Test 'test_parse_simple_objects' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_simple_objects' has multiple assertions without diagnostic messages
+  test_parse_array (line 1430) - Score: 90
+    - Test 'test_parse_array' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_array' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_array' has multiple assertions without diagnostic messages
+    i Test 'test_parse_array' uses .unwrap() which silently discards error information
+  test_parse_array_with_references (line 1450) - Score: 90
+    - Test 'test_parse_array_with_references' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_array_with_references' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_array_with_references' has multiple assertions without diagnostic messages
+    i Test 'test_parse_array_with_references' uses .unwrap() which silently discards error information
+  test_parse_dictionary (line 1464) - Score: 90
+    - Test 'test_parse_dictionary' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_dictionary' has multiple assertions without diagnostic messages
+    i Test 'test_parse_dictionary' uses .unwrap() which silently discards error information
+  test_pdf_object_null (line 1481) - Score: 100
+    i Test 'test_pdf_object_null' has multiple assertions without diagnostic messages
+  test_pdf_object_boolean (line 1496) - Score: 100
+    i Test 'test_pdf_object_boolean' has multiple assertions without diagnostic messages
+  test_pdf_object_integer (line 1515) - Score: 100
+    i Test 'test_pdf_object_integer' has multiple assertions without diagnostic messages
+  test_pdf_object_real (line 1541) - Score: 100
+    i Test 'test_pdf_object_real' has multiple assertions without diagnostic messages
+  test_pdf_object_string (line 1573) - Score: 100
+    i Test 'test_pdf_object_string' has multiple assertions without diagnostic messages
+  test_pdf_object_name (line 1592) - Score: 100
+    i Test 'test_pdf_object_name' has multiple assertions without diagnostic messages
+  test_pdf_object_array (line 1611) - Score: 100
+    i Test 'test_pdf_object_array' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_object_array' has multiple assertions without diagnostic messages
+  test_pdf_object_dictionary (line 1632) - Score: 100
+    i Test 'test_pdf_object_dictionary' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_object_dictionary' has multiple assertions without diagnostic messages
+  test_pdf_object_stream (line 1655) - Score: 100
+    i Test 'test_pdf_object_stream' has multiple assertions without diagnostic messages
+  test_pdf_object_reference (line 1676) - Score: 100
+    i Test 'test_pdf_object_reference' has multiple assertions without diagnostic messages
+  test_pdf_string_methods (line 1696) - Score: 100
+    i Test 'test_pdf_string_methods' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_string_methods' has multiple assertions without diagnostic messages
+  test_pdf_name_methods (line 1718) - Score: 100
+    i Test 'test_pdf_name_methods' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_name_methods' has multiple assertions without diagnostic messages
+  test_pdf_array_methods (line 1738) - Score: 100
+    i Test 'test_pdf_array_methods' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_array_methods' has multiple assertions without diagnostic messages
+  test_pdf_dictionary_methods (line 1786) - Score: 100
+    i Test 'test_pdf_dictionary_methods' asserts against a hardcoded constant instead of a computed expected value
+  test_pdf_stream_methods (line 1831) - Score: 100
+    i Test 'test_pdf_stream_methods' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_stream_methods' has multiple assertions without diagnostic messages
+  test_parse_complex_nested_structures (line 1869) - Score: 90
+    - Test 'test_parse_complex_nested_structures' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_complex_nested_structures' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_complex_nested_structures' has multiple assertions without diagnostic messages
+    i Test 'test_parse_complex_nested_structures' uses .unwrap() which silently discards error information
+  test_parse_complex_dictionary (line 1893) - Score: 90
+    - Test 'test_parse_complex_dictionary' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_complex_dictionary' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_complex_dictionary' has multiple assertions without diagnostic messages
+    i Test 'test_parse_complex_dictionary' uses .unwrap() which silently discards error information
+  test_parse_hex_strings (line 1928) - Score: 90
+    - Test 'test_parse_hex_strings' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_hex_strings' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_hex_strings' uses .unwrap() which silently discards error information
+  test_parse_literal_strings (line 1938) - Score: 90
+    - Test 'test_parse_literal_strings' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_literal_strings' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_literal_strings' uses .unwrap() which silently discards error information
+  test_parse_string_with_escapes (line 1948) - Score: 90
+    - Test 'test_parse_string_with_escapes' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_string_with_escapes' uses .unwrap() which silently discards error information
+  test_parse_names_with_special_chars (line 1959) - Score: 90
+    - Test 'test_parse_names_with_special_chars' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_names_with_special_chars' uses .unwrap() which silently discards error information
+  test_parse_references (line 1970) - Score: 90
+    - Test 'test_parse_references' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_references' has multiple assertions without diagnostic messages
+    i Test 'test_parse_references' uses .unwrap() which silently discards error information
+  test_parse_edge_cases (line 1986) - Score: 90
+    - Test 'test_parse_edge_cases' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_edge_cases' has multiple assertions without diagnostic messages
+    i Test 'test_parse_edge_cases' uses .unwrap() which silently discards error information
+  test_parse_empty_structures (line 2008) - Score: 90
+    - Test 'test_parse_empty_structures' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_parse_empty_structures' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_parse_empty_structures' has multiple assertions without diagnostic messages
+    i Test 'test_parse_empty_structures' uses .unwrap() which silently discards error information
+  test_error_handling (line 2029) - Score: 90
+    - Test 'test_error_handling' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_error_handling' has multiple assertions without diagnostic messages
+  test_clone_and_equality (line 2052) - Score: 100
+    i Test 'test_clone_and_equality' has multiple assertions without diagnostic messages
+  test_debug_formatting (line 2070) - Score: 100
+    i Test 'test_debug_formatting' has multiple assertions without diagnostic messages
+  test_performance_large_array (line 2083) - Score: 100
+    i Test 'test_performance_large_array' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_performance_large_array' has multiple assertions without diagnostic messages
+  test_performance_large_dictionary (line 2099) - Score: 100
+    i Test 'test_performance_large_dictionary' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_performance_large_dictionary' has multiple assertions without diagnostic messages
+  test_lenient_stream_parsing_too_short (line 2117) - Score: 80
+    - Test 'test_lenient_stream_parsing_too_short' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_lenient_stream_parsing_too_short' has multiple assertions without diagnostic messages
+    i Test 'test_lenient_stream_parsing_too_short' uses .unwrap() which silently discards error information
+    - Test 'test_lenient_stream_parsing_too_short' has low assert-to-setup ratio (8%): 3 asserts vs 34 setup lines
+  test_lenient_stream_parsing_too_long (line 2163) - Score: 80
+    - Test 'test_lenient_stream_parsing_too_long' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_lenient_stream_parsing_too_long' has low assert-to-setup ratio (3%): 1 asserts vs 31 setup lines
+  test_lenient_stream_no_endstream_found (line 2199) - Score: 80
+    - Test 'test_lenient_stream_no_endstream_found' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_lenient_stream_no_endstream_found' uses .unwrap() which silently discards error information
+    - Test 'test_lenient_stream_no_endstream_found' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  test_pdf_name_special_characters (line 2222) - Score: 100
+    i Test 'test_pdf_name_special_characters' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_name_special_characters' has multiple assertions without diagnostic messages
+  test_pdf_name_edge_cases (line 2236) - Score: 100
+    i Test 'test_pdf_name_edge_cases' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_name_edge_cases' has multiple assertions without diagnostic messages
+  test_pdf_string_encoding_validation (line 2251) - Score: 100
+    i Test 'test_pdf_string_encoding_validation' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_string_encoding_validation' has multiple assertions without diagnostic messages
+  test_pdf_string_binary_data (line 2266) - Score: 100
+    i Test 'test_pdf_string_binary_data' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_string_binary_data' has multiple assertions without diagnostic messages
+  test_pdf_array_nested_structures (line 2281) - Score: 90
+    i Test 'test_pdf_array_nested_structures' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_array_nested_structures' has multiple assertions without diagnostic messages
+    - Test 'test_pdf_array_nested_structures' has low assert-to-setup ratio (16%): 3 asserts vs 16 setup lines
+  test_pdf_array_type_mixing (line 2304) - Score: 100
+    i Test 'test_pdf_array_type_mixing' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_array_type_mixing' has multiple assertions without diagnostic messages
+  test_pdf_dictionary_key_operations (line 2325) - Score: 100
+    i Test 'test_pdf_dictionary_key_operations' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_dictionary_key_operations' has multiple assertions without diagnostic messages
+  test_pdf_dictionary_complex_values (line 2349) - Score: 90
+    i Test 'test_pdf_dictionary_complex_values' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_dictionary_complex_values' has multiple assertions without diagnostic messages
+    - Test 'test_pdf_dictionary_complex_values' has low assert-to-setup ratio (9%): 3 asserts vs 30 setup lines
+  test_object_reference_validation (line 2386) - Score: 100
+    i Test 'test_object_reference_validation' has multiple assertions without diagnostic messages
+  test_pdf_object_type_checking (line 2402) - Score: 90
+    i Test 'test_pdf_object_type_checking' has multiple assertions without diagnostic messages
+    - Test 'test_pdf_object_type_checking' does not call any production code
+  test_pdf_array_large_capacity (line 2428) - Score: 90
+    - Test 'test_pdf_array_large_capacity' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'test_pdf_array_large_capacity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_array_large_capacity' has multiple assertions without diagnostic messages
+  test_pdf_dictionary_memory_efficiency (line 2458) - Score: 100
+    i Test 'test_pdf_dictionary_memory_efficiency' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_pdf_dictionary_memory_efficiency' has multiple assertions without diagnostic messages
+  test_parsing_simple_error_cases (line 2478) - Score: 80
+    - Test 'test_parsing_simple_error_cases' only exercises the happy path — no None, Err, or edge-case inputs
+    - Test 'test_parsing_simple_error_cases' has low assert-to-setup ratio (10%): 1 asserts vs 9 setup lines
+  test_unicode_string_handling (line 2492) - Score: 80
+    - Test 'test_unicode_string_handling' has a match arm with empty body, ignoring potential error cases
+    - Test 'test_unicode_string_handling' has low assert-to-setup ratio (14%): 2 asserts vs 12 setup lines
+  test_deep_nesting_limits (line 2515) - Score: 90
+    i Test 'test_deep_nesting_limits' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_deep_nesting_limits' has multiple assertions without diagnostic messages
+    - Test 'test_deep_nesting_limits' has low assert-to-setup ratio (17%): 2 asserts vs 10 setup lines
+  test_special_numeric_values (line 2537) - Score: 90
+    i Test 'test_special_numeric_values' has multiple assertions without diagnostic messages
+    - Test 'test_special_numeric_values' has low assert-to-setup ratio (19%): 3 asserts vs 13 setup lines
+  test_array_bounds_checking (line 2569) - Score: 100
+    i Test 'test_array_bounds_checking' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_array_bounds_checking' has multiple assertions without diagnostic messages
+  test_dictionary_case_sensitivity (line 2591) - Score: 100
+    i Test 'test_dictionary_case_sensitivity' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_dictionary_case_sensitivity' has multiple assertions without diagnostic messages
+  test_object_cloning_and_equality (line 2626) - Score: 90
+    - Test 'test_object_cloning_and_equality' has a match arm with empty body, ignoring potential error cases
+    i Test 'test_object_cloning_and_equality' has multiple assertions without diagnostic messages
+    i Test 'test_object_cloning_and_equality' uses .unwrap() which silently discards error information
+  test_concurrent_object_access (line 2652) - Score: 90
+    i Test 'test_concurrent_object_access' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_concurrent_object_access' has multiple assertions without diagnostic messages
+    i Test 'test_concurrent_object_access' uses .unwrap() which silently discards error information
+    - Test 'test_concurrent_object_access' has low assert-to-setup ratio (14%): 3 asserts vs 18 setup lines
+  test_stream_data_edge_cases (line 2684) - Score: 100
+    i Test 'test_stream_data_edge_cases' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_stream_data_edge_cases' has multiple assertions without diagnostic messages
+  test_name_object_hash_consistency (line 2709) - Score: 100
+    i Test 'test_name_object_hash_consistency' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'test_name_object_hash_consistency' has multiple assertions without diagnostic messages
+
+/tmp/issue803-review-scope/oxidize-pdf-core/tests/issue_803_stream_length_recovery_test.rs:
+  overdeclared_length_recovers_partial_marker_and_preserves_next_object (line 14) - Score: 100
+    i Test 'overdeclared_length_recovers_partial_marker_and_preserves_next_object' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'overdeclared_length_recovers_partial_marker_and_preserves_next_object' has multiple assertions without diagnostic messages
+    i Test 'overdeclared_length_recovers_partial_marker_and_preserves_next_object' uses .unwrap() which silently discards error information
+  recovery_respects_backward_distance_budget (line 38) - Score: 90
+    - Test 'recovery_respects_backward_distance_budget' has low assert-to-setup ratio (17%): 1 asserts vs 5 setup lines
+  valid_length_preserves_embedded_marker_bytes (line 48) - Score: 90
+    - Test 'valid_length_preserves_embedded_marker_bytes' only exercises the happy path — no None, Err, or edge-case inputs
+    i Test 'valid_length_preserves_embedded_marker_bytes' uses .unwrap() which silently discards error information
+  recovery_uses_absolute_reader_offset_after_object_seek (line 68) - Score: 100
+    i Test 'recovery_uses_absolute_reader_offset_after_object_seek' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.
