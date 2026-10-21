@@ -643,12 +643,62 @@ mod process_contracts {
     }
 
     #[cfg(unix)]
-    fn script(dir: &std::path::Path, content: &str) -> std::path::PathBuf {
-        use std::os::unix::fs::PermissionsExt;
-        let path = dir.join("validator");
-        std::fs::write(&path, format!("#!/bin/sh\n{content}\n")).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
-        path
+    struct ScriptFixture {
+        directory: tempfile::TempDir,
+        executable: std::path::PathBuf,
+    }
+
+    #[cfg(unix)]
+    impl ScriptFixture {
+        fn as_os_str(&self) -> &std::ffi::OsStr {
+            self.executable.as_os_str()
+        }
+
+        fn scenario(&self) -> std::path::PathBuf {
+            self.directory.path().join("scenario.sh")
+        }
+    }
+
+    #[cfg(unix)]
+    fn script(dir: &std::path::Path, content: &str) -> ScriptFixture {
+        let directory = tempfile::tempdir_in(dir).unwrap();
+        let executable = directory.path().join("validator");
+        // Execute a fixed repository fixture. Scenario files are shell input,
+        // never executable inodes that concurrent process creation can pin open.
+        std::fs::write(directory.path().join("scenario.sh"), format!("{content}\n")).unwrap();
+        std::os::unix::fs::symlink(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/fixtures/issue_729/validator-dispatch.sh"
+            ),
+            &executable,
+        )
+        .unwrap();
+        ScriptFixture {
+            directory,
+            executable,
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn validator_fixture_scenarios_are_data_even_while_open_for_writing() {
+        let file = input();
+        let dir = tempfile::tempdir().unwrap();
+        let first = script(dir.path(), "exit 2");
+        let previous_writer = std::fs::OpenOptions::new()
+            .write(true)
+            .open(first.scenario())
+            .unwrap();
+        assert!(!run_qpdf(first.as_os_str(), file.path()).unwrap());
+        let next = script(dir.path(), "exit 0");
+        assert!(run_qpdf(next.as_os_str(), file.path()).unwrap());
+        assert_eq!(
+            std::fs::read_to_string(first.scenario()).unwrap(),
+            "exit 2\n"
+        );
+        drop(previous_writer);
+        assert!(!run_qpdf(first.as_os_str(), file.path()).unwrap());
     }
 
     #[test]
