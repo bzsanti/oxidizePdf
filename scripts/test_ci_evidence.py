@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch
 from types import SimpleNamespace
 
+import ci_verify_package as package_verification
 import ci_evidence as evidence
 from ci_release_gate import coverage_status
 from ci_verify_package import verify
@@ -265,6 +266,30 @@ class PublicationContracts(unittest.TestCase):
         ):
             with self.assertRaises(ValueError):
                 validate(tag, version, sha, candidates)
+
+    def test_registry_request_identifies_project_and_preserves_http_errors(self):
+        # SHA256 of an empty package, independently fixed as the expected receipt.
+        checksum = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+        body = json.dumps({'version': {'num': '5.5.1', 'checksum': checksum,
+                                       'yanked': False}}).encode()
+
+        def transport(request, timeout):
+            self.assertIsInstance(request, package_verification.urllib.request.Request)
+            self.assertEqual(request.full_url, 'https://crates.io/api/v1/crates/oxidize-pdf/5.5.1')
+            self.assertEqual(request.get_header('User-agent'),
+                             'oxidize-pdf-release (https://github.com/bzsanti/oxidizePdf)')
+            self.assertIsNone(request.get_header('Authorization'))
+            self.assertEqual(timeout, 30)
+            return io.BytesIO(body)
+
+        with patch.dict(os.environ, {'PACKAGE_VERSION': '5.5.1'}), patch.object(Path, 'read_bytes', return_value=b''):
+            with patch.object(package_verification.urllib.request, 'urlopen', side_effect=transport):
+                package_verification.main()
+            error = package_verification.urllib.error.HTTPError('https://crates.io', 403, 'Forbidden', {}, None)
+            with patch.object(package_verification.urllib.request, 'urlopen', side_effect=error), patch.object(package_verification.time, 'sleep') as sleep:
+                with self.assertRaises(package_verification.urllib.error.HTTPError):
+                    package_verification.main()
+                sleep.assert_not_called()
 
     def test_registry_identity_and_yank_are_checked(self):
         data = {'version': {'num': '5.5.0', 'checksum': 'abc', 'yanked': False}}
