@@ -25,9 +25,11 @@ def main():
     checksum = hashlib.sha256(package.read_bytes()).hexdigest()
     for attempt in range(12):
         try:
-            with urllib.request.urlopen(
-                f'https://crates.io/api/v1/crates/oxidize-pdf/{version}', timeout=30
-            ) as response:
+            request = urllib.request.Request(
+                f'https://crates.io/api/v1/crates/oxidize-pdf/{version}',
+                headers={'User-Agent': 'oxidize-pdf-release (https://github.com/bzsanti/oxidizePdf)'},
+            )
+            with urllib.request.urlopen(request, timeout=30) as response:
                 verify(json.load(response), version, checksum)
             print(f'Confirmed oxidize-pdf {version}: sha256:{checksum}')
             return
