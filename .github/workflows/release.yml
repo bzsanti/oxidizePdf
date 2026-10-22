@@ -135,7 +135,7 @@ jobs:
           echo "Core version to check: $CORE_VERSION"
 
           # Check core package
-          STATUS=$(curl --silent --show-error --location --output registry-version.json --write-out '%{http_code}' "https://crates.io/api/v1/crates/oxidize-pdf/$CORE_VERSION")
+          STATUS=$(curl --silent --show-error --location --user-agent 'oxidize-pdf-release (https://github.com/bzsanti/oxidizePdf)' --output registry-version.json --write-out '%{http_code}' "https://crates.io/api/v1/crates/oxidize-pdf/$CORE_VERSION")
           case "$STATUS" in
             200) echo "core_needs_publish=false" >> "$GITHUB_OUTPUT" ;;
             404) echo "core_needs_publish=true" >> "$GITHUB_OUTPUT" ;;
