@@ -219,27 +219,14 @@ fn to_roman(mut num: u32) -> String {
     result
 }
 
-/// Convert number to letters (A, B, ... Z, AA, AB, ...)
+/// Convert a positive number to PDF repeated-letter labels (A...Z, AA, BB...).
 fn to_letters(num: u32, uppercase: bool) -> String {
     if num == 0 {
         return String::new();
     }
-
-    let mut result = String::new();
-    let mut n = num;
-
-    while n > 0 {
-        let remainder = ((n - 1) % 26) as u8;
-        let letter = if uppercase {
-            (b'A' + remainder) as char
-        } else {
-            (b'a' + remainder) as char
-        };
-        result.insert(0, letter);
-        n = (n - 1) / 26;
-    }
-
-    result
+    let base = if uppercase { b'A' } else { b'a' };
+    let letter = char::from(base + ((num - 1) % 26) as u8);
+    letter.to_string().repeat(((num - 1) / 26 + 1) as usize)
 }
 
 #[cfg(test)]
@@ -262,7 +249,7 @@ mod tests {
         assert_eq!(PageLabelStyle::UppercaseLetters.format(1), "A");
         assert_eq!(PageLabelStyle::UppercaseLetters.format(26), "Z");
         assert_eq!(PageLabelStyle::UppercaseLetters.format(27), "AA");
-        assert_eq!(PageLabelStyle::UppercaseLetters.format(52), "AZ");
+        assert_eq!(PageLabelStyle::UppercaseLetters.format(52), "ZZ");
 
         assert_eq!(PageLabelStyle::LowercaseLetters.format(1), "a");
         assert_eq!(PageLabelStyle::LowercaseLetters.format(26), "z");
@@ -357,10 +344,10 @@ mod tests {
         assert_eq!(to_letters(1, true), "A");
         assert_eq!(to_letters(26, true), "Z");
         assert_eq!(to_letters(27, true), "AA");
-        assert_eq!(to_letters(52, true), "AZ");
-        assert_eq!(to_letters(53, true), "BA");
-        assert_eq!(to_letters(702, true), "ZZ");
-        assert_eq!(to_letters(703, true), "AAA");
+        assert_eq!(to_letters(52, true), "ZZ");
+        assert_eq!(to_letters(53, true), "AAA");
+        assert_eq!(to_letters(702, true), "Z".repeat(27));
+        assert_eq!(to_letters(703, true), "A".repeat(28));
 
         assert_eq!(to_letters(1, false), "a");
         assert_eq!(to_letters(26, false), "z");
@@ -482,17 +469,16 @@ mod tests {
 
     #[test]
     fn test_letter_edge_cases() {
-        // Test more letter conversion cases
-        assert_eq!(to_letters(78, true), "BZ"); // 26*2 + 26
-        assert_eq!(to_letters(104, true), "CZ"); // 26*3 + 26
-        assert_eq!(to_letters(701, true), "ZY"); // Last before ZZ
-        assert_eq!(to_letters(728, true), "AAZ"); // 26*26 + 26 + 26
-        assert_eq!(to_letters(1378, true), "AZZ"); // Complex case
-
-        // Lowercase versions
-        assert_eq!(to_letters(78, false), "bz");
-        assert_eq!(to_letters(104, false), "cz");
-        assert_eq!(to_letters(701, false), "zy");
+        assert_eq!(to_letters(78, true), "ZZZ");
+        assert_eq!(to_letters(104, true), "ZZZZ");
+        assert_eq!(to_letters(105, true), "AAAAA");
+        assert_eq!(to_letters(78, false), "zzz");
+        assert_eq!(to_letters(104, false), "zzzz");
+        assert_eq!(to_letters(105, false), "aaaaa");
+        assert_eq!(to_letters(701, true), "Y".repeat(27));
+        assert_eq!(to_letters(728, true), "Z".repeat(28));
+        assert_eq!(to_letters(1378, true), "Z".repeat(53));
+        assert_eq!(to_letters(701, false), "y".repeat(27));
     }
 
     #[test]
