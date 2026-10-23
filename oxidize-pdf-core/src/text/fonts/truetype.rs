@@ -574,6 +574,8 @@ impl TrueTypeFont {
     }
 
     /// Parse the cmap table to get character to glyph mappings
+    /// Missing glyphs (GID 0) and selectors outside `maxp.numGlyphs` are omitted.
+    /// Other valid mappings and subtables remain available.
     pub fn parse_cmap(&self) -> ParseResult<Vec<CmapSubtable>> {
         self.parse_cmap_with_codes(None)
     }
@@ -657,7 +659,7 @@ impl TrueTypeFont {
                                 position: 6 + code as usize,
                                 message: "Format 0 cmap is truncated".to_string(),
                             })? as u16;
-                    if gid != 0 {
+                    if gid != 0 && gid < self.num_glyphs {
                         mappings.insert(code, gid);
                     }
                 }
@@ -698,7 +700,7 @@ impl TrueTypeFont {
                                 gid.wrapping_add(delta as u16)
                             }
                         };
-                        if gid != 0 {
+                        if gid != 0 && gid < self.num_glyphs {
                             mappings.insert(code, gid);
                         }
                     }
@@ -714,7 +716,7 @@ impl TrueTypeFont {
                         let Ok(gid) = read_u16(data, position) else {
                             break;
                         };
-                        if gid != 0 {
+                        if gid != 0 && gid < self.num_glyphs {
                             mappings.insert(code, gid);
                         }
                     }

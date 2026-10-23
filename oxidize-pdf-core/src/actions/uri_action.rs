@@ -37,9 +37,9 @@ impl UriAction {
         Self::new(format!("mailto:{}", address.into()))
     }
 
-    /// Create URI action for email with subject
+    /// Create URI action for email with a UTF-8 subject, percent-encoded per RFC 6068.
     pub fn email_with_subject(address: impl Into<String>, subject: impl Into<String>) -> Self {
-        let encoded_subject = urlencoding::encode(&subject.into());
+        let encoded_subject = urlencoding::encode_component(&subject.into(), false);
         Self::new(format!(
             "mailto:{}?subject={}",
             address.into(),
@@ -106,16 +106,29 @@ impl UriBuilder {
     }
 }
 
-/// URL encoding helper (simplified version)
+/// UTF-8 component encoding; query builders retain form-style spaces.
 mod urlencoding {
     pub fn encode(s: &str) -> String {
-        s.chars()
-            .map(|c| match c {
-                'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => c.to_string(),
-                ' ' => "+".to_string(),
-                _ => format!("%{:02X}", c as u8),
-            })
-            .collect()
+        encode_component(s, true)
+    }
+
+    pub fn encode_component(s: &str, space_as_plus: bool) -> String {
+        const HEX: &[u8; 16] = b"0123456789ABCDEF";
+        let mut encoded = String::new();
+        for byte in s.bytes() {
+            match byte {
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                    encoded.push(char::from(byte))
+                }
+                b' ' if space_as_plus => encoded.push('+'),
+                _ => {
+                    encoded.push('%');
+                    encoded.push(char::from(HEX[usize::from(byte >> 4)]));
+                    encoded.push(char::from(HEX[usize::from(byte & 15)]));
+                }
+            }
+        }
+        encoded
     }
 }
 
@@ -269,6 +282,16 @@ mod tests {
         assert_eq!(
             dict.get("URI"),
             Some(&Object::String("tel:+1234567890".to_string()))
+        );
+    }
+
+    #[test]
+    fn query_components_preserve_utf8_and_form_spaces() {
+        assert_eq!(
+            UriBuilder::new("https://example.com")
+                .param("café +", "😀 &?#%")
+                .build(),
+            "https://example.com?caf%C3%A9+%2B=%F0%9F%98%80+%26%3F%23%25"
         );
     }
 
