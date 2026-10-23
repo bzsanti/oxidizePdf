@@ -5,8 +5,8 @@ use crate::error::PdfError;
 use crate::operations::existing_document::{
     extract_pdf_pages, merge_pdfs, split_pdf, ExistingDocumentMergeInput, ExistingDocumentPolicy,
 };
-use crate::operations::OperationError;
 use crate::operations::PageRange;
+use crate::operations::{rotate_pdf_pages, OperationError, RotateOptions, RotationAngle};
 use crate::parser::PdfReader;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -329,11 +329,28 @@ fn execute_job(job: BatchJob) -> std::result::Result<Vec<PathBuf>, PdfError> {
         BatchJob::Rotate {
             input,
             output,
-            rotation: _,
-            pages: _,
+            rotation,
+            pages,
         } => {
-            // Rotate not implemented in current API, just copy
-            std::fs::copy(&input, &output)?;
+            let options = RotateOptions {
+                angle: RotationAngle::from_degrees(rotation)
+                    .map_err(operation_error_to_pdf_error)?,
+                pages: pages.map(PageRange::List).unwrap_or(PageRange::All),
+                ..RotateOptions::default()
+            };
+            // Use the core rotation engine, but publish only a fully written
+            // document. Failed parsing/rotation/serialization leaves output intact.
+            let parent = output
+                .parent()
+                .filter(|parent| !parent.as_os_str().is_empty())
+                .unwrap_or_else(|| std::path::Path::new("."));
+            let temporary = tempfile::NamedTempFile::new_in(parent)?;
+            rotate_pdf_pages(&input, temporary.path(), options)
+                .map_err(operation_error_to_pdf_error)?;
+            temporary.as_file().sync_all()?;
+            temporary
+                .persist(&output)
+                .map_err(|error| PdfError::Io(error.error))?;
             Ok(vec![output])
         }
 
@@ -352,15 +369,9 @@ fn execute_job(job: BatchJob) -> std::result::Result<Vec<PathBuf>, PdfError> {
             Ok(vec![output])
         }
 
-        BatchJob::Compress {
-            input,
-            output,
-            quality: _,
-        } => {
-            // Compression not implemented yet, just copy
-            std::fs::copy(&input, &output)?;
-            Ok(vec![output])
-        }
+        BatchJob::Compress { .. } => Err(PdfError::InvalidOperation(
+            "BatchJob::Compress is unsupported; no output was written".into(),
+        )),
 
         BatchJob::Custom { operation, .. } => {
             operation()?;
