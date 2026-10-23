@@ -300,13 +300,14 @@ fn test_batch_job_types() {
     let summary = processor.execute().unwrap();
 
     assert_eq!(summary.total_jobs, 4);
-    assert_eq!(summary.successful, 4);
-    assert_eq!(summary.failed, 0);
+    assert_eq!(summary.successful, 3);
+    assert_eq!(summary.failed, 1);
 
     // Check output files
     assert!(temp_dir.path().join("rotated.pdf").exists());
     assert!(temp_dir.path().join("extracted.pdf").exists());
-    assert!(temp_dir.path().join("compressed.pdf").exists());
+    assert!(summary.results[3].error().unwrap().contains("unsupported"));
+    assert!(!temp_dir.path().join("compressed.pdf").exists());
 }
 
 #[test]

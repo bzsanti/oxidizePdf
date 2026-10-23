@@ -2,6 +2,18 @@
 //!
 //! This module provides basic annotation types including text annotations,
 //! link annotations, and markup annotations.
+//!
+//! Polygon and polyline options use [`PolygonBorderStyle`],
+//! [`PolygonBorderStyleType`] and [`PolylineLineEndingStyle`]. These are
+//! distinct from the base annotation border and [`LineAnnotation`] endings.
+//!
+//! ```
+//! use oxidize_pdf::annotations::{PolylineAnnotation, PolylineLineEndingStyle};
+//! use oxidize_pdf::geometry::Point;
+//! let line = PolylineAnnotation::new(vec![Point::new(10.0, 10.0), Point::new(90.0, 90.0)])
+//!     .with_endings(PolylineLineEndingStyle::OpenArrow, PolylineLineEndingStyle::Circle);
+//! assert_eq!(line.start_style.to_pdf_name(), "OpenArrow");
+//! ```
 
 mod annotation;
 mod annotation_type;
@@ -23,8 +35,9 @@ pub use annotation_type::{
 pub use link::{HighlightMode, LinkAction, LinkAnnotation, LinkDestination};
 pub use markup::{MarkupAnnotation, MarkupType, QuadPoints};
 pub use polygon::{
-    create_rectangle_polygon, create_regular_polygon, create_triangle, PolygonAnnotation,
-    PolylineAnnotation,
+    create_rectangle_polygon, create_regular_polygon, create_triangle,
+    BorderStyle as PolygonBorderStyle, BorderStyleType as PolygonBorderStyleType,
+    LineEndingStyle as PolylineLineEndingStyle, PolygonAnnotation, PolylineAnnotation,
 };
 pub use popup::{
     create_markup_popup, create_open_popup, create_text_popup, PopupAnnotation, PopupFlags,

@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- Export `PolygonBorderStyle`, `PolygonBorderStyleType` and
+  `PolylineLineEndingStyle` so external callers can configure polygon/polyline
+  borders and line endings without inaccessible private-module types (#795).
+- Execute batch rotation through the core rotation engine, honoring page
+  selection and composed angles, with atomic output replacement. Rotation
+  reconstructs the PDF and is not a signature-preserving incremental edit.
+  Batch compression now reports an explicit unsupported-operation failure
+  without touching files instead of returning success for an unchanged copy (#797).
+
 ## [5.5.1] - 2026-10-20
 
 ### Fixed
