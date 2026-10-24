@@ -73,6 +73,15 @@ pub enum BatchJob {
     /// it is not an incremental edit and does not preserve signatures or all
     /// document-level structures. Output replacement is atomic after successful
     /// serialization. A completion-checked timeout may still leave that output.
+    /// Existing symlinks are followed without replacing the link; dangling links fail.
+    /// Output inherits destination permissions, or input permissions for new files
+    /// (ordinary mode bits on Unix). Other platforms copy std::fs::Permissions
+    /// (the read-only attribute on Windows), not Unix mode bits. A platform that
+    /// refuses replacement of a read-only destination returns a failed job.
+    /// The destination parent must be writable.
+    /// Atomic replacement creates a new inode: hardlinks, ownership, ACLs and
+    /// extended attributes are not preserved. Concurrent replacement of destination
+    /// paths is not guarded against.
     Rotate {
         input: PathBuf,
         output: PathBuf,

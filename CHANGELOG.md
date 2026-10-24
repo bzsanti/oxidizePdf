@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Use PDF repeated-letter page labels, encode mailto subjects as UTF-8, and
+  filter generic TrueType cmap entries against maxp numGlyphs (#743–745).
+- Add fallible page-label formatting with configurable byte budgets, checked
+  arithmetic, numeric dictionary validation and UTF-16BE Unicode prefixes (#812).
+  Legacy formatting methods panic explicitly on invalid/oversized input; use
+  `try_format`, `try_format_label` or `try_get_label` for untrusted data.
+- Reject invalid subset GIDs and filter the parallel font parser's mappings;
+  mapping extraction now rejects a missing or truncated maxp inventory;
+  escape raw mailto recipient delimiters and validate polygon/polyline geometry
+  and styles. Stroke width setters now also update PDF border width (#812).
+- Preserve ordinary permissions and existing symlinks when publishing batch
+  rotation; dangling links fail unchanged. Clarify unsupported compression and
+  the existing completion-checked timeout contract (#797).
+
 - Export `PolygonBorderStyle`, `PolygonBorderStyleType` and
   `PolylineLineEndingStyle` so external callers can configure polygon/polyline
   borders and line endings without inaccessible private-module types (#795).

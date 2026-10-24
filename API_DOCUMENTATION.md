@@ -144,7 +144,24 @@ processor.add_job(BatchJob::Rotate {
 });
 ```
 
+Rotation uses the reconstructive core engine: annotations, forms and original page
+boxes are not preserved. Publication uses a temporary file in the destination
+directory, which must be writable. Existing output permissions are preserved
+(ordinary mode bits on Unix); new outputs inherit input permissions. Existing
+symlinks keep pointing to their updated target; dangling links fail unchanged.
+Non-Unix platforms copy `std::fs::Permissions` (the read-only attribute on Windows),
+not Unix mode bits. If the platform refuses replacement of a read-only destination,
+the job fails without publishing the temporary output.
+Atomic replacement creates a new inode: hardlinks, ownership, ACLs and extended
+attributes are not preserved. This is not a security boundary against concurrent
+path replacement by other processes.
+A positive timeout is checked after completion and can report failure even when a
+complete output was published; it does not cancel or roll back the operation.
+
 #### Compress PDF
+`BatchJob::Compress` is currently unsupported: every quality value returns a failed
+job with an explicit unsupported error, without creating or overwriting output.
+The example below demonstrates that failure, not working compression.
 ```rust
 processor.add_job(BatchJob::Compress {
     input: "large_file.pdf".into(),

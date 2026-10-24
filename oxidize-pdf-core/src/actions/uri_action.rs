@@ -32,17 +32,20 @@ impl UriAction {
         Self::new(url)
     }
 
-    /// Create URI action for email
+    /// Create URI action for a raw recipient address (not an already encoded URI).
+    /// Reserved URI delimiters are escaped; `@`, `+`, and recipient-list commas are preserved.
+    /// This encodes address data but does not validate mailbox syntax.
     pub fn email(address: impl Into<String>) -> Self {
-        Self::new(format!("mailto:{}", address.into()))
+        Self::new(format!("mailto:{}", encode_recipient(&address.into())))
     }
 
-    /// Create URI action for email with a UTF-8 subject, percent-encoded per RFC 6068.
+    /// Create URI action for a raw recipient and UTF-8 subject.
+    /// Both are percent-encoded; pre-encoded input is treated as literal data.
     pub fn email_with_subject(address: impl Into<String>, subject: impl Into<String>) -> Self {
         let encoded_subject = urlencoding::encode_component(&subject.into(), false);
         Self::new(format!(
             "mailto:{}?subject={}",
-            address.into(),
+            encode_recipient(&address.into()),
             encoded_subject
         ))
     }
@@ -66,6 +69,14 @@ impl UriAction {
 
         dict
     }
+}
+
+// Keep only mailbox separators that cannot start a URI query or fragment.
+fn encode_recipient(address: &str) -> String {
+    urlencoding::encode_component(address, false)
+        .replace("%40", "@")
+        .replace("%2B", "+")
+        .replace("%2C", ",")
 }
 
 /// Helper to build complex URIs
@@ -174,7 +185,7 @@ mod tests {
             .unwrap();
 
         assert!(uri.starts_with("mailto:test@example.com?subject="));
-        assert!(uri.contains("Hello+World") || uri.contains("Hello%20World"));
+        assert_eq!(uri, "mailto:test@example.com?subject=Hello%20World");
     }
 
     #[test]
@@ -250,11 +261,12 @@ mod tests {
             UriAction::email_with_subject("test@example.com", "Meeting Tomorrow & Schedule");
         let dict = action.to_dict();
 
-        if let Some(Object::String(uri)) = dict.get("URI") {
-            assert!(uri.starts_with("mailto:test@example.com?subject="));
-            // Should handle special characters in subject
-            assert!(uri.contains("Meeting") && uri.contains("Schedule"));
-        }
+        assert_eq!(
+            dict.get("URI"),
+            Some(&Object::String(
+                "mailto:test@example.com?subject=Meeting%20Tomorrow%20%26%20Schedule".into()
+            ))
+        );
     }
 
     #[test]

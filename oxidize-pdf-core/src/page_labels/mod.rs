@@ -6,5 +6,5 @@
 mod page_label;
 mod page_label_tree;
 
-pub use page_label::{PageLabel, PageLabelRange, PageLabelStyle};
+pub use page_label::{PageLabel, PageLabelRange, PageLabelStyle, DEFAULT_LABEL_BYTE_LIMIT};
 pub use page_label_tree::{PageLabelBuilder, PageLabelTree};

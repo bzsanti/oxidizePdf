@@ -352,7 +352,10 @@ impl<'a> TtfParser<'a> {
         Ok(flags)
     }
 
-    /// Extract character to glyph mapping
+    /// Extract character-to-glyph mappings within the maxp glyph inventory.
+    ///
+    /// # Errors
+    /// Returns FontError for missing/truncated maxp, cmap or metrics tables.
     pub fn extract_glyph_mapping(&self) -> Result<GlyphMapping> {
         let mut mapping = GlyphMapping::default();
 
@@ -378,8 +381,22 @@ impl<'a> TtfParser<'a> {
             }
         }
 
+        // maxp is the authority for both real cmap entries and fallback guesses.
+        let maxp = self
+            .get_table("maxp")
+            .filter(|table| table.len() >= 6)
+            .ok_or_else(|| PdfError::FontError("Missing or truncated maxp table".into()))?;
+        let num_glyphs = u16::from_be_bytes([maxp[4], maxp[5]]);
+        mapping
+            .char_to_glyph
+            .retain(|_, gid| *gid != 0 && *gid < num_glyphs);
+        mapping
+            .glyph_to_char
+            .retain(|gid, _| *gid != 0 && *gid < num_glyphs);
+
         // Extract glyph widths from hmtx table
         self.extract_glyph_widths(&mut mapping)?;
+        mapping.glyph_widths.retain(|gid, _| *gid < num_glyphs);
 
         Ok(mapping)
     }
