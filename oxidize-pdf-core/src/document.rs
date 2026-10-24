@@ -399,21 +399,45 @@ impl Document {
         self.page_labels.as_mut()
     }
 
-    /// Get page label for a specific page
+    /// Get a page label with the default formatting budget.
+    ///
+    /// # Panics
+    /// Panics for invalid or oversized labels. Use [`Self::try_get_page_label`]
+    /// for untrusted input.
     pub fn get_page_label(&self, page_index: u32) -> String {
-        self.page_labels
-            .as_ref()
-            .and_then(|labels| labels.get_label(page_index))
-            .unwrap_or_else(|| (page_index + 1).to_string())
+        self.try_get_page_label(page_index)
+            .expect("Invalid or oversized page label")
     }
 
-    /// Get all page labels
+    /// Get a page label with checked formatting and recoverable errors.
+    /// An absent range uses the one-based decimal page index.
+    pub fn try_get_page_label(&self, page_index: u32) -> Result<String> {
+        let label = self
+            .page_labels
+            .as_ref()
+            .map(|labels| labels.try_get_label(page_index))
+            .transpose()?
+            .flatten();
+        Ok(label.unwrap_or_else(|| (u64::from(page_index) + 1).to_string()))
+    }
+
+    /// Get all labels with a 16 MiB aggregate budget, including String slots.
+    ///
+    /// # Panics
+    /// Panics for invalid or oversized labels. Use [`Self::try_get_all_page_labels`]
+    /// to select an aggregate budget and handle errors.
     pub fn get_all_page_labels(&self) -> Vec<String> {
-        let page_count = self.pages.len() as u32;
-        if let Some(labels) = &self.page_labels {
-            labels.get_all_labels(page_count)
-        } else {
-            (1..=page_count).map(|i| i.to_string()).collect()
+        self.try_get_all_page_labels(16 * 1024 * 1024)
+            .expect("Invalid or oversized page labels")
+    }
+
+    /// Get all labels with a caller-selected aggregate byte budget.
+    pub fn try_get_all_page_labels(&self, max_bytes: usize) -> Result<Vec<String>> {
+        let page_count = u32::try_from(self.pages.len())
+            .map_err(|_| crate::PdfError::InvalidOperation("Page count exceeds u32::MAX".into()))?;
+        match &self.page_labels {
+            Some(labels) => labels.try_get_all_labels(page_count, max_bytes),
+            None => PageLabelTree::new().try_get_all_labels(page_count, max_bytes),
         }
     }
 

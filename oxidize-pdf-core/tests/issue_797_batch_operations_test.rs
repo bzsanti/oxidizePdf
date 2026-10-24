@@ -242,3 +242,97 @@ fn rotation_can_replace_its_input_after_reading_and_writing_successfully() {
     assert_eq!(doc.get_page(2).unwrap().rotation, 270);
     assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
 }
+
+#[cfg(unix)]
+#[test]
+fn rotation_preserves_ordinary_permissions_and_existing_symlinks() {
+    use std::os::unix::fs::{symlink, PermissionsExt};
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("input.pdf");
+    source(&input);
+    std::fs::set_permissions(&input, std::fs::Permissions::from_mode(0o640)).unwrap();
+    for existing in [false, true] {
+        let output = dir.path().join(format!("output-{existing}.pdf"));
+        if existing {
+            std::fs::write(&output, b"old").unwrap();
+            std::fs::set_permissions(&output, std::fs::Permissions::from_mode(0o644)).unwrap();
+        }
+        let mut batch = BatchProcessor::new(BatchOptions::default());
+        batch.add_job(rotate(&input, &output, 90, None));
+        assert!(batch.execute().unwrap().results[0].is_success());
+        assert_eq!(
+            std::fs::metadata(&output).unwrap().permissions().mode() & 0o7777,
+            if existing { 0o644 } else { 0o640 }
+        );
+    }
+    let target = dir.path().join("target.pdf");
+    std::fs::write(&target, b"old target").unwrap();
+    let link = dir.path().join("link.pdf");
+    symlink("target.pdf", &link).unwrap();
+    let mut batch = BatchProcessor::new(BatchOptions::default());
+    batch.add_job(rotate(&input, &link, 90, None));
+    assert!(batch.execute().unwrap().results[0].is_success());
+    assert!(std::fs::symlink_metadata(&link)
+        .unwrap()
+        .file_type()
+        .is_symlink());
+    assert_eq!(
+        oxidize_pdf::PdfReader::open_document(&target)
+            .unwrap()
+            .get_page(0)
+            .unwrap()
+            .rotation,
+        90
+    );
+    let dangling = dir.path().join("dangling.pdf");
+    symlink("absent.pdf", &dangling).unwrap();
+    let mut batch = BatchProcessor::new(BatchOptions::default());
+    batch.add_job(rotate(&input, &dangling, 90, None));
+    assert!(batch.execute().unwrap().results[0].is_failed());
+    assert!(std::fs::symlink_metadata(&dangling)
+        .unwrap()
+        .file_type()
+        .is_symlink());
+    assert!(!dir.path().join("absent.pdf").exists());
+}
+
+#[test]
+fn positive_timeout_reports_completion_and_leaves_complete_rotated_output() {
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("input.pdf");
+    source(&input);
+    let mut batch =
+        BatchProcessor::new(BatchOptions::default().with_job_timeout(Duration::from_nanos(1)));
+    batch.add_job(rotate(&input, &input, 90, None));
+    let summary = batch.execute().unwrap();
+    assert!(summary.results[0]
+        .error()
+        .unwrap()
+        .contains("after completion"));
+    let doc = oxidize_pdf::PdfReader::open_document(&input).unwrap();
+    assert_eq!(doc.page_count().unwrap(), 3);
+    assert_eq!(doc.get_page(0).unwrap().rotation, 90);
+}
+
+#[cfg(unix)]
+#[test]
+fn rotation_does_not_transfer_special_permission_bits() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("input.pdf");
+    source(&input);
+    let output = dir.path().join("output.pdf");
+    std::fs::write(&output, b"old").unwrap();
+    std::fs::set_permissions(&output, std::fs::Permissions::from_mode(0o1755)).unwrap();
+    assert_eq!(
+        std::fs::metadata(&output).unwrap().permissions().mode() & 0o7777,
+        0o1755
+    );
+    let mut batch = BatchProcessor::new(BatchOptions::default());
+    batch.add_job(rotate(&input, &output, 90, None));
+    assert!(batch.execute().unwrap().results[0].is_success());
+    assert_eq!(
+        std::fs::metadata(&output).unwrap().permissions().mode() & 0o7777,
+        0o755
+    );
+}
