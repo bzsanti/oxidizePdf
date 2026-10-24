@@ -10,30 +10,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.5.2] - 2026-10-24
 
+### Added
+
+- Add fallible page-label formatting and Document getters with configurable
+  byte budgets; legacy signatures remain available with documented panics for
+  invalid or oversized labels (#812).
+- Export `PolygonBorderStyle`, `PolygonBorderStyleType` and
+  `PolylineLineEndingStyle` so external callers can configure polygon/polyline
+  borders and line endings without inaccessible private-module types (#795).
+
 ### Fixed
 
 - Use PDF repeated-letter page labels, encode mailto subjects as UTF-8, and
   filter generic TrueType cmap entries against maxp numGlyphs (#743–745).
-- Add fallible page-label formatting with configurable byte budgets, checked
-  arithmetic, numeric dictionary validation and UTF-16BE Unicode prefixes (#812).
-  Legacy formatting methods panic explicitly on invalid/oversized input; use
-  `try_format`, `try_format_label` or `try_get_label` for untrusted data.
+- Validate label numeric fields and arithmetic before formatting, and serialize
+  Unicode prefixes as UTF-16BE PDF text strings (#812).
 - Reject invalid subset GIDs and filter the parallel font parser's mappings;
-  mapping extraction now rejects a missing or truncated maxp inventory;
-  escape raw mailto recipient delimiters and validate polygon/polyline geometry
-  and styles. Stroke width setters now also update PDF border width (#812).
-- Preserve ordinary permissions and existing symlinks when publishing batch
-  rotation; dangling links fail unchanged. Clarify unsupported compression and
-  the existing completion-checked timeout contract (#797).
-
-- Export `PolygonBorderStyle`, `PolygonBorderStyleType` and
-  `PolylineLineEndingStyle` so external callers can configure polygon/polyline
-  borders and line endings without inaccessible private-module types (#795).
+  mapping extraction rejects a missing or truncated maxp inventory. Escape raw
+  mailto recipient delimiters and validate polygon/polyline geometry and styles.
+  Stroke width setters also update PDF border width (#812).
 - Execute batch rotation through the core rotation engine, honoring page
-  selection and composed angles, with atomic output replacement. Rotation
-  reconstructs the PDF and is not a signature-preserving incremental edit.
-  Batch compression now reports an explicit unsupported-operation failure
-  without touching files instead of returning success for an unchanged copy (#797).
+  selection and composed angles, with atomic output replacement that preserves
+  ordinary permissions and existing symlinks; dangling links fail unchanged.
+  Rotation reconstructs the PDF and is not a signature-preserving incremental
+  edit. Compression reports an explicit unsupported-operation failure without
+  touching files instead of returning success for an unchanged copy (#797).
 
 See [5.5.2 migration and validation notes](docs/releases/5.5.2.md) for changed
 validation, label budgets and batch publication behavior.
