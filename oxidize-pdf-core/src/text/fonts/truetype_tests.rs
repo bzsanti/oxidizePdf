@@ -56,7 +56,7 @@ mod tests {
         data.extend(&[0x00, 0x00]); // rangeShift
 
         // End codes
-        data.extend(&[0x00, 0x7F]); // End code for segment 1
+        data.extend(&[0x00, 0x22]); // End code: three mappings, GIDs 1..3
         data.extend(&[0xFF, 0xFF]); // End code for last segment
         data.extend(&[0x00, 0x00]); // Reserved pad
 
@@ -65,7 +65,7 @@ mod tests {
         data.extend(&[0xFF, 0xFF]); // Start code for last segment
 
         // ID deltas
-        data.extend(&[0x00, 0x00]); // Delta for segment 1
+        data.extend(&[0xFF, 0xE1]); // Delta = -31: codes 32..34 map to GIDs 1..3
         data.extend(&[0x00, 0x01]); // Delta for last segment
 
         // ID range offsets
@@ -194,15 +194,13 @@ mod tests {
         let font = TrueTypeFont::parse(data).unwrap();
         let cmap_tables = font.parse_cmap().unwrap();
 
-        // The test cmap might be malformed, just verify parsing doesn't crash
-        // and returns a valid result (could be empty)
-        assert!(cmap_tables.len() <= 1, "Should have 0 or 1 cmap subtable");
-
-        if !cmap_tables.is_empty() {
-            // If we found a subtable, verify basic properties
-            assert_eq!(cmap_tables[0].platform_id, 3); // Windows
-            assert_eq!(cmap_tables[0].encoding_id, 1); // Unicode
-        }
+        assert_eq!(cmap_tables.len(), 1);
+        assert_eq!(cmap_tables[0].platform_id, 3);
+        assert_eq!(cmap_tables[0].encoding_id, 1);
+        assert_eq!(
+            cmap_tables[0].mappings,
+            HashMap::from([(32, 1), (33, 2), (34, 3)])
+        );
     }
 
     #[test]
@@ -242,24 +240,11 @@ mod tests {
         used_glyphs.insert(0);
         used_glyphs.insert(2);
 
-        // create_subset might fail if cmap is not properly formed
-        let subset_data = match font.create_subset(&used_glyphs) {
-            Ok(data) => data,
-            Err(_) => {
-                // If subset creation fails due to missing cmap, just return
-                // This is acceptable for this test
-                return;
-            }
-        };
+        let subset_data = font.create_subset(&used_glyphs).unwrap();
 
         // Verify subset is valid
         assert!(!subset_data.is_empty());
         assert!(subset_data.starts_with(&[0x00, 0x01, 0x00, 0x00])); // TTF signature
-    }
-
-    #[test]
-    fn test_cmap_format_0_parsing() {
-        // Already tested in truetype.rs tests
     }
 
     #[test]

@@ -574,6 +574,8 @@ impl TrueTypeFont {
     }
 
     /// Parse the cmap table to get character to glyph mappings
+    /// Missing glyphs (GID 0) and selectors outside `maxp.numGlyphs` are omitted.
+    /// Other valid mappings and subtables remain available.
     pub fn parse_cmap(&self) -> ParseResult<Vec<CmapSubtable>> {
         self.parse_cmap_with_codes(None)
     }
@@ -657,7 +659,7 @@ impl TrueTypeFont {
                                 position: 6 + code as usize,
                                 message: "Format 0 cmap is truncated".to_string(),
                             })? as u16;
-                    if gid != 0 {
+                    if gid != 0 && gid < self.num_glyphs {
                         mappings.insert(code, gid);
                     }
                 }
@@ -698,7 +700,7 @@ impl TrueTypeFont {
                                 gid.wrapping_add(delta as u16)
                             }
                         };
-                        if gid != 0 {
+                        if gid != 0 && gid < self.num_glyphs {
                             mappings.insert(code, gid);
                         }
                     }
@@ -714,7 +716,7 @@ impl TrueTypeFont {
                         let Ok(gid) = read_u16(data, position) else {
                             break;
                         };
-                        if gid != 0 {
+                        if gid != 0 && gid < self.num_glyphs {
                             mappings.insert(code, gid);
                         }
                     }
@@ -989,8 +991,17 @@ impl TrueTypeFont {
         Ok(bbox_width * 0.12)
     }
 
-    /// Create a subset of the font containing only specified glyphs
+    /// Create a subset of the font containing only specified glyphs.
+    ///
+    /// # Errors
+    /// Rejects glyph IDs outside maxp numGlyphs, including for CFF passthrough.
     pub fn create_subset(&self, glyph_indices: &HashSet<u16>) -> ParseResult<Vec<u8>> {
+        if glyph_indices.iter().any(|&gid| gid >= self.num_glyphs) || self.num_glyphs == 0 {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: "Subset glyph ID outside maxp numGlyphs".into(),
+            });
+        }
         // For CFF fonts, return the full font (subsetting CFF is complex)
         if self.is_cff {
             return Ok(self.data.clone());
@@ -1633,167 +1644,22 @@ mod tests {
 
     #[test]
     fn test_cmap_format_0() {
-        // Test parsing of format 0 cmap subtable
-        let mut font_data = vec![
-            // Minimal font header
-            0x00, 0x01, 0x00, 0x00, // TTF signature
-            0x00, 0x07, // numTables = 7 (cmap + 6 required)
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // searchRange, entrySelector, rangeShift
-        ];
-
-        // Table directory entries
-        let tables = [
-            (b"cmap", 32 + 7 * 16, 266), // cmap first
-            (b"head", 32 + 7 * 16 + 266, 54),
-            (b"glyf", 32 + 7 * 16 + 266 + 54, 0),
-            (b"loca", 32 + 7 * 16 + 266 + 54, 0),
-            (b"maxp", 32 + 7 * 16 + 266 + 54, 6),
-            (b"hhea", 32 + 7 * 16 + 266 + 54 + 6, 36),
-            (b"hmtx", 32 + 7 * 16 + 266 + 54 + 6 + 36, 0),
-        ];
-
-        // Add table directory
-        for (tag, offset, length) in &tables {
-            font_data.extend(*tag);
-            font_data.extend(&[0, 0, 0, 0]); // checksum
-            font_data.extend(&(*offset as u32).to_be_bytes());
-            font_data.extend(&(*length as u32).to_be_bytes());
-        }
-
-        // Add padding to reach cmap offset
-        while font_data.len() < tables[0].1 {
-            font_data.push(0);
-        }
-
-        // Cmap table
-        font_data.extend(&[
-            0x00, 0x00, // version
-            0x00, 0x01, // numTables = 1
-            // Subtable record
-            0x00, 0x01, // platformID
-            0x00, 0x00, // encodingID
-            0x00, 0x00, 0x00, 0x0C, // offset = 12
-            // Format 0 subtable
-            0x00, 0x00, // format = 0
-            0x01, 0x06, // length = 262
-            0x00, 0x00, // language
-        ]);
-
-        // Add 256 glyph indices
-        for i in 0..=255u8 {
-            font_data.push(i);
-        }
-
-        // Add required tables stubs
-        let tables = vec![
-            (HEAD_TABLE, 36 + 18 + 32), // Need at least 54 bytes
-            (GLYF_TABLE, 0),
-            (LOCA_TABLE, 0),
-            (MAXP_TABLE, 6),
-            (HHEA_TABLE, 36),
-            (HMTX_TABLE, 0),
-        ];
-
-        // Update header
-        font_data[4] = 0x00;
-        font_data[5] = tables.len() as u8 + 1; // +1 for cmap
-
-        let mut offset = 32 + 266; // After cmap
-        for (table, min_size) in &tables {
-            // Add to directory
-            font_data.extend(*table);
-            font_data.extend(&[0, 0, 0, 0]); // checksum
-            font_data.extend(&(offset as u32).to_be_bytes()); // offset
-            font_data.extend(&(*min_size as u32).to_be_bytes()); // length
-
-            // Add table data
-            let _table_start = font_data.len();
-            while font_data.len() < offset {
-                font_data.push(0);
-            }
-
-            // Add specific data for certain tables
-            match *table {
-                HEAD_TABLE => {
-                    // Ensure we have enough space for the HEAD table data
-                    while font_data.len() < offset + *min_size {
-                        font_data.push(0);
-                    }
-                    // Add units_per_em at offset 18
-                    if offset + 19 < font_data.len() {
-                        font_data[offset + 18] = 0x04;
-                        font_data[offset + 19] = 0x00; // 1024 units
-                    }
-                    // Add indexToLocFormat at offset 50
-                    if offset + 51 < font_data.len() {
-                        font_data[offset + 50] = 0x00;
-                        font_data[offset + 51] = 0x00; // short format
-                    }
-                }
-                MAXP_TABLE => {
-                    // Ensure we have enough space for the MAXP table data
-                    while font_data.len() < offset + *min_size {
-                        font_data.push(0);
-                    }
-                    // Add numGlyphs at offset 4
-                    if offset + 5 < font_data.len() {
-                        font_data[offset + 4] = 0x01;
-                        font_data[offset + 5] = 0x00; // 256 glyphs
-                    }
-                }
-                HHEA_TABLE => {
-                    // Ensure we have enough space for the HHEA table data
-                    while font_data.len() < offset + *min_size {
-                        font_data.push(0);
-                    }
-                    // Add numberOfHMetrics at offset 34
-                    if offset + 35 < font_data.len() {
-                        font_data[offset + 34] = 0x01;
-                        font_data[offset + 35] = 0x00; // 256 metrics
-                    }
-                }
-                _ => {}
-            }
-
-            offset += min_size;
-        }
-
-        // Ensure font_data is long enough
-        while font_data.len() < offset {
-            font_data.push(0);
-        }
-
-        let font = TrueTypeFont::parse(font_data).expect("Failed to parse test font");
+        let font = TrueTypeFont::parse(
+            include_bytes!("../../../tests/fixtures/text_contracts/symbolic/mac-subset.ttf")
+                .to_vec(),
+        )
+        .unwrap();
         let subtables = font.parse_cmap().unwrap();
-
-        // Test that the font parses successfully even if cmap subtables have issues
-        // This primarily tests that required tables are present and parsing doesn't crash
-        assert!(subtables.len() <= 1, "Should have 0 or 1 subtables");
-
-        // If a subtable is found, verify it has the expected format
-        if !subtables.is_empty() {
-            assert_eq!(subtables[0].format, 0);
-        }
-    }
-
-    #[test]
-    fn test_glyph_metrics() {
-        // Test would require a valid font file with hmtx/hhea tables
-        // This is a placeholder for integration tests
-    }
-
-    #[test]
-    fn test_font_name_parsing() {
-        // Test would require a valid font file with name table
-        // This is a placeholder for integration tests
-    }
-
-    #[test]
-    fn test_subset_creation() {
-        // Test would require a valid font file
-        // This is a placeholder for integration tests
-        let glyphs = HashSet::from([0, 1, 2, 3]);
-        assert_eq!(glyphs.len(), 4);
+        let table = subtables
+            .iter()
+            .find(|table| table.format == 0)
+            .expect("format 0 fixture");
+        assert_eq!(table.mappings.get(&65), Some(&3));
+        assert_eq!(font.get_glyph_metrics(3).unwrap().0, 700);
+        assert!(!font
+            .create_subset(&HashSet::from([0, 3]))
+            .unwrap()
+            .is_empty());
     }
 
     #[test]

@@ -870,7 +870,7 @@ impl<W: Write> PdfWriter<W> {
         // large documents can grow without reshuffling the catalog.
         if let Some(page_labels) = &document.page_labels {
             let labels_id = self.allocate_object_id()?;
-            self.write_object(labels_id, Object::Dictionary(page_labels.to_dict()))?;
+            self.write_object(labels_id, Object::Dictionary(page_labels.try_to_dict()?))?;
             catalog.set("PageLabels", Object::Reference(labels_id));
         }
 
