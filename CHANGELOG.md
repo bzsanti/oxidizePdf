@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.5.2] - 2026-10-24
+
 ### Fixed
 
 - Use PDF repeated-letter page labels, encode mailto subjects as UTF-8, and
@@ -32,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reconstructs the PDF and is not a signature-preserving incremental edit.
   Batch compression now reports an explicit unsupported-operation failure
   without touching files instead of returning success for an unchanged copy (#797).
+
+See [5.5.2 migration and validation notes](docs/releases/5.5.2.md) for changed
+validation, label budgets and batch publication behavior.
 
 ## [5.5.1] - 2026-10-20
 
