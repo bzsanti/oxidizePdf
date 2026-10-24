@@ -411,6 +411,10 @@ impl Document {
 
     /// Get a page label with checked formatting and recoverable errors.
     /// An absent range uses the one-based decimal page index.
+    ///
+    /// # Errors
+    /// Returns an error for start zero, numeric overflow, or a label exceeding
+    /// [`crate::page_labels::DEFAULT_LABEL_BYTE_LIMIT`] (64 KiB, including prefix).
     pub fn try_get_page_label(&self, page_index: u32) -> Result<String> {
         let label = self
             .page_labels
@@ -432,6 +436,11 @@ impl Document {
     }
 
     /// Get all labels with a caller-selected aggregate byte budget.
+    ///
+    /// # Errors
+    /// Returns an error for invalid label numbers, numeric overflow, a label
+    /// exceeding the default 64 KiB per-label limit, or an exceeded aggregate
+    /// budget (including String slots). Returns no partial result.
     pub fn try_get_all_page_labels(&self, max_bytes: usize) -> Result<Vec<String>> {
         let page_count = u32::try_from(self.pages.len())
             .map_err(|_| crate::PdfError::InvalidOperation("Page count exceeds u32::MAX".into()))?;

@@ -149,6 +149,9 @@ boxes are not preserved. Publication uses a temporary file in the destination
 directory, which must be writable. Existing output permissions are preserved
 (ordinary mode bits on Unix); new outputs inherit input permissions. Existing
 symlinks keep pointing to their updated target; dangling links fail unchanged.
+Non-Unix platforms copy `std::fs::Permissions` (the read-only attribute on Windows),
+not Unix mode bits. If the platform refuses replacement of a read-only destination,
+the job fails without publishing the temporary output.
 Atomic replacement creates a new inode: hardlinks, ownership, ACLs and extended
 attributes are not preserved. This is not a security boundary against concurrent
 path replacement by other processes.

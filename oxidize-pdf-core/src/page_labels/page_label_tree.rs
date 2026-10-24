@@ -103,6 +103,8 @@ impl PageLabelTree {
 
     /// Create from a flat PDF number tree. Invalid numeric fields, malformed pairs,
     /// duplicate or unsorted indices are rejected without casting or wrapping.
+    /// `None` rejects the whole tree without identifying the invalid entry;
+    /// this compatibility API provides neither diagnostics nor partial recovery.
     pub fn from_dict(dict: &Dictionary) -> Option<Self> {
         let nums_array = match dict.get("Nums")? {
             Object::Array(arr) => arr,
