@@ -1,5 +1,6 @@
 //! Page label tree structure for managing page numbering
 
+use crate::error::{PdfError, Result};
 use crate::objects::{Array, Dictionary, Object};
 use crate::page_labels::PageLabel;
 use std::collections::BTreeMap;
@@ -24,37 +25,67 @@ impl PageLabelTree {
         self.ranges.insert(start_page, label);
     }
 
-    /// Get the page label for a specific page
+    /// Get a label with the default per-label byte budget.
+    ///
+    /// # Panics
+    /// Panics for invalid or oversized labels. Use [`Self::try_get_label`] for
+    /// untrusted input. An absent range is still returned as None.
     pub fn get_label(&self, page_index: u32) -> Option<String> {
-        // Find the applicable range
-        let mut applicable_range = None;
-        let mut range_start = 0;
-
-        for (&start, label) in &self.ranges {
-            if start <= page_index {
-                applicable_range = Some(label);
-                range_start = start;
-            } else {
-                break;
-            }
-        }
-
-        // Format the label if found
-        applicable_range.map(|label| {
-            let offset = page_index - range_start;
-            label.format_label(offset)
-        })
+        self.try_get_label(page_index)
+            .expect("Invalid or oversized page label")
     }
 
-    /// Get all page labels for a document
+    /// Get a label, distinguishing an absent range from a formatting error.
+    pub fn try_get_label(&self, page_index: u32) -> Result<Option<String>> {
+        self.ranges
+            .range(..=page_index)
+            .next_back()
+            .map(|(&start, label)| label.try_format_label(page_index - start))
+            .transpose()
+    }
+
+    /// Get all labels with a 16 MiB aggregate byte budget (including String slots).
+    ///
+    /// # Panics
+    /// Panics on invalid labels or exceeded budgets. Use [`Self::try_get_all_labels`]
+    /// to select an aggregate budget and handle errors.
     pub fn get_all_labels(&self, total_pages: u32) -> Vec<String> {
-        (0..total_pages)
-            .map(|i| self.get_label(i).unwrap_or_else(|| (i + 1).to_string()))
-            .collect()
+        self.try_get_all_labels(total_pages, 16 * 1024 * 1024)
+            .expect("Invalid or oversized page labels")
+    }
+
+    /// Collect labels with an aggregate budget and the default per-label limit.
+    /// Rejects the vector size before allocation and never returns partial output.
+    pub fn try_get_all_labels(&self, total_pages: u32, max_bytes: usize) -> Result<Vec<String>> {
+        let error =
+            || PdfError::InvalidOperation("Page labels exceed aggregate byte budget".into());
+        let slots = (total_pages as usize)
+            .checked_mul(std::mem::size_of::<String>())
+            .ok_or_else(error)?;
+        let mut remaining = max_bytes.checked_sub(slots).ok_or_else(error)?;
+        let mut labels = Vec::with_capacity(total_pages as usize);
+        for i in 0..total_pages {
+            let limit = remaining.min(super::DEFAULT_LABEL_BYTE_LIMIT);
+            let label = match self.ranges.range(..=i).next_back() {
+                Some((&start, label)) => label.try_format_label_with_limit(i - start, limit)?,
+                None => (i + 1).to_string(),
+            };
+            remaining = remaining.checked_sub(label.len()).ok_or_else(error)?;
+            labels.push(label);
+        }
+        Ok(labels)
     }
 
     /// Convert to PDF number tree dictionary
+    ///
+    /// # Panics
+    /// Panics if a label has start zero. Use [`Self::try_to_dict`] for errors.
     pub fn to_dict(&self) -> Dictionary {
+        self.try_to_dict().expect("Invalid page label tree")
+    }
+
+    /// Serialize ranges while validating each label's starting value.
+    pub fn try_to_dict(&self) -> Result<Dictionary> {
         let mut dict = Dictionary::new();
 
         // Create nums array [key1 val1 key2 val2 ...]
@@ -62,15 +93,18 @@ impl PageLabelTree {
 
         for (&start_page, label) in &self.ranges {
             nums.push(Object::Integer(start_page as i64));
-            nums.push(Object::Dictionary(label.to_dict()));
+            nums.push(Object::Dictionary(label.try_to_dict()?));
         }
 
         dict.set("Nums", Object::Array(nums.into()));
 
-        dict
+        Ok(dict)
     }
 
-    /// Create from PDF dictionary
+    /// Create from a flat PDF number tree. Invalid numeric fields, malformed pairs,
+    /// duplicate or unsorted indices are rejected without casting or wrapping.
+    /// `None` rejects the whole tree without identifying the invalid entry;
+    /// this compatibility API provides neither diagnostics nor partial recovery.
     pub fn from_dict(dict: &Dictionary) -> Option<Self> {
         let nums_array = match dict.get("Nums")? {
             Object::Array(arr) => arr,
@@ -80,19 +114,23 @@ impl PageLabelTree {
 
         // Parse pairs of [page_index, label_dict]
         let elements: Vec<&Object> = nums_array.iter().collect();
+        if elements.len() % 2 != 0 {
+            return None;
+        }
+        let mut previous = None;
         for i in (0..elements.len()).step_by(2) {
-            if i + 1 >= elements.len() {
-                break;
-            }
-
             let page_index = match elements[i] {
-                Object::Integer(n) => *n as u32,
-                _ => continue,
+                Object::Integer(n) => u32::try_from(*n).ok()?,
+                _ => return None,
             };
             let label_dict = match elements[i + 1] {
                 Object::Dictionary(d) => d,
-                _ => continue,
+                _ => return None,
             };
+            if previous.is_some_and(|index| page_index <= index) {
+                return None;
+            }
+            previous = Some(page_index);
 
             // Parse numbering style per ISO 32000-1 §12.4.2 Table 159.
             // Spec key is /S; accept a legacy /Type-carrying-style as a
@@ -119,12 +157,21 @@ impl PageLabelTree {
 
             let mut label = PageLabel::new(style);
 
-            if let Some(Object::String(prefix)) = label_dict.get("P") {
-                label = label.with_prefix(prefix);
+            match label_dict.get("P") {
+                Some(Object::String(prefix)) => label = label.with_prefix(prefix),
+                Some(Object::ByteString(bytes)) => {
+                    label = label.with_prefix(crate::parser::objects::decode_text_string(bytes))
+                }
+                None => {}
+                _ => return None,
             }
-
-            if let Some(Object::Integer(start)) = label_dict.get("St") {
-                label = label.starting_at(*start as u32);
+            match label_dict.get("St") {
+                Some(Object::Integer(start)) => {
+                    let start = u32::try_from(*start).ok().filter(|start| *start > 0)?;
+                    label = label.starting_at(start);
+                }
+                None => {}
+                _ => return None,
             }
 
             tree.add_range(page_index, label);
@@ -161,10 +208,16 @@ impl PageLabelBuilder {
         }
     }
 
-    /// Add a range with a specific label
+    /// Add a range with a specific label.
+    ///
+    /// # Panics
+    /// Panics if the accumulated page count exceeds u32::MAX.
     pub fn add_range(mut self, num_pages: u32, label: PageLabel) -> Self {
         self.tree.add_range(self.current_page, label);
-        self.current_page += num_pages;
+        self.current_page = self
+            .current_page
+            .checked_add(num_pages)
+            .expect("Page label builder page index overflow");
         self
     }
 
@@ -476,9 +529,9 @@ mod tests {
         let mut dict = Dictionary::new();
         dict.set("Nums", Object::Array(nums.into()));
 
-        // Should skip invalid entries
+        // Malformed input is rejected, never silently omitted.
         let tree = PageLabelTree::from_dict(&dict);
-        assert!(tree.is_some());
+        assert!(tree.is_none());
     }
 
     #[test]
@@ -491,14 +544,14 @@ mod tests {
         let mut dict = Dictionary::new();
         dict.set("Nums", Object::Array(nums.into()));
 
-        // Should skip invalid entries
+        // Malformed input is rejected, never silently omitted.
         let tree = PageLabelTree::from_dict(&dict);
-        assert!(tree.is_some());
+        assert!(tree.is_none());
     }
 
     #[test]
     fn test_from_dict_odd_length_array() {
-        // Array with odd length - last element should be ignored
+        // An incomplete pair invalidates the flat tree.
         let label_dict = Dictionary::new();
 
         let mut nums = Array::new();
@@ -510,7 +563,7 @@ mod tests {
         dict.set("Nums", Object::Array(nums.into()));
 
         let tree = PageLabelTree::from_dict(&dict);
-        assert!(tree.is_some());
+        assert!(tree.is_none());
     }
 
     #[test]

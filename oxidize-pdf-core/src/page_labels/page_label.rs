@@ -1,6 +1,15 @@
 //! Page label definitions according to ISO 32000-1
 
+use crate::error::{PdfError, Result};
 use crate::objects::{Dictionary, Object};
+
+/// Default UTF-8 byte budget per formatted label (64 KiB).
+/// Call the fallible methods with an explicit limit for larger trusted labels.
+pub const DEFAULT_LABEL_BYTE_LIMIT: usize = 64 * 1024;
+
+fn label_error(message: &str) -> PdfError {
+    PdfError::InvalidOperation(format!("Page label: {message}"))
+}
 
 /// Page label numbering style
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -44,16 +53,47 @@ impl PageLabelStyle {
         }
     }
 
-    /// Format a page number in this style
+    /// Format a positive page number using the default byte budget.
+    ///
+    /// # Panics
+    /// Panics for zero or an output larger than DEFAULT_LABEL_BYTE_LIMIT.
+    /// Use [`Self::try_format`] for untrusted inputs and recoverable errors.
     pub fn format(&self, number: u32) -> String {
-        match self {
-            PageLabelStyle::DecimalArabic => number.to_string(),
-            PageLabelStyle::UppercaseRoman => to_roman(number).to_uppercase(),
-            PageLabelStyle::LowercaseRoman => to_roman(number),
-            PageLabelStyle::UppercaseLetters => to_letters(number, true),
-            PageLabelStyle::LowercaseLetters => to_letters(number, false),
-            PageLabelStyle::None => String::new(),
+        self.try_format(number)
+            .expect("Invalid or oversized page label")
+    }
+
+    /// Format a positive number, returning an error before allocating oversized output.
+    pub fn try_format(&self, number: u32) -> Result<String> {
+        self.try_format_with_limit(number, DEFAULT_LABEL_BYTE_LIMIT)
+    }
+
+    /// Format with a caller-selected UTF-8 byte budget, without truncation.
+    /// Zero is invalid for numbered styles. Prefix-only styles ignore the number.
+    pub fn try_format_with_limit(&self, number: u32, max_bytes: usize) -> Result<String> {
+        if number == 0 && *self != Self::None {
+            return Err(label_error("number must be positive"));
         }
+        let length = match self {
+            Self::DecimalArabic => number.ilog10() as usize + 1,
+            Self::UppercaseLetters | Self::LowercaseLetters => ((number - 1) / 26 + 1) as usize,
+            Self::UppercaseRoman | Self::LowercaseRoman => {
+                // Only format the bounded remainder to determine the exact length.
+                number as usize / 1000 + to_roman(number % 1000).len()
+            }
+            Self::None => 0,
+        };
+        if length > max_bytes {
+            return Err(label_error("formatted label exceeds byte budget"));
+        }
+        Ok(match self {
+            Self::DecimalArabic => number.to_string(),
+            Self::UppercaseRoman => to_roman(number).to_uppercase(),
+            Self::LowercaseRoman => to_roman(number),
+            Self::UppercaseLetters => to_letters(number, true),
+            Self::LowercaseLetters => to_letters(number, false),
+            Self::None => String::new(),
+        })
     }
 }
 
@@ -124,20 +164,42 @@ impl PageLabel {
         self
     }
 
-    /// Format a page label for a given offset
+    /// Format a page label using the default byte budget.
+    ///
+    /// # Panics
+    /// Panics for invalid start/overflow or oversized output. Use
+    /// [`Self::try_format_label`] for untrusted input.
     pub fn format_label(&self, offset: u32) -> String {
-        let mut label = String::new();
+        self.try_format_label(offset)
+            .expect("Invalid or oversized page label")
+    }
 
-        if let Some(prefix) = &self.prefix {
-            label.push_str(prefix);
+    /// Format with checked arithmetic and the default byte budget.
+    pub fn try_format_label(&self, offset: u32) -> Result<String> {
+        self.try_format_label_with_limit(offset, DEFAULT_LABEL_BYTE_LIMIT)
+    }
+
+    /// Format with a UTF-8 byte budget including the prefix, without truncation.
+    pub fn try_format_label_with_limit(&self, offset: u32, max_bytes: usize) -> Result<String> {
+        if self.start == 0 {
+            return Err(label_error("start must be positive"));
         }
-
-        if self.style != PageLabelStyle::None {
-            let number = self.start + offset;
-            label.push_str(&self.style.format(number));
-        }
-
-        label
+        let prefix = self.prefix.as_deref().unwrap_or("");
+        let remaining = max_bytes
+            .checked_sub(prefix.len())
+            .ok_or_else(|| label_error("prefix exceeds byte budget"))?;
+        let number = if self.style == PageLabelStyle::None {
+            1
+        } else {
+            self.start
+                .checked_add(offset)
+                .ok_or_else(|| label_error("number overflow"))?
+        };
+        let suffix = self.style.try_format_with_limit(number, remaining)?;
+        let mut label = String::with_capacity(prefix.len() + suffix.len());
+        label.push_str(prefix);
+        label.push_str(&suffix);
+        Ok(label)
     }
 
     /// Convert to PDF dictionary
@@ -148,7 +210,19 @@ impl PageLabel {
     ///            label has no numeric portion (style `None`).
     /// - `/P`    — optional prefix string.
     /// - `/St`   — optional integer starting value (default 1).
+    ///
+    /// # Panics
+    /// Panics if start is zero. Use [`Self::try_to_dict`] for recoverable errors.
     pub fn to_dict(&self) -> Dictionary {
+        self.try_to_dict().expect("Invalid page label start")
+    }
+
+    /// Serialize a label, rejecting a zero starting value.
+    /// Non-ASCII prefixes use BOM-prefixed UTF-16BE PDF text strings.
+    pub fn try_to_dict(&self) -> Result<Dictionary> {
+        if self.start == 0 {
+            return Err(label_error("start must be positive"));
+        }
         let mut dict = Dictionary::new();
 
         dict.set("Type", Object::Name("PageLabel".to_string()));
@@ -158,14 +232,21 @@ impl PageLabel {
         }
 
         if let Some(prefix) = &self.prefix {
-            dict.set("P", Object::String(prefix.clone()));
+            let value = if prefix.is_ascii() {
+                Object::String(prefix.clone())
+            } else {
+                let mut bytes = vec![0xfe, 0xff];
+                bytes.extend(prefix.encode_utf16().flat_map(u16::to_be_bytes));
+                Object::ByteString(bytes)
+            };
+            dict.set("P", value);
         }
 
         if self.start != 1 {
             dict.set("St", Object::Integer(self.start as i64));
         }
 
-        dict
+        Ok(dict)
     }
 }
 
@@ -219,27 +300,14 @@ fn to_roman(mut num: u32) -> String {
     result
 }
 
-/// Convert number to letters (A, B, ... Z, AA, AB, ...)
+/// Convert a positive number to PDF repeated-letter labels (A...Z, AA, BB...).
 fn to_letters(num: u32, uppercase: bool) -> String {
     if num == 0 {
         return String::new();
     }
-
-    let mut result = String::new();
-    let mut n = num;
-
-    while n > 0 {
-        let remainder = ((n - 1) % 26) as u8;
-        let letter = if uppercase {
-            (b'A' + remainder) as char
-        } else {
-            (b'a' + remainder) as char
-        };
-        result.insert(0, letter);
-        n = (n - 1) / 26;
-    }
-
-    result
+    let base = if uppercase { b'A' } else { b'a' };
+    let letter = char::from(base + ((num - 1) % 26) as u8);
+    letter.to_string().repeat(((num - 1) / 26 + 1) as usize)
 }
 
 #[cfg(test)]
@@ -262,7 +330,7 @@ mod tests {
         assert_eq!(PageLabelStyle::UppercaseLetters.format(1), "A");
         assert_eq!(PageLabelStyle::UppercaseLetters.format(26), "Z");
         assert_eq!(PageLabelStyle::UppercaseLetters.format(27), "AA");
-        assert_eq!(PageLabelStyle::UppercaseLetters.format(52), "AZ");
+        assert_eq!(PageLabelStyle::UppercaseLetters.format(52), "ZZ");
 
         assert_eq!(PageLabelStyle::LowercaseLetters.format(1), "a");
         assert_eq!(PageLabelStyle::LowercaseLetters.format(26), "z");
@@ -357,10 +425,10 @@ mod tests {
         assert_eq!(to_letters(1, true), "A");
         assert_eq!(to_letters(26, true), "Z");
         assert_eq!(to_letters(27, true), "AA");
-        assert_eq!(to_letters(52, true), "AZ");
-        assert_eq!(to_letters(53, true), "BA");
-        assert_eq!(to_letters(702, true), "ZZ");
-        assert_eq!(to_letters(703, true), "AAA");
+        assert_eq!(to_letters(52, true), "ZZ");
+        assert_eq!(to_letters(53, true), "AAA");
+        assert_eq!(to_letters(702, true), "Z".repeat(27));
+        assert_eq!(to_letters(703, true), "A".repeat(28));
 
         assert_eq!(to_letters(1, false), "a");
         assert_eq!(to_letters(26, false), "z");
@@ -482,17 +550,16 @@ mod tests {
 
     #[test]
     fn test_letter_edge_cases() {
-        // Test more letter conversion cases
-        assert_eq!(to_letters(78, true), "BZ"); // 26*2 + 26
-        assert_eq!(to_letters(104, true), "CZ"); // 26*3 + 26
-        assert_eq!(to_letters(701, true), "ZY"); // Last before ZZ
-        assert_eq!(to_letters(728, true), "AAZ"); // 26*26 + 26 + 26
-        assert_eq!(to_letters(1378, true), "AZZ"); // Complex case
-
-        // Lowercase versions
-        assert_eq!(to_letters(78, false), "bz");
-        assert_eq!(to_letters(104, false), "cz");
-        assert_eq!(to_letters(701, false), "zy");
+        assert_eq!(to_letters(78, true), "ZZZ");
+        assert_eq!(to_letters(104, true), "ZZZZ");
+        assert_eq!(to_letters(105, true), "AAAAA");
+        assert_eq!(to_letters(78, false), "zzz");
+        assert_eq!(to_letters(104, false), "zzzz");
+        assert_eq!(to_letters(105, false), "aaaaa");
+        assert_eq!(to_letters(701, true), "Y".repeat(27));
+        assert_eq!(to_letters(728, true), "Z".repeat(28));
+        assert_eq!(to_letters(1378, true), "Z".repeat(53));
+        assert_eq!(to_letters(701, false), "y".repeat(27));
     }
 
     #[test]
@@ -589,7 +656,7 @@ mod tests {
         assert_eq!(to_roman(5000), "mmmmm");
 
         // Letters with large numbers
-        assert_eq!(to_letters(18278, true).len() > 0, true); // Should produce something
+        assert_eq!(to_letters(18278, true), "Z".repeat(703));
     }
 
     #[test]

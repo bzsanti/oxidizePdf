@@ -5,8 +5,8 @@ use crate::error::PdfError;
 use crate::operations::existing_document::{
     extract_pdf_pages, merge_pdfs, split_pdf, ExistingDocumentMergeInput, ExistingDocumentPolicy,
 };
-use crate::operations::OperationError;
 use crate::operations::PageRange;
+use crate::operations::{rotate_pdf_pages, OperationError, RotateOptions, RotationAngle};
 use crate::parser::PdfReader;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -329,11 +329,53 @@ fn execute_job(job: BatchJob) -> std::result::Result<Vec<PathBuf>, PdfError> {
         BatchJob::Rotate {
             input,
             output,
-            rotation: _,
-            pages: _,
+            rotation,
+            pages,
         } => {
-            // Rotate not implemented in current API, just copy
-            std::fs::copy(&input, &output)?;
+            let options = RotateOptions {
+                angle: RotationAngle::from_degrees(rotation)
+                    .map_err(operation_error_to_pdf_error)?,
+                pages: pages.map(PageRange::List).unwrap_or(PageRange::All),
+                ..RotateOptions::default()
+            };
+            // Use the core rotation engine, but publish only a fully written
+            // document. Failed parsing/rotation/serialization leaves output intact.
+            // Resolve an existing symlink without replacing the link itself.
+            // Dangling links fail before any output is published.
+            let destination = match std::fs::symlink_metadata(&output) {
+                Ok(metadata) if metadata.file_type().is_symlink() => {
+                    std::fs::canonicalize(&output)?
+                }
+                Ok(_) => output.clone(),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => output.clone(),
+                Err(error) => return Err(error.into()),
+            };
+            let metadata = match std::fs::metadata(&destination) {
+                Ok(metadata) => metadata,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    std::fs::metadata(&input)?
+                }
+                Err(error) => return Err(error.into()),
+            };
+            let permissions = metadata.permissions();
+            #[cfg(unix)]
+            let permissions = {
+                use std::os::unix::fs::PermissionsExt;
+                // Never transfer setuid, setgid or sticky bits to generated data.
+                std::fs::Permissions::from_mode(permissions.mode() & 0o777)
+            };
+            let parent = destination
+                .parent()
+                .filter(|parent| !parent.as_os_str().is_empty())
+                .unwrap_or_else(|| std::path::Path::new("."));
+            let temporary = tempfile::NamedTempFile::new_in(parent)?;
+            rotate_pdf_pages(&input, temporary.path(), options)
+                .map_err(operation_error_to_pdf_error)?;
+            temporary.as_file().set_permissions(permissions)?;
+            temporary.as_file().sync_all()?;
+            temporary
+                .persist(&destination)
+                .map_err(|error| PdfError::Io(error.error))?;
             Ok(vec![output])
         }
 
@@ -352,15 +394,9 @@ fn execute_job(job: BatchJob) -> std::result::Result<Vec<PathBuf>, PdfError> {
             Ok(vec![output])
         }
 
-        BatchJob::Compress {
-            input,
-            output,
-            quality: _,
-        } => {
-            // Compression not implemented yet, just copy
-            std::fs::copy(&input, &output)?;
-            Ok(vec![output])
-        }
+        BatchJob::Compress { .. } => Err(PdfError::InvalidOperation(
+            "BatchJob::Compress is unsupported; no output was written".into(),
+        )),
 
         BatchJob::Custom { operation, .. } => {
             operation()?;

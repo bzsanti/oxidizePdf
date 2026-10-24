@@ -4,10 +4,63 @@
 //! Section 12.5.6.10 (Polyline annotations)
 
 use crate::annotations::{Annotation, AnnotationType};
-use crate::error::Result;
+use crate::error::{PdfError, Result};
 use crate::geometry::{Point, Rectangle};
 use crate::graphics::Color;
 use crate::objects::{Dictionary, Object};
+
+fn validate_geometry(
+    vertices: &[Point],
+    minimum: usize,
+    padding: f64,
+    border: &BorderStyle,
+    opacity: f64,
+) -> Result<()> {
+    if vertices.len() < minimum
+        || vertices
+            .iter()
+            .any(|p| !p.x.is_finite() || !p.y.is_finite())
+    {
+        return Err(PdfError::InvalidOperation(
+            "Annotation requires sufficient finite vertices".into(),
+        ));
+    }
+    if !padding.is_finite()
+        || padding < 0.0
+        || !border.width.is_finite()
+        || border.width < 0.0
+        || !opacity.is_finite()
+        || !(0.0..=1.0).contains(&opacity)
+    {
+        return Err(PdfError::InvalidOperation(
+            "Invalid annotation width or opacity".into(),
+        ));
+    }
+    if let Some(dash) = &border.dash_pattern {
+        if dash.iter().any(|n| !n.is_finite() || *n < 0.0)
+            || (!dash.is_empty() && dash.iter().all(|n| *n == 0.0))
+        {
+            return Err(PdfError::InvalidOperation(
+                "Invalid annotation dash pattern".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_color(color: Option<&Color>) -> Result<()> {
+    if let Some(color) = color {
+        if [color.r(), color.g(), color.b()]
+            .iter()
+            .any(|n| !n.is_finite() || !(0.0..=1.0).contains(n))
+        {
+            return Err(PdfError::InvalidOperation(
+                "Invalid annotation color".into(),
+            ));
+        }
+    }
+    Ok(())
+}
 
 /// Polygon annotation - displays a closed polygon on the page
 #[derive(Debug, Clone)]
@@ -18,9 +71,9 @@ pub struct PolygonAnnotation {
     pub line_color: Option<Color>,
     /// Fill color
     pub fill_color: Option<Color>,
-    /// Line width in points
+    /// Bounding-box padding in points; use with_line_width to also set the stroke width.
     pub line_width: f64,
-    /// Border style
+    /// Border style; width controls the serialized stroke width.
     pub border_style: BorderStyle,
     /// Opacity (0.0 to 1.0)
     pub opacity: f64,
@@ -33,7 +86,7 @@ pub struct PolylineAnnotation {
     pub vertices: Vec<Point>,
     /// Line color
     pub line_color: Option<Color>,
-    /// Line width in points
+    /// Bounding-box padding in points; use with_line_width to also set the stroke width.
     pub line_width: f64,
     /// Line ending style at start
     pub start_style: LineEndingStyle,
@@ -41,7 +94,7 @@ pub struct PolylineAnnotation {
     pub end_style: LineEndingStyle,
     /// Interior color for line endings
     pub interior_color: Option<Color>,
-    /// Border style
+    /// Border style; width controls the serialized stroke width.
     pub border_style: BorderStyle,
     /// Opacity (0.0 to 1.0)
     pub opacity: f64,
@@ -170,21 +223,28 @@ impl PolygonAnnotation {
         self
     }
 
-    /// Set line width
+    /// Set the stroke width and bounding-box padding in points.
     pub fn with_line_width(mut self, width: f64) -> Self {
         self.line_width = width;
+        self.border_style.width = width;
         self
     }
 
-    /// Set border style
+    /// Set border style and synchronize line width with its width.
     pub fn with_border_style(mut self, style: BorderStyle) -> Self {
+        self.line_width = style.width;
         self.border_style = style;
         self
     }
 
-    /// Set opacity
+    /// Set opacity, clamping finite values to 0..=1.
+    /// Nonfinite values are rejected when converting to an annotation.
     pub fn with_opacity(mut self, opacity: f64) -> Self {
-        self.opacity = opacity.clamp(0.0, 1.0);
+        self.opacity = if opacity.is_finite() {
+            opacity.clamp(0.0, 1.0)
+        } else {
+            opacity
+        };
         self
     }
 
@@ -216,7 +276,29 @@ impl PolygonAnnotation {
 
     /// Convert to PDF annotation
     pub fn to_annotation(&self) -> Result<Annotation> {
+        validate_geometry(
+            &self.vertices,
+            3,
+            self.line_width,
+            &self.border_style,
+            self.opacity,
+        )?;
+        validate_color(self.line_color.as_ref())?;
+        validate_color(self.fill_color.as_ref())?;
         let rect = self.calculate_rect();
+        if ![
+            rect.lower_left.x,
+            rect.lower_left.y,
+            rect.upper_right.x,
+            rect.upper_right.y,
+        ]
+        .iter()
+        .all(|value| value.is_finite())
+        {
+            return Err(PdfError::InvalidOperation(
+                "Annotation rectangle overflow".into(),
+            ));
+        }
         let mut annotation = Annotation::new(AnnotationType::Polygon, rect);
 
         // Set vertices
@@ -294,9 +376,10 @@ impl PolylineAnnotation {
         self
     }
 
-    /// Set line width
+    /// Set the stroke width and bounding-box padding in points.
     pub fn with_line_width(mut self, width: f64) -> Self {
         self.line_width = width;
+        self.border_style.width = width;
         self
     }
 
@@ -313,15 +396,21 @@ impl PolylineAnnotation {
         self
     }
 
-    /// Set border style
+    /// Set border style and synchronize line width with its width.
     pub fn with_border_style(mut self, style: BorderStyle) -> Self {
+        self.line_width = style.width;
         self.border_style = style;
         self
     }
 
-    /// Set opacity
+    /// Set opacity, clamping finite values to 0..=1.
+    /// Nonfinite values are rejected when converting to an annotation.
     pub fn with_opacity(mut self, opacity: f64) -> Self {
-        self.opacity = opacity.clamp(0.0, 1.0);
+        self.opacity = if opacity.is_finite() {
+            opacity.clamp(0.0, 1.0)
+        } else {
+            opacity
+        };
         self
     }
 
@@ -353,7 +442,29 @@ impl PolylineAnnotation {
 
     /// Convert to PDF annotation
     pub fn to_annotation(&self) -> Result<Annotation> {
+        validate_geometry(
+            &self.vertices,
+            2,
+            self.line_width,
+            &self.border_style,
+            self.opacity,
+        )?;
+        validate_color(self.line_color.as_ref())?;
+        validate_color(self.interior_color.as_ref())?;
         let rect = self.calculate_rect();
+        if ![
+            rect.lower_left.x,
+            rect.lower_left.y,
+            rect.upper_right.x,
+            rect.upper_right.y,
+        ]
+        .iter()
+        .all(|value| value.is_finite())
+        {
+            return Err(PdfError::InvalidOperation(
+                "Annotation rectangle overflow".into(),
+            ));
+        }
         let mut annotation = Annotation::new(AnnotationType::PolyLine, rect);
 
         // Set vertices
@@ -613,7 +724,15 @@ mod tests {
             Point::new(150.0, 186.6),
         );
 
-        assert_eq!(triangle.vertices.len(), 3);
+        assert_eq!(
+            triangle.vertices,
+            vec![
+                Point::new(100.0, 100.0),
+                Point::new(200.0, 100.0),
+                Point::new(150.0, 186.6)
+            ]
+        );
+        assert!(triangle.to_annotation().is_ok());
     }
 
     #[test]

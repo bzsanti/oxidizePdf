@@ -8,7 +8,7 @@ use oxidize_pdf::fonts::TtfParser;
 /// Build a minimal TTF font with a cmap Format 12 subtable.
 ///
 /// The font contains the minimum required tables for TtfParser:
-/// head, hhea, hmtx, name, cmap (Format 12).
+/// head, hhea, hmtx, maxp, name, cmap (Format 12).
 ///
 /// `groups` is a slice of (start_char_code, end_char_code, start_glyph_id).
 fn build_cmap_format12_font(groups: &[(u32, u32, u32)]) -> Vec<u8> {
@@ -110,8 +110,12 @@ fn build_cmap_format12_font(groups: &[(u32, u32, u32)]) -> Vec<u8> {
     }
 
     // --- Assemble OTF/TTF file ---
-    let num_tables: u16 = 5; // head, hhea, hmtx, name, cmap
+    let num_tables: u16 = 6; // head, hhea, hmtx, name, cmap
+    let mut maxp = vec![0u8; 32];
+    maxp[0..4].copy_from_slice(&0x00010000u32.to_be_bytes());
+    maxp[4..6].copy_from_slice(&num_glyphs.to_be_bytes());
     let tables: Vec<(&[u8; 4], &[u8])> = vec![
+        (b"maxp", &maxp),
         (b"cmap", &cmap),
         (b"head", &head),
         (b"hhea", &hhea),
@@ -319,8 +323,12 @@ fn build_cmap_format4_font(segments: &[Format4Segment], max_gid: u16) -> Vec<u8>
     cmap.extend_from_slice(&cmap_subtable);
 
     // --- Assemble TTF ---
-    let num_tables: u16 = 5;
+    let num_tables: u16 = 6;
+    let mut maxp = vec![0u8; 32];
+    maxp[0..4].copy_from_slice(&0x00010000u32.to_be_bytes());
+    maxp[4..6].copy_from_slice(&num_glyphs.to_be_bytes());
     let tables: Vec<(&[u8; 4], &[u8])> = vec![
+        (b"maxp", &maxp),
         (b"cmap", &cmap),
         (b"head", &head),
         (b"hhea", &hhea),
@@ -487,12 +495,12 @@ fn test_cmap_format12_supplementary_plane() {
 fn test_cmap_format12_gid_above_0xffff_skipped() {
     // GID overflow: start_glyph_id=0xFFFF, range of 3 chars
     // GIDs would be 0xFFFF, 0x10000, 0x10001
-    // Only the first (0xFFFF) should be mapped; the others exceed u16 range
+    // Even 0xFFFF is outside every u16 maxp inventory; all must be omitted.
     let font_data = build_cmap_format12_font(&[(0x0041, 0x0043, 0xFFFF)]);
     let parser = TtfParser::new(&font_data).unwrap();
     let mapping = parser.extract_glyph_mapping().unwrap();
 
-    assert_eq!(mapping.char_to_glyph('A'), Some(0xFFFF)); // valid
+    assert_eq!(mapping.char_to_glyph('A'), None); // outside maxp inventory
     assert_eq!(mapping.char_to_glyph('B'), None); // 0x10000 > u16 max
     assert_eq!(mapping.char_to_glyph('C'), None); // 0x10001 > u16 max
 }

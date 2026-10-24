@@ -392,3 +392,73 @@ fn null_tounicode_keeps_the_same_fallback_as_an_absent_entry() {
         }
     }
 }
+
+// #745: the generic cmap API must enforce the same inventory boundary as text fallback.
+#[test]
+fn generic_format_0_filters_invalid_gids() {
+    check_generic_cmap_glyph_inventory("mac");
+}
+
+#[test]
+fn generic_format_4_filters_invalid_gids() {
+    check_generic_cmap_glyph_inventory("symbol");
+}
+
+fn check_generic_cmap_glyph_inventory(profile: &str) {
+    use oxidize_pdf::text::fonts::TrueTypeFont;
+    {
+        for count in [0, 1, 2, 3, 4] {
+            let font = TrueTypeFont::parse(with_glyph_count(program(profile), count)).unwrap();
+            let maps = font.parse_cmap().unwrap();
+            let table = maps
+                .iter()
+                .find(|t| t.platform_id == if profile == "mac" { 1 } else { 3 })
+                .unwrap();
+            assert_eq!(table.format, if profile == "mac" { 0 } else { 4 });
+            let base = if profile == "mac" { 0 } else { 0xF000 };
+            for (code, gid) in [(32, 1), (65, 3), (66, 2)] {
+                assert_eq!(
+                    table.mappings.get(&(base + code)).copied(),
+                    (gid < count).then_some(gid),
+                    "{profile}, count={count}, code={code}"
+                );
+            }
+            assert!(!table.mappings.values().any(|&gid| gid == 0));
+            // This public consumer supplies glyph selections to subsetting.
+            let expected: std::collections::HashSet<u16> = (1..count).collect();
+            assert_eq!(font.get_all_glyph_indices(), expected);
+        }
+    }
+}
+
+#[test]
+fn generic_format_6_keeps_alternative_tables_and_valid_gids() {
+    use oxidize_pdf::text::fonts::TrueTypeFont;
+    let bytes = with_cmaps(
+        program("symbol"),
+        &[
+            (3, 0, format_6(65, &[0, 3, 4])),
+            (1, 0, format_6(65, &[2, 3, 1])),
+        ],
+    );
+    let font = TrueTypeFont::parse(bytes).unwrap();
+    assert_eq!(font.num_glyphs, 4);
+    let tables = font.parse_cmap().unwrap();
+    assert_eq!(tables.len(), 2);
+    assert_eq!(tables[0].mappings, [(66, 3)].into());
+    assert_eq!(tables[1].mappings, [(65, 2), (66, 3), (67, 1)].into());
+    assert_eq!(font.get_all_glyph_indices(), [1, 2, 3].into());
+}
+
+#[test]
+fn invalid_cmap_gids_do_not_reach_cid_mapping() {
+    use oxidize_pdf::{fonts::CidMapping, text::fonts::TrueTypeFont};
+    // Unicode format 6: last valid GID 3 and first invalid GID 4.
+    let bytes = with_cmaps(program("symbol"), &[(3, 1, format_6(65, &[3, 4]))]);
+    let font = TrueTypeFont::parse(bytes).unwrap();
+    let mapping = CidMapping::from_text_and_font("AB", &font).unwrap();
+    assert_eq!(mapping.cid_to_gid, [(1, 3)].into());
+    assert_eq!(mapping.get_cid(65), Some(1));
+    assert_eq!(mapping.get_cid(66), None);
+    assert_eq!(mapping.unmapped_chars, ['B']);
+}

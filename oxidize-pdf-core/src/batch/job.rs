@@ -64,7 +64,24 @@ pub enum BatchJob {
         output: PathBuf,
     },
 
-    /// Rotate pages in a PDF
+    /// Rotate pages through the core page-rotation engine.
+    ///
+    /// Angles are clockwise multiples of 90 (negative values are allowed).
+    /// Page indices are zero-based; `None` selects all pages and an empty list
+    /// selects none. Existing rotations are composed with the requested angle.
+    /// Like [`crate::operations::rotate_pdf_pages`], this reconstructs the PDF:
+    /// it is not an incremental edit and does not preserve signatures or all
+    /// document-level structures. Output replacement is atomic after successful
+    /// serialization. A completion-checked timeout may still leave that output.
+    /// Existing symlinks are followed without replacing the link; dangling links fail.
+    /// Output inherits destination permissions, or input permissions for new files
+    /// (ordinary mode bits on Unix). Other platforms copy std::fs::Permissions
+    /// (the read-only attribute on Windows), not Unix mode bits. A platform that
+    /// refuses replacement of a read-only destination returns a failed job.
+    /// The destination parent must be writable.
+    /// Atomic replacement creates a new inode: hardlinks, ownership, ACLs and
+    /// extended attributes are not preserved. Concurrent replacement of destination
+    /// paths is not guarded against.
     Rotate {
         input: PathBuf,
         output: PathBuf,
@@ -79,7 +96,11 @@ pub enum BatchJob {
         pages: Vec<usize>,
     },
 
-    /// Compress a PDF
+    /// Request PDF compression (currently unsupported).
+    ///
+    /// Execution returns a failed job with an explicit unsupported-operation
+    /// error for every quality value, without reading or writing either path.
+    /// No copy-only placeholder is reported as successful compression.
     Compress {
         input: PathBuf,
         output: PathBuf,
