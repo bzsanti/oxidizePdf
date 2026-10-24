@@ -38,17 +38,11 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: rustfmt, clippy
 
-      - name: Cache cargo registry
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+      - name: Cache compiled dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo index
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          shared-key: tests-${{ matrix.os }}-${{ matrix.rust }}
+          cache-workspace-crates: 'false'
 
       - name: Find equivalent validation
         id: reuse
@@ -223,41 +217,21 @@ jobs:
           # Cargo.toml and the published baseline.
           release-type: ${{ (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'semver-major') && 'major') || (((github.event_name == 'pull_request' && github.base_ref == 'develop') || github.ref == 'refs/heads/develop') && 'minor') || '' }}
 
+  optimized:
+    name: Optimized validation
+    if: github.base_ref == 'main' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/optimized-tests.yml
+
   release-profile:
     name: Optimized release tests
-    if: github.base_ref == 'main' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: optimized
+    if: always() && (github.base_ref == 'main' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    timeout-minutes: 120
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
-        with:
-          toolchain: stable
-      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
-        with:
-          path: ~/.cargo/registry
-          key: release-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Find equivalent validation
-        id: reuse
-        shell: bash
+      - name: Require complete optimized validation
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: python scripts/ci_evidence.py --role 'optimized' --job 'Optimized release tests' --workflow 'ci.yml'
-
-      - name: Run optimized tests
-        if: steps.reuse.outputs.hit != 'true'
-        run: cargo test --locked --all --release
-
-      - name: Record validation evidence
-        if: steps.reuse.outputs.hit != 'true' && steps.reuse.outputs.artifact != ''
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: ${{ steps.reuse.outputs.artifact }}
-          path: .ci-evidence/inputs.json
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 2
-
+          RESULT: ${{ needs.optimized.result }}
+        run: test "$RESULT" = success
 
   evidence-contract:
     name: CI evidence contracts

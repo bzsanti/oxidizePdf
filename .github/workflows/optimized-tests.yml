@@ -1,0 +1,124 @@
+name: Optimized validation
+
+on:
+  workflow_call:
+    outputs:
+      digest:
+        description: Digest of the complete target plan
+        value: ${{ jobs.plan.outputs.digest }}
+      toolchain:
+        description: Exact compiler used by every optimized shard
+        value: ${{ jobs.plan.outputs.toolchain }}
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  plan:
+    name: Plan optimized targets
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.plan.outputs.digest }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      toolchain: ${{ steps.plan.outputs.toolchain }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+      - name: Enumerate default release targets
+        id: plan
+        run: python3 scripts/ci_optimized.py plan
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: optimized-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: optimized-plan.json
+          if-no-files-found: error
+          retention-days: 2
+
+  shard:
+    name: Optimized shard (${{ matrix.shard }})
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: ${{ needs.plan.outputs.toolchain }}
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: optimized-plan-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Cache compiled dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: optimized-release
+          cache-workspace-crates: 'false'
+      - name: Find equivalent validation
+        id: reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHARD: ${{ matrix.shard }}
+          PLAN_DIGEST: ${{ needs.plan.outputs.digest }}
+        run: >-
+          python3 scripts/ci_evidence.py --role "optimized-$SHARD"
+          --job "Optimized validation / Optimized shard ($SHARD)"
+          --workflow ci.yml --extra "$PLAN_DIGEST"
+      - name: Validate assigned targets
+        env:
+          SHARD: ${{ matrix.shard }}
+          PLAN_DIGEST: ${{ needs.plan.outputs.digest }}
+        run: >-
+          python3 scripts/ci_optimized.py run --shard "$SHARD"
+          --digest "$PLAN_DIGEST" --reuse-file .ci-evidence/reuse.json
+          --inputs-file .ci-evidence/inputs.json
+      - name: Upload shard report
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: optimized-report-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: optimized-reports/*.json
+          if-no-files-found: error
+          retention-days: 2
+      - name: Record validation evidence
+        if: steps.reuse.outputs.hit != 'true' && steps.reuse.outputs.artifact != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ steps.reuse.outputs.artifact }}
+          path: .ci-evidence/inputs.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2
+
+  complete:
+    name: Require every optimized shard
+    if: always()
+    needs: [plan, shard]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful execution
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          SHARD_RESULT: ${{ needs.shard.result }}
+        run: test "$PLAN_RESULT" = success && test "$SHARD_RESULT" = success
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: optimized-plan-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          pattern: optimized-report-${{ github.run_id }}-${{ github.run_attempt }}-*
+          path: optimized-reports
+          merge-multiple: true
+      - name: Require complete target coverage
+        env:
+          PLAN_DIGEST: ${{ needs.plan.outputs.digest }}
+        run: python3 scripts/ci_optimized.py verify --digest "$PLAN_DIGEST"

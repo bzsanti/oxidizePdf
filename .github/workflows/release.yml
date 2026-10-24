@@ -52,10 +52,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/ci_release_gate.py
 
+  optimized:
+    name: Optimized validation
+    needs: [verify-release-conditions, check-ci-status]
+    if: needs.verify-release-conditions.outputs.should_release == 'true'
+    uses: ./.github/workflows/optimized-tests.yml
+
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [verify-release-conditions, check-ci-status]
+    needs: [verify-release-conditions, check-ci-status, optimized]
     if: needs.verify-release-conditions.outputs.should_release == 'true'
     permissions:
       contents: write
@@ -69,7 +75,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: ${{ needs.optimized.outputs.toolchain }}
 
       - name: Cache cargo registry
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
@@ -83,14 +91,21 @@ jobs:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Find equivalent optimized validation
-        id: optimized
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: optimized-plan-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          pattern: optimized-report-${{ github.run_id }}-${{ github.run_attempt }}-*
+          path: optimized-reports
+          merge-multiple: true
+      - name: Compare publisher with validated environments
+        id: environment
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: python scripts/ci_evidence.py --role optimized --job 'Optimized release tests' --workflow ci.yml
-
-      - name: Validate changed optimized build inputs
-        if: steps.optimized.outputs.hit != 'true'
+          PLAN_DIGEST: ${{ needs.optimized.outputs.digest }}
+        run: python3 scripts/ci_optimized.py environment --digest "$PLAN_DIGEST"
+      - name: Validate changed publisher environment
+        if: steps.environment.outputs.match != 'true'
         run: cargo test --locked --all --release
 
       - name: Build release binaries
