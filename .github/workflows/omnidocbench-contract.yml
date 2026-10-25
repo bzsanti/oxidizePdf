@@ -40,6 +40,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
           cargo test --locked --offline -p oxidize-pdf --example omnidocbench_export
+          cargo test --locked --offline -p oxidize-pdf --example omnidocbench_structural_jobs --example omnidocbench_structural_export
           python3 -m unittest tools/benchmarks/omnidocbench_gate_test.py
 
       - name: Record validation evidence
