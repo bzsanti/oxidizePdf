@@ -129,6 +129,8 @@ def probe(args):
         hit = find_evidence(api, name, inputs, args.workflow, dt.datetime.now(dt.timezone.utc))
     except (OSError, http.client.HTTPException, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         print(f'Evidence unavailable; run validation: {type(error).__name__}: {error}')
+    Path('.ci-evidence').mkdir(exist_ok=True)
+    Path('.ci-evidence/reuse.json').write_text(json.dumps(hit))
     output = f"hit={'true' if hit else 'false'}\nartifact={name}\n"
     with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
         stream.write(output)
