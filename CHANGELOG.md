@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- Keep indexed page access consistent with the recovered page count. An empty
+  page tree no longer exposes unrelated page objects through a fallback scan
+  (#709).
+
 ## [5.5.2] - 2026-10-24
 
 ### Added
