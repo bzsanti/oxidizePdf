@@ -15,7 +15,8 @@ const OCR_FONT_NAME: &str = "OxidizeOCR";
 pub struct OcrLayerFragment {
     /// Recognized Unicode text.
     pub text: String,
-    /// Source-image region `[x, y, width, height]` mapped to page coordinates.
+    /// Axis-aligned region `[x, y, width, height]` in unrotated PDF user space.
+    /// Text is upright in the displayed page, accounting for its `/Rotate` value.
     pub region: [f64; 4],
     /// Recognition confidence in the inclusive range 0–1.
     pub confidence: f64,
@@ -110,19 +111,35 @@ impl<'a> IncrementalOcrLayerEditor<'a> {
                 .map_err(|error| invalid(format!("read page {}: {error}", requested.page_index)))?;
             let font_id = update.allocate_id()?;
             update.replace(font_id, PdfObject::Dictionary(ocr_font_dictionary()))?;
+            // Content arrays are one graphics program. Save the initial state before
+            // existing streams, then restore it before positioning the new layer.
+            let guard_id = update.allocate_id()?;
+            update.replace(
+                guard_id,
+                PdfObject::Stream(PdfStream {
+                    dict: PdfDictionary::new(),
+                    data: b"q\n".to_vec(),
+                }),
+            )?;
             let stream_id = update.allocate_id()?;
             let stream = PdfStream {
                 dict: ocr_stream_dictionary(&requested.language),
-                data: build_ocr_content(requested)?,
+                data: build_ocr_content(requested, parsed_page.rotation)?,
             };
             update.replace(stream_id, PdfObject::Stream(stream))?;
 
             let mut page_dictionary = parsed_page.dict.clone();
             let resources = merged_resources(&parsed_page, &document, font_id)?;
             page_dictionary.insert("Resources".to_string(), PdfObject::Dictionary(resources));
+            let contents = append_content_reference(parsed_page.get_contents(), stream_id)?;
+            let mut references = vec![PdfObject::Reference(guard_id.0, guard_id.1)];
+            match contents {
+                PdfObject::Array(array) => references.extend(array.0),
+                value => references.push(value),
+            }
             page_dictionary.insert(
                 "Contents".to_string(),
-                append_content_reference(parsed_page.get_contents(), stream_id)?,
+                PdfObject::Array(PdfArray(references)),
             );
             update.replace(parsed_page.obj_ref, PdfObject::Dictionary(page_dictionary))?;
         }
@@ -217,6 +234,13 @@ fn build_plan(
         if has_existing_ocr_layer(&page, document)? {
             skipped.push(requested.page_index);
         } else if !requested.fragments.is_empty() {
+            for fragment in &requested.fragments {
+                text_transform(
+                    fragment,
+                    page.rotation,
+                    &encode_invisible_glyphs(&fragment.text),
+                )?;
+            }
             merged_resources(&page, document, (u32::MAX, 0))?;
             append_content_reference(page.get_contents(), (u32::MAX, 0))?;
             changed.push(requested.page_index);
@@ -225,7 +249,7 @@ fn build_plan(
     changed.sort_unstable();
     skipped.sort_unstable();
     Ok(OcrLayerPlan {
-        streams_added: changed.len(),
+        streams_added: changed.len() * 2,
         resources_added: changed.len(),
         pages: changed,
         pages_skipped_existing_ocr: skipped,
@@ -338,23 +362,37 @@ fn ocr_stream_dictionary(language: &str) -> PdfDictionary {
     dictionary
 }
 
-fn build_ocr_content(page: &OcrLayerPage) -> Result<Vec<u8>> {
+fn build_ocr_content(page: &OcrLayerPage, rotation: i32) -> Result<Vec<u8>> {
     let mut content = Vec::new();
-    content.extend_from_slice(b"q\nBT\n/OxidizeOCR 1 Tf\n3 Tr\n");
+    content.extend_from_slice(b"Q\nq\nBT\n/OxidizeOCR 1 Tf\n3 Tr\n0 Tc\n0 Tw\n0 Ts\n");
     for (index, fragment) in page.fragments.iter().enumerate() {
         let [x, y, width, height] = fragment.region;
-        let separator = (index + 1 < page.fragments.len())
-            .then_some(" ")
-            .unwrap_or("");
-        let logical_text = format!("{}{separator}", fragment.text);
+        // Logical separation belongs to ActualText; it must not add glyph advance
+        // to the word's measured region.
+        let logical_text = if index + 1 < page.fragments.len() {
+            format!("{} ", fragment.text)
+        } else {
+            fragment.text.clone()
+        };
         let actual_text = encode_actual_text(&logical_text);
-        let glyphs = encode_invisible_glyphs(&logical_text);
+        let glyphs = encode_invisible_glyphs(&fragment.text);
         let escaped_glyphs = escape_literal(&glyphs);
-        let estimated_width = (fragment.text.chars().count().max(1) as f64) * 0.5;
-        let horizontal_scale = (width / estimated_width * 100.0).clamp(1.0, 1000.0);
+        let OcrTextTransform {
+            font_size,
+            horizontal_scale,
+            matrix,
+        } = text_transform(fragment, rotation, &glyphs)?;
+        let crate::coordinate_system::TransformMatrix {
+            a,
+            b,
+            c,
+            d,
+            e: tx,
+            f: ty,
+        } = matrix;
         content.extend_from_slice(
             format!(
-                "/OCR << /ActualText {} /Lang ({}) /OxidizeConfidence {:.6} /OxidizeRegion [{:.6} {:.6} {:.6} {:.6}] /OxidizeReadingOrder {} >> BDC\n/OxidizeOCR {:.6} Tf\n{:.6} Tz\n1 0 0 1 {:.6} {:.6} Tm\n({}) Tj\nEMC\n",
+                "/Span << /ActualText {} /Lang ({}) /OxidizeConfidence {:.6} /OxidizeRegion [{:.6} {:.6} {:.6} {:.6}] /OxidizeReadingOrder {} >> BDC\n/OxidizeOCR {} Tf\n{} Tz\n{a} {b} {c} {d} {} {} Tm\n({}) Tj\nEMC\n",
                 actual_text,
                 escape_literal(page.language.as_bytes()),
                 fragment.confidence,
@@ -363,10 +401,10 @@ fn build_ocr_content(page: &OcrLayerPage) -> Result<Vec<u8>> {
                 width,
                 height,
                 fragment.reading_order,
-                height,
+                font_size,
                 horizontal_scale,
-                x,
-                y,
+                tx,
+                ty,
                 escaped_glyphs,
             )
             .as_bytes(),
@@ -374,6 +412,65 @@ fn build_ocr_content(page: &OcrLayerPage) -> Result<Vec<u8>> {
     }
     content.extend_from_slice(b"ET\nQ\n");
     Ok(content)
+}
+
+struct OcrTextTransform {
+    font_size: f64,
+    horizontal_scale: f64,
+    matrix: crate::coordinate_system::TransformMatrix,
+}
+
+fn text_transform(
+    fragment: &OcrLayerFragment,
+    rotation: i32,
+    glyphs: &[u8],
+) -> Result<OcrTextTransform> {
+    let [x, y, width, height] = fragment.region;
+    let metrics = crate::text::Font::Helvetica
+        .get_metrics()
+        .expect("standard font metrics");
+    let rotation = rotation.rem_euclid(360);
+    let (text_width, text_height) = if matches!(rotation, 90 | 270) {
+        (height, width)
+    } else {
+        (width, height)
+    };
+    let font_size = text_height * 1000.0 / f64::from(metrics.ascender - metrics.descender);
+    let advance: f64 = glyphs
+        .iter()
+        .map(|byte| f64::from(metrics.get_char_width(*byte)))
+        .sum();
+    let horizontal_scale = text_width / (advance * font_size / 1000.0) * 100.0;
+    let descent = -f64::from(metrics.descender) * font_size / 1000.0;
+    let (a, b, c, d, tx, ty) = match rotation {
+        0 => (1, 0, 0, 1, x, y + descent),
+        90 => (0, 1, -1, 0, x + width - descent, y),
+        180 => (-1, 0, 0, -1, x + width, y + height - descent),
+        270 => (0, -1, 1, 0, x + descent, y + height),
+        _ => {
+            return Err(invalid(
+                "OCR page rotation must be a multiple of 90 degrees",
+            ))
+        }
+    };
+    if !font_size.is_finite()
+        || font_size <= 0.0
+        || !horizontal_scale.is_finite()
+        || horizontal_scale <= 0.0
+        || !tx.is_finite()
+        || !ty.is_finite()
+    {
+        return Err(invalid(
+            "OCR region cannot be represented by a finite text transform",
+        ));
+    }
+    Ok(OcrTextTransform {
+        font_size,
+        horizontal_scale,
+        matrix: crate::coordinate_system::TransformMatrix::new(
+            a as f64, b as f64, c as f64, d as f64, tx, ty,
+        ),
+    })
 }
 
 fn encode_actual_text(text: &str) -> String {
@@ -496,7 +593,7 @@ mod tests {
             .plan(&[layer()])
             .unwrap();
         assert_eq!(plan.pages, vec![0]);
-        assert_eq!(plan.streams_added, 1);
+        assert_eq!(plan.streams_added, 2);
         assert_eq!(plan.resources_added, 1);
         assert!(plan.pages_skipped_existing_ocr.is_empty());
     }

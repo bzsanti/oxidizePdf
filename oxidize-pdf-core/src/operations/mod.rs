@@ -6,6 +6,7 @@
 pub mod chunk_page_mapper;
 pub mod extract_images;
 pub mod merge;
+mod ocr_image_placement;
 pub mod overlay;
 pub mod page_analysis;
 pub mod page_extraction;

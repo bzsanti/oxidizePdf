@@ -627,16 +627,16 @@ pub struct OcrTextFragment {
     /// The extracted text content
     pub text: String,
 
-    /// X position in page coordinates (points)
+    /// X position in the provider's coordinate space (see OcrProvider::coordinate_space)
     pub x: f64,
 
-    /// Y position in page coordinates (points)
+    /// Y position in the provider's coordinate space
     pub y: f64,
 
-    /// Width of the text fragment (points)
+    /// Width in the provider's coordinate units
     pub width: f64,
 
-    /// Height of the text fragment (points)
+    /// Height in the provider's coordinate units
     pub height: f64,
 
     /// Confidence score for this fragment (0.0 to 1.0)
@@ -987,6 +987,16 @@ impl fmt::Display for OcrEngine {
     }
 }
 
+/// Coordinate contract for fragments returned by an OCR provider.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OcrCoordinateSpace {
+    /// Existing providers supply absolute PDF user-space points.
+    PagePoints,
+    /// Image-local coordinates, bottom-left origin, one unit per pixel.
+    /// `image_dimensions` is required; a PDF placement is applied by the converter.
+    ImagePixels,
+}
+
 /// Trait for OCR providers
 ///
 /// This trait defines the interface that all OCR providers must implement.
@@ -1036,6 +1046,11 @@ impl fmt::Display for OcrEngine {
 /// }
 /// ```
 pub trait OcrProvider: Send + Sync {
+    /// Coordinate system of returned fragments. Defaults to the legacy page-point contract.
+    fn coordinate_space(&self) -> OcrCoordinateSpace {
+        OcrCoordinateSpace::PagePoints
+    }
+
     /// Process an image and extract text using OCR
     ///
     /// This is the core method that all OCR providers must implement.
@@ -1049,6 +1064,8 @@ pub trait OcrProvider: Send + Sync {
     /// # Returns
     ///
     /// A `Result` containing the OCR results with text, confidence, and positioning information.
+    /// Fragment units and origin follow [`Self::coordinate_space`]. ImagePixels
+    /// providers return image-local bounds; the converter applies the PDF placement.
     ///
     /// # Errors
     ///
@@ -1126,10 +1143,14 @@ pub trait OcrProvider: Send + Sync {
 
             // Adjust fragment coordinates to match original image coordinates
             // (assuming the input image_data is already cropped to the region)
-            for fragment in &mut result.fragments {
-                fragment.x += region.x as f64;
-                fragment.y += region.y as f64;
+            if self.coordinate_space() == OcrCoordinateSpace::PagePoints {
+                for fragment in &mut result.fragments {
+                    fragment.x += region.x as f64;
+                    fragment.y += region.y as f64;
+                }
             }
+            // ImagePixels keeps the cropped canvas and dimensions local. The top-left
+            // source-image crop is separately identified by processed_region.
 
             result.processed_region = Some((*region).clone());
             results.push(result);
