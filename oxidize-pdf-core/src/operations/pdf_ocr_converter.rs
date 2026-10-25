@@ -40,7 +40,7 @@
 use crate::error::{PdfError, Result};
 use crate::operations::page_analysis::{AnalysisOptions, PageContentAnalyzer};
 use crate::parser::{ParseOptions, PdfDocument, PdfReader};
-use crate::text::{FragmentType, OcrOptions, OcrProvider};
+use crate::text::{FragmentType, OcrCoordinateSpace, OcrOptions, OcrProvider};
 use crate::writer::{IncrementalOcrLayerEditor, OcrLayerFragment, OcrLayerPage, OcrLayerPlan};
 use std::fs::File;
 use std::io::Write;
@@ -134,6 +134,13 @@ impl PdfOcrConverter {
 
     /// Convert a scanned PDF to a searchable PDF
     ///
+    /// Providers using `ImagePixels` are mapped through painted image placements,
+    /// including orthogonal rotations and nested Forms. Each image is recognized
+    /// separately in content order. This is not a page renderer: masked images,
+    /// non-rectangular or partially clipping paths, external graphics states,
+    /// inline images, skew and reflections return explicit errors. Plain providers
+    /// retain the default `PagePoints` contract and legacy image-selection behavior.
+    ///
     /// This is the main function that:
     /// 1. Opens the input PDF
     /// 2. Analyzes each page to detect scanned content
@@ -175,39 +182,83 @@ impl PdfOcrConverter {
                 .map_err(|error| PdfError::ParseError(error.to_string()))?;
             if analysis.is_scanned() && (!options.skip_text_pages || analysis.character_count < 50)
             {
-                let image_data = analyzer
-                    .extract_page_image_data(page_num as usize)
-                    .map_err(|error| {
-                        PdfError::ParseError(format!(
-                            "Failed to extract image from page {page_num}: {error}"
-                        ))
-                    })?;
-                let result = ocr_provider
-                    .process_image(&image_data, &options.ocr_options)
-                    .map_err(|error| {
-                        PdfError::InvalidStructure(format!(
-                            "OCR failed for page {page_num}: {error}"
-                        ))
-                    })?;
-                if result.confidence >= options.min_confidence {
-                    let fragments = result
-                        .fragments
-                        .iter()
-                        .filter(|fragment| fragment.fragment_type == FragmentType::Word)
-                        .enumerate()
-                        .map(|(reading_order, fragment)| OcrLayerFragment {
-                            text: fragment.text.clone(),
-                            region: [fragment.x, fragment.y, fragment.width, fragment.height],
-                            confidence: fragment.confidence,
-                            reading_order: reading_order as u32,
-                        })
-                        .collect();
+                let images = if ocr_provider.coordinate_space() == OcrCoordinateSpace::ImagePixels {
+                    let images = analyzer.positioned_ocr_images(page_num)?;
+                    if images.is_empty() {
+                        return Err(PdfError::InvalidStructure(format!(
+                            "Scanned page {page_num} has no supported painted image"
+                        )));
+                    }
+                    images.into_iter().map(Some).collect()
+                } else {
+                    vec![None]
+                };
+                let mut page_fragments = Vec::new();
+                let mut language = None;
+                let mut confidence_sum = 0.0;
+                let mut image_count = 0;
+                let mut characters = 0;
+                for image in images {
+                    let (image_data, matrix) = match image {
+                        Some(image) => {
+                            let (data, matrix) = analyzer.prepare_ocr_image(page_num, &image)?;
+                            (data, Some(matrix))
+                        }
+                        None => (
+                            analyzer
+                                .extract_page_image_data(page_num as usize)
+                                .map_err(|e| PdfError::InvalidStructure(e.to_string()))?,
+                            None,
+                        ),
+                    };
+                    let result = ocr_provider
+                        .process_image(&image_data, &options.ocr_options)
+                        .map_err(|error| {
+                            PdfError::InvalidStructure(format!(
+                                "OCR failed for page {page_num}: {error}"
+                            ))
+                        })?;
+                    if result.confidence >= options.min_confidence {
+                        for fragment in result
+                            .fragments
+                            .iter()
+                            .filter(|f| f.fragment_type == FragmentType::Word)
+                        {
+                            let region = [fragment.x, fragment.y, fragment.width, fragment.height];
+                            let region = match matrix {
+                                Some(matrix) => super::ocr_image_placement::map_region(
+                                    region,
+                                    result.image_dimensions,
+                                    matrix,
+                                )?,
+                                None => region,
+                            };
+                            page_fragments.push(OcrLayerFragment {
+                                text: fragment.text.clone(),
+                                region,
+                                confidence: fragment.confidence,
+                                reading_order: u32::try_from(page_fragments.len()).map_err(
+                                    |_| PdfError::InvalidStructure("Too many OCR words".into()),
+                                )?,
+                            });
+                        }
+                        language = Some(result.language);
+                        confidence_sum += result.confidence;
+                        image_count += 1;
+                        characters += result.text.chars().count();
+                    }
+                }
+                if let Some(language) = language {
                     layers.push(OcrLayerPage {
                         page_index: page_num,
-                        language: result.language.clone(),
-                        fragments,
+                        language,
+                        fragments: page_fragments,
                     });
-                    accepted_results.push((page_num, result.confidence, result.text.len()));
+                    accepted_results.push((
+                        page_num,
+                        confidence_sum / f64::from(image_count),
+                        characters,
+                    ));
                 }
             } else if options.skip_text_pages {
                 stats.pages_skipped += 1;

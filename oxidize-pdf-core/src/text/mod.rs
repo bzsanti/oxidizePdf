@@ -58,9 +58,9 @@ pub use metrics::{
 };
 pub use ocr::{
     CharacterConfidence, CorrectionCandidate, CorrectionReason, CorrectionSuggestion,
-    CorrectionType, FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError,
-    OcrOptions, OcrPostProcessor, OcrProcessingResult, OcrProvider, OcrRegion, OcrResult,
-    OcrTextFragment, WordConfidence,
+    CorrectionType, FragmentType, ImagePreprocessing, MockOcrProvider, OcrCoordinateSpace,
+    OcrEngine, OcrError, OcrOptions, OcrPostProcessor, OcrProcessingResult, OcrProvider, OcrRegion,
+    OcrResult, OcrTextFragment, WordConfidence,
 };
 pub use plaintext::{LineBreakMode, PlainTextConfig, PlainTextExtractor, PlainTextResult};
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};

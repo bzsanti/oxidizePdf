@@ -34,7 +34,7 @@ use crate::text::{
 };
 
 #[cfg(feature = "ocr-tesseract")]
-use rusty_tesseract::{image_to_string, Args, Image};
+use rusty_tesseract::{image_to_data, Args, Image};
 #[cfg(feature = "ocr-tesseract")]
 use std::collections::HashMap;
 #[cfg(feature = "ocr-tesseract")]
@@ -61,9 +61,6 @@ impl Default for RustyTesseractConfig {
     fn default() -> Self {
         let mut config_vars = HashMap::new();
 
-        // Optimize for scanned documents
-        config_vars.insert("tessedit_char_whitelist".to_string(),
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?:;()[]{}\"'-+=%&#@*/\\| \t\n".to_string());
         config_vars.insert("preserve_interword_spaces".to_string(), "1".to_string());
 
         Self {
@@ -76,7 +73,14 @@ impl Default for RustyTesseractConfig {
     }
 }
 
-/// Tesseract OCR provider using rusty-tesseract
+/// Tesseract OCR provider using rusty-tesseract TSV word records.
+///
+/// Fragments use `ImagePixels`: bottom-left image-local coordinates with one unit
+/// per pixel. Confidence is the mean of accepted word confidences. The configured
+/// language selects the Tesseract model; no alphabet whitelist is imposed by default.
+/// Preprocessing, `regions` and timeout options are not implemented by this adapter;
+/// callers can preprocess/crop images before recognition. PDF conversion handles
+/// page placement separately.
 #[cfg(feature = "ocr-tesseract")]
 pub struct RustyTesseractProvider {
     config: RustyTesseractConfig,
@@ -101,7 +105,6 @@ impl RustyTesseractProvider {
         // Optimize specifically for legal/contract documents
         config_vars.insert("preserve_interword_spaces".to_string(), "1".to_string());
         config_vars.insert("tessedit_create_hocr".to_string(), "0".to_string());
-        config_vars.insert("tessedit_create_tsv".to_string(), "0".to_string());
         config_vars.insert("load_system_dawg".to_string(), "1".to_string()); // Use system dictionary
         config_vars.insert("load_freq_dawg".to_string(), "1".to_string()); // Use frequency data
         config_vars.insert("textord_debug_tabfind".to_string(), "0".to_string());
@@ -125,7 +128,6 @@ impl RustyTesseractProvider {
         // Optimize for speed and rotation handling
         config_vars.insert("preserve_interword_spaces".to_string(), "1".to_string());
         config_vars.insert("tessedit_create_hocr".to_string(), "0".to_string());
-        config_vars.insert("tessedit_create_tsv".to_string(), "0".to_string());
         config_vars.insert("load_system_dawg".to_string(), "1".to_string());
         config_vars.insert("load_freq_dawg".to_string(), "1".to_string());
 
@@ -189,6 +191,10 @@ impl RustyTesseractProvider {
 
 #[cfg(feature = "ocr-tesseract")]
 impl OcrProvider for RustyTesseractProvider {
+    fn coordinate_space(&self) -> crate::text::OcrCoordinateSpace {
+        crate::text::OcrCoordinateSpace::ImagePixels
+    }
+
     fn supported_formats(&self) -> Vec<ImageFormat> {
         vec![
             ImageFormat::Png,
@@ -232,88 +238,75 @@ impl OcrProvider for RustyTesseractProvider {
         // Create OCR arguments
         let args = self.create_args(options);
 
-        // Perform OCR
-        let text = image_to_string(&image, &args)
-            .map_err(|e| OcrError::ProcessingFailed(format!("OCR processing failed: {}", e)))?;
-
-        let processing_time = start_time.elapsed();
-
-        // For now, we'll estimate confidence based on text length and characters
-        // rusty-tesseract doesn't provide detailed confidence information
-        let confidence = estimate_confidence(&text);
-
-        // Create basic fragments - one fragment for the entire text
-        let fragments = if text.trim().is_empty() {
-            Vec::new()
-        } else {
-            vec![OcrTextFragment {
-                text: text.clone(),
-                x: 0.0,
-                y: 0.0,
-                width: 0.0,
-                height: 0.0,
-                font_size: 12.0,
-                confidence: confidence as f64,
+        // TSV supplies measured word boxes and confidence; hierarchy rows are not words.
+        let output = image_to_data(&image, &args)
+            .map_err(|e| OcrError::ProcessingFailed(format!("OCR processing failed: {e}")))?;
+        let dimensions = (dynamic_image.width(), dynamic_image.height());
+        let mut fragments = Vec::new();
+        let mut text = String::new();
+        let mut previous_line = None;
+        for word in output
+            .data
+            .iter()
+            .filter(|word| word.level == 5 && !word.text.trim().is_empty())
+        {
+            if word.left < 0
+                || word.top < 0
+                || word.width <= 0
+                || word.height <= 0
+                || i64::from(word.left) + i64::from(word.width) > i64::from(dimensions.0)
+                || i64::from(word.top) + i64::from(word.height) > i64::from(dimensions.1)
+                || !word.conf.is_finite()
+                || !(0.0..=100.0).contains(&word.conf)
+            {
+                return Err(OcrError::ProcessingFailed(
+                    "Tesseract returned an invalid word region or confidence".into(),
+                ));
+            }
+            let confidence = f64::from(word.conf) / 100.0;
+            if confidence < options.min_confidence {
+                continue;
+            }
+            let line = (word.page_num, word.block_num, word.par_num, word.line_num);
+            if let Some(previous) = previous_line {
+                text.push(if previous == line { ' ' } else { '\n' });
+            }
+            previous_line = Some(line);
+            text.push_str(&word.text);
+            fragments.push(OcrTextFragment {
+                text: word.text.clone(),
+                x: f64::from(word.left),
+                y: f64::from(dimensions.1) - f64::from(word.top) - f64::from(word.height),
+                width: f64::from(word.width),
+                height: f64::from(word.height),
+                font_size: f64::from(word.height),
+                confidence,
                 word_confidences: None,
                 fragment_type: FragmentType::Word,
-            }]
+            });
+        }
+        let confidence = if fragments.is_empty() {
+            0.0
+        } else {
+            fragments
+                .iter()
+                .map(|fragment| fragment.confidence)
+                .sum::<f64>()
+                / fragments.len() as f64
         };
+        let processing_time = start_time.elapsed();
 
         Ok(OcrProcessingResult {
             text: text.trim().to_string(),
-            confidence: confidence as f64,
+            confidence,
             fragments,
             processing_time_ms: processing_time.as_millis() as u64,
             engine_name: "rusty-tesseract".to_string(),
             language: self.config.language.clone(),
             processed_region: None,
-            image_dimensions: (0, 0), // We could extract actual dimensions if needed
+            image_dimensions: dimensions,
         })
     }
-}
-
-/// Estimate confidence based on text characteristics
-/// This is a simple heuristic since rusty-tesseract doesn't provide detailed confidence
-#[cfg(feature = "ocr-tesseract")]
-fn estimate_confidence(text: &str) -> f32 {
-    if text.trim().is_empty() {
-        return 0.0;
-    }
-
-    let trimmed = text.trim();
-    let total_chars = trimmed.len() as f32;
-
-    // Basic confidence estimation
-    let alpha_count = trimmed.chars().filter(|c| c.is_alphabetic()).count() as f32;
-    let _digit_count = trimmed.chars().filter(|c| c.is_numeric()).count() as f32;
-    let space_count = trimmed.chars().filter(|c| c.is_whitespace()).count() as f32;
-    let punct_count = trimmed.chars().filter(|c| c.is_ascii_punctuation()).count() as f32;
-
-    // Start with base confidence
-    let mut confidence: f32 = 0.7;
-
-    // Boost confidence for reasonable character distributions
-    let alpha_ratio = alpha_count / total_chars;
-    if alpha_ratio > 0.5 {
-        confidence += 0.1;
-    }
-
-    // Reasonable amount of spaces suggests proper word separation
-    let space_ratio = space_count / total_chars;
-    if space_ratio > 0.1 && space_ratio < 0.3 {
-        confidence += 0.1;
-    }
-
-    // Some punctuation is good, too much might indicate noise
-    let punct_ratio = punct_count / total_chars;
-    if punct_ratio < 0.2 {
-        confidence += 0.05;
-    } else {
-        confidence -= 0.1;
-    }
-
-    // Clamp to valid range
-    confidence.max(0.0).min(1.0)
 }
 
 #[cfg(feature = "ocr-tesseract")]
@@ -353,20 +346,6 @@ mod tests {
     fn test_provider_creation() {
         let _provider = RustyTesseractProvider::new();
         // Provider creation is now infallible
-    }
-
-    #[cfg(feature = "ocr-tesseract")]
-    #[test]
-    fn test_confidence_estimation() {
-        assert_eq!(estimate_confidence(""), 0.0);
-
-        let normal_text = "This is a normal text with proper spacing.";
-        let confidence = estimate_confidence(normal_text);
-        assert!(confidence > 0.5);
-
-        let noisy_text = "!!@#$%^&*()";
-        let noisy_confidence = estimate_confidence(noisy_text);
-        assert!(noisy_confidence < confidence);
     }
 
     #[cfg(feature = "ocr-tesseract")]

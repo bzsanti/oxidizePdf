@@ -201,6 +201,9 @@ jobs:
           qpdf_accepts_classic_and_xref_stream_ocr_revisions
           -- --ignored --exact
 
+      - name: Validate actual OCR selection bounds and visible preservation
+        run: cargo test --locked -p oxidize-pdf --test issue_708_ocr_geometry_test -- --ignored
+
       - name: Validate incremental signature appearances
         run: >
           cargo test -p oxidize-pdf
@@ -241,3 +244,17 @@ jobs:
         run: |
           wasm-pack build tools/wasm-encryption-regression --target web --dev --no-opt --locked
           node tools/wasm-encryption-regression/browser_test.cjs
+
+  tesseract:
+    name: Spanish OCR and positioned conversion
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+      - name: Install OCR and independent readers
+        run: |
+          sudo apt-get update -o Acquire::Retries=3
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa poppler-utils qpdf
+      - name: Test real Spanish recognition and rotated scans
+        run: cargo test --locked -p oxidize-pdf --features ocr-tesseract --test issue_708_tesseract_test --test issue_708_ocr_geometry_test -- --include-ignored

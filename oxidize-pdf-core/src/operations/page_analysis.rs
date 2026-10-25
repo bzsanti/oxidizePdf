@@ -168,6 +168,32 @@ pub struct PageContentAnalyzer {
 }
 
 impl PageContentAnalyzer {
+    pub(crate) fn positioned_ocr_images(
+        &self,
+        page: u32,
+    ) -> crate::error::Result<Vec<super::ocr_image_placement::PlacedOcrImage>> {
+        super::ocr_image_placement::collect(&self.document, page)
+    }
+
+    pub(crate) fn prepare_ocr_image(
+        &self,
+        page: u32,
+        image: &super::ocr_image_placement::PlacedOcrImage,
+    ) -> crate::error::Result<(Vec<u8>, crate::coordinate_system::TransformMatrix)> {
+        let object = self.document.resolve(&image.reference)?;
+        let stream = object
+            .as_stream()
+            .ok_or_else(|| crate::PdfError::InvalidStructure("OCR image is not a stream".into()))?;
+        let data = self
+            .extract_image_stream_for_ocr(stream)
+            .map_err(|e| crate::PdfError::InvalidStructure(e.to_string()))?;
+        super::ocr_image_placement::orient_image(
+            data,
+            image.matrix,
+            self.document.get_page(page)?.rotation,
+        )
+    }
+
     /// Create a new page content analyzer
     ///
     /// # Arguments

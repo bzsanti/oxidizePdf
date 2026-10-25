@@ -11,7 +11,8 @@
   ],
   "interoperability.yml": [
     "WASM encryption in Node and Chrome",
-    "qpdf external validation"
+    "qpdf external validation",
+    "Spanish OCR and positioned conversion"
   ],
   "omnidocbench-contract.yml": [
     "contract"
