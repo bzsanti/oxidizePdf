@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-25",
+  "issue": 581,
+  "identity": {
+    "dataset_revision": "f5f559bddf50e36f7f9899d842d0006f13ce8afc",
+    "annotations_sha256": "2fafe9329dc92fc426b30036aee51c716b3fcdcc1d20cb964dc7670579533817",
+    "evaluator_revision": "337cc26965893db3ef53ddc119a6d6bb5bde096f",
+    "core_base": "6090294f4ab619160107b85f962d5f09efabfc3c"
+  },
+  "export_identity": {
+    "compiled_adapter_sha256": "381e2704d97e27b8a2289a30d7928ae1dde0dedacd0227697be795434e8bc2ae",
+    "compiled_lock_sha256": "151c149044db1eb3ead06a1a2b21854d150290604dfa5bb3fc91b8d09342882e",
+    "crate_version": "5.5.2",
+    "executable_sha256": "8ffadf8e01dbff265064b1cc38ecea510aa6dd3a08c23dc249aa3f2b66e7e536",
+    "partition_api": "PdfDocument::partition",
+    "runtime_checkout_git_sha": "6090294f4ab619160107b85f962d5f09efabfc3c"
+  },
+  "population": {
+    "pages": 981,
+    "export_errors": 1,
+    "layout_boxes": 38938,
+    "layout_pages_with_predictions": 768,
+    "annotated_tables": 428,
+    "annotated_table_pages": 317,
+    "tables_with_empty_prediction": 296
+  },
+  "teds": 0.07405097493480234,
+  "teds_structure_only": 0.1414761408949025,
+  "layout": {
+    "bbox_mAP": 0.01208385391887625,
+    "bbox_mAP_50": 0.02466051042431044,
+    "bbox_mAP_75": 0.008182475681671538,
+    "bbox_mAP_s": 0.00023360440971447477,
+    "bbox_mAP_m": 0.011902468754437059,
+    "bbox_mAP_l": 0.017216547236479623,
+    "bbox_title_precision": 0.08485212200565165,
+    "bbox_text_precision": 0.010054074721729601,
+    "bbox_abandon_precision": 0.00603246375282244,
+    "bbox_figure_precision": 0.0,
+    "bbox_figure_caption_precision": 0.0,
+    "bbox_table_precision": 0.019899878708558815,
+    "bbox_table_caption_precision": 0.0,
+    "bbox_table_footnote_precision": 0.0,
+    "bbox_isolate_formula_precision": 0.0,
+    "bbox_formula_caption_precision": 0.0
+  },
+  "formula_cdm": "not_applicable: public API exposes no LaTeX formula recognition",
+  "text_and_reading_order": "not_reportable: structural predictions contain tables only",
+  "export_failures": [
+    {
+      "error": "Syntax error at position 0: Invalid Filter type",
+      "prediction_name": "jiaocaineedrop_chap10.pdf_8.md"
+    }
+  ],
+  "artifact_sha256": {
+    "jobs.json": "0ee3933f1adbaa42d2874b32f76d8948c15b8c5c45044eaed3569de2f0b7d166",
+    "input-pdfs-sha256.json": "f63bb3e3f6dc1d80de316ba0a4393d383ae9a17f4c43fc0901ab4e3da7d5a9eb",
+    "accepted-export/report.json": "2490902531044ef66a02ac451ec44ed3df3edf52e2d5b7919842722024d0c512",
+    "accepted-export/layout.json": "f6377519e3cf9b75ed3f3d0d3e948132ef0c4f4c975928b736b2db1b58563a5d",
+    "evaluation/result/predictions_quick_match_table_result.json": "37abda22e3b1956fa56a0aef90a6255e591923d645f7e765f3c1b89e86d98cf4",
+    "evaluation/result/predictions_quick_match_metric_result.json": "a7db9815647db9f636fd1bddb24d5b68b92ba0b9fa0d9ce9c7d8512eaa8f1176",
+    "teds.log": "71404597ea6ef8f124d630d8a75b2111a8b1dd52ad4ac1fae716a9275ab168c9",
+    "layout.log": "807a3ace8751f7b0e7af31bf2d3f2e2cb32e95a76eefece60526c39c2585ffc6",
+    "evaluator-packages.txt": "cdf6592271f148bc20f581fcafd30a3900a3601895ef8ca05df9c133329e0941"
+  },
+  "predictions_sha256": "d7de032b71aee0f43c2177f58b44cc4f26ef79f7e04d0e3932b0117e485ae38e",
+  "protocol_limits": [
+    "TEDS excludes unmatched extra predictions in the pinned official evaluator.",
+    "Layout uses all ten official categories; unrepresented categories remain in the denominator.",
+    "COCO small/medium/large area bins use bbox area as reported by mmeval.",
+    "Companion text and reading order metrics are not native-text benchmark results."
+  ]
+}
