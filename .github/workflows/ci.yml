@@ -291,7 +291,7 @@ jobs:
         if: steps.reuse.outputs.hit != 'true'
         run: |
           cargo llvm-cov -p oxidize-pdf --no-report
-          cargo llvm-cov -p oxidize-pdf --no-clean --no-report \
+          cargo llvm-cov -p oxidize-pdf --no-report \
             --features ocr-tesseract \
             --test issue_708_tesseract_test --test issue_708_ocr_geometry_test \
             -- --include-ignored
