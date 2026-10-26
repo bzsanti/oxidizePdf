@@ -1612,7 +1612,7 @@ impl GraphicsContext {
             chars.extend(text.chars());
         } else {
             self.used_characters_by_font
-                .insert(bucket.to_owned(), text.chars().collect());
+                .insert(bucket.to_owned(), UsedCharacters::from_text(text));
         }
     }
 

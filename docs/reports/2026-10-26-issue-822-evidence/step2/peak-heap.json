@@ -1,0 +1,32 @@
+[
+  {
+    "variant": "control",
+    "peak_heap_bytes": 191150,
+    "command": [
+      "valgrind",
+      "--tool=massif",
+      "--peak-inaccuracy=0.0",
+      "--massif-out-file=docs/reports/2026-10-26-issue-822-evidence/step2/control-massif.out",
+      "/tmp/oxidize-perf822/usage-control",
+      "ascii",
+      "16384",
+      "1",
+      "/tmp/oxidize-perf822/massif-control.pdf"
+    ]
+  },
+  {
+    "variant": "candidate",
+    "peak_heap_bytes": 111794,
+    "command": [
+      "valgrind",
+      "--tool=massif",
+      "--peak-inaccuracy=0.0",
+      "--massif-out-file=docs/reports/2026-10-26-issue-822-evidence/step2/candidate-massif.out",
+      "/tmp/oxidize-perf822/usage-candidate",
+      "ascii",
+      "16384",
+      "1",
+      "/tmp/oxidize-perf822/massif-candidate.pdf"
+    ]
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "kind": "ascii",
+    "characters": 80,
+    "control_us": 40.203338,
+    "candidate_us": 39.7195965,
+    "median_paired_reduction_percent": 0.3729911233298189,
+    "bootstrap_95_percent": [
+      -1.913764687399655,
+      1.9805930402009952
+    ]
+  },
+  {
+    "kind": "ascii",
+    "characters": 16384,
+    "control_us": 101.5665325,
+    "candidate_us": 97.590655,
+    "median_paired_reduction_percent": 2.587085287272861,
+    "bootstrap_95_percent": [
+      1.1803506180269985,
+      6.22596419716579
+    ]
+  },
+  {
+    "kind": "latin",
+    "characters": 16384,
+    "control_us": 503.34769,
+    "candidate_us": 497.0456675,
+    "median_paired_reduction_percent": -0.8203081506588994,
+    "bootstrap_95_percent": [
+      -4.121018360206186,
+      1.1673146661452027
+    ]
+  },
+  {
+    "kind": "unique",
+    "characters": 4096,
+    "control_us": 235.1879725,
+    "candidate_us": 239.06188500000002,
+    "median_paired_reduction_percent": -0.885984498602288,
+    "bootstrap_95_percent": [
+      -3.8246911554131735,
+      0.8896642469955252
+    ]
+  }
+]

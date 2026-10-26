@@ -9,30 +9,48 @@ struct Counter;
 thread_local! {
     static ENABLED: Cell<bool> = const { Cell::new(false) };
     static CALLS: Cell<usize> = const { Cell::new(0) };
+    static BYTES: Cell<usize> = const { Cell::new(0) };
 }
-fn record() {
+fn record(bytes: usize) {
     if ENABLED.try_with(Cell::get).unwrap_or(false) {
         let _ = CALLS.try_with(|calls| calls.set(calls.get() + 1));
+        let _ = BYTES.try_with(|total| total.set(total.get() + bytes));
     }
 }
 // SAFETY: System receives the original pointer, layout and size unchanged;
 // the thread-local counters neither allocate nor access the allocated memory.
 unsafe impl GlobalAlloc for Counter {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        record();
+        record(layout.size());
         unsafe { System.alloc(layout) }
     }
     unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-        record();
+        record(layout.size());
         unsafe { System.alloc_zeroed(layout) }
     }
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, size: usize) -> *mut u8 {
-        record();
+        record(size);
         unsafe { System.realloc(ptr, layout, size) }
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         unsafe { System.dealloc(ptr, layout) }
     }
+}
+
+#[test]
+fn repeated_text_does_not_reserve_a_character_set_for_every_occurrence() {
+    let text = "A".repeat(16_384);
+    let mut context = TextContext::new();
+    BYTES.with(|bytes| bytes.set(0));
+    ENABLED.with(|enabled| enabled.set(true));
+    context.write(&text).unwrap();
+    ENABLED.with(|enabled| enabled.set(false));
+    let bytes = BYTES.with(Cell::get);
+    assert!(
+        bytes < 2 * text.len(),
+        "{bytes} cumulative bytes for a {}-byte text with one distinct character",
+        text.len()
+    );
 }
 #[global_allocator]
 static ALLOCATOR: Counter = Counter;
