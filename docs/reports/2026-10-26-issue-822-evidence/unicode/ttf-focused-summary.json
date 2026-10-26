@@ -1,0 +1,9 @@
+{
+  "blocks": 24,
+  "iterations": 250,
+  "median_paired_reduction_percent": -4.656061026463332,
+  "bootstrap_95_percent": [
+    -12.938793207520227,
+    3.9485480108980453
+  ]
+}

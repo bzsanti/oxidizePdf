@@ -1,0 +1,18 @@
+{
+  "elapsed_ns": {
+    "reference": "geometric mean of both controls within each block",
+    "median_reduction_percent": 1.1333159089393863,
+    "bootstrap_95_percent": [
+      -3.181782628256169,
+      4.315755126700638
+    ]
+  },
+  "cpu_seconds": {
+    "reference": "geometric mean of both controls within each block",
+    "median_reduction_percent": 1.1167070613441077,
+    "bootstrap_95_percent": [
+      -2.142405396968572,
+      4.392713208454269
+    ]
+  }
+}

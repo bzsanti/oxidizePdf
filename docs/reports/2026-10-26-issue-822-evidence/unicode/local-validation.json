@@ -1,0 +1,15 @@
+{
+  "base": "ee8d709d991510041ebe19ccaae85885b002c8b7",
+  "base_ci_success": 34,
+  "base_ci_skipped": 4,
+  "font_sized_allocations_red": 5,
+  "font_sized_allocation_budget": 4,
+  "red_exit": 101,
+  "library_passed": 6737,
+  "library_ignored": 3,
+  "integration_passed": 17,
+  "clippy": "PASS: library and allocation/writer resources integrations, no-default-features/compression, -D warnings",
+  "callgrind_ttf_control_instructions": 408620727,
+  "callgrind_ttf_candidate_instructions": 406356031,
+  "first_validation_script_failure": "compared volatile XMP timestamps; narrowed stream equality to non-Metadata payload streams; all expected text, widths and bbox still checked"
+}

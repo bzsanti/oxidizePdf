@@ -1457,28 +1457,25 @@ impl<W: Write> PdfWriter<W> {
         // emits raw CFF for OpenType/CFF fonts, so OpenType font files are
         // embedded with /CIDFontType0C. TrueType fonts keep the SFNT wrapper.
         // IMPORTANT: We need the ORIGINAL font for width calculations, not the subset.
-        let (font_data_to_embed, subset_glyph_mapping, original_font_for_widths) =
-            if font.data.len() > 100_000 && !used_chars.is_empty() {
-                match crate::text::fonts::truetype_subsetter::subset_font(
-                    font.data.clone(),
-                    &used_chars,
-                ) {
-                    Ok(subset_result) => (
-                        subset_result.font_data,
-                        Some(subset_result.glyph_mapping),
-                        font.clone(),
-                    ),
-                    Err(_) => {
-                        if font.data.len() < 25_000_000 {
-                            (font.data.clone(), None, font.clone())
-                        } else {
-                            (Vec::new(), None, font.clone())
-                        }
+        let (font_data_to_embed, subset_glyph_mapping) = if font.data.len() > 100_000
+            && !used_chars.is_empty()
+        {
+            match crate::text::fonts::truetype_subsetter::subset_font(
+                font.data.clone(),
+                &used_chars,
+            ) {
+                Ok(subset_result) => (subset_result.font_data, Some(subset_result.glyph_mapping)),
+                Err(_) => {
+                    if font.data.len() < 25_000_000 {
+                        (font.data.clone(), None)
+                    } else {
+                        (Vec::new(), None)
                     }
                 }
-            } else {
-                (font.data.clone(), None, font.clone())
-            };
+            }
+        } else {
+            (font.data.clone(), None)
+        };
 
         if !font_data_to_embed.is_empty() {
             // Build the initial font-file dictionary carrying the format-specific
@@ -1587,11 +1584,7 @@ impl<W: Write> PdfWriter<W> {
         // Generate proper width array from font metrics
         // IMPORTANT: Use the ORIGINAL font for width calculations, not the subset
         // But pass the subset mapping to know which characters we're using
-        let w_array = self.generate_width_array(
-            &original_font_for_widths,
-            default_width,
-            subset_glyph_mapping.as_ref(),
-        );
+        let w_array = self.generate_width_array(font, default_width, subset_glyph_mapping.as_ref());
         cid_font.set("W", Object::Array(w_array));
 
         // CIDToGIDMap - Only required for CIDFontType2 (TrueType)

@@ -1,0 +1,92 @@
+[
+  {
+    "allocations": {
+      "calls": 3748,
+      "font_sized_allocations": 0,
+      "requested_bytes": 2611549
+    },
+    "compression": true,
+    "documents": 3,
+    "elapsed_ns": 1802669,
+    "font_bytes": 0,
+    "kind": "latin",
+    "pages": 10,
+    "pdf_bytes": 8824,
+    "phase": "full"
+  },
+  {
+    "allocations": {
+      "calls": 2332,
+      "font_sized_allocations": 0,
+      "requested_bytes": 1578481
+    },
+    "compression": true,
+    "documents": 3,
+    "elapsed_ns": 1216508,
+    "font_bytes": 0,
+    "kind": "latin",
+    "pages": 10,
+    "pdf_bytes": 8824,
+    "phase": "serialize"
+  },
+  {
+    "allocations": {
+      "calls": 30031,
+      "font_sized_allocations": 18,
+      "requested_bytes": 16748701
+    },
+    "compression": true,
+    "documents": 3,
+    "elapsed_ns": 11052402,
+    "font_bytes": 431196,
+    "kind": "ttf",
+    "pages": 10,
+    "pdf_bytes": 13090,
+    "phase": "full"
+  },
+  {
+    "allocations": {
+      "calls": 27844,
+      "font_sized_allocations": 15,
+      "requested_bytes": 13928479
+    },
+    "compression": true,
+    "documents": 3,
+    "elapsed_ns": 8588742,
+    "font_bytes": 431196,
+    "kind": "ttf",
+    "pages": 10,
+    "pdf_bytes": 13090,
+    "phase": "serialize"
+  },
+  {
+    "allocations": {
+      "calls": 303883,
+      "font_sized_allocations": 18,
+      "requested_bytes": 385418737
+    },
+    "compression": true,
+    "documents": 3,
+    "elapsed_ns": 173015563,
+    "font_bytes": 16529832,
+    "kind": "cjk",
+    "pages": 10,
+    "pdf_bytes": 10447,
+    "phase": "full"
+  },
+  {
+    "allocations": {
+      "calls": 301672,
+      "font_sized_allocations": 15,
+      "requested_bytes": 320311180
+    },
+    "compression": true,
+    "documents": 3,
+    "elapsed_ns": 140605744,
+    "font_bytes": 16529832,
+    "kind": "cjk",
+    "pages": 10,
+    "pdf_bytes": 10447,
+    "phase": "serialize"
+  }
+]

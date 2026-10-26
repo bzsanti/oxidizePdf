@@ -1,0 +1,74 @@
+[
+  {
+    "kind": "latin",
+    "compression": "default",
+    "pages": 10,
+    "qpdf_exit": 0,
+    "streams_identical": true,
+    "widths_identical": true,
+    "bbox_identical": true,
+    "expected_unicode_text": true,
+    "stream_count": 10,
+    "bbox_sha256": "440a3f544d42abd35ecd8876ae9df4b134e76ab5f5c437b0061516a1f9f02e90"
+  },
+  {
+    "kind": "latin",
+    "compression": "raw",
+    "pages": 10,
+    "qpdf_exit": 0,
+    "streams_identical": true,
+    "widths_identical": true,
+    "bbox_identical": true,
+    "expected_unicode_text": true,
+    "stream_count": 10,
+    "bbox_sha256": "440a3f544d42abd35ecd8876ae9df4b134e76ab5f5c437b0061516a1f9f02e90"
+  },
+  {
+    "kind": "ttf",
+    "compression": "default",
+    "pages": 10,
+    "qpdf_exit": 0,
+    "streams_identical": true,
+    "widths_identical": true,
+    "bbox_identical": true,
+    "expected_unicode_text": true,
+    "stream_count": 13,
+    "bbox_sha256": "891e7701736d0b2bd3dc7124b9e006ca84bb27fb5e5f67b394e2d44145814de0"
+  },
+  {
+    "kind": "ttf",
+    "compression": "raw",
+    "pages": 10,
+    "qpdf_exit": 0,
+    "streams_identical": true,
+    "widths_identical": true,
+    "bbox_identical": true,
+    "expected_unicode_text": true,
+    "stream_count": 13,
+    "bbox_sha256": "891e7701736d0b2bd3dc7124b9e006ca84bb27fb5e5f67b394e2d44145814de0"
+  },
+  {
+    "kind": "cjk",
+    "compression": "default",
+    "pages": 10,
+    "qpdf_exit": 0,
+    "streams_identical": true,
+    "widths_identical": true,
+    "bbox_identical": true,
+    "expected_unicode_text": true,
+    "stream_count": 12,
+    "bbox_sha256": "1477458a31b4c9ae014572d0fa0ea1821aeffda59f0382dbe7c592e7b0a09bae"
+  },
+  {
+    "kind": "cjk",
+    "compression": "raw",
+    "pages": 10,
+    "qpdf_exit": 0,
+    "streams_identical": true,
+    "widths_identical": true,
+    "bbox_identical": true,
+    "expected_unicode_text": true,
+    "stream_count": 12,
+    "bbox_sha256": "1477458a31b4c9ae014572d0fa0ea1821aeffda59f0382dbe7c592e7b0a09bae"
+  }
+]

@@ -1,5 +1,5 @@
 //! Repeated standard-font text must not allocate a name for each Tf operator.
-use oxidize_pdf::{text::TextContext, Font};
+use oxidize_pdf::{text::TextContext, Document, Font, Page};
 use std::{
     alloc::{GlobalAlloc, Layout, System},
     cell::Cell,
@@ -10,11 +10,16 @@ thread_local! {
     static ENABLED: Cell<bool> = const { Cell::new(false) };
     static CALLS: Cell<usize> = const { Cell::new(0) };
     static BYTES: Cell<usize> = const { Cell::new(0) };
+    static FONT_SIZE: Cell<usize> = const { Cell::new(0) };
+    static FONT_COPIES: Cell<usize> = const { Cell::new(0) };
 }
 fn record(bytes: usize) {
     if ENABLED.try_with(Cell::get).unwrap_or(false) {
         let _ = CALLS.try_with(|calls| calls.set(calls.get() + 1));
         let _ = BYTES.try_with(|total| total.set(total.get() + bytes));
+        if FONT_SIZE.try_with(Cell::get).unwrap_or(0) == bytes {
+            let _ = FONT_COPIES.try_with(|copies| copies.set(copies.get() + 1));
+        }
     }
 }
 // SAFETY: System receives the original pointer, layout and size unchanged;
@@ -54,6 +59,29 @@ fn repeated_text_does_not_reserve_a_character_set_for_every_occurrence() {
 }
 #[global_allocator]
 static ALLOCATOR: Counter = Counter;
+
+#[test]
+fn serializing_a_cjk_font_does_not_clone_the_original_for_widths() {
+    let data = include_bytes!("fixtures/writer_resources/WriterCjkTest-Regular.otf");
+    let mut document = Document::new();
+    document.add_font_from_bytes("CJK", data.to_vec()).unwrap();
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("CJK".into()), 12.0)
+        .at(40.0, 700.0)
+        .write("中文测试")
+        .unwrap();
+    document.add_page(page);
+    FONT_SIZE.with(|size| size.set(data.len()));
+    FONT_COPIES.with(|copies| copies.set(0));
+    ENABLED.with(|enabled| enabled.set(true));
+    let pdf = document.to_bytes().unwrap();
+    ENABLED.with(|enabled| enabled.set(false));
+    let copies = FONT_COPIES.with(Cell::get);
+    FONT_SIZE.with(|size| size.set(0));
+    assert!(pdf.starts_with(b"%PDF-"));
+    assert!(copies <= 4, "{copies} full-font-sized allocations; the subset pipeline needs no additional original-font copy for width lookup");
+}
 
 #[test]
 fn standard_font_writes_allocate_text_buffers_without_repeated_font_names() {
