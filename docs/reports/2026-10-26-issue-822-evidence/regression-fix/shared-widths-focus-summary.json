@@ -1,0 +1,30 @@
+{
+  "candidate_vs_control": {
+    "median_reduction_percent": -28.130040630564746,
+    "bootstrap95": [
+      -29.398137791448885,
+      -26.159002596609724
+    ]
+  },
+  "fixed_vs_control": {
+    "median_reduction_percent": 30.940184258783944,
+    "bootstrap95": [
+      28.172538124533787,
+      32.2785222838193
+    ]
+  },
+  "fixed_vs_step2": {
+    "median_reduction_percent": 31.559957202568377,
+    "bootstrap95": [
+      28.470252245586746,
+      33.43600223862568
+    ]
+  },
+  "fixed_vs_candidate": {
+    "median_reduction_percent": 46.40150413830618,
+    "bootstrap95": [
+      43.67776841128761,
+      46.842721600059065
+    ]
+  }
+}

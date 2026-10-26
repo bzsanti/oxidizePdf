@@ -1,0 +1,23 @@
+{
+  "step2_vs_control": {
+    "median_reduction_percent": -0.3216921192134681,
+    "bootstrap95": [
+      -0.9950092723984172,
+      0.08347742704121197
+    ]
+  },
+  "candidate_vs_control": {
+    "median_reduction_percent": -27.58906109383212,
+    "bootstrap95": [
+      -29.9537792716283,
+      -25.987484015077357
+    ]
+  },
+  "candidate_vs_step2": {
+    "median_reduction_percent": -26.54562391516926,
+    "bootstrap95": [
+      -28.53005584907182,
+      -24.638608466542532
+    ]
+  }
+}

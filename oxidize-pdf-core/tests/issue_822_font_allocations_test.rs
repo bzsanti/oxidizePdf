@@ -61,7 +61,7 @@ fn repeated_text_does_not_reserve_a_character_set_for_every_occurrence() {
 static ALLOCATOR: Counter = Counter;
 
 #[test]
-fn serializing_a_cjk_font_does_not_clone_the_original_for_widths() {
+fn serializing_a_cjk_font_reuses_the_original_parse_for_widths() {
     let data = include_bytes!("fixtures/writer_resources/WriterCjkTest-Regular.otf");
     let mut document = Document::new();
     document.add_font_from_bytes("CJK", data.to_vec()).unwrap();
@@ -80,7 +80,7 @@ fn serializing_a_cjk_font_does_not_clone_the_original_for_widths() {
     let copies = FONT_COPIES.with(Cell::get);
     FONT_SIZE.with(|size| size.set(0));
     assert!(pdf.starts_with(b"%PDF-"));
-    assert!(copies <= 4, "{copies} full-font-sized allocations; the subset pipeline needs no additional original-font copy for width lookup");
+    assert!(copies <= 3, "{copies} full-font-sized allocations; default and per-character widths must share one original-font parse");
 }
 
 #[test]

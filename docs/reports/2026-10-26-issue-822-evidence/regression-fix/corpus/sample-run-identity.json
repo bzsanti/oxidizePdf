@@ -1,0 +1,14 @@
+{
+  "runner_sha256": "788c330c432244a0a7bdac7ddc0dfe7fac1f21a6cd3e41674206b1a0a4f22cf3",
+  "protocol_sha256": "df9107c45ccde5fd236c8a05b1038d8d575ecbce08d7ea377b4ec15589dbd488",
+  "cpu": 0,
+  "timeout_seconds": 15,
+  "address_space_bytes": 2147483648,
+  "blocks": 5,
+  "iterations": 3,
+  "binaries": {
+    "control": "c2f27a5e3af2ac2d46f046fd34fb4659cbd4ab54d7f99e46476124b06fa43393",
+    "candidate": "a0ed3f9b195c38c8201c24f6a31c61245bbd725fb591bb4d4dbace5c42ab61e7"
+  },
+  "population_hash": "60bff04d190e4314199edcda46a6906a9abeb029cb184766830b9d28667876d3"
+}

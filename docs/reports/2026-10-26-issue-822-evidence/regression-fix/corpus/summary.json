@@ -1,0 +1,123 @@
+{
+  "population_paths": 9051,
+  "unique_inputs": 6128,
+  "full_status": {
+    "ok/ok": 5827,
+    "error/error": 301
+  },
+  "full_alias_status": {
+    "ok/ok": 8717,
+    "error/error": 334
+  },
+  "tiers": {
+    "t1-spec": {
+      "ok/ok": 3515,
+      "error/error": 38
+    },
+    "t5-quality": {
+      "ok/ok": 2897,
+      "error/error": 10
+    },
+    "t0-regression": {
+      "error/error": 9,
+      "ok/ok": 4
+    },
+    "t3-stress": {
+      "ok/ok": 1534,
+      "error/error": 240
+    },
+    "t2-realworld": {
+      "ok/ok": 477,
+      "error/error": 7
+    },
+    "t4-ai-target": {
+      "ok/ok": 130
+    },
+    "t6-adversarial": {
+      "ok/ok": 131,
+      "error/error": 30
+    }
+  },
+  "full_pages": 37222,
+  "full_median_reduction_percent": 0.5193508829471227,
+  "full_total_time_reduction_percent": 0.2609595882822724,
+  "full_size_mismatches": 23,
+  "full_timing_limitation": "one cold serialization per revision/input; descriptive only, no per-document significance",
+  "sample": {
+    "rewrite": {
+      "paired_status_across_blocks": {
+        "ok/ok": 335,
+        "error/error": 80
+      },
+      "documents_complete_five_pairs": 67,
+      "median_document_generation_reduction_percent": 0.6593890102414179,
+      "median_block_generation_reduction_percent": 0.8576503942137825,
+      "block_bootstrap95_generation_reduction_percent": [
+        -0.12683237192752106,
+        1.5102540116571972
+      ],
+      "total_median_generation_time_reduction_percent": -0.006711566503003752,
+      "median_document_cold_reduction_percent": 0.7598672559247843,
+      "median_document_warm_reduction_percent": 0.1285993024540466,
+      "median_block_warm_reduction_percent": 0.18931535914018527,
+      "block_bootstrap95_warm_reduction_percent": [
+        -0.46241085217320066,
+        0.6589182461690046
+      ],
+      "total_median_warm_time_reduction_percent": -0.022823350562362066,
+      "median_document_peak_rss_delta_kib": -4,
+      "median_document_peak_rss_reduction_percent": 0.041206769683588274,
+      "regression_flags": []
+    },
+    "ttf": {
+      "paired_status_across_blocks": {
+        "ok/ok": 335,
+        "error/error": 80
+      },
+      "documents_complete_five_pairs": 67,
+      "median_document_generation_reduction_percent": 19.252274483446673,
+      "median_block_generation_reduction_percent": 18.29772223675886,
+      "block_bootstrap95_generation_reduction_percent": [
+        16.555950987782676,
+        19.237784652389966
+      ],
+      "total_median_generation_time_reduction_percent": 5.91027922621159,
+      "median_document_cold_reduction_percent": 22.16571369064485,
+      "median_document_warm_reduction_percent": 14.940058078287032,
+      "median_block_warm_reduction_percent": 12.022522115764666,
+      "block_bootstrap95_warm_reduction_percent": [
+        10.109007894520673,
+        15.722537312945494
+      ],
+      "total_median_warm_time_reduction_percent": 4.564865138059049,
+      "median_document_peak_rss_delta_kib": 4,
+      "median_document_peak_rss_reduction_percent": -0.028993911278640816,
+      "regression_flags": []
+    },
+    "cjk": {
+      "paired_status_across_blocks": {
+        "ok/ok": 335,
+        "error/error": 80
+      },
+      "documents_complete_five_pairs": 67,
+      "median_document_generation_reduction_percent": 25.048099592423256,
+      "median_block_generation_reduction_percent": 25.001888103952442,
+      "block_bootstrap95_generation_reduction_percent": [
+        24.669693707651806,
+        25.07001499319316
+      ],
+      "total_median_generation_time_reduction_percent": 23.844100549145043,
+      "median_document_cold_reduction_percent": 29.99908237752168,
+      "median_document_warm_reduction_percent": 39.50243929940408,
+      "median_block_warm_reduction_percent": 38.978125096663895,
+      "block_bootstrap95_warm_reduction_percent": [
+        38.11310355145133,
+        39.67434999526521
+      ],
+      "total_median_warm_time_reduction_percent": 36.42132114669621,
+      "median_document_peak_rss_delta_kib": -2124,
+      "median_document_peak_rss_reduction_percent": 3.490216816499203,
+      "regression_flags": []
+    }
+  }
+}
