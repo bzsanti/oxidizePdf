@@ -1,0 +1,18 @@
+{
+  "library_command": "cargo test --offline --locked -p oxidize-pdf --lib --no-default-features --features compression",
+  "library_passed": 6736,
+  "library_failed": 0,
+  "library_ignored": 3,
+  "library_exit": 0,
+  "format": "cargo fmt --all --check: exit0",
+  "diff_check": "exit0",
+  "allocation_probe": {
+    "baseline_calls": 206,
+    "candidate_calls": 106,
+    "writes": 100,
+    "baseline_exit": 101,
+    "candidate_exit": 0
+  },
+  "integration_passed": 9,
+  "clippy": "library + allocation/painter integration tests, no-default-features/compression, -D warnings: exit0"
+}

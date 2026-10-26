@@ -1,0 +1,32 @@
+[
+  {
+    "mode": "default",
+    "pages": 1,
+    "all_page_content_bytes_identical": true
+  },
+  {
+    "mode": "default",
+    "pages": 10,
+    "all_page_content_bytes_identical": true
+  },
+  {
+    "mode": "default",
+    "pages": 100,
+    "all_page_content_bytes_identical": true
+  },
+  {
+    "mode": "raw",
+    "pages": 1,
+    "all_page_content_bytes_identical": true
+  },
+  {
+    "mode": "raw",
+    "pages": 10,
+    "all_page_content_bytes_identical": true
+  },
+  {
+    "mode": "raw",
+    "pages": 100,
+    "all_page_content_bytes_identical": true
+  }
+]

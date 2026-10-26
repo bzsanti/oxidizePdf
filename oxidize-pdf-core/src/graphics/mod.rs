@@ -914,7 +914,7 @@ impl GraphicsContext {
     /// Set font and size
     pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {
         self.operations.push(ops::Op::SetFont {
-            name: font.pdf_name(),
+            font: font.clone(),
             size,
         });
 
@@ -1347,7 +1347,7 @@ impl GraphicsContext {
     pub fn set_custom_font(&mut self, font_name: &str, size: f64) -> &mut Self {
         // Emit Tf operator to the content stream (consistent with set_font)
         self.operations.push(ops::Op::SetFont {
-            name: font_name.to_string(),
+            font: Font::Custom(font_name.to_string()),
             size,
         });
 
@@ -1459,7 +1459,7 @@ impl GraphicsContext {
             .unwrap_or("Helvetica")
             .to_string();
         self.operations.push(ops::Op::SetFont {
-            name,
+            font: Font::Custom(name),
             size: self.current_font_size,
         });
     }

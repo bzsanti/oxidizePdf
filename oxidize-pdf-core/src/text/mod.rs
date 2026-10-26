@@ -363,7 +363,7 @@ impl TextContext {
 
         // Set font
         self.operations.push(Op::SetFont {
-            name: self.current_font.pdf_name(),
+            font: self.current_font.clone(),
             size: self.font_size,
         });
 
