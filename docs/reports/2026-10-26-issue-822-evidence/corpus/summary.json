@@ -1,0 +1,190 @@
+{
+  "population_paths": 9051,
+  "unique_inputs": 6128,
+  "full_status": {
+    "ok/ok": 5827,
+    "error/error": 301
+  },
+  "full_alias_status": {
+    "ok/ok": 8717,
+    "error/error": 334
+  },
+  "tiers": {
+    "t1-spec": {
+      "ok/ok": 3515,
+      "error/error": 38
+    },
+    "t5-quality": {
+      "ok/ok": 2897,
+      "error/error": 10
+    },
+    "t0-regression": {
+      "error/error": 9,
+      "ok/ok": 4
+    },
+    "t3-stress": {
+      "ok/ok": 1534,
+      "error/error": 240
+    },
+    "t2-realworld": {
+      "ok/ok": 477,
+      "error/error": 7
+    },
+    "t4-ai-target": {
+      "ok/ok": 130
+    },
+    "t6-adversarial": {
+      "ok/ok": 131,
+      "error/error": 30
+    }
+  },
+  "full_pages": 37222,
+  "full_median_reduction_percent": 2.253308200070858,
+  "full_total_time_reduction_percent": 0.23673982028717955,
+  "full_size_mismatches": 31,
+  "full_timing_limitation": "one cold serialization per revision/input; descriptive only, no per-document significance",
+  "sample": {
+    "rewrite": {
+      "paired_status_across_blocks": {
+        "ok/ok": 335,
+        "error/error": 80
+      },
+      "documents_complete_five_pairs": 67,
+      "median_document_generation_reduction_percent": 1.1749817980099109,
+      "median_block_generation_reduction_percent": 1.2230700179533205,
+      "block_bootstrap95_generation_reduction_percent": [
+        -1.1561405669840097,
+        2.6590798262624893
+      ],
+      "total_median_generation_time_reduction_percent": -0.5334861977699612,
+      "median_document_cold_reduction_percent": 1.2944424311624347,
+      "median_document_warm_reduction_percent": -0.2840929785327795,
+      "median_block_warm_reduction_percent": -0.32988549780785803,
+      "block_bootstrap95_warm_reduction_percent": [
+        -0.8806171926775352,
+        0.007840062720498864
+      ],
+      "total_median_warm_time_reduction_percent": -1.0260799266771592,
+      "median_document_peak_rss_delta_kib": 0,
+      "median_document_peak_rss_reduction_percent": 0.0,
+      "regression_flags": [
+        {
+          "sha256": "9ab5ce1410b4df5d9102caa1d2e7ad64abc0eb229ed60501f313b9482c2475e8",
+          "mode": "rewrite",
+          "path": "test-corpus/t4-ai-target/papers/arxiv_2301.00234.pdf",
+          "paired_blocks": 5,
+          "generation_reduction_percent": -3.543577298840561,
+          "control_generation_ns": 17481013,
+          "candidate_generation_ns": 17616342,
+          "cold_reduction_percent": -3.497241042447552,
+          "warm_reduction_percent": -8.83771369977695,
+          "control_warm_ns": 16920789,
+          "candidate_warm_ns": 19409847,
+          "rss_delta_kib": 1236,
+          "rss_reduction_percent": -3.257072016229001,
+          "candidate_slower_all_blocks": true
+        },
+        {
+          "sha256": "f4b50e2de151fbf5f0ad9b7b790496152739d9caf10e2dcc7be6bf033ff36ffa",
+          "mode": "rewrite",
+          "path": "test-corpus/t4-ai-target/papers/arxiv_2306.02707.pdf",
+          "paired_blocks": 5,
+          "generation_reduction_percent": 1.0614819177074963,
+          "control_generation_ns": 28104215,
+          "candidate_generation_ns": 28000770,
+          "cold_reduction_percent": 1.0007358605710337,
+          "warm_reduction_percent": -8.417020843875523,
+          "control_warm_ns": 26029109.5,
+          "candidate_warm_ns": 28052443,
+          "rss_delta_kib": 6332,
+          "rss_reduction_percent": -22.062717770034833,
+          "candidate_slower_all_blocks": true
+        }
+      ]
+    },
+    "ttf": {
+      "paired_status_across_blocks": {
+        "ok/ok": 335,
+        "error/error": 80
+      },
+      "documents_complete_five_pairs": 67,
+      "median_document_generation_reduction_percent": 6.918959952377568,
+      "median_block_generation_reduction_percent": 6.918959952377568,
+      "block_bootstrap95_generation_reduction_percent": [
+        5.691201499880327,
+        7.726268815760973
+      ],
+      "total_median_generation_time_reduction_percent": 3.135747182872428,
+      "median_document_cold_reduction_percent": 9.008163142369174,
+      "median_document_warm_reduction_percent": -0.6840053614106001,
+      "median_block_warm_reduction_percent": 0.3438567180486185,
+      "block_bootstrap95_warm_reduction_percent": [
+        -0.7831931041601514,
+        1.5975046004632065
+      ],
+      "total_median_warm_time_reduction_percent": 0.6868874105663059,
+      "median_document_peak_rss_delta_kib": -76,
+      "median_document_peak_rss_reduction_percent": 1.0489510489510523,
+      "regression_flags": [
+        {
+          "sha256": "a013471d617922095f92d6301c2bcc09b7d96204c3b24f0c31495e06464267d7",
+          "mode": "ttf",
+          "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t09-fail-l.pdf",
+          "paired_blocks": 5,
+          "generation_reduction_percent": 12.398983216498483,
+          "control_generation_ns": 2996346,
+          "candidate_generation_ns": 2717378,
+          "cold_reduction_percent": 10.291199434339893,
+          "warm_reduction_percent": -7.415354557314058,
+          "control_warm_ns": 1795862,
+          "candidate_warm_ns": 1927811,
+          "rss_delta_kib": -200,
+          "rss_reduction_percent": 3.479471120389699,
+          "candidate_slower_all_blocks": true
+        }
+      ]
+    },
+    "cjk": {
+      "paired_status_across_blocks": {
+        "ok/ok": 335,
+        "error/error": 80
+      },
+      "documents_complete_five_pairs": 67,
+      "median_document_generation_reduction_percent": 12.564089663019073,
+      "median_block_generation_reduction_percent": 12.477624610256843,
+      "block_bootstrap95_generation_reduction_percent": [
+        12.0740556396158,
+        12.666828791981711
+      ],
+      "total_median_generation_time_reduction_percent": 12.01351448991762,
+      "median_document_cold_reduction_percent": 14.634756918595027,
+      "median_document_warm_reduction_percent": 24.196940981075908,
+      "median_block_warm_reduction_percent": 24.198569870258567,
+      "block_bootstrap95_warm_reduction_percent": [
+        23.549460159857993,
+        24.40373886506667
+      ],
+      "total_median_warm_time_reduction_percent": 21.74585311930205,
+      "median_document_peak_rss_delta_kib": -2104,
+      "median_document_peak_rss_reduction_percent": 3.4755655213348335,
+      "regression_flags": [
+        {
+          "sha256": "d2bbcef1b42f4163550baae4782d63a8c862c817150e375d98dc5c28bf89ba81",
+          "mode": "cjk",
+          "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-11-7-3-t01-pass-e.pdf",
+          "paired_blocks": 5,
+          "generation_reduction_percent": 11.524852157432719,
+          "control_generation_ns": 79774724,
+          "candidate_generation_ns": 71964776,
+          "cold_reduction_percent": 12.930038659843557,
+          "warm_reduction_percent": -23.951450359289804,
+          "control_warm_ns": 42522498,
+          "candidate_warm_ns": 52707253,
+          "rss_delta_kib": -1928,
+          "rss_reduction_percent": 2.6418196766237356,
+          "candidate_slower_all_blocks": true
+        }
+      ]
+    }
+  }
+}

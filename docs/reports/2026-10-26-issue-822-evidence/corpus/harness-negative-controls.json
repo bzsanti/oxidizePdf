@@ -1,0 +1,5 @@
+{
+  "missing": "rejected as expected",
+  "duplicate": "rejected as expected",
+  "wrong_serialization_count": "rejected as expected"
+}

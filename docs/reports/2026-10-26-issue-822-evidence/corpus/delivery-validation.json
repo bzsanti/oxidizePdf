@@ -1,0 +1,8 @@
+{
+  "raw_compressed_observations_reproduce_identical_summary": true,
+  "full_rows": 12256,
+  "sample_rows": 2490,
+  "duplicate_or_missing_rows": 0,
+  "product_changed_for_evaluation": false,
+  "acceptance": "pending confirmed CJK repeated-serialization regression investigation"
+}
