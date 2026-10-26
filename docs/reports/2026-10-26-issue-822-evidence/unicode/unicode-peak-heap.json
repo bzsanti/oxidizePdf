@@ -1,0 +1,74 @@
+[
+  {
+    "kind": "ttf",
+    "variant": "control",
+    "peak_heap_bytes": 2183876,
+    "command": [
+      "valgrind",
+      "--tool=massif",
+      "--peak-inaccuracy=0.0",
+      "--massif-out-file=/tmp/oxidize-perf822/unicode-ttf-control.massif",
+      "/tmp/oxidize-perf822/unicode-control",
+      "ttf",
+      "10",
+      "1",
+      "/tmp/oxidize-perf822/massif-unicode.pdf",
+      "serialize",
+      "default"
+    ]
+  },
+  {
+    "kind": "ttf",
+    "variant": "candidate",
+    "peak_heap_bytes": 2113558,
+    "command": [
+      "valgrind",
+      "--tool=massif",
+      "--peak-inaccuracy=0.0",
+      "--massif-out-file=/tmp/oxidize-perf822/unicode-ttf-candidate.massif",
+      "/tmp/oxidize-perf822/unicode-candidate",
+      "ttf",
+      "10",
+      "1",
+      "/tmp/oxidize-perf822/massif-unicode.pdf",
+      "serialize",
+      "default"
+    ]
+  },
+  {
+    "kind": "cjk",
+    "variant": "control",
+    "peak_heap_bytes": 73932556,
+    "command": [
+      "valgrind",
+      "--tool=massif",
+      "--peak-inaccuracy=0.0",
+      "--massif-out-file=/tmp/oxidize-perf822/unicode-cjk-control.massif",
+      "/tmp/oxidize-perf822/unicode-control",
+      "cjk",
+      "10",
+      "1",
+      "/tmp/oxidize-perf822/massif-unicode.pdf",
+      "serialize",
+      "default"
+    ]
+  },
+  {
+    "kind": "cjk",
+    "variant": "candidate",
+    "peak_heap_bytes": 71907689,
+    "command": [
+      "valgrind",
+      "--tool=massif",
+      "--peak-inaccuracy=0.0",
+      "--massif-out-file=/tmp/oxidize-perf822/unicode-cjk-candidate.massif",
+      "/tmp/oxidize-perf822/unicode-candidate",
+      "cjk",
+      "10",
+      "1",
+      "/tmp/oxidize-perf822/massif-unicode.pdf",
+      "serialize",
+      "default"
+    ]
+  }
+]

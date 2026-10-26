@@ -4401,3 +4401,89 @@ fn numeric_and_binary_serialization_preserves_legacy_bytes() {
         assert_eq!(buffer, expected);
     }
 }
+
+#[test]
+fn shared_font_metrics_keep_original_glyph_ids_and_full_default_width() {
+    let data =
+        include_bytes!("../../../tests/fixtures/text_contracts/fonts/SourceSans3-Regular.ttf");
+    let parsed = TrueTypeFont::parse(data.to_vec()).unwrap();
+    let cmaps = parsed.parse_cmap().unwrap();
+    let cmap = CmapSubtable::select_best_or_first(&cmaps).unwrap();
+    let widths = parsed.get_glyph_widths(&cmap.mappings).unwrap();
+    let metrics = Some((cmap, &widths));
+    let writer = PdfWriter::new_with_writer(Vec::new());
+    let subset = HashMap::from([(65, 1), (233, 2)]);
+
+    // Independent SFNT fixture values: A/GID2=544, é/GID371=496;
+    // the 63 common Latin characters average to 512 PDF units.
+    assert_eq!(
+        PdfWriter::<Vec<u8>>::default_width_from_widths(Some(&widths)),
+        512
+    );
+    assert_eq!(
+        writer.generate_width_array(metrics, Some(&subset)),
+        vec![
+            Object::Integer(65),
+            Object::Array(vec![Object::Integer(544)]),
+            Object::Integer(233),
+            Object::Array(vec![Object::Integer(496)]),
+        ]
+    );
+}
+
+#[test]
+fn shared_font_metrics_preserve_empty_mapping_and_empty_width_fallbacks() {
+    let data =
+        include_bytes!("../../../tests/fixtures/text_contracts/fonts/SourceSans3-Regular.ttf");
+    let parsed = TrueTypeFont::parse(data.to_vec()).unwrap();
+    let cmaps = parsed.parse_cmap().unwrap();
+    let cmap = CmapSubtable::select_best_or_first(&cmaps).unwrap();
+    let widths = parsed.get_glyph_widths(&cmap.mappings).unwrap();
+    let writer = PdfWriter::new_with_writer(Vec::new());
+    let fallback = writer.generate_width_array(None, None);
+    assert_eq!(
+        &fallback[..5],
+        &[
+            Object::Integer(32),
+            Object::Array(vec![Object::Integer(250)]),
+            Object::Integer(33),
+            Object::Integer(47),
+            Object::Integer(333),
+        ]
+    );
+    assert_eq!(PdfWriter::<Vec<u8>>::default_width_from_widths(None), 500);
+    assert_eq!(
+        writer.generate_width_array(Some((cmap, &widths)), Some(&HashMap::new())),
+        fallback
+    );
+    assert_eq!(
+        writer.generate_width_array(Some((cmap, &widths)), Some(&HashMap::from([(0x10FFFF, 1)]))),
+        fallback
+    );
+    assert_eq!(
+        PdfWriter::<Vec<u8>>::default_width_from_widths(Some(&widths)),
+        512
+    );
+    let empty_cmap = CmapSubtable {
+        platform_id: 3,
+        encoding_id: 1,
+        format: 4,
+        mappings: HashMap::new(),
+    };
+    assert_eq!(
+        writer.generate_width_array(Some((&empty_cmap, &HashMap::new())), None),
+        fallback
+    );
+    let invalid_gid_cmap = CmapSubtable {
+        mappings: HashMap::from([(65, u16::MAX)]),
+        ..empty_cmap
+    };
+    let empty_widths = parsed.get_glyph_widths(&invalid_gid_cmap.mappings).unwrap();
+    assert!(writer
+        .generate_width_array(Some((&invalid_gid_cmap, &empty_widths)), None)
+        .is_empty());
+    assert_eq!(
+        PdfWriter::<Vec<u8>>::default_width_from_widths(Some(&empty_widths)),
+        500
+    );
+}

@@ -266,7 +266,7 @@ impl TextContext {
             chars.extend(text.chars());
         } else {
             self.used_characters_by_font
-                .insert(name.to_owned(), text.chars().collect());
+                .insert(name.to_owned(), UsedCharacters::from_text(text));
         }
     }
 
@@ -363,7 +363,7 @@ impl TextContext {
 
         // Set font
         self.operations.push(Op::SetFont {
-            name: self.current_font.pdf_name(),
+            font: self.current_font.clone(),
             size: self.font_size,
         });
 

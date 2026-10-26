@@ -1,0 +1,4 @@
+{
+  "src/writer/pdf_writer/mod.rs": "2a0b76a8ceac1f36d898436bc40563663288681acc1b581bc9365d4d8084a7e3",
+  "tests/issue_822_font_allocations_test.rs": "c4d1db88c6e0e3b9f9f248c4788de117ddbedc47b7e8bf81adc46ba63efce68f"
+}

@@ -1,0 +1,14 @@
+{
+  "test-pdfs/SourceHanSansSC-Regular.otf": {
+    "bytes": 16529832,
+    "sha256": "f1d8611151880c6c336aabeac4640ef434fa13cbfbf1ffe82d0a71b2a5637256"
+  },
+  "oxidize-pdf-core/tests/fixtures/text_contracts/fonts/SourceSans3-Regular.ttf": {
+    "bytes": 431196,
+    "sha256": "4644c81b86ec9caaa76b634889968ed3c4f4f52f054855933acc7c2b21e53b0f"
+  },
+  "oxidize-pdf-core/tests/fixtures/writer_resources/WriterCjkTest-Regular.otf": {
+    "bytes": 312272,
+    "sha256": "1113ddc22a9526854d95d1942ee6adc5767436049583f3b9b5edf9ef1552666b"
+  }
+}

@@ -1,0 +1,163 @@
+--- a/oxidize-pdf-core/src/writer/pdf_writer/mod.rs
++++ b/oxidize-pdf-core/src/writer/pdf_writer/mod.rs
+@@ -2,7 +2,7 @@
+ use crate::error::{PdfError, Result};
+ use crate::objects::{Dictionary, Object, ObjectId};
+ use crate::text::fonts::embedding::CjkFontType;
+-use crate::text::fonts::truetype::CmapSubtable;
++use crate::text::fonts::truetype::{CmapSubtable, TrueTypeFont};
+ use crate::writer::{ObjectStreamConfig, ObjectStreamWriter, XRefStreamWriter};
+ use chrono::{DateTime, Utc};
+ use std::collections::HashMap;
+@@ -1577,14 +1577,22 @@
+ 
+         cid_font.set("FontDescriptor", Object::Reference(descriptor_id));
+ 
+-        // Calculate a better default width based on font metrics
+-        let default_width = self.calculate_default_width(font);
++        // Both width calculations use original glyph IDs, not subset IDs.
++        // Keep the parsed data local so it is released before writing the maps.
++        let (default_width, w_array) = {
++            let parsed = TrueTypeFont::parse(font.data.clone()).ok();
++            let cmaps = parsed.as_ref().and_then(|font| font.parse_cmap().ok());
++            let metrics = parsed.as_ref().zip(
++                cmaps
++                    .as_deref()
++                    .and_then(CmapSubtable::select_best_or_first),
++            );
++            (
++                Self::default_width_from_metrics(metrics),
++                self.generate_width_array(metrics, subset_glyph_mapping.as_ref()),
++            )
++        };
+         cid_font.set("DW", Object::Integer(default_width));
+-
+-        // Generate proper width array from font metrics
+-        // IMPORTANT: Use the ORIGINAL font for width calculations, not the subset
+-        // But pass the subset mapping to know which characters we're using
+-        let w_array = self.generate_width_array(font, default_width, subset_glyph_mapping.as_ref());
+         cid_font.set("W", Object::Array(w_array));
+ 
+         // CIDToGIDMap - Only required for CIDFontType2 (TrueType)
+@@ -1870,82 +1878,56 @@
+         Ok(font_id)
+     }
+ 
+-    /// Calculate default width based on common characters
++    /// Calculate default width based on common characters.
+     fn calculate_default_width(&self, font: &crate::fonts::Font) -> i64 {
+-        use crate::text::fonts::truetype::TrueTypeFont;
+-
+-        // Try to calculate from actual font metrics
+-        if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
+-            if let Ok(cmap_tables) = tt_font.parse_cmap() {
+-                if let Some(cmap) = CmapSubtable::select_best_or_first(&cmap_tables) {
+-                    if let Ok(widths) = tt_font.get_glyph_widths(&cmap.mappings) {
+-                        // NOTE: get_glyph_widths already returns widths in PDF units (1000 per em)
+-
+-                        // Calculate average width of common Latin characters
+-                        let common_chars =
+-                            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
+-                        let mut total_width = 0;
+-                        let mut count = 0;
+-
+-                        for ch in common_chars.chars() {
+-                            let unicode = ch as u32;
+-                            if let Some(&pdf_width) = widths.get(&unicode) {
+-                                total_width += pdf_width as i64;
+-                                count += 1;
+-                            }
+-                        }
+-
+-                        if count > 0 {
+-                            return total_width / count;
+-                        }
++        let parsed = TrueTypeFont::parse(font.data.clone()).ok();
++        let cmaps = parsed.as_ref().and_then(|font| font.parse_cmap().ok());
++        Self::default_width_from_metrics(
++            parsed.as_ref().zip(
++                cmaps
++                    .as_deref()
++                    .and_then(CmapSubtable::select_best_or_first),
++            ),
++        )
++    }
++
++    fn default_width_from_metrics(metrics: Option<(&TrueTypeFont, &CmapSubtable)>) -> i64 {
++        if let Some((font, cmap)) = metrics {
++            if let Ok(widths) = font.get_glyph_widths(&cmap.mappings) {
++                let common_chars =
++                    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
++                let mut total_width = 0;
++                let mut count = 0;
++                for ch in common_chars.chars() {
++                    if let Some(&pdf_width) = widths.get(&(ch as u32)) {
++                        total_width += pdf_width as i64;
++                        count += 1;
+                     }
+                 }
+-            }
+-        }
+-
+-        // Fallback default if we can't calculate
++                if count > 0 {
++                    return total_width / count;
++                }
++            }
++        }
+         500
+     }
+ 
+-    /// Generate width array for CID font
++    /// Generate width array for CID font.
+     fn generate_width_array(
+         &self,
+-        font: &crate::fonts::Font,
+-        _default_width: i64,
++        metrics: Option<(&TrueTypeFont, &CmapSubtable)>,
+         subset_mapping: Option<&HashMap<u32, u16>>,
+     ) -> Vec<Object> {
+-        use crate::text::fonts::truetype::TrueTypeFont;
+-
+         let mut w_array = Vec::new();
+-
+-        // Try to get actual glyph widths from the font
+-        if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
+-            // IMPORTANT: Always use ORIGINAL mappings for width calculation
+-            // The subset_mapping has NEW GlyphIDs which don't correspond to the right glyphs
+-            // in the original font's width table
+-            let char_to_glyph = {
+-                // Parse cmap to get original mappings
+-                if let Ok(cmap_tables) = tt_font.parse_cmap() {
+-                    if let Some(cmap) = CmapSubtable::select_best_or_first(&cmap_tables) {
+-                        // If we have subset_mapping, filter to only include used characters
+-                        if let Some(subset_map) = subset_mapping {
+-                            let mut filtered = HashMap::new();
+-                            for unicode in subset_map.keys() {
+-                                // Get the ORIGINAL GlyphID for this Unicode
+-                                if let Some(&orig_glyph) = cmap.mappings.get(unicode) {
+-                                    filtered.insert(*unicode, orig_glyph);
+-                                }
+-                            }
+-                            filtered
+-                        } else {
+-                            cmap.mappings.clone()
+-                        }
+-                    } else {
+-                        HashMap::new()
+-                    }
+-                } else {
+-                    HashMap::new()
+-                }
++        if let Some((tt_font, cmap)) = metrics {
++            // Subset keys select characters; widths still use original glyph IDs.
++            let char_to_glyph = if let Some(subset_map) = subset_mapping {
++                subset_map
++                    .keys()
++                    .filter_map(|unicode| cmap.mappings.get(unicode).map(|gid| (*unicode, *gid)))
++                    .collect()
++            } else {
++                cmap.mappings.clone()
+             };
+ 
+             if !char_to_glyph.is_empty() {

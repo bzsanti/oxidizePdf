@@ -1,0 +1,40 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 97 | Tests: 3 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...unicode-review/tests/issue_822_font_allocations_test.rs        3     97
+
+--- Worst Offenders ---
+  standard_font_writes_allocate_text_buffers_without_repeated_font_names (/tmp/oxidize-822-unicode-review/tests/issue_822_font_allocations_test.rs:87) - Score: 90
+    i Test 'standard_font_writes_allocate_text_buffers_without_repeated_font_names' uses .unwrap() which silently discards error information
+    - Test 'standard_font_writes_allocate_text_buffers_without_repeated_font_names' has low assert-to-setup ratio (15%): 3 asserts vs 17 setup lines
+  repeated_text_does_not_reserve_a_character_set_for_every_occurrence (/tmp/oxidize-822-unicode-review/tests/issue_822_font_allocations_test.rs:46) - Score: 100
+    i Test 'repeated_text_does_not_reserve_a_character_set_for_every_occurrence' uses .unwrap() which silently discards error information
+  serializing_a_cjk_font_does_not_clone_the_original_for_widths (/tmp/oxidize-822-unicode-review/tests/issue_822_font_allocations_test.rs:64) - Score: 100
+    i Test 'serializing_a_cjk_font_does_not_clone_the_original_for_widths' uses .unwrap() which silently discards error information
+
+--- Details ---
+/tmp/oxidize-822-unicode-review/tests/issue_822_font_allocations_test.rs:
+  repeated_text_does_not_reserve_a_character_set_for_every_occurrence (line 46) - Score: 100
+    i Test 'repeated_text_does_not_reserve_a_character_set_for_every_occurrence' uses .unwrap() which silently discards error information
+  serializing_a_cjk_font_does_not_clone_the_original_for_widths (line 64) - Score: 100
+    i Test 'serializing_a_cjk_font_does_not_clone_the_original_for_widths' uses .unwrap() which silently discards error information
+  standard_font_writes_allocate_text_buffers_without_repeated_font_names (line 87) - Score: 90
+    i Test 'standard_font_writes_allocate_text_buffers_without_repeated_font_names' uses .unwrap() which silently discards error information
+    - Test 'standard_font_writes_allocate_text_buffers_without_repeated_font_names' has low assert-to-setup ratio (15%): 3 asserts vs 17 setup lines
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+--- Unsafe Usages (4) ---
+  /tmp/oxidize-822-unicode-review/tests/issue_822_font_allocations_test.rs:28 — fn alloc
+  /tmp/oxidize-822-unicode-review/tests/issue_822_font_allocations_test.rs:32 — fn alloc_zeroed
+  /tmp/oxidize-822-unicode-review/tests/issue_822_font_allocations_test.rs:36 — fn realloc
+  /tmp/oxidize-822-unicode-review/tests/issue_822_font_allocations_test.rs:40 — fn dealloc
+

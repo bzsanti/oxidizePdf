@@ -1,0 +1,240 @@
+[
+  {
+    "sha256": "91188975f9822ae66cea47a5bf2df90f5ea3ededd8dd7dd8c2ca288aae787ff0",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-7-2-t18-pass-a.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "660c7ed1735d6afa9c6bebafa071e2836ad8177175d5005c87aebab3fdac52c2",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t11-pass-a.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "d8e467960ac570ce55f8be11a0ef670bf76c164ce1ba46455e903d6e2c426eb2",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-4-2-t03-pass-e.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "87d502dd2f8dcd5bc7f90fbc42882776480e22667d0c67a1e2b355894723e0bb",
+    "path": "test-corpus/t1-spec/pdfjs/issue7855.pdf",
+    "tiers": [
+      "t1-spec"
+    ]
+  },
+  {
+    "sha256": "699924a2ba0472d31147aecb25eebe4b5b771f9108bdaa3212c72b5e70da4666",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-10-t03-fail-f.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "0a463e47091693e19f75cf8ea086507efa21cfb2a165889fec7b7ec2093ba703",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-7-2-t14-pass-l.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "e57a19d576e117530b70420d94f89131e237a4a83a3450467e6aba4d01b458f2",
+    "path": "test-corpus/t1-spec/verapdf/isartor-6-2-8-t02-fail-c.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "2743af49ec65e14f3646aa204e320fdce6351fdb15447561b54456749f0c9471",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t06-fail-e.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "6f7855a995ddc405691f9e357e1a0c1770b14e0dee5d8e27f6289808e04c742a",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_source2.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "eb070a1d458c5c6d3cefa0d0bee69a27f6056d1649294166de27cdb511a08a5b",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-7-2-t13-pass-j.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "0dc997836f20ee7069f95002b1b38a186d88d7d86eb5c8e8512ecc8d90e98a65",
+    "path": "test-corpus/t1-spec/verapdf/7.9-t01-pass-a.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "97ff9483e6441f975b752cffd78f98ddccbf528294ad981727d3d713afc066dd",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-2-t02-pass-d.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "76a42584e2a02ed9e0bfad8c55135964b8c75280a75def548c2a61f707d69de2",
+    "path": "test-corpus/t2-realworld/govdocs-subset0/000899.pdf",
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "77c969f113ba68b596796062e26748af4a548d561669df23c9269af36536887e",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_simple.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "e7a1a8d1dd44544a6e58437b49604fe728f8cccaca6dfdc61224e6b451348701",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001381.pdf",
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "df9ab28a64f63896152934fb13e9ee1322cbd94874206b91107344ffff7aaa6c",
+    "path": "test-corpus/t3-stress/safedocs/safedocs_CompactedPDFSyntaxTest.pdf",
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "9a13c068e45f714de8e4461914b16ee0259ece218ebeef246ffdf9feca5a173f",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-7-2-t12-fail-a.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "0254a68e51963427ac42c6ba4e8bd59a11ed8a0054469d8c08847cd1d3aec071",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-1-12-t02-pass-j.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "03273035246a5998805ee73345470a9ead16a017e30aa0367435f685257b6d2d",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001487.pdf",
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "57f872ea39e87b1cbb147b6b539b0c086054ac2d7ca3f56e04279720f9cb70e6",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t06-fail-g.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "dedf292e406fecdea5763ca20fe4452015ee44a6cde3fe31d2da925dbf9a8a98",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-1-12-t03-pass-a.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "a0a28a72e1ea8c6e0fafb3843ec388413632910c78ae52cb2b3a6aaa640eb6c5",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_zlib-9.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "3da1e80219c3171df5c67de8668ee4b16b21c2608e4b35ef60ad7573e4fffbec",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-1-4-t02-fail-a.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "569549370acb7fb48d1e3bf1a532a6f88a828ec804a38bee7c170aa636e1b561",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t14-fail-u.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "77ddd56540762a0c21173d964d44c5ab4d70dd3e893c2c24bd403c798aa00c02",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_T02-05-01_001_Stream-BT-missing.pdf",
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "59e893264a514507f853d51ac4f30146175955301853bc8e73e3c7d31c8574eb",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-1-12-t02-fail-b.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "97788ea2fa5893528db707e7d1e8b0bae08e6fcc044a64033323381bf074ed5a",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-3-t02-fail-b.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "fa657aff19eb954904ab75283cee0b11702216dfbff8aadada3895850ec63389",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001040.pdf",
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "5cfb3e593fddd7ab34e6c6e00f5062aaaa57dc08cdd6f30e43f8e22994c9e6be",
+    "path": "test-corpus/t1-spec/verapdf/7.2-t27-fail-b.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "573af46ffd2e0257b8d8b52f4b5d41a44fc0ebe53ab0e6edc5c07b8b24827673",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_lin4.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "b47fc82b437d9e7090e8d111a1c345b1912ef930ba4363c21d7eff982b6c737b",
+    "path": "test-corpus/t1-spec/pdfjs/bug1953099.pdf",
+    "tiers": [
+      "t1-spec"
+    ]
+  }
+]

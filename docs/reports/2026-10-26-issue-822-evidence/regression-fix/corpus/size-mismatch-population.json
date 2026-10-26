@@ -1,0 +1,174 @@
+[
+  {
+    "sha256": "08355e696f274c08c0e285d6ff4921dd4cf52215d6ef1cdfdb3b41438e1b458a",
+    "path": "test-corpus/t1-spec/pdfjs/issue15818.pdf",
+    "tiers": [
+      "t1-spec"
+    ]
+  },
+  {
+    "sha256": "7aeaac982d208171e68d9d7ec2d6aaa284f46239479d278cb821b5407910c4b2",
+    "path": "test-corpus/t1-spec/pdfjs/issue14802.pdf",
+    "tiers": [
+      "t1-spec"
+    ]
+  },
+  {
+    "sha256": "c779e714b10a5d7dcb2ab0f3124d883f3beb468c7094a12371cf2ec664f64967",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_T02-05-01_013_stream-keyword-missing.pdf",
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "471880e5232589c9937b3caf128d96e8cb3fdb44692a35f08878337c0d497179",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001063.pdf",
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "da6e366f5001f6bc2ac140175ecf14067067965868ef9e18cf88b4c76eb02997",
+    "path": "test-corpus/t5-quality/verapdf-corpus/PDF_A-4_6.3 Annotations_6.3.3 Annotation appearances_veraPDF test suite 6-3-3-t01-fail-h.pdf",
+    "tiers": [
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "6e473ddb95c5e7db9e5b26642aec14a75482db2b506217a0614a89e1dfd68548",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t15-fail-e.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "49c40096793b1a889d3ee658fa49cf225711d159762ea6e00414d750a8829c09",
+    "path": "test-corpus/t3-stress/pdfium/pdfium_annotation_underline.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "0e89e0f329bb0ed4c9485e0235ea0b79001159762574f4d44b08a7d768682b3d",
+    "path": "test-corpus/t3-stress/pdfium/pdfium_FRC_43_8.2.2_C_empty.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "adf05ce77e042876696f25bf0c1123b886a36282337df2c596a155161d5dbf17",
+    "path": "test-corpus/t1-spec/verapdf/7.2-t29-fail-m.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "2c63ba87b393b09ffbc36d6c1bae2c405e4368207fed8cda9f39278f041545dc",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_bad20.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "a66b8d08cef7d13a3396553e604612203399c2f6f3ba3b9aaec86e3f1526fde6",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t03-pass-b.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "291f5067367b73157378c00489494a6b483e50ab2d89a406983e2574f2913839",
+    "path": "test-corpus/t1-spec/verapdf/7.2-t43-fail-c.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "b47e4b321e8547a517875b3e1675a319d98b89fa30c1614397eaeed9b8e7f00d",
+    "path": "test-corpus/t3-stress/pdfium/pdfium_lines.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "44766efdbd191d267422169ee8859963a5801fb5f4fe19944549af0cca227989",
+    "path": "test-corpus/t3-stress/pdfium/pdfium_2_11_stamp3.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "f18ce5d3c7d2b4fb7fc6418ceaae36ab1955b403badb6bc19639e6047cd13ec8",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-2-t04-fail-d.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "a4f2d86d17011f458d81c8ed53a3a2bbf19fc4423a1a4a234a75a7e636cf9e01",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_need-appearances-more2.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "af32b5108c3ca51fed12bb272568c2e9df1b27b1ff9bf8d7d11c4cdc1a1ec961",
+    "path": "test-corpus/t3-stress/pdfium/pdfium_image_ico.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "232f7d2f259407192e73934623722747951ea95ee30295d2b828f4c9e710bdba",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t07-fail-b.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "eb1f91dc89ac6aa1fe26c011ac94e53ebb35e0f66f04936bf3ca7217260970f9",
+    "path": "test-corpus/t1-spec/verapdf/isartor-6-7-9-t01-fail-a.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "f1de98e85fb4ad22635e973cb50f58087a182d24297a3989284124ef38f06ed8",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t04-fail-t.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "9d93066b2f49e4e0de08c28cdad5f73e350806171931a29c1630a5fe50ee0200",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_json-changed-form-fields-and-annotations.pdf",
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "2c86c9cde4e623f2ba3c94d6b9e067298b25adeebd96ab704cbe908c22de5c8b",
+    "path": "test-corpus/t1-spec/pdfjs/bitmap-symbol-textrefine-customat.pdf",
+    "tiers": [
+      "t1-spec",
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "78b6272b490b4b398472b802ac5f3f60d82ba08c482369eb746deccd38b205ce",
+    "path": "test-corpus/t1-spec/verapdf/8.2.1-t01-fail-a.pdf",
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  }
+]

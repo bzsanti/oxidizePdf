@@ -1,0 +1,6 @@
+{
+  "src/text/used_characters.rs": "d8afde4fe43f17a02fc0df7ded110591a14c1e706f7fda9aad55a0833edb5fc8",
+  "src/text/mod.rs": "9f6148b4171a9f4a7ffa1adc4c61de9c2b5198e280765170c4cd095096acb943",
+  "src/graphics/mod.rs": "c1e09517e726eda9b49dc31656af1dc030217ee950c43919b2a309d9e3e78946",
+  "tests/issue_822_font_allocations_test.rs": "f0b18c1d0683e4310e1bb2b2d5f4b02a2871683474c914570a27a21959bc4814"
+}

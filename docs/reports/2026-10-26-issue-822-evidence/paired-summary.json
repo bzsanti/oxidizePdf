@@ -1,0 +1,68 @@
+[
+  {
+    "mode": "default",
+    "pages": 1,
+    "control_us": 212.33869949999996,
+    "candidate_us": 214.0799075,
+    "median_paired_reduction_percent": -0.3115223978673809,
+    "bootstrap_95_percent": [
+      -5.593096079997151,
+      6.786828361988334
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 10,
+    "control_us": 748.4944260000001,
+    "candidate_us": 737.79748,
+    "median_paired_reduction_percent": -1.833816713713532,
+    "bootstrap_95_percent": [
+      -13.953634427271444,
+      4.512824252729475
+    ]
+  },
+  {
+    "mode": "default",
+    "pages": 100,
+    "control_us": 5540.4772,
+    "candidate_us": 5459.374066666667,
+    "median_paired_reduction_percent": 4.159475891878461,
+    "bootstrap_95_percent": [
+      1.6064842885508135,
+      6.234402901143444
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 1,
+    "control_us": 59.7329365,
+    "candidate_us": 58.8319675,
+    "median_paired_reduction_percent": 3.967975169225679,
+    "bootstrap_95_percent": [
+      -0.6188844860585796,
+      6.6213919905516505
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 10,
+    "control_us": 292.50030000000004,
+    "candidate_us": 301.004772,
+    "median_paired_reduction_percent": -1.2192347293104144,
+    "bootstrap_95_percent": [
+      -9.126705248567578,
+      7.636807748965385
+    ]
+  },
+  {
+    "mode": "raw",
+    "pages": 100,
+    "control_us": 2442.0057833333335,
+    "candidate_us": 2305.73225,
+    "median_paired_reduction_percent": 6.703059117549476,
+    "bootstrap_95_percent": [
+      1.534893301233753,
+      10.514426832689892
+    ]
+  }
+]

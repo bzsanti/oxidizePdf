@@ -1,0 +1,68 @@
+[
+  {
+    "kind": "latin",
+    "phase": "full",
+    "control_us": 568.934805,
+    "candidate_us": 598.24604,
+    "median_paired_reduction_percent": -3.160496439230698,
+    "bootstrap_95_percent": [
+      -7.30335569451781,
+      1.3814890077398112
+    ]
+  },
+  {
+    "kind": "latin",
+    "phase": "serialize",
+    "control_us": 408.6844775,
+    "candidate_us": 409.2638925,
+    "median_paired_reduction_percent": -1.4491485072899435,
+    "bootstrap_95_percent": [
+      -11.2217525865693,
+      0.5493394314405264
+    ]
+  },
+  {
+    "kind": "ttf",
+    "phase": "full",
+    "control_us": 3129.1822666666667,
+    "candidate_us": 3117.932425,
+    "median_paired_reduction_percent": -0.38976970912398823,
+    "bootstrap_95_percent": [
+      -9.037122215405113,
+      9.186189945497315
+    ]
+  },
+  {
+    "kind": "ttf",
+    "phase": "serialize",
+    "control_us": 2103.5825416666667,
+    "candidate_us": 2344.214808333333,
+    "median_paired_reduction_percent": -12.669231398390636,
+    "bootstrap_95_percent": [
+      -16.046770860421034,
+      -6.705978819598057
+    ]
+  },
+  {
+    "kind": "cjk",
+    "phase": "full",
+    "control_us": 53205.3802,
+    "candidate_us": 54339.092699999994,
+    "median_paired_reduction_percent": -0.08017727874282121,
+    "bootstrap_95_percent": [
+      -11.908849891970807,
+      4.712889109111417
+    ]
+  },
+  {
+    "kind": "cjk",
+    "phase": "serialize",
+    "control_us": 42337.706699999995,
+    "candidate_us": 40899.163,
+    "median_paired_reduction_percent": 5.010726360518802,
+    "bootstrap_95_percent": [
+      2.202042075115962,
+      6.809125994047493
+    ]
+  }
+]

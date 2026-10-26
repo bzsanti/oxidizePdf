@@ -1,0 +1,7 @@
+{
+  "src/graphics/mod.rs": "aa373da9c115966fc04f4fd22df5472d747147ab9a34b314cde3a35712770c41",
+  "src/graphics/ops.rs": "b566efea9f3117b6076f9b35f7b0ea839c076b25038f2511e7849e663d8d4f5d",
+  "src/text/flow.rs": "8bcccf7bea66d5d8771d19f90808becbc4289ee88c76912eac3f023c8823e3ec",
+  "src/text/mod.rs": "1cebbf53b3d001f9d941b68cfdb4b6f1294d7703de5e0d69ac822f3235ee83d2",
+  "tests/issue_822_font_allocations_test.rs": "a2c460630bf16c7415fa6dc31432468ccaf5644b356571061810b8b95d373a87"
+}

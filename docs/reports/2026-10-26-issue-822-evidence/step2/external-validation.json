@@ -1,0 +1,30 @@
+[
+  {
+    "kind": "ascii",
+    "characters": 80,
+    "qpdf_exit": 0,
+    "page_content_identical": true,
+    "content_sha256": "88d7f4c9f769772164ef5dabcf2f449597e328dac6372025ee062ffc70b82302"
+  },
+  {
+    "kind": "ascii",
+    "characters": 16384,
+    "qpdf_exit": 0,
+    "page_content_identical": true,
+    "content_sha256": "02c9b7bb05bca5c74b1f6b3e25f695abe5f7fed40b500276e85a9590e55843d2"
+  },
+  {
+    "kind": "latin",
+    "characters": 16384,
+    "qpdf_exit": 0,
+    "page_content_identical": true,
+    "content_sha256": "97839f5bdccbd09c33d81d39c515226a19518b3a18623461bc8d7eb466282454"
+  },
+  {
+    "kind": "unique",
+    "characters": 4096,
+    "qpdf_exit": 0,
+    "page_content_identical": true,
+    "content_sha256": "d3da9a45e50335c7e6943f1a774fb7b46ae97b003cee1d11d1e11ef3492fd5e9"
+  }
+]
