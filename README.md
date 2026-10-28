@@ -22,7 +22,7 @@ workflows or continue into structure-aware chunks for AI/RAG applications.
 
 ```toml
 [dependencies]
-oxidize-pdf = "5.5.2"
+oxidize-pdf = "5.5.3"
 ```
 
 Structure-aware RAG remains a first-class workflow:
@@ -68,7 +68,7 @@ See the [protocol, environment and comparison](docs/reports/2026-09-28-generatio
 
 ```toml
 [dependencies]
-oxidize-pdf = "5.5.2"
+oxidize-pdf = "5.5.3"
 ```
 
 ### RAG Pipeline

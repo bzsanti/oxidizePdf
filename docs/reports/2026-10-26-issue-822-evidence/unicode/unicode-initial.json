@@ -1,0 +1,35 @@
+[
+  {
+    "allocations": null,
+    "compression": true,
+    "documents": 2,
+    "elapsed_ns": 1191803,
+    "font_bytes": 0,
+    "kind": "latin",
+    "pages": 10,
+    "pdf_bytes": 8824,
+    "phase": "full"
+  },
+  {
+    "allocations": null,
+    "compression": true,
+    "documents": 2,
+    "elapsed_ns": 6186094,
+    "font_bytes": 431196,
+    "kind": "ttf",
+    "pages": 10,
+    "pdf_bytes": 13090,
+    "phase": "full"
+  },
+  {
+    "allocations": null,
+    "compression": true,
+    "documents": 2,
+    "elapsed_ns": 117508092,
+    "font_bytes": 16529832,
+    "kind": "cjk",
+    "pages": 10,
+    "pdf_bytes": 10447,
+    "phase": "full"
+  }
+]

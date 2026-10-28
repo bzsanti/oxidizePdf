@@ -1,0 +1,106 @@
+[
+  {
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2301.00234.pdf",
+    "mode": "rewrite",
+    "candidate_vs_two_controls": {
+      "median_reduction_percent": 1.271203400801113,
+      "bootstrap95": [
+        -1.679222611262432,
+        2.5325072108397517
+      ],
+      "bootstrap98_75": [
+        -1.679222611262432,
+        2.5325072108397517
+      ]
+    },
+    "identical_control_pair": {
+      "median_reduction_percent": 0.5318072962510301,
+      "bootstrap95": [
+        -1.5719171387707398,
+        1.8670673713800823
+      ],
+      "bootstrap98_75": [
+        -1.5719171387707398,
+        3.1383727500565506
+      ]
+    }
+  },
+  {
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2306.02707.pdf",
+    "mode": "rewrite",
+    "candidate_vs_two_controls": {
+      "median_reduction_percent": 2.50641926955647,
+      "bootstrap95": [
+        -0.8704373747498328,
+        5.170147666948067
+      ],
+      "bootstrap98_75": [
+        -0.8704373747498328,
+        5.170147666948067
+      ]
+    },
+    "identical_control_pair": {
+      "median_reduction_percent": -0.0030587365448697668,
+      "bootstrap95": [
+        -3.571322303214952,
+        3.5726473751195975
+      ],
+      "bootstrap98_75": [
+        -3.571322303214952,
+        4.93414184104739
+      ]
+    }
+  },
+  {
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t09-fail-l.pdf",
+    "mode": "ttf",
+    "candidate_vs_two_controls": {
+      "median_reduction_percent": -0.09456105342156018,
+      "bootstrap95": [
+        -16.55918821900537,
+        3.4111214068937246
+      ],
+      "bootstrap98_75": [
+        -16.55918821900537,
+        3.4111214068937246
+      ]
+    },
+    "identical_control_pair": {
+      "median_reduction_percent": 2.660033686407126,
+      "bootstrap95": [
+        -2.9709202965099824,
+        10.865675473459246
+      ],
+      "bootstrap98_75": [
+        -2.9709202965099824,
+        10.865675473459246
+      ]
+    }
+  },
+  {
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-11-7-3-t01-pass-e.pdf",
+    "mode": "cjk",
+    "candidate_vs_two_controls": {
+      "median_reduction_percent": -23.980018163618098,
+      "bootstrap95": [
+        -29.026094468376208,
+        -21.705661301278866
+      ],
+      "bootstrap98_75": [
+        -29.026094468376208,
+        -21.705661301278866
+      ]
+    },
+    "identical_control_pair": {
+      "median_reduction_percent": -1.9749922414501242,
+      "bootstrap95": [
+        -6.387331486571579,
+        3.4868680476502822
+      ],
+      "bootstrap98_75": [
+        -6.387331486571579,
+        3.4868680476502822
+      ]
+    }
+  }
+]

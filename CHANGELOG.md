@@ -8,6 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.5.3] - 2026-10-28
+
+### Fixed
+
+- Keep indexed page access consistent with the recovered page count. An empty
+  page tree no longer exposes unrelated page objects through a fallback scan
+  (#709).
+
+- Preserve OCR Unicode text and measured word geometry, fit searchable text
+  to its region across page rotations, and follow painted image placements.
+  Unsupported visibility/compositing states fail explicitly (#708).
+
+### Performance
+
+- Avoid allocating standard font names per text operation and limit initial
+  character-set reservation for ASCII input (#822).
+- Remove a redundant Unicode font clone and share parsed font metrics between
+  default and per-character widths, including repeated serialization (#822).
+
+### Development
+
+- Add official OmniDocBench table/layout evaluation adapters and recorded
+  results; formula recognition remains unsupported (#581).
+- Partition optimized CI validation and cache compiled dependencies (#818).
+
+See [5.5.3 compatibility and performance notes](docs/releases/5.5.3.md) for
+measurement scope, OCR limitations and validation evidence.
+
 ## [5.5.2] - 2026-10-24
 
 ### Added

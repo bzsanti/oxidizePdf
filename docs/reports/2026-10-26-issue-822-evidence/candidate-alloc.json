@@ -1,0 +1,80 @@
+[
+  {
+    "allocations": {
+      "calls": 4080,
+      "requested_bytes": 998120
+    },
+    "bytes": 6799,
+    "construction_ns": 0,
+    "documents": 10,
+    "elapsed_ns": 712930,
+    "mode": "raw",
+    "pages": 1,
+    "serialization_ns": 0
+  },
+  {
+    "allocations": {
+      "calls": 13350,
+      "requested_bytes": 7207880
+    },
+    "bytes": 27315,
+    "construction_ns": 0,
+    "documents": 10,
+    "elapsed_ns": 3458826,
+    "mode": "raw",
+    "pages": 10,
+    "serialization_ns": 0
+  },
+  {
+    "allocations": {
+      "calls": 104430,
+      "requested_bytes": 64980820
+    },
+    "bytes": 232380,
+    "construction_ns": 0,
+    "documents": 10,
+    "elapsed_ns": 37061740,
+    "mode": "raw",
+    "pages": 100,
+    "serialization_ns": 0
+  },
+  {
+    "allocations": {
+      "calls": 4210,
+      "requested_bytes": 4521980
+    },
+    "bytes": 5015,
+    "construction_ns": 0,
+    "documents": 10,
+    "elapsed_ns": 2445514,
+    "mode": "default",
+    "pages": 1,
+    "serialization_ns": 0
+  },
+  {
+    "allocations": {
+      "calls": 14010,
+      "requested_bytes": 10389460
+    },
+    "bytes": 9483,
+    "construction_ns": 0,
+    "documents": 10,
+    "elapsed_ns": 8678104,
+    "mode": "default",
+    "pages": 10,
+    "serialization_ns": 0
+  },
+  {
+    "allocations": {
+      "calls": 110480,
+      "requested_bytes": 64369310
+    },
+    "bytes": 53903,
+    "construction_ns": 0,
+    "documents": 10,
+    "elapsed_ns": 69811128,
+    "mode": "default",
+    "pages": 100,
+    "serialization_ns": 0
+  }
+]

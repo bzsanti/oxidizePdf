@@ -1,0 +1,11 @@
+{
+  "input": "16384 A followed by e acute",
+  "iterations_per_sample": 1000,
+  "blocks": 20,
+  "scope": "collection constructor only, not PDF generation",
+  "median_paired_reduction_percent": -1.0003819539801118,
+  "bootstrap_95_percent": [
+    -2.818002053856128,
+    -0.016180342603350217
+  ]
+}

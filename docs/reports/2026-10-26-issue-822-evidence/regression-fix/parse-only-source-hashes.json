@@ -1,0 +1,5 @@
+{
+  "oxidize-pdf-core/src/writer/pdf_writer/mod.rs": "4d16b918e3ee3b1bc5dfcd46d561ba181ea096500faaa1638512b9d87e68be79",
+  "oxidize-pdf-core/src/writer/pdf_writer/tests.rs": "1f3c20005268d9ff15be46ee22c507971bfd7c47cea2b910731661d5859aa382",
+  "oxidize-pdf-core/tests/issue_822_font_allocations_test.rs": "a61e959122ca8329a3d66938c641e9834ed992e8d5602a9ed14434a9c2f45782"
+}

@@ -1,0 +1,1602 @@
+[
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 101399924,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 0,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 99842818,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 50899394,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 0,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 50711425,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 45924030,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 37618684,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 0,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 23373581,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 0,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20215444,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 0,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 50707057,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 1,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 49861803,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 1,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 38439644,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 1,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 38267649,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 1,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 96389510,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 1,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 109675059,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 1,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 23604247,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 1,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19192888,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 1,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 96475161,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 2,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 105609343,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 2,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 46100964,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 2,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 46667124,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 2,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 18826477,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 2,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 21456683,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 2,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 41806224,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 2,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 44140697,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 2,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 102603736,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 3,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 101436489,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 3,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 48832451,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 3,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 44451225,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 3,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19091518,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 3,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19536442,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 3,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39389082,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 3,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 40266015,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 3,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 98092325,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 4,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 96477795,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 4,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39583562,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 4,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 40288097,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 4,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 18915481,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 4,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19250916,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 4,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 47299380,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 4,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 44634065,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 4,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 113971140,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 5,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 98357540,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 5,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20484069,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 5,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19224698,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 5,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39383421,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 5,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 38557434,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 5,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 44246725,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 5,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 43818024,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 5,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 38393524,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 6,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 38905181,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 6,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 44282651,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 6,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 46399693,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 6,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 97781806,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 6,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 96317050,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 6,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 18365727,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 6,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20588332,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 6,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 42140229,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 7,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39190380,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 7,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 110732873,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 7,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 108276370,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 7,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 52989480,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 7,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 46585817,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 7,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20641859,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 7,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20997482,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 7,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 53091185,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 8,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 51388344,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 8,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20118866,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 8,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 27163989,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 8,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 49834023,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 8,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 44871552,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 8,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 125465043,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 8,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 104312481,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 8,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 98107827,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 9,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 94714086,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 9,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 40972741,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 9,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 45876885,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 9,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 24822206,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 9,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 24103165,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 9,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 47344691,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 9,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 43237182,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 9,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 38147224,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 10,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 38490096,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 10,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 50110201,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 10,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 50706522,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 10,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19843374,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 10,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19486995,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 10,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 96614593,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 10,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 101633675,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 10,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 18554856,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 11,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 24275713,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 11,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 100392009,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 11,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 99902587,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 11,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 45244942,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 11,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 45682616,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 11,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 50664249,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 11,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 50862242,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 11,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 50143823,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 12,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 50448179,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 12,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 45250183,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 12,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 48011244,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 12,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 95168592,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 12,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 111692328,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 12,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 22895565,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 12,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 22112270,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 12,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 47675496,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 13,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 51241100,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 13,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 109415425,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 13,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 104544794,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 13,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39883547,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 13,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39649181,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 13,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20452727,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 13,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20316296,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 13,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 18797610,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 14,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19639974,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 14,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 98259582,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 14,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 98777009,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 14,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 44452624,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 14,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 44805401,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 14,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39853122,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 14,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39790012,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 14,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 98426258,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 15,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 99092994,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 15,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39491935,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 15,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 40626653,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 15,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 18612099,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 15,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19540221,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 15,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 44837817,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 15,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 46781855,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 15,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 31705725,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 16,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19391978,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 16,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 116900528,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 16,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 99501838,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 16,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 40118579,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 16,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 39230978,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 16,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 44575892,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 16,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 43868884,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 16,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 38273265,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 17,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 38918286,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 17,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 95292492,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 17,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 94495232,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 17,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20173886,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 17,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 18620068,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 17,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 43803705,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 17,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 47038737,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 17,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 18760206,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 18,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 19184385,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 18,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 41519203,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 18,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 43229411,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 18,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 113842245,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 18,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 106411637,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 18,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 48280063,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 18,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 53130449,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 18,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 43552145,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 19,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 80,
+    "documents": 1000,
+    "elapsed_ns": 45432862,
+    "kind": "ascii",
+    "pdf_bytes": 4877,
+    "block": 19,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 22046904,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 19,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 20781831,
+    "kind": "ascii",
+    "pdf_bytes": 21184,
+    "block": 19,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 109486319,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 19,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 16384,
+    "documents": 200,
+    "elapsed_ns": 116691563,
+    "kind": "latin",
+    "pdf_bytes": 70336,
+    "block": 19,
+    "variant": "candidate"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 51740134,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 19,
+    "variant": "control"
+  },
+  {
+    "allocations": null,
+    "characters": 4096,
+    "documents": 200,
+    "elapsed_ns": 49218507,
+    "kind": "unique",
+    "pdf_bytes": 8894,
+    "block": 19,
+    "variant": "candidate"
+  }
+]

@@ -413,6 +413,8 @@ impl<R: Read + Seek> PdfDocument<R> {
     ///
     /// Pages are cached after first access. This method handles page tree
     /// traversal and property inheritance automatically.
+    /// Access uses the same recovered page index as [`Self::page_count`];
+    /// skipped or unreachable objects do not become accessible pages.
     ///
     /// # Arguments
     ///
@@ -459,34 +461,21 @@ impl<R: Read + Seek> PdfDocument<R> {
             }
         }
 
-        // Try flat index O(1) lookup first
-        let (page_ref, has_flat_index) = {
-            let pt_borrow = self.page_tree.borrow();
-            let pt = pt_borrow.as_ref();
-            let ref_val = pt.and_then(|pt| pt.get_page_ref(index));
-            let has_index = pt.map_or(false, |pt| pt.page_count() > 0 || ref_val.is_some());
-            (ref_val, has_index)
+        // Initialization builds the index even when no usable pages are found.
+        let page_ref = {
+            let page_tree = self.page_tree.borrow();
+            let tree = page_tree.as_ref();
+            tree.and_then(|tree| tree.get_page_ref(index))
+                .ok_or_else(|| ParseError::SyntaxError {
+                    position: 0,
+                    message: format!(
+                        "Page index {} out of range (document has {} pages)",
+                        index,
+                        tree.map_or(0, PageTree::page_count)
+                    ),
+                })?
         };
-
-        let page = if let Some(page_ref) = page_ref {
-            self.load_page_by_ref(page_ref)?
-        } else if has_flat_index {
-            // Flat index exists but page not found — index is out of range
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: format!(
-                    "Page index {} out of range (document has {} pages)",
-                    index,
-                    self.page_tree
-                        .borrow()
-                        .as_ref()
-                        .map_or(0, |pt| pt.page_count())
-                ),
-            });
-        } else {
-            // No flat index available — fallback to tree traversal
-            self.load_page_at_index(index)?
-        };
+        let page = self.load_page_by_ref(page_ref)?;
 
         // Cache it
         if let Some(page_tree) = self.page_tree.borrow_mut().as_mut() {
@@ -494,17 +483,6 @@ impl<R: Read + Seek> PdfDocument<R> {
         }
 
         Ok(page)
-    }
-
-    /// Load a specific page by index (legacy tree traversal fallback)
-    fn load_page_at_index(&self, index: u32) -> ParseResult<ParsedPage> {
-        // Get the pages root
-        let pages_dict = self.load_pages_dict()?;
-
-        // Navigate to the specific page
-        let page_info = self.find_page_in_tree(&pages_dict, index, 0, None)?;
-
-        Ok(page_info)
     }
 
     /// Load a page directly by its object reference (O(1) via flat index).
@@ -560,233 +538,6 @@ impl<R: Read + Seek> PdfDocument<R> {
         }
 
         inherited
-    }
-
-    /// Find a page in the page tree (iterative implementation for stack safety)
-    fn find_page_in_tree(
-        &self,
-        root_node: &PdfDictionary,
-        target_index: u32,
-        initial_current_index: u32,
-        initial_inherited: Option<&PdfDictionary>,
-    ) -> ParseResult<ParsedPage> {
-        // Work item for the traversal queue
-        #[derive(Debug)]
-        struct WorkItem {
-            node_dict: PdfDictionary,
-            node_ref: Option<(u32, u16)>,
-            current_index: u32,
-            inherited: Option<PdfDictionary>,
-        }
-
-        // Initialize work queue with root node
-        let mut work_queue = Vec::new();
-        work_queue.push(WorkItem {
-            node_dict: root_node.clone(),
-            node_ref: None,
-            current_index: initial_current_index,
-            inherited: initial_inherited.cloned(),
-        });
-
-        // Iterative traversal
-        while let Some(work_item) = work_queue.pop() {
-            let WorkItem {
-                node_dict,
-                node_ref,
-                current_index,
-                inherited,
-            } = work_item;
-
-            let node_type = node_dict
-                .get_type()
-                .or_else(|| {
-                    // If Type is missing, try to infer from content
-                    if node_dict.contains_key("Kids") && node_dict.contains_key("Count") {
-                        Some("Pages")
-                    } else if node_dict.contains_key("Contents")
-                        || node_dict.contains_key("MediaBox")
-                    {
-                        Some("Page")
-                    } else {
-                        None
-                    }
-                })
-                .or_else(|| {
-                    // If Type is missing, try to infer from structure
-                    if node_dict.contains_key("Kids") {
-                        Some("Pages")
-                    } else if node_dict.contains_key("Contents")
-                        || (node_dict.contains_key("MediaBox") && !node_dict.contains_key("Kids"))
-                    {
-                        Some("Page")
-                    } else {
-                        None
-                    }
-                })
-                .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
-
-            match node_type {
-                "Pages" => {
-                    // This is a page tree node
-                    let kids = node_dict
-                        .get("Kids")
-                        .and_then(|obj| obj.as_array())
-                        .or_else(|| {
-                            // If Kids is missing, use empty array
-                            tracing::debug!(
-                                "Warning: Missing Kids array in Pages node, using empty array"
-                            );
-                            Some(&super::objects::EMPTY_PDF_ARRAY)
-                        })
-                        .ok_or_else(|| ParseError::MissingKey("Kids".to_string()))?;
-
-                    // Merge inherited attributes
-                    let mut merged_inherited = inherited.unwrap_or_else(PdfDictionary::new);
-
-                    // Inheritable attributes
-                    for key in ["Resources", "MediaBox", "CropBox", "Rotate"] {
-                        if let Some(value) = node_dict.get(key) {
-                            if !merged_inherited.contains_key(key) {
-                                merged_inherited.insert(key.to_string(), value.clone());
-                            }
-                        }
-                    }
-
-                    // Process kids in reverse order (since we're using a stack/Vec::pop())
-                    // This ensures we process them in the correct order
-                    let mut current_idx = current_index;
-                    let mut pending_kids = Vec::new();
-
-                    for kid_ref in &kids.0 {
-                        let kid_ref =
-                            kid_ref
-                                .as_reference()
-                                .ok_or_else(|| ParseError::SyntaxError {
-                                    position: 0,
-                                    message: "Kids array must contain references".to_string(),
-                                })?;
-
-                        // Get the kid object
-                        let kid_obj = self.get_object(kid_ref.0, kid_ref.1)?;
-                        let kid_dict = match kid_obj.as_dict() {
-                            Some(dict) => dict,
-                            None => {
-                                // Skip invalid page tree nodes in lenient mode
-                                tracing::debug!(
-                                    "Warning: Page tree node {} {} R is not a dictionary, skipping",
-                                    kid_ref.0,
-                                    kid_ref.1
-                                );
-                                current_idx += 1; // Count as processed but skip
-                                continue;
-                            }
-                        };
-
-                        let kid_type = kid_dict
-                            .get_type()
-                            .or_else(|| {
-                                // If Type is missing, try to infer from content
-                                if kid_dict.contains_key("Kids") && kid_dict.contains_key("Count") {
-                                    Some("Pages")
-                                } else if kid_dict.contains_key("Contents")
-                                    || kid_dict.contains_key("MediaBox")
-                                {
-                                    Some("Page")
-                                } else {
-                                    None
-                                }
-                            })
-                            .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
-
-                        let count = if kid_type == "Pages" {
-                            kid_dict
-                                .get("Count")
-                                .and_then(|obj| obj.as_integer())
-                                .unwrap_or(1) // Fallback to 1 if Count is missing (defensive)
-                                as u32
-                        } else {
-                            1
-                        };
-
-                        if target_index < current_idx + count {
-                            // Found the right subtree/page
-                            if kid_type == "Page" {
-                                // This is the page we want
-                                return self.create_parsed_page(
-                                    kid_ref,
-                                    kid_dict,
-                                    Some(&merged_inherited),
-                                );
-                            } else {
-                                // Need to traverse this subtree - add to queue
-                                pending_kids.push(WorkItem {
-                                    node_dict: kid_dict.clone(),
-                                    node_ref: Some(kid_ref),
-                                    current_index: current_idx,
-                                    inherited: Some(merged_inherited.clone()),
-                                });
-                                break; // Found our target subtree, no need to continue
-                            }
-                        }
-
-                        current_idx += count;
-                    }
-
-                    // Add pending kids to work queue in reverse order for correct processing
-                    work_queue.extend(pending_kids.into_iter().rev());
-                }
-                "Page" => {
-                    // This is a page object
-                    if target_index != current_index {
-                        return Err(ParseError::SyntaxError {
-                            position: 0,
-                            message: "Page index mismatch".to_string(),
-                        });
-                    }
-
-                    // We need the reference for creating the parsed page
-                    if let Some(page_ref) = node_ref {
-                        return self.create_parsed_page(page_ref, &node_dict, inherited.as_ref());
-                    } else {
-                        return Err(ParseError::SyntaxError {
-                            position: 0,
-                            message: "Direct page object without reference".to_string(),
-                        });
-                    }
-                }
-                _ => {
-                    return Err(ParseError::SyntaxError {
-                        position: 0,
-                        message: format!("Invalid page tree node type: {node_type}"),
-                    });
-                }
-            }
-        }
-
-        // Try fallback: search for the page by direct object scanning
-        tracing::debug!(
-            "Warning: Page {} not found in tree, attempting direct lookup",
-            target_index
-        );
-
-        // Scan for Page objects directly (try first few hundred objects)
-        for obj_num in 1..500 {
-            if let Ok(obj) = self.reader.borrow_mut().get_object(obj_num, 0) {
-                if let Some(dict) = obj.as_dict() {
-                    if let Some(obj_type) = dict.get("Type").and_then(|t| t.as_name()) {
-                        if obj_type.0 == "Page" {
-                            // Found a page, check if it's the right index (approximate)
-                            return self.create_parsed_page((obj_num, 0), dict, None);
-                        }
-                    }
-                }
-            }
-        }
-
-        Err(ParseError::SyntaxError {
-            position: 0,
-            message: format!("Page {} not found in tree or document", target_index),
-        })
     }
 
     /// Create a ParsedPage from a page dictionary

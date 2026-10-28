@@ -1,0 +1,46 @@
+[
+  {
+    "allocations": {
+      "calls": 6981,
+      "requested_bytes": 1197092
+    },
+    "characters": 80,
+    "documents": 20,
+    "elapsed_ns": 896887,
+    "kind": "ascii",
+    "pdf_bytes": 4877
+  },
+  {
+    "allocations": {
+      "calls": 6981,
+      "requested_bytes": 4930172
+    },
+    "characters": 16384,
+    "documents": 20,
+    "elapsed_ns": 2032252,
+    "kind": "ascii",
+    "pdf_bytes": 21184
+  },
+  {
+    "allocations": {
+      "calls": 7001,
+      "requested_bytes": 14105212
+    },
+    "characters": 16384,
+    "documents": 20,
+    "elapsed_ns": 12764847,
+    "kind": "latin",
+    "pdf_bytes": 70336
+  },
+  {
+    "allocations": {
+      "calls": 7001,
+      "requested_bytes": 3783532
+    },
+    "characters": 4096,
+    "documents": 20,
+    "elapsed_ns": 5145724,
+    "kind": "unique",
+    "pdf_bytes": 8894
+  }
+]

@@ -129,7 +129,7 @@ pub(crate) enum Op {
     /// `ET`
     EndText,
     /// `/name size Tf`
-    SetFont { name: String, size: f64 },
+    SetFont { font: crate::text::Font, size: f64 },
     /// `tx ty Td`
     SetTextPosition { x: f64, y: f64 },
     /// `(escaped) Tj` — the bytes inside the parens are pre-escaped per
@@ -369,10 +369,10 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
             // ── text ──
             Op::BeginText => out.extend_from_slice(b"BT\n"),
             Op::EndText => out.extend_from_slice(b"ET\n"),
-            Op::SetFont { name, size } => {
+            Op::SetFont { font, size } => {
                 let size = finite_or_zero(*size);
                 out.push(b'/');
-                out.extend_from_slice(name.as_bytes());
+                out.extend_from_slice(font.pdf_name_ref().as_bytes());
                 out.push(b' ');
                 if !write_integral(out, size) {
                     write!(out, "{size}").expect("writing to Vec<u8> never fails");
@@ -598,6 +598,44 @@ mod tests {
 mod numeric_performance_tests {
     use super::*;
 
+    #[test]
+    fn font_operators_preserve_standard_and_owned_custom_names() {
+        use crate::text::Font;
+        let cases = [
+            (Font::Helvetica, "Helvetica"),
+            (Font::HelveticaBold, "Helvetica-Bold"),
+            (Font::HelveticaOblique, "Helvetica-Oblique"),
+            (Font::HelveticaBoldOblique, "Helvetica-BoldOblique"),
+            (Font::TimesRoman, "Times-Roman"),
+            (Font::TimesBold, "Times-Bold"),
+            (Font::TimesItalic, "Times-Italic"),
+            (Font::TimesBoldItalic, "Times-BoldItalic"),
+            (Font::Courier, "Courier"),
+            (Font::CourierBold, "Courier-Bold"),
+            (Font::CourierOblique, "Courier-Oblique"),
+            (Font::CourierBoldOblique, "Courier-BoldOblique"),
+            (Font::Symbol, "Symbol"),
+            (Font::ZapfDingbats, "ZapfDingbats"),
+            (Font::Custom("ScopedFont".into()), "ScopedFont"),
+            (Font::Custom("Helvetica".into()), "Helvetica"),
+        ];
+        for (mut font, expected_name) in cases {
+            let op = Op::SetFont {
+                font: font.clone(),
+                size: 12.5,
+            };
+            if let Font::Custom(name) = &mut font {
+                name.clear();
+            }
+            let mut bytes = Vec::new();
+            serialize_ops(&mut bytes, &[op.clone(), op]);
+            assert_eq!(
+                bytes,
+                format!("/{expected_name} 12.5 Tf\n/{expected_name} 12.5 Tf\n").as_bytes()
+            );
+        }
+    }
+
     fn assert_legacy_bytes(value: f64) {
         let finite = if value.is_finite() { value } else { 0.0 };
         let mut actual = Vec::new();
@@ -641,7 +679,7 @@ mod numeric_performance_tests {
                 Op::SetLeading(value),
                 Op::SetTextRise(value),
                 Op::SetFont {
-                    name: "F1".into(),
+                    font: crate::text::Font::Custom("F1".into()),
                     size: value,
                 },
                 Op::SetFillColorComponents(vec![value]),

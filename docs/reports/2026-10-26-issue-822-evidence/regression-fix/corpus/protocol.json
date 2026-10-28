@@ -1,0 +1,20 @@
+{
+  "control": "113ccb9db217c635a1ee507a159b8132051db9eb",
+  "candidate": "95d05ba0 plus regression-fix source-hashes.json",
+  "full_sweep": "all unique contents in test-corpus T0-T6, both revisions, rewrite, one serialization per process",
+  "sample": "12 size quantiles per tier, content deduplicated before measurements",
+  "sample_modes": [
+    "rewrite",
+    "ttf",
+    "cjk"
+  ],
+  "limits": {
+    "process_address_space_bytes": 2147483648,
+    "per_process_timeout_seconds": 15
+  },
+  "serial_runs_per_sample_process": 3,
+  "sample_paired_blocks": 5,
+  "timing": "preparation excluded; authoring and serialization reported separately; first serialization separated from warm",
+  "memory": "VmHWM whole process, includes input/import and libraries, not writer-only",
+  "purpose": "repeat frozen corpus after shared font parse correction"
+}

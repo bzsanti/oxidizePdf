@@ -105,8 +105,8 @@ fn test_absurd_count_10b_capped() {
     }
 }
 
-/// poppler-85140-0.pdf: /Count=213,804,087 but only 1 real page.
-/// Same fix as above — flat index counts actual leaves.
+/// poppler-85140-0.pdf declares /Count=213,804,087, but its page header has
+/// an overflowing generation. No usable leaf exists and indexed access must fail.
 #[test]
 fn test_absurd_count_214m_capped() {
     let path = "tests/fixtures/poppler-85140-0.pdf";
@@ -124,11 +124,8 @@ fn test_absurd_count_214m_capped() {
         elapsed
     );
 
-    assert!(
-        count <= 10,
-        "Expected ≤10 actual pages, got {} (absurd /Count not capped)",
-        count
-    );
+    assert_eq!(count, 0, "the malformed generation must not invent a page");
+    assert!(doc.get_page(0).is_err(), "an empty index must deny access");
 
     // extract_text() should also complete quickly
     let start = Instant::now();
@@ -141,13 +138,7 @@ fn test_absurd_count_214m_capped() {
         elapsed
     );
 
-    if let Ok(pages) = &result {
-        assert!(
-            pages.len() <= 10,
-            "extract_text() returned {} pages for a 1-page PDF",
-            pages.len()
-        );
-    }
+    assert!(result.unwrap().is_empty());
 }
 
 /// isartor-6-1-12-t01-fail-a.pdf: 4MB, 10,000 pages.

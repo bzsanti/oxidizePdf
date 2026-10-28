@@ -1,0 +1,19 @@
+{
+  "base": "a8a51f1d21cb7d6059d708d69e970d838524a9d1",
+  "base_ci": {
+    "success": 34,
+    "skipped": 4
+  },
+  "memory_red_bytes": 58445,
+  "memory_red_exit": 101,
+  "input_bytes": 16384,
+  "library_passed": 6737,
+  "library_failed": 0,
+  "library_ignored": 3,
+  "integration_passed": 9,
+  "kripteia_exit": 0,
+  "candidate": "ASCII-only reservation cap; non-ASCII previous capacity preserved",
+  "clippy": "exit0, library + allocation test, -D warnings",
+  "format": "exit0",
+  "memory_green": "PASS: cumulative allocation below 32768 bytes for 16384 repeated A"
+}

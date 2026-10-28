@@ -1,0 +1,7 @@
+{
+  "head": "95d05ba0",
+  "observed_font_sized_requests": 4,
+  "budget": 3,
+  "exit_code": 101,
+  "test": "serializing_a_cjk_font_reuses_the_original_parse_for_widths"
+}

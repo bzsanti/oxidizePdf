@@ -1,0 +1,983 @@
+[
+  {
+    "sha256": "0555000d7e6e7911cc3de3f647673de985702835281a048241ed79abc41166cc",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_pypdf_aes256_user.pdf",
+    "bytes": 1222,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_pypdf_aes256_user.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "6afdf477217f24da9fcd995f3729ab03c373e3c130be6d1c710d884f3d3a31cc",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_pypdf_aes256_empty.pdf",
+    "bytes": 1222,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_pypdf_aes256_empty.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "e113e268b491a2b77a1e93458468776ebc03f69f5d64804cbc3f6c9ce1fc59c2",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_pypdf_aes256_spanish.pdf",
+    "bytes": 1222,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_pypdf_aes256_spanish.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "734cfdbce07aa3f96d187237a831ff6d599fa58a69a547f69ec85f453bae70a1",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_rc4_40bit.pdf",
+    "bytes": 928876,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_rc4_40bit.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "1945c6a7de4295278ddda5110c95d865d530b7d0a192839798a670720efa30fe",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_rc4_128bit.pdf",
+    "bytes": 928878,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_rc4_128bit.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "7bdcf95b334e01907229a9542c467da36988c3542058d5b3b300d298038beaa0",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_restricted.pdf",
+    "bytes": 928881,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_restricted.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "3824bed2140754ec51a5b9fa699364b3a7e921c20eebcf5fc41d55161775cccb",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_aes256_r6_unicode.pdf",
+    "bytes": 931237,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_aes256_r6_unicode.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "3eeff6af54796374b78b76773241535f30d0d83720a07cd3106277da6851b622",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_aes256_r5_unicode.pdf",
+    "bytes": 931237,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_aes256_r5_unicode.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "488739e4ff7403c1a3d1eee6b1d106768942f89cb2697e34e38920ac7206adc5",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_aes256_r6_empty_user.pdf",
+    "bytes": 931237,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_aes256_r6_empty_user.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "72a808a2c7796eebfe792384d21044c1876992ee4327b16f4f9c443ab05e1fe6",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_aes256_r6_user.pdf",
+    "bytes": 931237,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_aes256_r6_user.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "968e4966ec9380b58dcef4d1ca37e0a5be40938866417e60b072f10c54e509ff",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_aes256_r5_empty_user.pdf",
+    "bytes": 931237,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_aes256_r5_empty_user.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "9df3e030e2b596b70fa62a58a53772ce7eeab78abfd9ed7b72005a88e037601c",
+    "path": "test-corpus/t0-regression/fixtures/encrypted_aes256_r5_user.pdf",
+    "bytes": 931237,
+    "aliases": [
+      "test-corpus/t0-regression/fixtures/encrypted_aes256_r5_user.pdf"
+    ],
+    "tiers": [
+      "t0-regression"
+    ]
+  },
+  {
+    "sha256": "50e91d373aa313537972519c65b050f8d4d5bd996859fa20756432c2029c3ff6",
+    "path": "test-corpus/t1-spec/pdfjs/bug1020226.pdf",
+    "bytes": 184,
+    "aliases": [
+      "test-corpus/t1-spec/pdfjs/bug1020226.pdf"
+    ],
+    "tiers": [
+      "t1-spec"
+    ]
+  },
+  {
+    "sha256": "be44847415681762371e9d8ecf372c9756130feac73c9de5641311498bd01739",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-4-3-t03-fail-d.pdf",
+    "bytes": 2938,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-4-3-t03-fail-d.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-2b_6.2 Graphics_6.2.4.3 Uncalibrated -Device colour spaces_veraPDF test suite 6-2-4-3-t03-fail-d.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "380f5791070b224bb2c63a57124d3a4198c3abf8f078e8d2d1933b3ea8df101d",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-7-2-t07-pass-b.pdf",
+    "bytes": 3501,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-7-2-t07-pass-b.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-1b_6.7 Metadata_6.7.2 Properties_veraPDF test suite 6-7-2-t07-pass-b.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "1e96c347aacf1231021b8e9d3fb8e17ee0688f7c2f0eb514d30296907613a454",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t16-fail-x.pdf",
+    "bytes": 3556,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t16-fail-x.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-2b_6.6 Metadata_6.6.2 Metadata streams_6.6.2.3 Schemas_6.6.2.3.1 General_veraPDF test suite 6-6-2-3-1-t16-fail-x.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "b5d2a97707d90e425ca986b18be72b960bf56633d1b00ec95537131a70fd80c3",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t09-fail-o.pdf",
+    "bytes": 3629,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t09-fail-o.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-2b_6.6 Metadata_6.6.2 Metadata streams_6.6.2.3 Schemas_6.6.2.3.1 General_veraPDF test suite 6-6-2-3-1-t09-fail-o.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "a07edce338d90b14fb418da84860ed34afd6028558661c9d8c9aa29fe198d19f",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-4-3-t02-fail-g.pdf",
+    "bytes": 3928,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-4-3-t02-fail-g.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-2b_6.2 Graphics_6.2.4.3 Uncalibrated -Device colour spaces_veraPDF test suite 6-2-4-3-t02-fail-g.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "60786ce1057cbbaebea46eee282bf9bb1d3e4db7fc31bd65bc2c02a367737efc",
+    "path": "test-corpus/t1-spec/verapdf/isartor-6-7-8-t02-fail-f.pdf",
+    "bytes": 6805,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/isartor-6-7-8-t02-fail-f.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/Isartor test files_PDFA-1b_6.7 Metadata_6.7.8 Extension schemas_isartor-6-7-8-t02-fail-f.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "33e2e410c8bcbfffe2380c67a3bd830c82fcc8fdc57840057953a0f8c5bea85c",
+    "path": "test-corpus/t1-spec/verapdf/isartor-6-5-2-t01-fail-c.pdf",
+    "bytes": 11371,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/isartor-6-5-2-t01-fail-c.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/Isartor test files_PDFA-1b_6.5 Annotations_6.5.2 Annotation types_isartor-6-5-2-t01-fail-c.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "12cc65e222f51d7885ef5c5901bf38bd331315c9f599611939620fcdb4a4bbc4",
+    "path": "test-corpus/t1-spec/pdfjs/issue1045.pdf",
+    "bytes": 22741,
+    "aliases": [
+      "test-corpus/t1-spec/pdfjs/issue1045.pdf"
+    ],
+    "tiers": [
+      "t1-spec"
+    ]
+  },
+  {
+    "sha256": "e6f9653d2223a4f9475372e99cd88719bb7042477792b35dba03f78877f4439f",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-1-10-t01-fail-d.pdf",
+    "bytes": 41718,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-1-10-t01-fail-d.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-1b_6.1 File structure_6.1.10 Filters_veraPDF test suite 6-1-10-t01-fail-d.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "0bb40b97949abd4acd6ab9662b890ebe527f87e7daf9b8dee0dc3a4e24fb673d",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-3-2-t01-fail-a.pdf",
+    "bytes": 91817,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-3-2-t01-fail-a.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-4e_6.3 Annotations_6.3.2 Annotation dictionaries_veraPDF test suite 6-3-2-t01-fail-a.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "9f3af0b42fc395be1fcd80499bf7cb6214488a512dbbd0b4ae604cd03ea6518c",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-3-1-t01-pass-d.pdf",
+    "bytes": 10873240,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-3-1-t01-pass-d.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-4e_6.3 Annotations_6.3.1 Annotation types_veraPDF test suite 6-3-1-t01-pass-d.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "b4380011d8c1e4ab6ccca1380ce81f9b9144ea8d06e9814210d63a959b74e6e3",
+    "path": "test-corpus/t2-realworld/govdocs-subset0/000021.pdf",
+    "bytes": 4521,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset0/000021.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "b156e9a6c16d7228e798f0c0df0f2ff6c619c6da1ca39d2cb85f8cdf515d0baf",
+    "path": "test-corpus/t2-realworld/govdocs-subset0/000810.pdf",
+    "bytes": 30055,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset0/000810.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "cc245ca682df7d12d94033aa516fbe73f766ec665eac13dcf487b58588750955",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001799.pdf",
+    "bytes": 47863,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset1/001799.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "78e0cada8fea42d35bcb835c06b57c3d00273a09caf286fe7294f28d17466622",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001117.pdf",
+    "bytes": 66059,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset1/001117.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "242c30c27cf1b8b44891d12c4ef81369b05403e3c47714d99379e44748e7b7d7",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001039.pdf",
+    "bytes": 109749,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset1/001039.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "563d825153fda6b54243fefd81c45fbe26802d7a81cd6447f04cb7782b58e2e4",
+    "path": "test-corpus/t2-realworld/govdocs-subset0/000363.pdf",
+    "bytes": 178805,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset0/000363.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "d605a34ce8ec8361e4d8e2206f933d15289cc386adab30eb43278604b2c355b9",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001306.pdf",
+    "bytes": 261059,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset1/001306.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "63980ecfaee8ef366e2acf46279981762b7e48e3b536ea8d6d72a08cc761d446",
+    "path": "test-corpus/t2-realworld/govdocs-subset0/000582.pdf",
+    "bytes": 379591,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset0/000582.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "6452bacf4e4e2a0b09e69f165bfb10494ea9225373d09bb921108c863c70a35b",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001927.pdf",
+    "bytes": 531529,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset1/001927.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "e6b8ea7afbcfcf82e27438f6dd39bcd30397214d0ebb9d0ac27c784055e27435",
+    "path": "test-corpus/t2-realworld/govdocs-subset1/001503.pdf",
+    "bytes": 865031,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset1/001503.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "f075afba278eaa8a1adb3bc28dd721d8e511e2464b4da64c33b0da9ba7044024",
+    "path": "test-corpus/t2-realworld/govdocs-subset0/000269.pdf",
+    "bytes": 2066037,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset0/000269.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "3443c4a45a8b57b0f77c467555c5f050668476e0e0f8e08ff4e52c4b87663482",
+    "path": "test-corpus/t2-realworld/govdocs-subset0/000187.pdf",
+    "bytes": 9122928,
+    "aliases": [
+      "test-corpus/t2-realworld/govdocs-subset0/000187.pdf"
+    ],
+    "tiers": [
+      "t2-realworld"
+    ]
+  },
+  {
+    "sha256": "fe19778cf1ce280658154f2b9c01ffbccd825a23460141dcf3794e7a2c0eb629",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_bad1.pdf",
+    "bytes": 5,
+    "aliases": [
+      "test-corpus/t3-stress/qpdf/qpdf_bad1.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "07d22200bcdf4f0a54a865409a888adcb09e02be54e956c89116d19dcafbf574",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_bad24.pdf",
+    "bytes": 778,
+    "aliases": [
+      "test-corpus/t3-stress/qpdf/qpdf_bad24.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "b6d9b0b9348e9f4c33ba192a32c913ecc446d212dc3df0108ed732cc399b5482",
+    "path": "test-corpus/t1-spec/pdfjs/bitmap-stripe-single.pdf",
+    "bytes": 1041,
+    "aliases": [
+      "test-corpus/t1-spec/pdfjs/bitmap-stripe-single.pdf",
+      "test-corpus/t3-stress/pdfium/pdfium_bitmap-stripe-single.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "a3f3985d4adcff6f5fbd2df7fad5382f43ac1dd2f4f868cb854a7a067bdeaf86",
+    "path": "test-corpus/t1-spec/pdfjs/bitmap-symbol-textcomposite.pdf",
+    "bytes": 1319,
+    "aliases": [
+      "test-corpus/t1-spec/pdfjs/bitmap-symbol-textcomposite.pdf",
+      "test-corpus/t3-stress/pdfium/pdfium_bitmap-symbol-textcomposite.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "bf6a7a2588f101707f203beb71a1999e8747d449d7548bf04ffa5b606b56b000",
+    "path": "test-corpus/t3-stress/poppler/poppler_stroke-alpha-pattern.pdf",
+    "bytes": 1993,
+    "aliases": [
+      "test-corpus/t3-stress/poppler/poppler_stroke-alpha-pattern.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "51118b0172cd285064068c8957253c3ff90853ed4d6751f54555d96bb3fe833f",
+    "path": "test-corpus/t3-stress/pdfium/pdfium_3_0_cloud.pdf",
+    "bytes": 3229,
+    "aliases": [
+      "test-corpus/t3-stress/pdfium/pdfium_3_0_cloud.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "09a8eeb541f7910ae515ba11ee33ce7975141e246d3983a8e1f6f79b78d6788b",
+    "path": "test-corpus/t3-stress/poppler/poppler_fakebold.pdf",
+    "bytes": 7606,
+    "aliases": [
+      "test-corpus/t3-stress/poppler/poppler_fakebold.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "7189c20048f3144c5b31617c0f0d5bc4b623bee1d721ad1c8b551e4fdb187683",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_remove-metadata.pdf",
+    "bytes": 13495,
+    "aliases": [
+      "test-corpus/t3-stress/qpdf/qpdf_remove-metadata.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "130134c62521d1a29813fa8c2090441c31c7107dee59f96aefc0fc75a2e5d6b2",
+    "path": "test-corpus/t3-stress/pdfium/pdfium_example_016.pdf",
+    "bytes": 25836,
+    "aliases": [
+      "test-corpus/t3-stress/pdfium/pdfium_example_016.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "05e969415b03d9782b0b132f147b86cb42eafddf6176aaf2710334a9cc643c3c",
+    "path": "test-corpus/t3-stress/qpdf/qpdf_digitally-signed.pdf",
+    "bytes": 68846,
+    "aliases": [
+      "test-corpus/t3-stress/qpdf/qpdf_digitally-signed.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "9401a10714fbdb4aa1da6ab457bf58ddd22eb9698b4cfbb4a4c44a700f86de4c",
+    "path": "test-corpus/t3-stress/pdfium/pdfium_Test_NumericField.pdf",
+    "bytes": 515812,
+    "aliases": [
+      "test-corpus/t3-stress/pdfium/pdfium_Test_NumericField.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "599ae4e18df444a4b49314305e626c765df0278e20dd2f7d92badfbea89a5962",
+    "path": "test-corpus/t3-stress/pdfium/pdfium_FRC_8.5_Screen_Fo_JavaScript.pdf",
+    "bytes": 26143189,
+    "aliases": [
+      "test-corpus/t3-stress/pdfium/pdfium_FRC_8.5_Screen_Fo_JavaScript.pdf"
+    ],
+    "tiers": [
+      "t3-stress"
+    ]
+  },
+  {
+    "sha256": "865730100e23fb3ecc232267327cb3a58788f4e2540aa791aa55f4d8d3605f16",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2311.01476.pdf",
+    "bytes": 94637,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2311.01476.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "3137064882b8a6d378573b9627ae823333b57824501692b5b4b34bf7b0bac898",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2303.09446.pdf",
+    "bytes": 545376,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2303.09446.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "06879da435dd312676c94f66f0997735b18fb9d611b795c3d8734822f1091bb3",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2402.13228.pdf",
+    "bytes": 809275,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2402.13228.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "039bccd60a7d49bfda80ce17ea627654736928eee9a7ee75767a38d04a01562f",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2403.04132.pdf",
+    "bytes": 1081950,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2403.04132.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "efd2362be3adc5c2d5c7e729606a6e9f3bb58516f2839aa57c6953e630dc7f16",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2305.08283.pdf",
+    "bytes": 1363474,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2305.08283.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "f4b50e2de151fbf5f0ad9b7b790496152739d9caf10e2dcc7be6bf033ff36ffa",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2306.02707.pdf",
+    "bytes": 1458242,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2306.02707.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "b747069131e44f1f07b8984dc2762ecc0c2e84ddf25af029a0ca3c1476b61a4b",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2401.06121.pdf",
+    "bytes": 1693823,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2401.06121.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "bf512a93b1dc1595c97f08563b5eba0fc95a868d47ec8686525614e43d9acc67",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2307.04964.pdf",
+    "bytes": 2175525,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2307.04964.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "3b5caf58c8448a4714a5b8e3679d5f1a1d3e2ec60e9026d3ff112781a5970da0",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2308.01825.pdf",
+    "bytes": 3155302,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2308.01825.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "9ab5ce1410b4df5d9102caa1d2e7ad64abc0eb229ed60501f313b9482c2475e8",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2301.00234.pdf",
+    "bytes": 5637331,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2301.00234.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "c04339e34ac3f4a8695a74c59e2a0a4f332cfdcb3831a12696d5192cec2ed713",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2404.19756.pdf",
+    "bytes": 12822114,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2404.19756.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "b02c45e2cc34a15bdc3e05c958e2871440ba24da895b3a184a1ce573a4c11bbd",
+    "path": "test-corpus/t4-ai-target/papers/arxiv_2309.10020.pdf",
+    "bytes": 58167919,
+    "aliases": [
+      "test-corpus/t4-ai-target/papers/arxiv_2309.10020.pdf"
+    ],
+    "tiers": [
+      "t4-ai-target"
+    ]
+  },
+  {
+    "sha256": "d3bc6659f3ea525cabf21bb5e212325b26c82aeac758df6fc950b28fb3bacfa7",
+    "path": "test-corpus/t1-spec/verapdf/isartor-6-7-2-t01-fail-a.pdf",
+    "bytes": 2021,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/isartor-6-7-2-t01-fail-a.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/Isartor test files_PDFA-1b_6.7 Metadata_6.7.2 Properties_isartor-6-7-2-t01-fail-a.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "c5d2c380a40ec2ac6f7b7d0fe9751b256b889c6f914baf9fc974f5831d5ccf0e",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-10-t06-fail-b.pdf",
+    "bytes": 3347,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-10-t06-fail-b.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-2b_6.2 Graphics_6.2.10 Transparency_veraPDF test suite 6-2-10-t06-fail-b.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "57ea3cdef27257c0f540dfff3646d19180fad9d0e373a647edc2222d49656a85",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-7-2-t17-pass-l.pdf",
+    "bytes": 3514,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-7-2-t17-pass-l.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-1b_6.7 Metadata_6.7.2 Properties_veraPDF test suite 6-7-2-t17-pass-l.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "ad70f416ae35ffec6b229225efdfcbc6774415639863717f85f27e196a507d59",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t14-fail-d.pdf",
+    "bytes": 3560,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t14-fail-d.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-2b_6.6 Metadata_6.6.2 Metadata streams_6.6.2.3 Schemas_6.6.2.3.1 General_veraPDF test suite 6-6-2-3-1-t14-fail-d.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "dcf793e161f6d1564e348f68dcfca2473fd70c1b985724d5131fcf9d7b6b6704",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-2-t01-fail-a.pdf",
+    "bytes": 3622,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-2-t01-fail-a.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-2b_6.6 Metadata_6.6.2 Metadata streams_6.6.2.3 Schemas_6.6.2.3.2 Extension schemas_veraPDF test suite 6-6-2-3-2-t01-fail-a.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "a013471d617922095f92d6301c2bcc09b7d96204c3b24f0c31495e06464267d7",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t09-fail-l.pdf",
+    "bytes": 3751,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-6-2-3-1-t09-fail-l.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-2b_6.6 Metadata_6.6.2 Metadata streams_6.6.2.3 Schemas_6.6.2.3.1 General_veraPDF test suite 6-6-2-3-1-t09-fail-l.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "9e6fafa9b656242a1d42c1092e215e38a9594c5e988722903e7cb433743f314f",
+    "path": "test-corpus/t1-spec/verapdf/isartor-6-7-8-t02-fail-b.pdf",
+    "bytes": 4780,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/isartor-6-7-8-t02-fail-b.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/Isartor test files_PDFA-1b_6.7 Metadata_6.7.8 Extension schemas_isartor-6-7-8-t02-fail-b.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "0034869527e3e247b83557b2a59d6a56ea0dd337e3721a2aa8a64b091e65d036",
+    "path": "test-corpus/t5-quality/verapdf-corpus/PDF_A-4_6.2 Graphics_6.2.4 Colour spaces_6.2.4.4 Separation and DeviceN colour spaces_veraPDF test suite 6-2-4-4-t01-fail-b.pdf",
+    "bytes": 8785,
+    "aliases": [
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-4_6.2 Graphics_6.2.4 Colour spaces_6.2.4.4 Separation and DeviceN colour spaces_veraPDF test suite 6-2-4-4-t01-fail-b.pdf"
+    ],
+    "tiers": [
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "d2bbcef1b42f4163550baae4782d63a8c862c817150e375d98dc5c28bf89ba81",
+    "path": "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-11-7-3-t01-pass-e.pdf",
+    "bytes": 17060,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/veraPDF test suite 6-2-11-7-3-t01-pass-e.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_A-2a_6.2 Graphics_6.2.11 Fonts_6.2.11.7 Unicode character maps_6.2.11.7.3 Level A conformance_veraPDF test suite 6-2-11-7-3-t01-pass-e.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "4a3bf064f05e9c1e8057fdf556b98b7f6c1c219f32a6d673879a8e8b724e8a20",
+    "path": "test-corpus/t1-spec/verapdf/8.2.5.20-t02-pass-a.pdf",
+    "bytes": 32091,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/8.2.5.20-t02-pass-a.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_UA-2_8.2 Logical structure_8.2.5 Additional requirements for specific structure types_8.2.5.20 Link and Reference_8.2.5.20-t02-pass-a.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "c8b42fad25d225e50f861d1751fcec084fc99b61601f36e7a642addff82e15f1",
+    "path": "test-corpus/t1-spec/verapdf/8.4.5.3.1-t01-pass-d.pdf",
+    "bytes": 63084,
+    "aliases": [
+      "test-corpus/t1-spec/verapdf/8.4.5.3.1-t01-pass-d.pdf",
+      "test-corpus/t5-quality/verapdf-corpus/PDF_UA-2_8.4 Text representation for content_8.4.5 Fonts_8.4.5.3 Composite fonts_8.4.5.3.1 General_8.4.5.3.1-t01-pass-d.pdf"
+    ],
+    "tiers": [
+      "t1-spec",
+      "t5-quality"
+    ]
+  },
+  {
+    "sha256": "14bcd090baf31edba64e9cbd8cdfc15f943344aa72cb3675ad8e91bfcbce03ad",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_minimal_test.pdf",
+    "bytes": 15,
+    "aliases": [
+      "test-corpus/t3-stress/format-corpus/preserve_minimal_test.pdf",
+      "test-corpus/t6-adversarial/malformed/preserve_minimal_test.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "6c18a0051d595bc602b0e3815eab2205606fcac3b0205198a0cbc95a5e9b0d1f",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_T02-02_006_page-tree-no-type.pdf",
+    "bytes": 617,
+    "aliases": [
+      "test-corpus/t3-stress/format-corpus/preserve_T02-02_006_page-tree-no-type.pdf",
+      "test-corpus/t6-adversarial/malformed/preserve_T02-02_006_page-tree-no-type.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "6cdb9f2a0cce45d4e9e0d6077ebd335ce3e5c81dd1fbd5e0a35884cee211a976",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_T02-04-01_002_resources-basefont-wrong-font.pdf",
+    "bytes": 626,
+    "aliases": [
+      "test-corpus/t3-stress/format-corpus/preserve_T02-04-01_002_resources-basefont-wrong-font.pdf",
+      "test-corpus/t6-adversarial/malformed/preserve_T02-04-01_002_resources-basefont-wrong-font.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "cdf9860f87d963eae97be3a6cb4111313952076aaab1a184946d4558e68f15ba",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_T02-05-01_002_Stream-ET-missing.pdf",
+    "bytes": 628,
+    "aliases": [
+      "test-corpus/t3-stress/format-corpus/preserve_T02-05-01_002_Stream-ET-missing.pdf",
+      "test-corpus/t6-adversarial/malformed/preserve_T02-05-01_002_Stream-ET-missing.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "c6cefb37763759222071bbc5d3d5a1e6f4433bfad5407059a6c5ff9dc050e24c",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_T02-03_002_page-object-wrong-type.pdf",
+    "bytes": 629,
+    "aliases": [
+      "test-corpus/t3-stress/format-corpus/preserve_T02-03_002_page-object-wrong-type.pdf",
+      "test-corpus/t6-adversarial/malformed/preserve_T02-03_002_page-object-wrong-type.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "0e773fe6b17b8dfe10c1ed420abb174860bef484e2749bdc9c8fb425abf32c48",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_T01_005_header-invalid-syntax-replace-char.pdf",
+    "bytes": 631,
+    "aliases": [
+      "test-corpus/t3-stress/format-corpus/preserve_T01_005_header-invalid-syntax-replace-char.pdf",
+      "test-corpus/t6-adversarial/malformed/preserve_T01_005_header-invalid-syntax-replace-char.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "1c9160605825135af51864dde81f82645bca5d2d65e7bf415abd9fe02082d3bc",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_T04_005_EOF-followed-by-junk-data.pdf",
+    "bytes": 640,
+    "aliases": [
+      "test-corpus/t3-stress/format-corpus/preserve_T04_005_EOF-followed-by-junk-data.pdf",
+      "test-corpus/t6-adversarial/malformed/preserve_T04_005_EOF-followed-by-junk-data.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "92434006539d935fd64d2300bb14ca05d3d053fd8d4fb3d5e33674f391bc5754",
+    "path": "test-corpus/t3-stress/safedocs/safedocs_FontinsideType3insideType3.pdf",
+    "bytes": 1959,
+    "aliases": [
+      "test-corpus/t3-stress/safedocs/safedocs_FontinsideType3insideType3.pdf",
+      "test-corpus/t6-adversarial/malformed/safedocs_FontinsideType3insideType3.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "b5ff24d38f77b2875251a82d6e323d6024dc441c8b22817efbd4feb84c5aaa9d",
+    "path": "test-corpus/t3-stress/safedocs/safedocs_unicode-test-U2F874-wrong.pdf",
+    "bytes": 5273,
+    "aliases": [
+      "test-corpus/t3-stress/safedocs/safedocs_unicode-test-U2F874-wrong.pdf",
+      "test-corpus/t6-adversarial/malformed/safedocs_unicode-test-U2F874-wrong.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "04af7aced559ca6b9fbf7a466526a94f3b76cf75ed6af81f4f963892a9bcacfa",
+    "path": "test-corpus/t3-stress/safedocs/safedocs_utf16LE-test.pdf",
+    "bytes": 14417,
+    "aliases": [
+      "test-corpus/t3-stress/safedocs/safedocs_utf16LE-test.pdf",
+      "test-corpus/t6-adversarial/malformed/safedocs_utf16LE-test.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "dd55fec2e48a0f43266146e1d31155480695d31a28d0e4311bbd9472f9d992b3",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_encryption_nocopy.pdf",
+    "bytes": 70599,
+    "aliases": [
+      "test-corpus/t3-stress/format-corpus/preserve_encryption_nocopy.pdf",
+      "test-corpus/t6-adversarial/malformed/preserve_encryption_nocopy.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  },
+  {
+    "sha256": "0c5a2726b6821fe94a3ab7da92ab2655e41bf90fff9af91f55a48ce6308c061f",
+    "path": "test-corpus/t3-stress/format-corpus/preserve_PDF-Sample-Document-Fully-Featured-Layout_Redacted.pdf",
+    "bytes": 22724407,
+    "aliases": [
+      "test-corpus/t3-stress/format-corpus/preserve_PDF-Sample-Document-Fully-Featured-Layout_Redacted.pdf",
+      "test-corpus/t6-adversarial/malformed/preserve_PDF-Sample-Document-Fully-Featured-Layout_Redacted.pdf"
+    ],
+    "tiers": [
+      "t3-stress",
+      "t6-adversarial"
+    ]
+  }
+]

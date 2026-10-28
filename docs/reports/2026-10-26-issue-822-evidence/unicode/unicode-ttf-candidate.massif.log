@@ -1,0 +1,6 @@
+==8== Massif, a heap profiler
+==8== Copyright (C) 2003-2017, and GNU GPL'd, by Nicholas Nethercote
+==8== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==8== Command: /tmp/oxidize-perf822/unicode-candidate ttf 10 1 /tmp/oxidize-perf822/massif-unicode.pdf serialize default
+==8== 
+==8== 

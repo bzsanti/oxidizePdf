@@ -1,0 +1,30 @@
+{
+  "elapsed_ns_same_control": {
+    "median_reduction_percent": 0.11974245377948667,
+    "bootstrap_95_percent": [
+      -5.293281862992738,
+      4.580873921446793
+    ]
+  },
+  "elapsed_ns_candidate": {
+    "median_reduction_percent": 0.2596939131121856,
+    "bootstrap_95_percent": [
+      -4.373841240571186,
+      10.102360601367499
+    ]
+  },
+  "cpu_seconds_same_control": {
+    "median_reduction_percent": 0.14177262668447765,
+    "bootstrap_95_percent": [
+      -5.290836129358345,
+      4.55619476165785
+    ]
+  },
+  "cpu_seconds_candidate": {
+    "median_reduction_percent": 0.2597373986828966,
+    "bootstrap_95_percent": [
+      -6.902143627364043,
+      10.04993118369175
+    ]
+  }
+}

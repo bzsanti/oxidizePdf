@@ -7,6 +7,24 @@ pub(crate) struct UsedCharacters {
     all: HashSet<char>,
 }
 impl UsedCharacters {
+    pub(crate) fn from_text(text: &str) -> Self {
+        let chars = text.chars();
+        let initial_capacity = chars.size_hint().0;
+        // Only ASCII has a fixed repertoire of 128 characters. Preserve the
+        // Unicode reservation to avoid extra rehashing for high-cardinality text.
+        let initial_capacity = if text.is_ascii() {
+            initial_capacity.min(128)
+        } else {
+            initial_capacity
+        };
+        let mut result = Self {
+            ascii: 0,
+            all: HashSet::with_capacity(initial_capacity),
+        };
+        result.extend(chars);
+        result
+    }
+
     pub(crate) fn as_set(&self) -> &HashSet<char> {
         &self.all
     }
@@ -31,24 +49,34 @@ impl Extend<char> for UsedCharacters {
         }
     }
 }
-impl FromIterator<char> for UsedCharacters {
-    fn from_iter<T: IntoIterator<Item = char>>(iter: T) -> Self {
-        let iter = iter.into_iter();
-        let mut result = Self {
-            ascii: 0,
-            all: HashSet::with_capacity(iter.size_hint().0),
-        };
-        result.extend(iter);
-        result
-    }
-}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bounded_initial_reservation_keeps_all_distinct_unicode_characters() {
+        let text: String = (0x4e00..0x5e00).filter_map(char::from_u32).collect();
+        let usage = UsedCharacters::from_text(&text);
+        assert_eq!(usage.as_set(), &text.chars().collect::<HashSet<_>>());
+        let mut copy = usage.clone();
+        copy.extend("Aé😀".chars());
+        assert_eq!(usage.len(), 4096);
+        assert_eq!(copy.len(), 4099);
+        for ch in "Aé😀".chars() {
+            assert!(copy.contains(&ch));
+            assert!(!usage.contains(&ch));
+        }
+        let mut ascii_first = UsedCharacters::from_text(&"A".repeat(16_384));
+        ascii_first.extend(text.chars());
+        assert_eq!(ascii_first.len(), 4097);
+        for ch in text.chars() {
+            assert!(ascii_first.contains(&ch));
+        }
+    }
     #[test]
     fn repeated_ascii_and_unicode_union_remains_lossless_after_clone() {
         let initial: String = (0..=127).filter_map(char::from_u32).collect();
-        let mut usage: UsedCharacters = initial.chars().collect();
+        let mut usage = UsedCharacters::from_text(&initial);
         for _ in 0..100 {
             usage.extend(initial.chars());
         }

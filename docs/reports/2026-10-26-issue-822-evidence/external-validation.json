@@ -1,0 +1,44 @@
+[
+  {
+    "mode": "default",
+    "pages": 1,
+    "qpdf": true,
+    "text_identical": true,
+    "text_sha256": "d9ced7878cb0eeea5c04f435f99acac740975b04e8b11d79e974e31aed4cffa4"
+  },
+  {
+    "mode": "default",
+    "pages": 10,
+    "qpdf": true,
+    "text_identical": true,
+    "text_sha256": "271164380945df6e928807366a8326fd7f7d84290ce5759338e0534511325f06"
+  },
+  {
+    "mode": "default",
+    "pages": 100,
+    "qpdf": true,
+    "text_identical": true,
+    "text_sha256": "09cf4106aef280c3358a04a6848fb3f41e22b385284091c26f5642c599d3c5ad"
+  },
+  {
+    "mode": "raw",
+    "pages": 1,
+    "qpdf": true,
+    "text_identical": true,
+    "text_sha256": "d9ced7878cb0eeea5c04f435f99acac740975b04e8b11d79e974e31aed4cffa4"
+  },
+  {
+    "mode": "raw",
+    "pages": 10,
+    "qpdf": true,
+    "text_identical": true,
+    "text_sha256": "271164380945df6e928807366a8326fd7f7d84290ce5759338e0534511325f06"
+  },
+  {
+    "mode": "raw",
+    "pages": 100,
+    "qpdf": true,
+    "text_identical": true,
+    "text_sha256": "09cf4106aef280c3358a04a6848fb3f41e22b385284091c26f5642c599d3c5ad"
+  }
+]
