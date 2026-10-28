@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.5.4] - 2026-10-28
+
+### Security
+
+- Update ECDSA, P-256, P-384 and oxidize-webpki dependencies to remove
+  crypto-bigint versions affected by RUSTSEC-2026-0387. Require a patched
+  minimum for consumers with existing lockfiles (#828).
+- Preserve signature algorithms, public APIs and the Rust 1.88 minimum.
+
+See [5.5.4 security notes](docs/releases/5.5.4.md) for scope and compatibility.
+
 ## [5.5.3] - 2026-10-28
 
 ### Fixed
