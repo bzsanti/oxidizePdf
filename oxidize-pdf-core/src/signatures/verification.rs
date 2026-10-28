@@ -433,7 +433,7 @@ fn verify_ecdsa_signature(
 ) -> SignatureResult<bool> {
     use ecdsa::signature::hazmat::PrehashVerifier;
     use ecdsa::signature::Verifier;
-    use spki::DecodePublicKey;
+    use p256::pkcs8::DecodePublicKey;
 
     match parsed_sig.signature_algorithm {
         SignatureAlgorithm::EcdsaSha256 => {
@@ -531,6 +531,69 @@ pub fn hashes_match(hash1: &[u8], hash2: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn ecdsa_spki_vectors_verify_messages_and_prehashes() {
+        use sha2::{Digest, Sha256, Sha384};
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ecdsa");
+        let message = std::fs::read(root.join("message.bin")).unwrap();
+        for (curve, digest, algorithm, hash) in [
+            (
+                "p256",
+                "sha256",
+                SignatureAlgorithm::EcdsaSha256,
+                Sha256::digest(&message).to_vec(),
+            ),
+            (
+                "p384",
+                "sha384",
+                SignatureAlgorithm::EcdsaSha384,
+                Sha384::digest(&message).to_vec(),
+            ),
+        ] {
+            let key = std::fs::read(root.join(format!("{curve}.spki"))).unwrap();
+            let wrong_key = std::fs::read(root.join(format!("{curve}_wrong.spki"))).unwrap();
+            let signature =
+                std::fs::read(root.join(format!("{curve}_ecdsa_{digest}.sig"))).unwrap();
+            let parsed = ParsedSignature {
+                digest_algorithm: if curve == "p256" {
+                    DigestAlgorithm::Sha256
+                } else {
+                    DigestAlgorithm::Sha384
+                },
+                signature_algorithm: algorithm,
+                signature_value: signature.clone(),
+                signer_certificate_der: Vec::new(),
+                signing_time: None,
+            };
+            for (prehashed, input) in [(false, message.as_slice()), (true, hash.as_slice())] {
+                assert!(
+                    verify_ecdsa_signature(&key, &signature, input, prehashed, &parsed).unwrap(),
+                    "{curve}, prehashed={prehashed}"
+                );
+                assert!(
+                    !verify_ecdsa_signature(&wrong_key, &signature, input, prehashed, &parsed)
+                        .unwrap(),
+                    "wrong key: {curve}"
+                );
+                let mut altered_signature = signature.clone();
+                *altered_signature.last_mut().unwrap() ^= 1;
+                assert!(
+                    !verify_ecdsa_signature(&key, &altered_signature, input, prehashed, &parsed)
+                        .unwrap_or(false),
+                    "altered signature: {curve}"
+                );
+                let mut altered = input.to_vec();
+                altered[0] ^= 1;
+                assert!(
+                    !verify_ecdsa_signature(&key, &signature, &altered, prehashed, &parsed)
+                        .unwrap(),
+                    "altered input: {curve}"
+                );
+            }
+        }
+    }
 
     // Hash computation tests
 
