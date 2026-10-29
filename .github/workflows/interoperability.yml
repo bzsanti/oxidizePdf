@@ -215,6 +215,11 @@ jobs:
           cargo test --locked -p oxidize-pdf
           --test issue_714_incremental_primitives_test -- --ignored
 
+      - name: Validate nonzero page generations and prior signature preservation
+        run: >-
+          cargo test --locked -p oxidize-pdf --features signatures
+          --test issue_836_page_generations_test
+
       - name: Validate AES-256 R5 interoperability
         run: >
           cargo test -p oxidize-pdf

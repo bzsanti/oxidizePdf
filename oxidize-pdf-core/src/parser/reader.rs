@@ -1114,8 +1114,8 @@ impl<R: Read + Seek> PdfReader<R> {
                 (pages_obj_num, pages_gen_num)
             };
 
-        // Determine which object number to use for Pages (validate and potentially search)
-        let actual_pages_num = {
+        // Preserve the complete Pages reference through validation and recovery.
+        let actual_pages_ref = {
             // Check if the referenced object is valid (in a scope to drop borrows)
             let is_valid_dict = {
                 let pages_obj = self.get_object(final_obj_num, final_gen_num)?;
@@ -1124,7 +1124,7 @@ impl<R: Read + Seek> PdfReader<R> {
 
             if is_valid_dict {
                 // The referenced object is valid
-                final_obj_num
+                (final_obj_num, final_gen_num)
             } else {
                 // If Pages reference resolves to Null or non-dictionary, try to find Pages manually (corrupted PDF)
                 #[cfg(debug_assertions)]
@@ -1164,7 +1164,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     if let Some(obj_num) = found_pages_num {
                         #[cfg(debug_assertions)]
                         tracing::debug!("Found valid Pages object at {} 0 R", obj_num);
-                        obj_num
+                        (obj_num, 0)
                     } else {
                         // No valid Pages found
                         return Err(ParseError::SyntaxError {
@@ -1184,7 +1184,7 @@ impl<R: Read + Seek> PdfReader<R> {
         };
 
         // Now get the final Pages object (all validation/search done above)
-        let pages_obj = self.get_object(actual_pages_num, 0)?;
+        let pages_obj = self.get_object(actual_pages_ref.0, actual_pages_ref.1)?;
         pages_obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
             position: 0,
             message: "Pages object is not a dictionary".to_string(),
