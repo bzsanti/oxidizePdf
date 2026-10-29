@@ -962,10 +962,10 @@ impl<R: Read + Seek> PdfReader<R> {
 
         self.ensure_object_stream(stream_obj_num)?;
         let obj = self.object_stream_cache[&stream_obj_num].object(obj_num, &self.options)?;
-        let decrypted_obj = self.decrypt_object_if_needed(obj, obj_num, gen_num)?;
 
-        // Cache the decrypted object
-        self.object_cache.insert(key, decrypted_obj);
+        // The containing ObjStm was decrypted by ensure_object_stream. Its
+        // embedded objects are plaintext and must not be decrypted again.
+        self.object_cache.insert(key, obj);
         Ok(&self.object_cache[&key])
     }
 
@@ -1012,14 +1012,9 @@ impl<R: Read + Seek> PdfReader<R> {
             .and_then(|entry| entry.compressed_info);
         if let Some((stream, _)) = compressed {
             self.ensure_object_stream(stream)?;
-            let entries = self.object_stream_cache[&stream].sparse_array(obj_num, &self.options)?;
-            return entries
-                .into_iter()
-                .map(|(index, value)| {
-                    self.decrypt_object_if_needed(value, obj_num, gen_num)
-                        .map(|value| (index, value))
-                })
-                .collect();
+            // As with get_compressed_object, the containing stream has already
+            // been decrypted; sparse values retain that plaintext representation.
+            return self.object_stream_cache[&stream].sparse_array(obj_num, &self.options);
         }
         // Ordinary objects already use the reader's validated offset, generation
         // and encryption handling. Take the temporary array out of its cache.
@@ -2298,6 +2293,66 @@ mod tests {
     use crate::parser::test_helpers::*;
     use crate::parser::ParseOptions;
     use std::io::Cursor;
+
+    #[test]
+    fn encrypted_compressed_sparse_arrays_preserve_strings_and_positions() {
+        for variant in [
+            "plain",
+            "rc4",
+            "aes128",
+            "aes256r5",
+            "aes256r6",
+            "aes256r6_uncompressed",
+        ] {
+            let bytes = std::fs::read(format!(
+                "{}/tests/fixtures/issue_832_{variant}.pdf",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .unwrap();
+            let mut reader = PdfReader::new(Cursor::new(bytes)).unwrap();
+            assert!(reader.unlock_with_password("").unwrap());
+            let (id, generation) = reader
+                .catalog()
+                .unwrap()
+                .get("Sparse")
+                .unwrap()
+                .as_reference()
+                .unwrap();
+            for _ in 0..2 {
+                let entries = reader.sparse_array(id, generation).unwrap();
+                assert_eq!(entries.len(), 4, "{variant}");
+                assert!(!entries.contains_key(&0));
+                assert!(!entries.contains_key(&2));
+                assert_eq!(
+                    entries[&1].as_string().unwrap().as_bytes(),
+                    b"Identity",
+                    "{variant}"
+                );
+                assert_eq!(
+                    entries[&3]
+                        .as_dict()
+                        .unwrap()
+                        .get("Label")
+                        .unwrap()
+                        .as_string()
+                        .unwrap()
+                        .as_bytes(),
+                    b"Adobe",
+                    "{variant}"
+                );
+                assert_eq!(
+                    entries[&4].as_string().unwrap().as_bytes(),
+                    b"",
+                    "{variant}"
+                );
+                assert_eq!(
+                    entries[&5].as_string().unwrap().as_bytes(),
+                    b"0123456789abcdef0123456789abcdef",
+                    "{variant}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn test_reader_construction() {
