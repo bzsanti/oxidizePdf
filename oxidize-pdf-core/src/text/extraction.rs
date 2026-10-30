@@ -389,6 +389,25 @@ impl StructureActualText {
     }
 }
 
+#[derive(Clone, Copy)]
+struct PendingTjGap {
+    origin: (f64, f64),
+    width: f64,
+    is_word_gap: bool,
+    fragment: Option<usize>,
+}
+
+impl PendingTjGap {
+    fn extend_fragment(self, fragments: &mut [TextFragment]) {
+        if let Some(fragment) = self.fragment.and_then(|index| fragments.get_mut(index)) {
+            if !fragment.text.ends_with(char::is_whitespace) {
+                fragment.text.push(' ');
+                fragment.width += self.width;
+            }
+        }
+    }
+}
+
 /// Text extraction state
 struct TextState {
     /// Current text matrix
@@ -430,9 +449,19 @@ struct TextState {
     /// At most one active run at a time — nested ActualText replaces the
     /// outer (innermost wins, per spec §4).
     pending_actualtext: Option<PendingActualText>,
+    /// A trailing TJ gap is text only if a later glyph uses its final origin.
+    pending_tj_origin: Option<PendingTjGap>,
 }
 
 impl TextState {
+    fn consume_tj_gap(&mut self, origin: (f64, f64)) -> Option<PendingTjGap> {
+        self.pending_tj_origin.take().filter(|pending| {
+            pending.is_word_gap
+                && (pending.origin.0 - origin.0).abs() <= SAME_LINE_EPS
+                && (pending.origin.1 - origin.1).abs() <= SAME_LINE_EPS
+        })
+    }
+
     fn validate_geometry(&self) -> ParseResult<()> {
         let scalars = [
             self.font_size,
@@ -614,6 +643,7 @@ impl Default for TextState {
             saved_states: GraphicsStateStack::default(),
             mc_stack: Vec::new(),
             pending_actualtext: None,
+            pending_tj_origin: None,
         }
     }
 }
@@ -1740,10 +1770,14 @@ impl TextExtractor {
                 ContentOperation::ShowText(text) => {
                     if in_text_object {
                         let text_bytes = &text;
+                        if text_bytes.is_empty() {
+                            continue;
+                        }
                         let decoded = self.decode_text(text_bytes, &state)?;
 
                         // Pen origin in user space = (CTM × text_matrix)(0, 0).
                         let (x, y) = text_origin(&state);
+                        let pending_tj_gap = state.consume_tj_gap((x, y));
 
                         // Mirror the gate inside `emit_text_fragment` so that
                         // `.text` and `.fragments` stay consistent for pages
@@ -1786,8 +1820,9 @@ impl TextExtractor {
                                 let large_backward_jump =
                                     dx < -(self.options.newline_threshold * 2.0);
                                 let line_wrap = self.infer_backward_line_wraps
-                                    && large_backward_jump
-                                    && (dy > SAME_LINE_EPS || same_y_wrap);
+                                    && ((large_backward_jump
+                                        && (dy > SAME_LINE_EPS || same_y_wrap))
+                                        || is_compact_line_wrap(&state, dx, dy));
                                 let positioned_run_boundary = large_backward_jump
                                     && dy <= SAME_LINE_EPS
                                     && at_text_object_start;
@@ -1800,7 +1835,8 @@ impl TextExtractor {
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
                                 } else if positioned_run_boundary
-                                    || (dx > self.flat_space_gap_threshold(&state)
+                                    || ((pending_tj_gap.is_some()
+                                        || dx > self.flat_space_gap_threshold(&state))
                                         && !suppress_space)
                                 {
                                     Some(' ')
@@ -1833,6 +1869,11 @@ impl TextExtractor {
                             );
                             if !outcome.appended {
                                 break;
+                            }
+                            if outcome.applied_separator == Some(' ') {
+                                if let Some(gap) = pending_tj_gap {
+                                    gap.extend_fragment(&mut fragments);
+                                }
                             }
                             emitted_sep = Some(outcome.applied_separator);
                         }
@@ -1926,10 +1967,20 @@ impl TextExtractor {
                         // leading kern does NOT clear this (see the Spacing arm).
                         // See the boundary gate below.
                         let first_array_fragment = fragments.len();
+                        let mut gap_fragment = state.pending_tj_origin.and_then(|gap| gap.fragment);
                         let mut at_array_start = true;
-                        for item in array {
+                        // A final adjustment moves only the pen. The next show operation
+                        // may consume that position or replace it with Tm/BT; do not turn
+                        // discarded cursor movement into text (issue #833).
+                        let last_text = array.iter().rposition(
+                            |item| matches!(item, TextElement::Text(bytes) if !bytes.is_empty()),
+                        );
+                        for (item_index, item) in array.into_iter().enumerate() {
                             match item {
                                 TextElement::Text(text_bytes) => {
+                                    if text_bytes.is_empty() {
+                                        continue;
+                                    }
                                     let decoded = self.decode_text(&text_bytes, &state)?;
                                     // Mirror the gate inside `emit_text_fragment`
                                     // so `.text` and `.fragments` stay consistent
@@ -1938,6 +1989,7 @@ impl TextExtractor {
 
                                     // Pen origin in user space = (CTM × text_matrix)(0, 0).
                                     let (x, y) = text_origin(&state);
+                                    let pending_tj_gap = state.consume_tj_gap((x, y));
 
                                     // Insert a newline when this TJ piece starts on a
                                     // different visual line than the previously shown
@@ -1972,8 +2024,9 @@ impl TextExtractor {
                                     let large_backward_jump =
                                         dx < -(self.options.newline_threshold * 2.0);
                                     let line_wrap = self.infer_backward_line_wraps
-                                        && large_backward_jump
-                                        && (dy > SAME_LINE_EPS || same_y_wrap);
+                                        && ((large_backward_jump
+                                            && (dy > SAME_LINE_EPS || same_y_wrap))
+                                            || is_compact_line_wrap(&state, dx, dy));
                                     let positioned_run_boundary = large_backward_jump
                                         && dy <= SAME_LINE_EPS
                                         && at_text_object_start
@@ -2054,7 +2107,8 @@ impl TextExtractor {
                                                 &state,
                                             );
                                         let boundary_space = at_array_start
-                                            && dx > boundary_threshold
+                                            && (pending_tj_gap.is_some()
+                                                || dx > boundary_threshold)
                                             && !extracted_text.ends_with(' ')
                                             && !suppress_space;
                                         let separator = if extracted_text.is_empty() {
@@ -2087,6 +2141,11 @@ impl TextExtractor {
                                         );
                                         if !outcome.appended {
                                             break;
+                                        }
+                                        if outcome.applied_separator == Some(' ') {
+                                            if let Some(gap) = pending_tj_gap {
+                                                gap.extend_fragment(&mut fragments);
+                                            }
                                         }
                                         emitted_sep = Some(outcome.applied_separator);
                                     }
@@ -2121,6 +2180,19 @@ impl TextExtractor {
                                             skip_text,
                                         )?;
                                     }
+
+                                    // Only an emitted source fragment owns its trailing gap.
+                                    // ActualText and filtered runs must not modify earlier text.
+                                    gap_fragment = if !decoded.is_empty()
+                                        && !skip_text
+                                        && state.pending_actualtext.is_none()
+                                        && (self.options.preserve_layout
+                                            || self.options.reorder_columns)
+                                    {
+                                        fragments.len().checked_sub(1)
+                                    } else {
+                                        None
+                                    };
 
                                     // Record the run into the reading-order line
                                     // groups (issue #448) once its width is known.
@@ -2190,6 +2262,7 @@ impl TextExtractor {
                                         .is_some_and(is_vertical_font);
                                     if !skip_tj_space
                                         && !vertical
+                                        && last_text.is_some_and(|last| item_index < last)
                                         && gap_tx
                                             > self.options.tj_space_threshold * state.font_size
                                         && !extracted_text.is_empty()
@@ -2266,6 +2339,24 @@ impl TextExtractor {
                                         );
                                     } else {
                                         advance_pen(&mut state, tx);
+                                    }
+                                    if last_text.is_none_or(|last| item_index > last)
+                                        || (at_array_start && state.pending_tj_origin.is_some())
+                                    {
+                                        let origin = text_origin(&state);
+                                        let (dx, dy) = pen_delta(&state, (last_x, last_y), origin);
+                                        state.pending_tj_origin = (!skip_tj_space && !vertical)
+                                            .then_some(PendingTjGap {
+                                                origin,
+                                                width: dx,
+                                                is_word_gap: dy.abs() <= SAME_LINE_EPS
+                                                    && dx
+                                                        > self.tj_space_gap_threshold(
+                                                            &state,
+                                                            self.options.tj_space_threshold,
+                                                        ),
+                                                fragment: gap_fragment,
+                                            });
                                     }
                                 }
                             }
@@ -4353,6 +4444,23 @@ const TJ_FONT_CHANGE_BOUNDARY_SPACE_EM: f64 = 0.3;
 /// A wrap with any nonzero leading (the common case, issue #390) is unaffected:
 /// it breaks on the `dy`-aware gate.
 const SAME_Y_WRAP_EM: f64 = 10.0;
+
+/// Short headings can wrap below the fixed newline threshold (#834).
+/// Require a return of more than one em and a distinct baseline beyond one
+/// em; ordinary kerning, adjacent numeric runs and small rises are excluded.
+fn is_compact_line_wrap(state: &TextState, dx: f64, dy: f64) -> bool {
+    let m = multiply_matrix(&state.text_matrix, &state.ctm);
+    let x_scale = m[0].hypot(m[1]);
+    let y_scale = (m[0] * m[3] - m[1] * m[2]).abs() / x_scale;
+    let height = state.font_size.abs() * y_scale;
+    let width = state.font_size.abs() * x_scale * (state.horizontal_scale / 100.0).abs();
+    height.is_finite()
+        && width.is_finite()
+        && height > f64::EPSILON
+        && width > f64::EPSILON
+        && dx < -width
+        && dy > height
+}
 
 /// Pen movement from the previous post-advance pen point `last` to the
 /// current glyph origin `cur` (both user space), measured in the frame of the
