@@ -13,7 +13,7 @@ const VARIANTS: &[&str] = &[
 
 fn fixture(variant: &str) -> Vec<u8> {
     std::fs::read(format!(
-        "{}/tests/fixtures/issue_832_{variant}.pdf",
+        "{}/tests/fixtures/encrypted_object_streams/issue_832_{variant}.pdf",
         env!("CARGO_MANIFEST_DIR")
     ))
     .unwrap()

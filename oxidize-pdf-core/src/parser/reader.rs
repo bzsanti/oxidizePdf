@@ -2305,7 +2305,7 @@ mod tests {
             "aes256r6_uncompressed",
         ] {
             let bytes = std::fs::read(format!(
-                "{}/tests/fixtures/issue_832_{variant}.pdf",
+                "{}/tests/fixtures/encrypted_object_streams/issue_832_{variant}.pdf",
                 env!("CARGO_MANIFEST_DIR")
             ))
             .unwrap();
