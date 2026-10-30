@@ -1,6 +1,6 @@
 """Generate synthetic #832 fixtures with independent qpdf (no third-party PDFs).
 
-Run with Python 3 and qpdf 11+: python3 tests/fixtures/generate_issue_832.py
+Run with Python 3 and qpdf 11+: python3 tests/fixtures/encrypted_object_streams/generate_issue_832.py
 Each file has a one-page Helvetica marker, short/empty/long/nested strings,
 and a sparse array. Encryption uses owner832 and an empty user password (user832 in the _user control).
 qpdf chooses fresh encryption randomness; outputs are semantically reproducible.
