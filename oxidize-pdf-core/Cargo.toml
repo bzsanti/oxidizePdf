@@ -14,6 +14,9 @@ categories = ["parser-implementations", "text-processing", "graphics", "encoding
 readme = "../README.md"
 exclude = [
     "tests/fixtures/*.pdf",
+    # Synthetic fixtures embedded by library unit tests must ship with the source.
+    "!tests/fixtures/issue690-unused-xref.pdf",
+    "!tests/fixtures/issue_722_tiny.pdf",
     "tests/fixtures/*.sh",
 ]
 
