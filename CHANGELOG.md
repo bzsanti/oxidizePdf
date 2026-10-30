@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.5.5] - 2026-10-30
+
+### Security
+
+- Require rustls-webpki 0.103.16 and webpki-roots 1.0.10 or later in their
+  compatible series, addressing RUSTSEC-2026-0381 and RUSTSEC-2026-0382.
+  Existing consumer lockfiles cannot retain versions below these minimums (#831).
+
+### Fixed
+
+- Avoid decrypting strings inside object streams a second time, preserving
+  extraction of encrypted PDFs while retaining password and ciphertext checks (#832).
+- Preserve nonzero Pages object generations when resolving the page tree,
+  including incremental signature and document-timestamp preparation (#836).
+- Defer spaces inferred from trailing TJ adjustments until another glyph uses
+  the resulting position. Repositioned letters and digits remain joined, while
+  consumed word gaps and ActualText fragment ownership are preserved (#833).
+- Separate compact year headings from indented table labels using font-relative
+  geometry, preserving legitimate adjacent words and numbers (#834).
+
+Public APIs and Rust 1.88 remain unchanged. See [5.5.5 release notes](docs/releases/5.5.5.md)
+for validation scope and binding adoption.
+
 ## [5.5.4] - 2026-10-28
 
 ### Security
