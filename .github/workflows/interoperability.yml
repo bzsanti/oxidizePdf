@@ -220,6 +220,11 @@ jobs:
           cargo test --locked -p oxidize-pdf --features signatures
           --test issue_836_page_generations_test
 
+      - name: Validate signed field permissions with genuine CMS signatures
+        run: >-
+          cargo test --locked -p oxidize-pdf --features signatures
+          --test issue_843_field_lock_permissions_test -- --include-ignored
+
       - name: Validate AES-256 R5 interoperability
         run: >
           cargo test -p oxidize-pdf

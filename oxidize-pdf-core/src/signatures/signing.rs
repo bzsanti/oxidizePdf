@@ -395,9 +395,9 @@ impl DocumentTimestampOptions {
 /// [`PreparedSignature::finalize`]. Finalization checks only envelope/capacity,
 /// not RFC 3161 semantics, message imprint, trust or cryptographic validity.
 ///
-/// Encryption, DocMDP P=1 and applicable FieldMDP locks are rejected. P=2/P=3
-/// use the existing signing permission boundary; this is no exemption for
-/// arbitrary content or catalog edits. Every existing widget must have a valid
+/// Encryption and applicable FieldMDP locks are rejected. The dedicated invisible
+/// timestamp update is permitted under MDP P=1/P=2/P=3; this does not exempt
+/// approval signatures or arbitrary content and catalog edits. Every existing widget must have a valid
 /// zero rectangle, including widgets other than the selected one.
 pub fn prepare_document_timestamp(
     base: &[u8],
@@ -455,7 +455,12 @@ fn prepare_incremental_signature_inner(
         .catalog()
         .map_err(|error| invalid(error.to_string()))?
         .clone();
-    ensure_modification_allowed(&mut reader, &catalog, IncrementalModification::AddSignature)?;
+    let modification = if document_timestamp {
+        IncrementalModification::DocumentTimestamp
+    } else {
+        IncrementalModification::AddSignature
+    };
+    ensure_modification_allowed(&mut reader, &catalog, modification)?;
     let target = &options.target;
     let target_field_name = match target {
         SignatureTarget::Existing { field_name, .. } | SignatureTarget::New { field_name, .. } => {

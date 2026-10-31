@@ -126,6 +126,68 @@ impl<R: Read + Seek> PdfReader<R> {
         self.xref.revisions_oldest_first()
     }
 
+    /// Borrow the source with an isolated cache and the xref of an earlier revision.
+    /// Recovery scans are disabled so later bytes cannot supply historical objects.
+    pub(crate) fn at_revision(
+        &mut self,
+        xref_offset: u64,
+    ) -> ParseResult<PdfReader<&mut BufReader<R>>> {
+        if self.is_encrypted() {
+            return Err(ParseError::EncryptionNotSupported);
+        }
+        let mut options = self.options.clone();
+        options.max_recovery_attempts = 0;
+        options.lenient_syntax = false;
+        options.collect_warnings = false;
+        let mut source = BufReader::new(&mut self.reader);
+        let xref = XRefTable::parse_revision(&mut source, &options, xref_offset)?;
+        let trailer = PdfTrailer::from_dict(
+            xref.trailer().ok_or(ParseError::InvalidTrailer)?.clone(),
+            xref_offset,
+        )?;
+        trailer.validate()?;
+        if trailer.encrypt()?.is_some() {
+            return Err(ParseError::EncryptionNotSupported);
+        }
+        Ok(PdfReader {
+            reader: source,
+            header: self.header.clone(),
+            xref,
+            trailer,
+            object_cache: HashMap::new(),
+            object_stream_cache: HashMap::new(),
+            page_tree: None,
+            parse_context: StackSafeContext::new(),
+            options,
+            encryption_handler: None,
+            objects_being_reconstructed: std::sync::Mutex::new(std::collections::HashSet::new()),
+            max_reconstruction_depth: 100,
+            allow_object_reconstruction: false,
+        })
+    }
+
+    /// Advance a strict historical reader, discarding caches from the previous revision.
+    pub(crate) fn advance_revision(&mut self, xref_offset: u64) -> ParseResult<()> {
+        self.xref
+            .advance_revision(&mut self.reader, &self.options, xref_offset)?;
+        let trailer = PdfTrailer::from_dict(
+            self.xref
+                .trailer()
+                .ok_or(ParseError::InvalidTrailer)?
+                .clone(),
+            xref_offset,
+        )?;
+        trailer.validate()?;
+        if trailer.encrypt()?.is_some() {
+            return Err(ParseError::EncryptionNotSupported);
+        }
+        self.trailer = trailer;
+        self.object_cache.clear();
+        self.object_stream_cache.clear();
+        self.page_tree = None;
+        Ok(())
+    }
+
     /// Check if the PDF is unlocked (can read encrypted content)
     pub fn is_unlocked(&self) -> bool {
         match &self.encryption_handler {
