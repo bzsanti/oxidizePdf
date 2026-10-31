@@ -56,20 +56,23 @@ fn enforce_fields<R: Read + Seek>(
     };
     let mut stack: Vec<_> = resolve_array(reader, fields, "AcroForm /Fields")?
         .into_iter()
-        .map(|field| (field, false, 0usize))
+        .map(|field| (field, false, 0usize, Vec::new()))
         .collect();
     let mut seen = HashSet::new();
-    while let Some((object, inherited_sig, depth)) = stack.pop() {
+    while let Some((object, inherited_sig, depth, mut ancestors)) = stack.pop() {
         if depth > 128 {
             return Err(invalid_policy("signature field tree is too deep"));
         }
         let location = object.as_reference();
         if let Some(reference) = location {
-            if !seen.insert(reference) {
-                return Err(invalid_policy(
-                    "cyclic or repeated signature field reference",
-                ));
+            if ancestors.contains(&reference) {
+                return Err(invalid_policy("cyclic signature field reference"));
             }
+            // Shared children can inherit different field types through aliases.
+            if !seen.insert((reference, inherited_sig)) {
+                continue;
+            }
+            ancestors.push(reference);
         }
         let field = resolve_dictionary(reader, &object, "signature field")?;
         let is_sig = match field.get("FT") {
@@ -87,7 +90,7 @@ fn enforce_fields<R: Read + Seek>(
         }
         if let Some(kids) = field.get("Kids") {
             for child in resolve_array(reader, kids, "signature field /Kids")? {
-                stack.push((child, is_sig, depth + 1));
+                stack.push((child, is_sig, depth + 1, ancestors.clone()));
             }
         }
     }

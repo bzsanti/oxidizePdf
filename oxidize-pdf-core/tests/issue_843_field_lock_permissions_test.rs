@@ -284,3 +284,28 @@ fn indirect_and_inherited_field_types_enforce_indirect_lock_permissions() {
 fn malformed_field_type_cannot_hide_a_signed_lock() {
     assert!(!approval(&signed_field_graph("42", false, "1")));
 }
+
+#[test]
+fn shared_child_is_checked_under_each_inherited_field_type() {
+    for parents in ["4 0 R 5 0 R", "5 0 R 4 0 R"] {
+        let source = pdf_assembler::assemble_pdf_with_version(
+            "2.0",
+            &[
+                format!("<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [{parents}] >> >>")
+                    .into_bytes(),
+                b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_vec(),
+                b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>".to_vec(),
+                b"<< /FT /Sig /T (signed) /Kids [6 0 R] >>".to_vec(),
+                b"<< /FT /Tx /T (text) /Kids [6 0 R] >>".to_vec(),
+                b"<< /T (shared) /V 7 0 R /Lock << /P 1 >> >>".to_vec(),
+                b"<< /Type /Sig /ByteRange [0 999999 1000001 1] /Contents <0000> >>".to_vec(),
+            ],
+        );
+        let error = prepare_incremental_signature(
+            &source,
+            &SignaturePreparationOptions::invisible("Second"),
+        )
+        .expect_err("P1 must be enforced regardless of alias traversal order");
+        assert!(error.to_string().contains("P=1"), "{parents}: {error}");
+    }
+}
