@@ -20,7 +20,19 @@ Alternatively, authenticate with `npx @upstash/docs7@0.1.12 login --no-browser`,
 
 Record the actual URL returned by Docs7 after publication. Do not guess a docs7.io hostname or add a live-site badge before checking it.
 
-## Register Context7
+## Published site and Context7 index
+
+Published site: https://oxidize-pdf-for-rust.docs7.io
+Context7 library: `/llmstxt/oxidize-pdf-for-rust_docs7_io_llms_txt`
+Source: https://oxidize-pdf-for-rust.docs7.io/llms.txt
+
+The site was published through the CLI on 2026-11-01. Its non-secret `docs/site/.docs7/project.json` is retained for subsequent deployments. Production search returns the quickstart successfully. The llms.txt source was registered with Context7's public API, and a context query returned the documented 5.5.5 installation and usage examples. This live index uses the website, not the repository parser configuration.
+
+After changing the published guides, refresh this library in Context7 and query the changed example to confirm the new content. Preserve the library ID rather than submitting a duplicate source.
+
+## Optional repository index
+
+The root `context7.json` prepares a separate repository-based index. It does not control the live llms.txt index above. If adding that source later:
 
 1. After `context7.json` and the pages reach `main`, open https://context7.com/add-library and submit https://github.com/bzsanti/oxidizePdf.
 2. Check parse status and logs, resolve the returned library ID, and query an example from `quickstart.mdx`.
@@ -44,8 +56,8 @@ Use a documentation sidebar organized around installation, examples and limits. 
 - Both configurations pass the official JSON schemas using Python jsonschema Draft 7, including URI format checks. Navigation matches the four MDX pages; local links resolve; tracked root documentation is explicitly excluded from indexing.
 - The quickstart was executed against the published package 5.5.5. Rust generated a PDF and extracted its greeting.
 - Docs7 CLI 0.1.12 / renderer 0.1.63 served all four pages with HTTP 200. Chromium headless checked desktop/mobile navigation, both themes, code copying, Markdown copying and keyboard focus. No page overflow at 390px; no JavaScript page errors during the page sweep.
-- Global search is **not validated**: the local renderer returns HTTP 404 for `/api/search?q=Install` and shows its unavailable state. Escape closes the dialog. Recheck search on the deployed site before accepting publication; do not claim the hosted search works from this preview.
-- Publication and Context7 indexing remain pending: `docs7 whoami` reports not logged in. No live hostname or library registration is claimed.
+- The local renderer returns HTTP 404 for `/api/search?q=Install`; production returns HTTP 200 with the quickstart in its results. The preview limitation is resolved by checking the published site.
+- Authentication, publication and indexing completed on 2026-11-01. Context7 returned the expected package version and language-specific code from this site's quickstart. Credentials remain outside the repository.
 
 ## Official references
 

@@ -5,16 +5,16 @@ description: "Find version-specific documentation from your coding assistant."
 
 [Context7](https://context7.com/docs) supplies library documentation to coding assistants. Configure its integration using the [official installation guide](https://context7.com/docs/installation).
 
-Once this repository has been registered and indexed, ask your assistant to resolve the library by its repository URL:
+These guides are indexed in Context7 as [`/llmstxt/oxidize-pdf-for-rust_docs7_io_llms_txt`](https://context7.com/llmstxt/oxidize-pdf-for-rust_docs7_io_llms_txt). Ask your assistant to use that library:
 
 ```text
-Use Context7 to find documentation for https://github.com/bzsanti/oxidizePdf.
+Use Context7 library /llmstxt/oxidize-pdf-for-rust_docs7_io_llms_txt.
 I am using oxidize-pdf for Rust 5.5.5.
 Show an example using the API documented for that version.
 ```
 
-Resolve the library first and check the returned project and version before querying its documentation. A matching name alone is not sufficient.
+Check the returned project and package version before using an example. A matching name alone is not sufficient.
 
-The repository includes `context7.json` selecting the maintained pages in `docs/site`. Committing this file does not register the library, and deploying the Docs7 site does not by itself demonstrate successful indexing. If no matching library is returned, use these pages directly and report the missing index to the maintainer.
+The index reads the [published documentation](https://oxidize-pdf-for-rust.docs7.io/llms.txt). It covers these introductory guides; see [versions and capability limits](/scope) for their scope.
 
-The instructions to register and refresh the library are in the repository's `docs/CONTEXT7.md`.
+If Context7 is unavailable, use the [quickstart](/quickstart) directly.
