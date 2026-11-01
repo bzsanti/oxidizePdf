@@ -5,9 +5,10 @@ use std::sync::Arc;
 /// Configuration for semantic chunking.
 #[derive(Debug, Clone)]
 pub struct SemanticChunkConfig {
-    /// Maximum tokens per chunk (approximate — uses word count as proxy).
+    /// Maximum tokens per chunk under the selected counter (word proxy by default).
     pub max_tokens: usize,
-    /// Number of overlap tokens between consecutive chunks.
+    /// Maximum overlap tokens between consecutive chunks. Whole trailing elements
+    /// are retained only when they fit this limit and the next chunk budget.
     pub overlap_tokens: usize,
     /// Whether to keep elements whole (don't split titles, tables, etc.).
     pub respect_element_boundaries: bool,
@@ -115,7 +116,24 @@ impl SemanticChunker {
         self.counter.count(&element.display_text())
     }
 
-    fn make_chunk(&self, elements: Vec<Element>, oversized: bool) -> SemanticChunk {
+    /// Cost of appending an element, including the emitted newline separator.
+    fn appended_tokens(&self, elements: &[Element], tokens: usize, next: &Element) -> usize {
+        if elements.is_empty() {
+            return self.element_tokens(next);
+        }
+        if self.counter.is_additive_over_whitespace_join() {
+            return tokens.saturating_add(self.element_tokens(next));
+        }
+        let text = elements
+            .iter()
+            .chain(std::iter::once(next))
+            .map(Element::display_text)
+            .collect::<Vec<_>>()
+            .join("\n");
+        self.counter.count(&text)
+    }
+
+    fn make_chunk(&self, elements: Vec<Element>) -> SemanticChunk {
         let text = elements
             .iter()
             .map(|e| e.display_text())
@@ -124,7 +142,7 @@ impl SemanticChunker {
         let token_estimate = self.counter.count(&text);
         SemanticChunk {
             elements,
-            oversized,
+            oversized: token_estimate > self.config.max_tokens,
             token_estimate,
         }
     }
@@ -134,13 +152,10 @@ impl SemanticChunker {
         text: &str,
         meta: &crate::pipeline::ElementMetadata,
     ) -> SemanticChunk {
-        self.make_chunk(
-            vec![Element::Paragraph(crate::pipeline::ElementData {
-                text: text.to_string(),
-                metadata: meta.clone(),
-            })],
-            false,
-        )
+        self.make_chunk(vec![Element::Paragraph(crate::pipeline::ElementData {
+            text: text.to_string(),
+            metadata: meta.clone(),
+        })])
     }
 
     /// Chunk a list of elements into semantic chunks.
@@ -155,38 +170,42 @@ impl SemanticChunker {
 
         for element in elements {
             let elem_tokens = self.element_tokens(element);
+            let mut joined_tokens =
+                self.appended_tokens(&current_elements, current_tokens, element);
 
             // Non-splittable elements (Table, Title, Header, Footer, Image)
             if !is_splittable(element) {
                 // If adding this would overflow and we have content, flush first
-                if current_tokens > 0
-                    && current_tokens + elem_tokens > self.config.max_tokens
+                if !current_elements.is_empty()
+                    && joined_tokens > self.config.max_tokens
                     && self.config.respect_element_boundaries
                 {
                     self.flush_chunk(
                         &mut chunks,
                         &mut current_elements,
                         &mut current_tokens,
-                        false,
+                        element,
                     );
+                    joined_tokens =
+                        self.appended_tokens(&current_elements, current_tokens, element);
                 }
 
                 // If element alone exceeds max_tokens, it gets its own oversized chunk
                 if elem_tokens > self.config.max_tokens && current_elements.is_empty() {
-                    chunks.push(self.make_chunk(vec![element.clone()], true));
+                    chunks.push(self.make_chunk(vec![element.clone()]));
                     continue;
                 }
 
+                current_tokens = joined_tokens;
                 current_elements.push(element.clone());
-                current_tokens += elem_tokens;
                 continue;
             }
 
             // Splittable elements (Paragraph, ListItem, CodeBlock, KeyValue)
-            if current_tokens + elem_tokens <= self.config.max_tokens {
+            if joined_tokens <= self.config.max_tokens {
                 // Fits in current chunk
+                current_tokens = joined_tokens;
                 current_elements.push(element.clone());
-                current_tokens += elem_tokens;
             } else if elem_tokens <= self.config.max_tokens {
                 // Doesn't fit but element itself is within limit — start new chunk
                 if !current_elements.is_empty() {
@@ -194,91 +213,102 @@ impl SemanticChunker {
                         &mut chunks,
                         &mut current_elements,
                         &mut current_tokens,
-                        false,
+                        element,
                     );
                 }
+                current_tokens = self.appended_tokens(&current_elements, current_tokens, element);
                 current_elements.push(element.clone());
-                current_tokens = elem_tokens;
             } else {
-                // Element exceeds max_tokens — split by sentences
+                // Element exceeds max_tokens — split by sentences. Overlap is
+                // omitted here so it cannot consume the sentence budget.
                 if !current_elements.is_empty() {
-                    self.flush_chunk(
-                        &mut chunks,
-                        &mut current_elements,
-                        &mut current_tokens,
-                        false,
-                    );
+                    chunks.push(self.make_chunk(std::mem::take(&mut current_elements)));
                 }
+                current_tokens = 0;
 
                 let sentences = split_sentences(element.text());
                 let meta = element.metadata().clone();
                 let mut sentence_buf = String::new();
-                let mut buf_tokens = 0;
+                let mut sentence_tokens = 0usize;
 
                 for sentence in &sentences {
-                    let s_tokens = self.counter.count(sentence);
-                    if buf_tokens + s_tokens > self.config.max_tokens && !sentence_buf.is_empty() {
+                    let single_tokens = self.counter.count(sentence);
+                    let joined_tokens = if sentence_buf.is_empty() {
+                        single_tokens
+                    } else if self.counter.is_additive_over_whitespace_join() {
+                        sentence_tokens.saturating_add(single_tokens)
+                    } else {
+                        self.counter.count(&format!("{sentence_buf} {sentence}"))
+                    };
+                    if joined_tokens > self.config.max_tokens && !sentence_buf.is_empty() {
                         chunks.push(self.make_paragraph_chunk(&sentence_buf, &meta));
                         sentence_buf.clear();
-                        buf_tokens = 0;
+                        sentence_tokens = single_tokens;
+                    } else {
+                        sentence_tokens = joined_tokens;
                     }
                     if !sentence_buf.is_empty() {
                         sentence_buf.push(' ');
                     }
                     sentence_buf.push_str(sentence);
-                    buf_tokens += s_tokens;
                 }
 
                 if !sentence_buf.is_empty() {
+                    current_tokens = self.counter.count(&sentence_buf);
                     current_elements.push(Element::Paragraph(crate::pipeline::ElementData {
                         text: sentence_buf,
                         metadata: meta,
                     }));
-                    current_tokens = buf_tokens;
                 }
             }
         }
 
         // Flush remaining
         if !current_elements.is_empty() {
-            chunks.push(self.make_chunk(current_elements, false));
+            chunks.push(self.make_chunk(current_elements));
         }
 
         chunks
     }
 
-    /// Flush current elements into a chunk and apply overlap if configured.
+    /// Emit the buffer and retain a suffix only if it fits beside the next element.
     fn flush_chunk(
         &self,
         chunks: &mut Vec<SemanticChunk>,
         current_elements: &mut Vec<Element>,
         current_tokens: &mut usize,
-        oversized: bool,
+        next: &Element,
     ) {
         let flushed = std::mem::take(current_elements);
-        chunks.push(self.make_chunk(flushed.clone(), oversized));
-
-        // Apply overlap: carry trailing elements from flushed chunk into the next
+        *current_tokens = 0;
         if self.config.overlap_tokens > 0 {
-            let mut overlap_tokens = 0usize;
-            let mut overlap_elements = Vec::new();
-
-            // Walk backwards through flushed elements to collect overlap
-            for elem in flushed.iter().rev() {
-                let t = self.element_tokens(elem);
-                if overlap_tokens + t > self.config.overlap_tokens && !overlap_elements.is_empty() {
+            let mut retained_start = flushed.len();
+            let mut tokens = 0usize;
+            for start in (0..flushed.len()).rev() {
+                let suffix = &flushed[start..];
+                tokens = if self.counter.is_additive_over_whitespace_join() {
+                    tokens.saturating_add(self.element_tokens(&flushed[start]))
+                } else {
+                    let text = suffix
+                        .iter()
+                        .map(Element::display_text)
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    self.counter.count(&text)
+                };
+                if tokens > self.config.overlap_tokens
+                    || self.appended_tokens(suffix, tokens, next) > self.config.max_tokens
+                {
+                    // Overlap is best effort; keep the last suffix verified to
+                    // fit. We do not assume larger BPE suffixes cost more.
                     break;
                 }
-                overlap_elements.push(elem.clone());
-                overlap_tokens += t;
+                retained_start = start;
+                *current_tokens = tokens;
             }
-
-            overlap_elements.reverse();
-            *current_elements = overlap_elements;
-            *current_tokens = overlap_tokens;
-        } else {
-            *current_tokens = 0;
+            current_elements.extend_from_slice(&flushed[retained_start..]);
         }
+        chunks.push(self.make_chunk(flushed));
     }
 }
 
