@@ -1,0 +1,43 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "oxidize-pdf for Rust",
+  "description": "Rust library for PDF generation, parsing, text extraction and document operations.",
+  "branch": "main",
+  "folders": [
+    "docs/site"
+  ],
+  "excludeFolders": [
+    "docs/reports",
+    "docs/evidence",
+    "docs/plans",
+    "node_modules"
+  ],
+  "excludeFiles": [
+    "API_DOCUMENTATION.md",
+    "BENCHMARK_RESULTS.md",
+    "CHANGELOG.md",
+    "CLAUDE.local.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "COVERAGE_REPORT.md",
+    "IMPLEMENTACION_OCR_API.md",
+    "MIGRATION.md",
+    "PERFORMANCE.md",
+    "PNG_DECODER_ISSUES.md",
+    "PROJECT_PROGRESS.md",
+    "README.md",
+    "REPOSITORY_ARCHITECTURE.md",
+    "SECURITY.md",
+    "SECURITY_MEASURES.md",
+    "coverage_report.txt",
+    "tarpaulin_lib_only.txt",
+    "tarpaulin_output.txt",
+    "AGENTS.md",
+    "TASKS.md",
+    "CLAUDE.md"
+  ],
+  "rules": [
+    "Use the Rust API documented for the installed package version.",
+    "These guides target 5.5.5; do not assume develop-only changes are released."
+  ]
+}
