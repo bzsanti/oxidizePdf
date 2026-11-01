@@ -1,0 +1,42 @@
+---
+title: "Install, create and read a PDF"
+description: "A complete Rust example using oxidize-pdf 5.5.5."
+---
+
+Use Rust 1.88 or newer. In a Cargo binary project, add:
+
+```toml
+[dependencies]
+oxidize-pdf = "=5.5.5"
+```
+
+Save the following as `src/main.rs`. It creates a one-page PDF in the working directory, reopens it and prints its text.
+
+```rust
+use oxidize_pdf::{Document, Page};
+use oxidize_pdf::parser::PdfDocument;
+use oxidize_pdf::text::Font;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut document = Document::new();
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Helvetica, 18.0)
+        .at(72.0, 750.0)
+        .write("Hello from oxidize-pdf!")?;
+    document.add_page(page);
+    document.save("hello.pdf")?;
+
+    let reader = PdfDocument::open("hello.pdf")?;
+    for page_text in reader.extract_text()? {
+        println!("{}", page_text.text);
+    }
+    Ok(())
+}
+```
+
+Run `cargo run`. The output should contain `Hello from oxidize-pdf!`.
+
+Coordinates are measured in PDF points (72 points per inch), with the origin at the bottom left for this page. Errors from writing, opening or parsing propagate from `main` through `?`.
+
+Text extraction reads text represented in the PDF. A scanned image without a text layer needs OCR; this example does not perform OCR.

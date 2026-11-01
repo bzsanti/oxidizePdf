@@ -1,5 +1,7 @@
 # oxidize-pdf
 
+[Documentation](https://oxidize-pdf-for-rust.docs7.io) · [Context7](https://context7.com/llmstxt/oxidize-pdf-for-rust_docs7_io_llms_txt) · [Documentation publishing and indexing](docs/CONTEXT7.md)
+
 [![Crates.io](https://img.shields.io/crates/v/oxidize-pdf.svg)](https://crates.io/crates/oxidize-pdf)
 [![Documentation](https://docs.rs/oxidize-pdf/badge.svg)](https://docs.rs/oxidize-pdf)
 [![Downloads](https://img.shields.io/crates/d/oxidize-pdf)](https://crates.io/crates/oxidize-pdf)
