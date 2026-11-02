@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Enforce signed field Lock/P permissions across incremental revisions, including
   inherited and indirect field definitions. Later revisions cannot relax an
-  earlier signed restriction; dedicated document timestamp handling is preserved
-  (#843).
+  earlier signed restriction. The dedicated invisible document-timestamp path
+  now permits timestamps under P1; ordinary signatures remain restricted (#843).
 - Measure semantic chunk joins and overlap with the selected token counter.
   Overlap must fit both its own budget and the next chunk; oversized flags reflect
   the final text. Indivisible sentences and structures can still exceed the
