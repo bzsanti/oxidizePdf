@@ -559,9 +559,16 @@ impl XRefTable {
         reader: &mut BufReader<R>,
         options: &super::ParseOptions,
     ) -> ParseResult<Self> {
-        // Find the most recent xref offset
         let xref_offset = Self::find_xref_offset(reader)?;
+        Self::parse_revision(reader, options, xref_offset)
+    }
 
+    /// Resolve the xref chain ending at a specific physical revision.
+    pub(crate) fn parse_revision<R: Read + Seek>(
+        reader: &mut BufReader<R>,
+        options: &super::ParseOptions,
+        xref_offset: u64,
+    ) -> ParseResult<Self> {
         // Parse all xref tables in the chain
         let mut merged_table = Self::new();
         let mut current_offset = Some(xref_offset);
@@ -670,6 +677,36 @@ impl XRefTable {
         }
 
         Ok(merged_table)
+    }
+
+    /// Advance an isolated historical table by one physical incremental revision.
+    pub(crate) fn advance_revision<R: Read + Seek>(
+        &mut self,
+        reader: &mut BufReader<R>,
+        options: &super::ParseOptions,
+        offset: u64,
+    ) -> ParseResult<()> {
+        reader.seek(SeekFrom::Start(offset))?;
+        let next = Self::parse_primary_with_options(reader, options)?;
+        let previous = next
+            .trailer
+            .as_ref()
+            .and_then(|t| t.get("Prev"))
+            .and_then(|v| v.as_integer());
+        if previous.and_then(|p| u64::try_from(p).ok()) != Some(self.xref_offset) {
+            return Err(ParseError::InvalidXRef);
+        }
+        for (number, entry) in next.entries {
+            self.extended_entries.remove(&number);
+            self.entries.insert(number, entry);
+        }
+        for (number, entry) in next.extended_entries {
+            self.entries.remove(&number);
+            self.extended_entries.insert(number, entry);
+        }
+        self.trailer = next.trailer;
+        self.xref_offset = next.xref_offset;
+        Ok(())
     }
 
     /// Parse xref table from a reader (handles both traditional and stream xrefs)

@@ -5,6 +5,8 @@ use crate::parser::{PdfDictionary, PdfObject, PdfReader};
 use crate::signatures::ByteRange;
 use std::io::{Read, Seek};
 
+mod field_lock;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(dead_code)] // Additional variants are the shared contract for upcoming editors.
 pub(crate) enum IncrementalModification {
@@ -13,6 +15,7 @@ pub(crate) enum IncrementalModification {
     FormFill,
     FormStructure,
     AddSignature,
+    DocumentTimestamp,
     AddAnnotation,
     OcrTextLayer,
     TaggedStructure,
@@ -26,12 +29,17 @@ enum DocMdpPermission {
     FormFillSignAndAnnotate,
 }
 
-/// Enforce the effective certification policy for an incremental edit.
-///
-/// Approval signatures do not establish a DocMDP policy. Certification
-/// metadata is accepted only when the catalog and the signature's transform
-/// reference identify one unambiguous permission level.
+/// Enforce certification and signed field-lock permissions for an incremental edit.
+/// Historical signed restrictions remain effective after later field replacements.
 pub(crate) fn ensure_modification_allowed<R: Read + Seek>(
+    reader: &mut PdfReader<R>,
+    catalog: &PdfDictionary,
+    modification: IncrementalModification,
+) -> Result<(), PdfError> {
+    field_lock::enforce_history(reader, catalog, modification)
+}
+
+fn ensure_docmdp_allowed<R: Read + Seek>(
     reader: &mut PdfReader<R>,
     catalog: &PdfDictionary,
     modification: IncrementalModification,
@@ -443,6 +451,11 @@ fn enforce_permission(
     modification: IncrementalModification,
     permission: DocMdpPermission,
 ) -> Result<(), PdfError> {
+    // ISO 32000-2 erratum #131: only the dedicated invisible timestamp path
+    // qualifies. Generic object edits and approval signatures do not.
+    if modification == IncrementalModification::DocumentTimestamp {
+        return Ok(());
+    }
     let description = match permission {
         DocMdpPermission::NoChanges => "P=1 (no changes)",
         DocMdpPermission::FormFillAndSign => "P=2 (form filling and signing)",
@@ -470,6 +483,7 @@ fn enforce_permission(
         IncrementalModification::FormFill => "form filling",
         IncrementalModification::FormStructure => "changing signature form structure",
         IncrementalModification::AddSignature => "adding signatures",
+        IncrementalModification::DocumentTimestamp => "adding document timestamps",
         IncrementalModification::AddAnnotation => "adding annotations",
         IncrementalModification::OcrTextLayer => "adding an OCR text layer",
         IncrementalModification::GenericObjects => "editing arbitrary objects or catalog entries",

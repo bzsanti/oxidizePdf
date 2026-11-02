@@ -109,7 +109,7 @@ fn rejects_invalid_references_unfilled_reservations_and_structural_overrides() {
 }
 
 #[test]
-fn generic_updates_deny_all_certification_levels_and_timestamp_obeys_signing_policy() {
+fn generic_updates_deny_all_certification_levels_but_allow_document_timestamps() {
     for permission in [
         CertificationPermission::NoChanges,
         CertificationPermission::FormFillAndSign,
@@ -127,13 +127,12 @@ fn generic_updates_deny_all_certification_levels_and_timestamp_obeys_signing_pol
         ));
         let timestamp =
             prepare_document_timestamp(&signed, &DocumentTimestampOptions::invisible("timestamp"));
-        assert_eq!(
-            timestamp.is_ok(),
-            permission != CertificationPermission::NoChanges
-        );
-        if let Ok(timestamp) = timestamp {
-            assert!(timestamp.finalize(DER).unwrap().starts_with(&signed));
-        }
+        // ISO 32000-2 erratum #131 permits the dedicated timestamp-only update.
+        assert!(timestamp
+            .unwrap()
+            .finalize(DER)
+            .unwrap()
+            .starts_with(&signed));
     }
     let source = include_bytes!("fixtures/signatures/docmdp_p2_rsa.pdf");
     assert!(matches!(

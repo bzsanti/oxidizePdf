@@ -210,17 +210,12 @@ fn test_semantic_chunk_overlap_tokens() {
         chunks_with_overlap.len()
     );
 
-    // Verify overlap: chunk[1] should contain elements from the end of chunk[0]
-    if chunks_with_overlap.len() >= 2 {
-        let chunk0_elements = chunks_with_overlap[0].elements();
-        let chunk1_elements = chunks_with_overlap[1].elements();
-
-        // The last element of chunk 0 should also appear in chunk 1
-        let last_of_0 = chunk0_elements.last().unwrap();
-        let has_overlap = chunk1_elements.iter().any(|e| e.text() == last_of_0.text());
-        assert!(
-            has_overlap,
-            "Chunk 1 should contain overlapping elements from chunk 0"
-        );
+    // Whole ten-token elements cannot fit a five-token overlap allowance or
+    // the next twelve-token chunk. Keeping them would silently exceed both.
+    assert_eq!(chunks_with_overlap.len(), chunks_no_overlap.len());
+    for (with, without) in chunks_with_overlap.iter().zip(&chunks_no_overlap) {
+        assert_eq!(with.text(), without.text());
+        assert!(with.token_estimate() <= 12);
+        assert!(!with.is_oversized());
     }
 }

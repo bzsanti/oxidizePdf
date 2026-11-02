@@ -162,7 +162,19 @@ fn rejects_a_certification_dictionary_redefined_after_signing() {
         .into_bytes();
     let incrementally_redefined = append_signature_redefinition(&source, &replacement);
 
-    assert!(reorder_error(&incrementally_redefined).contains("outside its signed byte ranges"));
+    // The original P=1 already prohibits page reordering before the forged
+    // revision is reached. A timestamp is otherwise permitted and must still
+    // reject the unsigned replacement of the certification dictionary.
+    assert!(reorder_error(&incrementally_redefined).contains("P=1"));
+    let error = oxidize_pdf::signatures::prepare_document_timestamp(
+        &incrementally_redefined,
+        &oxidize_pdf::signatures::DocumentTimestampOptions::invisible("timestamp"),
+    )
+    .expect_err("unsigned certification replacement must be rejected");
+    assert!(
+        error.to_string().contains("outside its signed byte ranges"),
+        "{error}"
+    );
 }
 
 #[test]

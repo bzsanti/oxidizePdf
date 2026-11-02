@@ -1,0 +1,13 @@
+---
+title: "Versions and capability limits"
+description: "Distinguish the published Rust crate, optional capabilities and bridge APIs."
+---
+
+These pages target the published **oxidize-pdf 5.5.5** crate. The repository's `develop` branch may contain changes that are not in that release.
+
+- Feature-gated APIs require the corresponding Cargo feature. Check the [5.5.5 feature list](https://docs.rs/crate/oxidize-pdf/5.5.5/features) before copying examples for signatures, OCR or experimental SPI.
+- Reading text does not render a PDF page to an image. Page rasterization is outside this library's scope.
+- A validation report describes the checks that ran. It is not a general PDF/A, PDF/UA or signature-trust certificate.
+- Python and .NET expose separate APIs. A shared Rust dependency does not establish complete functional parity.
+
+For additional public APIs use the [versioned reference](https://docs.rs/oxidize-pdf/5.5.5/oxidize_pdf/). For pending bridge capabilities see [issue #710](https://github.com/bzsanti/oxidizePdf/issues/710).

@@ -109,6 +109,10 @@ jobs:
         if: steps.reuse.outputs.hit != 'true' && (matrix.os == 'ubuntu-latest' && matrix.rust == 'stable')
         run: cargo test -p oxidize-pdf --locked --features "internal-testing,unstable-spi,semantic" --verbose
 
+      - name: Verify semantic token budgets with cl100k_base
+        if: steps.reuse.outputs.hit != 'true' && matrix.rust == 'stable'
+        run: cargo test -p oxidize-pdf --locked --features tiktoken --test issue_847_semantic_token_budget_test --test semantic_chunking_test --test issue_377_token_counter_test
+
       - name: Build documentation
         if: steps.reuse.outputs.hit != 'true'
         run: cargo doc --all --locked --no-deps

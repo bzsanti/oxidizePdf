@@ -1,0 +1,27 @@
+{
+  "$schema": "https://context7.com/schema/docs7.json",
+  "name": "oxidize-pdf for Rust",
+  "colors": {
+    "primary": "#b84312",
+    "light": "#ff6b35",
+    "dark": "#b84312"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Use the library",
+        "pages": [
+          "index",
+          "quickstart",
+          "scope"
+        ]
+      },
+      {
+        "group": "Coding assistants",
+        "pages": [
+          "context7"
+        ]
+      }
+    ]
+  }
+}

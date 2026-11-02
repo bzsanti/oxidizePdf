@@ -207,3 +207,33 @@ fn inline_or_unsigned_field_policy_definitions_fail_closed() {
         assert!(matches!(IncrementalFormFiller::new(&base).fill("name", "blocked"), Err(PdfError::InvalidStructure(_))));
     }
 }
+
+#[test]
+fn unlocked_aliases_remain_fillable() {
+    let mut objects = fixture_objects(Some(2), None, false);
+    objects[3] = b"<< /Fields [8 0 R 9 0 R] /DA (/Helv 12 Tf 0 g) >>".to_vec();
+    objects.push(b"<< /T (first) /Kids [5 0 R] >>".to_vec());
+    objects.push(b"<< /T (alias) /Kids [5 0 R] >>".to_vec());
+    let base = pdf_assembler::assemble_pdf(&objects);
+    let output = IncrementalFormFiller::new(&base)
+        .fill("alias.name", "allowed")
+        .unwrap();
+    assert!(output.starts_with(&base));
+    assert_eq!(value(&output, 5), b"allowed");
+}
+
+#[test]
+fn actual_field_cycles_still_fail_closed() {
+    let mut objects = fixture_objects(None, None, false);
+    objects[3] = b"<< /Fields [8 0 R] >>".to_vec();
+    objects.push(b"<< /T (cycle) /Kids [8 0 R] >>".to_vec());
+    let base = pdf_assembler::assemble_pdf(&objects);
+    let error = IncrementalObjectEditor::new(&base).err().unwrap();
+    assert!(matches!(error, PdfError::InvalidStructure(_)), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("cyclic signature field reference"),
+        "{error}"
+    );
+}
