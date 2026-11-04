@@ -60,6 +60,10 @@ pub struct DecodedGlyph {
     /// Glyph identifier selected through `CIDToGIDMap` or an embedded CID CFF charset.
     pub gid: Option<u16>,
     /// Best available Unicode mapping, preferring `ToUnicode`.
+    /// For a surrogate pair in a Unicode identity map, the first glyph carries
+    /// the scalar and the second carries `Some("")`; both retain their own
+    /// source code, CID, GID and advance. Pairs are confined to one byte slice
+    /// passed to `decode_glyphs`, never combined across text-showing strings.
     pub unicode: Option<String>,
     /// Horizontal or vertical advance from the font's width tables.
     pub advance: f64,
@@ -449,6 +453,31 @@ impl ResolvedFontResource {
                 unicode,
                 advance,
             });
+        }
+        if self
+            .to_unicode
+            .as_ref()
+            .is_some_and(CMap::is_unicode_identity)
+        {
+            for index in 1..glyphs.len() {
+                let (previous, current) = glyphs.split_at_mut(index);
+                let high = &mut previous[index - 1];
+                let low = &mut current[0];
+                if let ([hi0, hi1], [lo0, lo1]) =
+                    (high.source_code.as_slice(), low.source_code.as_slice())
+                {
+                    let high_unit = u16::from_be_bytes([*hi0, *hi1]);
+                    let low_unit = u16::from_be_bytes([*lo0, *lo1]);
+                    if (0xd800..=0xdbff).contains(&high_unit)
+                        && (0xdc00..=0xdfff).contains(&low_unit)
+                    {
+                        // Keep both glyphs and their metrics; the second unit
+                        // completes the first glyph's Unicode scalar.
+                        high.unicode = String::from_utf16(&[high_unit, low_unit]).ok();
+                        low.unicode = Some(String::new());
+                    }
+                }
+            }
         }
         Ok(glyphs)
     }

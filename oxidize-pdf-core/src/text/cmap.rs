@@ -94,6 +94,38 @@ impl Default for CMap {
 }
 
 impl CMap {
+    /// Compatibility mapping for an explicit Identity name in a ToUnicode entry.
+    pub(crate) fn named_unicode(name: &str) -> Option<Self> {
+        if !matches!(name, "Identity-H" | "Identity-V") {
+            return None;
+        }
+        let mut map = Self::new();
+        map.inherited_predefined = Some(name.to_owned());
+        map.codespace_ranges.push(CodeRange {
+            start: vec![0x00, 0x00],
+            end: vec![0xff, 0xff],
+        });
+        Some(map)
+    }
+
+    /// Only an unmodified Unicode identity map can decode adjacent UTF-16 units.
+    pub(crate) fn is_unicode_identity(&self) -> bool {
+        self.cmap_type == CMapType::ToUnicode && self.is_identity_mapping()
+    }
+
+    fn is_identity_mapping(&self) -> bool {
+        self.mappings.is_empty()
+            && self.single_mappings.is_empty()
+            && match &self.parent {
+                Some(parent) => parent.is_identity_mapping(),
+                None => {
+                    (self.cmap_type == CMapType::ToUnicode && self.identity_inherited())
+                        || matches!(&self.cmap_type, CMapType::Predefined(name)
+                            if matches!(name.as_str(), "Identity-H" | "Identity-V"))
+                }
+            }
+    }
+
     /// Create a new empty CMap
     pub fn new() -> Self {
         Self {
@@ -401,7 +433,7 @@ impl CMap {
         None
     }
 
-    /// Return an explicitly mapped source code for a single Unicode character.
+    /// Return a source code proven to map to a single Unicode character.
     /// This lets extraction connect semantic glyphs such as U+0020 back to
     /// code/CID-indexed font metrics without guessing a CID.
     pub(crate) fn source_code_for_unicode(&self, target: char) -> Option<Vec<u8>> {
@@ -443,6 +475,12 @@ impl CMap {
             .as_ref()
             .and_then(|parent| parent.source_code_for_unicode(target))
             .filter(|code| self.map(code).as_deref() == Some(target_bytes.as_slice()))
+            .or_else(|| {
+                ((self.identity_inherited() || self.is_identity_mapping())
+                    && target_bytes.len() == 2
+                    && self.map(&target_bytes).as_deref() == Some(target_bytes.as_slice()))
+                .then_some(target_bytes)
+            })
     }
 
     /// Preserve layer precedence, including child ranges over parent singles.
