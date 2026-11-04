@@ -473,8 +473,16 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         }
 
         // A declared ToUnicode remains authoritative even if it is damaged.
-        // Resolve the whole reference chain instead of inspecting one object.
+        // If /ToUnicode is a Name (e.g. /Identity-H or /Identity-V), standard engines
+        // treat 2-byte character codes as mapping directly to UTF-16BE/UCS-2.
         if let Some(object) = font_dict.get("ToUnicode") {
+            let resolved_obj = document.resolve(object).ok();
+            let target_obj = resolved_obj.as_ref().unwrap_or(object);
+            if let Some(name) = target_obj.as_name() {
+                if matches!(name.0.as_str(), "Identity-H" | "Identity-V") {
+                    font_info.cid_encoding = Some(crate::text::encoding_cmap::CidEncoding::Utf16Be);
+                }
+            }
             let parsed = Self::resolve_tounicode(object, document);
             font_info.to_unicode = match parsed {
                 Ok(map) => map,
@@ -890,6 +898,12 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         }
         if matches!(object, PdfObject::Null) {
             return Ok(None);
+        }
+        // When /ToUnicode is specified as a Name (e.g. /Identity-H), there is no CMap stream.
+        if let Some(name) = object.as_name() {
+            if matches!(name.0.as_str(), "Identity-H" | "Identity-V") {
+                return Ok(None);
+            }
         }
         let stream = object
             .as_stream()
