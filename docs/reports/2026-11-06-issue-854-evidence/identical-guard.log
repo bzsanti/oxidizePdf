@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/tmp/perf854-data/measure.py", line 8, in <module>
+    raise ValueError('Comparison requires distinct binary hashes; verify baseline/candidate provenance')
+ValueError: Comparison requires distinct binary hashes; verify baseline/candidate provenance

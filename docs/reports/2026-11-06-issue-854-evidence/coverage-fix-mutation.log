@@ -1,0 +1,39 @@
+   Compiling oxidize-pdf v5.5.4 (/tmp/oxidize-perf854-mutation/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 9.99s
+     Running tests/issue_854_performance_contract_test.rs (/tmp/issue851-investigation/target/debug/deps/issue_854_performance_contract_test-27950e9f65da202e)
+
+running 1 test
+test pending_text_precedes_text_flow_and_later_text ... FAILED
+
+failures:
+
+---- pending_text_precedes_text_flow_and_later_text stdout ----
+
+thread 'pending_text_precedes_text_flow_and_later_text' (396) panicked at oxidize-pdf-core/tests/issue_854_performance_contract_test.rs:168:9:
+pending text, flow and later text must retain painting order: BT
+/Helvetica 12 Tf
+50.00 700.00 Td
+(Flow) Tj
+ET
+BT
+/Helvetica 12 Tf
+0.000 g
+50.00 700.00 Td
+(Pending) Tj
+ET
+BT
+/Helvetica 12 Tf
+0.000 g
+50.00 700.00 Td
+(Tail) Tj
+ET
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    pending_text_precedes_text_flow_and_later_text
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p oxidize-pdf --test issue_854_performance_contract_test`

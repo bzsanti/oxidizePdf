@@ -1,0 +1,39 @@
+## Calidad de Tests (Kripteia)
+
+=== Kripteia Test Quality Report ===
+Overall Score: 100 | Tests: 3 | Files: 1
+
+--- Files ---
+Path                                                          Tests  Score
+--------------------------------------------------------------------------
+...e-pdf-core/tests/issue_854_performance_contract_test.rs        3    100
+
+--- Worst Offenders ---
+  object_cache_avoids_io_and_returns_independent_streams (oxidize-pdf-core/tests/issue_854_performance_contract_test.rs:29) - Score: 100
+    i Test 'object_cache_avoids_io_and_returns_independent_streams' has multiple assertions without diagnostic messages
+    i Test 'object_cache_avoids_io_and_returns_independent_streams' uses .unwrap() which silently discards error information
+  repeated_context_switches_preserve_order_and_repeatable_content (oxidize-pdf-core/tests/issue_854_performance_contract_test.rs:72) - Score: 100
+    i Test 'repeated_context_switches_preserve_order_and_repeatable_content' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'repeated_context_switches_preserve_order_and_repeatable_content' uses .unwrap() which silently discards error information
+  pending_text_precedes_text_flow_and_later_text (oxidize-pdf-core/tests/issue_854_performance_contract_test.rs:123) - Score: 100
+    i Test 'pending_text_precedes_text_flow_and_later_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'pending_text_precedes_text_flow_and_later_text' uses .unwrap() which silently discards error information
+
+--- Details ---
+oxidize-pdf-core/tests/issue_854_performance_contract_test.rs:
+  object_cache_avoids_io_and_returns_independent_streams (line 29) - Score: 100
+    i Test 'object_cache_avoids_io_and_returns_independent_streams' has multiple assertions without diagnostic messages
+    i Test 'object_cache_avoids_io_and_returns_independent_streams' uses .unwrap() which silently discards error information
+  repeated_context_switches_preserve_order_and_repeatable_content (line 72) - Score: 100
+    i Test 'repeated_context_switches_preserve_order_and_repeatable_content' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'repeated_context_switches_preserve_order_and_repeatable_content' uses .unwrap() which silently discards error information
+  pending_text_precedes_text_flow_and_later_text (line 123) - Score: 100
+    i Test 'pending_text_precedes_text_flow_and_later_text' asserts against a hardcoded constant instead of a computed expected value
+    i Test 'pending_text_precedes_text_flow_and_later_text' uses .unwrap() which silently discards error information
+
+
+## Analisis de Seguridad (Kripteia Security)
+
+=== Kripteia Security Analysis ===
+
+No security issues found.

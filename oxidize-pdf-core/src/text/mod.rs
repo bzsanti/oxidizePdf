@@ -491,12 +491,11 @@ impl TextContext {
         Ok(buf)
     }
 
-    /// Take ownership of the accumulated `Op` buffer, leaving an empty
-    /// `Vec` in its place. Mirror of `GraphicsContext::drain_ops` —
+    /// Move buffered operators, retaining only small buffers for the next context switch. Mirror of `GraphicsContext::append_ops_to` —
     /// used by `Page` to flush the text buffer into a unified content
     /// stream on context switch (issue #227).
-    pub(crate) fn drain_ops(&mut self) -> Vec<crate::graphics::ops::Op> {
-        std::mem::take(&mut self.operations)
+    pub(crate) fn append_ops_to(&mut self, destination: &mut Vec<crate::graphics::ops::Op>) {
+        crate::graphics::ops::append_buffered_ops(destination, &mut self.operations);
     }
 
     /// Read-only access to the operation list.

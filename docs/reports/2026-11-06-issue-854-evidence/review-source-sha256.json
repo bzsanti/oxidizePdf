@@ -1,0 +1,11 @@
+{
+  "oxidize-pdf-core/src/graphics/mod.rs": "5ea1da3a2a02138c397aab4816984aaffcca1f7e09eaedab678c1f945290a426",
+  "oxidize-pdf-core/src/graphics/ops.rs": "1bbb69ee2296f7c7659859711887b36cf0507158a10ba6995a3397bc2203f5d8",
+  "oxidize-pdf-core/src/page.rs": "bcd2bf0b0af7127818dc2eab21f5faa52b2f2f650883a91b72c4f9e77ce1462d",
+  "oxidize-pdf-core/src/parser/document.rs": "94c19bf71320de6803a5b2b0ae7101407b412da2c61e41120a20e9505024e31b",
+  "oxidize-pdf-core/src/parser/mod.rs": "d542d8ba03bf48cc62e2290f6c6434a57fb923b72e7f0888b8d21396f10499c3",
+  "oxidize-pdf-core/src/text/extraction.rs": "f4a526414498733d386de7a1bca6f813f961bc229ec63afed21cc4b2ba3d2f1a",
+  "oxidize-pdf-core/src/text/mod.rs": "446a83367d3ec488ac1c97c3f75ed743a8f355291c4e4563befc7edd80075a11",
+  "oxidize-pdf-core/examples/performance_854.rs": "31b70e57ca0d6c48c57e9a91b788d8814f7712173f80046eaca4cfaf2697fe24",
+  "oxidize-pdf-core/tests/issue_854_performance_contract_test.rs": "f20078ec92afdcef15eef9aff22730d3c83741a52f49a0ef75c0eaab22235e07"
+}
