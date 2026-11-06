@@ -1,0 +1,22 @@
+{
+  "/tmp/perf854-data/shared-font-256p.pdf": {
+    "bytes": 105323,
+    "sha256": "a053bd5aa21bff1b7f29d2d13fed29ce9bdca6066f7c97614ee05050e40485b3"
+  },
+  "/tmp/perf854-data/vectors-32p.pdf": {
+    "bytes": 8854758,
+    "sha256": "a1e79c243dc8a49ad61ed17f39e0421e6ebefe4acd4e1b648f0d705c01bf9c03"
+  },
+  "/tmp/perf854-data/vectors-256p.pdf": {
+    "bytes": 70634350,
+    "sha256": "c7fa885bfbe0f0f187f70a890bcdebdc044eb1a9542fdfbaef3db86a5e8ac628"
+  },
+  "/tmp/perf854-data/invoice-100p.pdf": {
+    "bytes": 106230,
+    "sha256": "467c8877e08fdfcbb4b854c496a54ab9decaf5a5c79e2ab7af1ef006439f7c2b"
+  },
+  "/tmp/oxidize-perf854/oxidize-pdf-core/tests/fixtures/Cold_Email_Hacks.pdf": {
+    "bytes": 929918,
+    "sha256": "03dde678c4770801c11ca5595e049633502c94f32bf3867bb318bdf3646b3814"
+  }
+}

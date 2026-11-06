@@ -7,6 +7,7 @@ mod recovery;
 
 use std::collections::HashMap;
 use std::io::{Read, Seek};
+use std::sync::Arc;
 
 pub use recovery::{RecoveredText, RecoveryLocation, TextRecoveryAction, TextRecoveryDiagnostic};
 
@@ -762,14 +763,14 @@ pub struct TextExtractor {
     /// program instead of U+FFFD (issue #715).
     symbolic_truetype_fallback: bool,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
-    font_cache: HashMap<String, FontInfo>,
+    font_cache: HashMap<String, Arc<FontInfo>>,
     /// Narrowest usable CID width for Type0 fonts in the current page. Derived
     /// once when the font is cached so flat extraction does not rescan a
     /// potentially large attacker-controlled `/W` table for every glyph.
     type0_implicit_space_widths: HashMap<String, f64>,
     /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
     /// object across pages. Most multi-page PDFs reuse the same font objects.
-    font_object_cache: HashMap<(u32, u16), FontInfo>,
+    font_object_cache: HashMap<(u32, u16), Arc<FontInfo>>,
 }
 
 impl TextExtractor {
@@ -1886,7 +1887,7 @@ impl TextExtractor {
                             let font_info = state
                                 .font_name
                                 .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
+                                .and_then(|name| self.font_cache.get(name).map(Arc::as_ref));
                             calculate_text_width_from_codes(
                                 text_bytes,
                                 &decoded,
@@ -2151,10 +2152,9 @@ impl TextExtractor {
                                     }
 
                                     let text_width = {
-                                        let font_info = state
-                                            .font_name
-                                            .as_ref()
-                                            .and_then(|name| self.font_cache.get(name));
+                                        let font_info = state.font_name.as_ref().and_then(|name| {
+                                            self.font_cache.get(name).map(Arc::as_ref)
+                                        });
                                         calculate_text_width_from_codes(
                                             &text_bytes,
                                             &decoded,
@@ -2258,7 +2258,7 @@ impl TextExtractor {
                                     let vertical = state
                                         .font_name
                                         .as_ref()
-                                        .and_then(|name| self.font_cache.get(name))
+                                        .and_then(|name| self.font_cache.get(name).map(Arc::as_ref))
                                         .is_some_and(is_vertical_font);
                                     if !skip_tj_space
                                         && !vertical
@@ -2419,7 +2419,7 @@ impl TextExtractor {
                             let font_info = state
                                 .font_name
                                 .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
+                                .and_then(|name| self.font_cache.get(name).map(Arc::as_ref));
                             calculate_text_width_from_codes(
                                 &text,
                                 &decoded,
@@ -2527,7 +2527,7 @@ impl TextExtractor {
                             let font_info = state
                                 .font_name
                                 .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
+                                .and_then(|name| self.font_cache.get(name).map(Arc::as_ref));
                             calculate_text_width_from_codes(
                                 &text,
                                 &decoded,
@@ -3638,9 +3638,11 @@ impl TextExtractor {
         font_dict: &PdfDictionary,
         document: &PdfDocument<R>,
     ) -> ParseResult<()> {
-        let font_info = CMapTextExtractor::new()
-            .with_symbolic_truetype_fallback(self.symbolic_truetype_fallback)
-            .extract_font_info(font_dict, document)?;
+        let font_info = Arc::new(
+            CMapTextExtractor::new()
+                .with_symbolic_truetype_fallback(self.symbolic_truetype_fallback)
+                .extract_font_info(font_dict, document)?,
+        );
         self.cache_page_font(font_name, font_info);
         Ok(())
     }
@@ -3663,9 +3665,11 @@ impl TextExtractor {
                 position: 0,
                 message: "Font resource must be a dictionary".into(),
             })?;
-        let font_info = CMapTextExtractor::new()
-            .with_symbolic_truetype_fallback(self.symbolic_truetype_fallback)
-            .extract_font_info(font_dict, document)?;
+        let font_info = Arc::new(
+            CMapTextExtractor::new()
+                .with_symbolic_truetype_fallback(self.symbolic_truetype_fallback)
+                .extract_font_info(font_dict, document)?,
+        );
         self.font_object_cache.insert(font_ref, font_info.clone());
         self.cache_page_font(font_name, font_info);
         Ok(())
@@ -3682,7 +3686,7 @@ impl TextExtractor {
         let font = state
             .font_name
             .as_ref()
-            .and_then(|name| self.font_cache.get(name));
+            .and_then(|name| self.font_cache.get(name).map(Arc::as_ref));
         let Some(font) = font.filter(|font| is_vertical_font(font)) else {
             return advance_pen(state, horizontal_width);
         };
@@ -3715,7 +3719,7 @@ impl TextExtractor {
     }
 
     /// Add a parsed font to page-local caches and derive its Type0 fallback width.
-    fn cache_page_font(&mut self, font_name: &str, font_info: FontInfo) {
+    fn cache_page_font(&mut self, font_name: &str, font_info: Arc<FontInfo>) {
         if font_info.font_type == "Type0" || font_info.descendant_font.is_some() {
             let cid_font = font_info.descendant_font.as_deref().unwrap_or(&font_info);
             if let Some(width) = cid_font
@@ -3748,7 +3752,7 @@ impl TextExtractor {
         let font_is_unreliable = state
             .font_name
             .as_deref()
-            .and_then(|name| self.font_cache.get(name))
+            .and_then(|name| self.font_cache.get(name).map(Arc::as_ref))
             .is_some_and(|font| font.to_unicode.is_none() && font.differences.is_some());
 
         !self.include_unreliable_figure_text

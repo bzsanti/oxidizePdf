@@ -1,0 +1,59 @@
+[
+  {
+    "args": [],
+    "exit": 1,
+    "stderr": "Error: \"usage: performance_854 generate PAGES LINES COUNT compressed|raw mixed|text [OUTPUT] | extract PDF COUNT | read-streams PDF\"\n"
+  },
+  {
+    "args": [
+      "--help"
+    ],
+    "exit": 1,
+    "stderr": "Error: \"usage: performance_854 generate PAGES LINES COUNT compressed|raw mixed|text [OUTPUT] | extract PDF COUNT | read-streams PDF\"\n"
+  },
+  {
+    "args": [
+      "generate"
+    ],
+    "exit": 1,
+    "stderr": "Error: \"usage: performance_854 generate PAGES LINES COUNT compressed|raw mixed|text [OUTPUT] | extract PDF COUNT | read-streams PDF\"\n"
+  },
+  {
+    "args": [
+      "generate",
+      "1",
+      "1",
+      "1",
+      "compressed",
+      "typo"
+    ],
+    "exit": 1,
+    "stderr": "Error: \"usage: performance_854 generate PAGES LINES COUNT compressed|raw mixed|text [OUTPUT] | extract PDF COUNT | read-streams PDF\"\n"
+  },
+  {
+    "args": [
+      "generate",
+      "1",
+      "1",
+      "1",
+      "typo",
+      "mixed"
+    ],
+    "exit": 1,
+    "stderr": "Error: \"usage: performance_854 generate PAGES LINES COUNT compressed|raw mixed|text [OUTPUT] | extract PDF COUNT | read-streams PDF\"\n"
+  },
+  {
+    "args": [
+      "extract"
+    ],
+    "exit": 1,
+    "stderr": "Error: \"usage: performance_854 generate PAGES LINES COUNT compressed|raw mixed|text [OUTPUT] | extract PDF COUNT | read-streams PDF\"\n"
+  },
+  {
+    "args": [
+      "read-streams"
+    ],
+    "exit": 1,
+    "stderr": "Error: \"usage: performance_854 generate PAGES LINES COUNT compressed|raw mixed|text [OUTPUT] | extract PDF COUNT | read-streams PDF\"\n"
+  }
+]

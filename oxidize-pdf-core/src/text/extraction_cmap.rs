@@ -891,6 +891,11 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         if matches!(object, PdfObject::Null) {
             return Ok(None);
         }
+        if let PdfObject::Name(name) = &object {
+            if let Some(map) = CMap::named_unicode(&name.0) {
+                return Ok(Some(map));
+            }
+        }
         let stream = object
             .as_stream()
             .ok_or_else(|| Self::cmap_error("ToUnicode must be a stream".into()))?;
@@ -1634,6 +1639,9 @@ fn decode_with_cid_table(
 
 /// Decode text using a CMap — free function (no allocations).
 fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap, simple_font: bool) -> ParseResult<String> {
+    if !simple_font && cmap.is_unicode_identity() {
+        return Ok(crate::text::encoding_cmap::decode_utf16be(text_bytes));
+    }
     let inherited = cmap
         .inherited_ordering()
         .and_then(AdobeCidCollection::from_ordering);

@@ -275,6 +275,17 @@ fn write_numbers<const PRECISION: usize>(out: &mut Vec<u8>, values: &[f64], suff
     out.extend_from_slice(suffix);
 }
 
+pub(crate) fn append_buffered_ops(destination: &mut Vec<Op>, source: &mut Vec<Op>) {
+    // A text run uses only a handful of operators. Bound retained capacity so
+    // switching after a large path does not keep a second page-sized buffer.
+    const RETAINED_OPERATORS: usize = 64;
+    if source.capacity() <= RETAINED_OPERATORS {
+        destination.append(source);
+    } else {
+        destination.extend(std::mem::take(source));
+    }
+}
+
 /// Serialises a slice of `Op` values to a byte buffer in PDF
 /// content-stream syntax. Non-finite floats are clamped to `0.0` via
 /// `finite_or_zero` at the emission boundary.

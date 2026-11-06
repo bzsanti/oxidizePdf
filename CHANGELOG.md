@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.5.7] - 2026-11-06
+
+### Fixed
+
+- Decode explicit `/ToUnicode /Identity-H` and `/Identity-V` names in Type0
+  fonts, including indirect references and UTF-16 surrogate pairs. Preserve
+  glyph identities and advances; `/Encoding /Identity-H` alone does not imply
+  a Unicode map (#851).
+
+### Performance
+
+- Share immutable parsed font maps and metrics across pages and Form XObjects
+  during text extraction (#854).
+- Reuse small operator buffers during text/graphics switches and release large
+  buffers, preserving painting order and repeatable serialization (#854).
+- Remove duplicate parsed-object storage from `PdfDocument`; `PdfReader`
+  remains the cache owner and returned objects retain independent ownership.
+  The measured 256-page stream workload uses 46.6% less peak memory with a
+  4.5% increase in traversal time (#854).
+
+See [5.5.7 release notes](docs/releases/5.5.7.md) for compatibility, measurement
+scope and the memory/time tradeoff.
+
+
 ## [5.5.6] - 2026-11-02
 
 ### Fixed

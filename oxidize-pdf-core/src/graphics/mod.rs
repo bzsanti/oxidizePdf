@@ -807,8 +807,8 @@ impl GraphicsContext {
         Ok(buf)
     }
 
-    /// Take ownership of the accumulated `Op` buffer, leaving an empty
-    /// `Vec` in its place. Used by `Page` to flush the graphics buffer
+    /// Move buffered operators, retaining only small buffers for the next context switch.
+    /// Used by `Page` to flush the graphics buffer
     /// into a unified content stream when the caller switches contexts
     /// (issue #227 — preserves PDF painter-model call order across
     /// `Page::graphics()` / `Page::text()` switches).
@@ -816,8 +816,8 @@ impl GraphicsContext {
     /// State fields (`current_color`, `line_width`, …) are unaffected so
     /// the next chain of calls on this context resumes with the same
     /// graphics state.
-    pub(crate) fn drain_ops(&mut self) -> Vec<ops::Op> {
-        std::mem::take(&mut self.operations)
+    pub(crate) fn append_ops_to(&mut self, destination: &mut Vec<ops::Op>) {
+        ops::append_buffered_ops(destination, &mut self.operations);
     }
 
     /// Read-only access to the operation list (used by `Page` to peek

@@ -1,0 +1,50 @@
+[
+  {
+    "mode": "compressed",
+    "kind": "mixed",
+    "all_objects_and_decoded_streams_equal": true,
+    "qpdf_check": "PASS",
+    "excluded_clock_metadata": [
+      {
+        "/CreationDate": "u:D:20261106093426+00'00",
+        "/ModDate": "u:D:20261106093426+00'00"
+      },
+      {
+        "/CreationDate": "u:D:20261106093426+00'00",
+        "/ModDate": "u:D:20261106093426+00'00"
+      }
+    ]
+  },
+  {
+    "mode": "raw",
+    "kind": "mixed",
+    "all_objects_and_decoded_streams_equal": true,
+    "qpdf_check": "PASS",
+    "excluded_clock_metadata": [
+      {
+        "/CreationDate": "u:D:20261106093426+00'00",
+        "/ModDate": "u:D:20261106093426+00'00"
+      },
+      {
+        "/CreationDate": "u:D:20261106093426+00'00",
+        "/ModDate": "u:D:20261106093426+00'00"
+      }
+    ]
+  },
+  {
+    "mode": "compressed",
+    "kind": "text",
+    "all_objects_and_decoded_streams_equal": true,
+    "qpdf_check": "PASS",
+    "excluded_clock_metadata": [
+      {
+        "/CreationDate": "u:D:20261106093426+00'00",
+        "/ModDate": "u:D:20261106093426+00'00"
+      },
+      {
+        "/CreationDate": "u:D:20261106093426+00'00",
+        "/ModDate": "u:D:20261106093426+00'00"
+      }
+    ]
+  }
+]

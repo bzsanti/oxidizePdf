@@ -1,0 +1,27 @@
+info: cargo-llvm-cov currently setting cfg(coverage); you can opt-out it by passing --no-cfg-coverage
+   Compiling oxidize-pdf v5.5.4 (/tmp/oxidize-perf854/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 58.38s
+     Running tests/issue_854_performance_contract_test.rs (/tmp/perf854-coverage/llvm-cov-target/debug/deps/issue_854_performance_contract_test-27950e9f65da202e)
+
+running 3 tests
+test object_cache_avoids_io_and_returns_independent_streams ... ok
+test pending_text_precedes_text_flow_and_later_text ... ok
+test repeated_context_switches_preserve_order_and_repeatable_content ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/painter_model_ordering.rs (/tmp/perf854-coverage/llvm-cov-target/debug/deps/painter_model_ordering-441642c06d41965b)
+
+running 7 tests
+test text_then_graphics_preserves_call_order ... ok
+test nan_font_size_sanitised_at_emission_via_text_context ... ok
+test pure_text_only_does_not_regress ... ok
+test add_text_flow_then_page_text_preserves_call_order ... ok
+test interleaved_gfx_text_gfx_preserves_call_order ... ok
+test pure_graphics_only_does_not_regress ... ok
+test add_text_flow_between_gfx_preserves_call_order ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+    Finished report saved to /tmp/perf854-after.lcov

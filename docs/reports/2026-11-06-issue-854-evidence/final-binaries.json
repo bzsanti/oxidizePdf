@@ -1,0 +1,14 @@
+{
+  "baseline": {
+    "path": "/tmp/perf854-data/baseline",
+    "sha256": "8ad700c00c98bc060b7cdaba602b3a87068e662fcf4f9c3507bc9f5ac68382f4",
+    "source": "base 7f5d5027859292e1adb8fec69092fdc877821649 with identical benchmark example",
+    "target": "/tmp/perf854-isolated-baseline-target"
+  },
+  "candidate": {
+    "path": "/tmp/perf854-data/candidate",
+    "sha256": "a003bc93163b2325093f53ddba8e6088606cbf4d06b12dd4cd5eb1f79b3f589e",
+    "source": "final source hashes in review-source-sha256.json",
+    "target": "/tmp/perf854-target"
+  }
+}
