@@ -693,8 +693,7 @@ impl Page {
     /// switches (issue #227).
     pub fn graphics(&mut self) -> &mut GraphicsContext {
         if !self.text_context.ops_slice().is_empty() {
-            let drained = self.text_context.drain_ops();
-            self.page_ops.extend(drained);
+            self.text_context.append_ops_to(&mut self.page_ops);
         }
         &mut self.graphics_context
     }
@@ -750,8 +749,7 @@ impl Page {
     /// After `clear()`, the next `text()` call will repeat the handoff.
     pub fn text(&mut self) -> &mut TextContext {
         if !self.graphics_context.ops_slice().is_empty() {
-            let drained = self.graphics_context.drain_ops();
-            self.page_ops.extend(drained);
+            self.graphics_context.append_ops_to(&mut self.page_ops);
         }
         if self.text_context.fill_color().is_none() {
             let inherited = self.graphics_context.fill_color();
@@ -1249,12 +1247,10 @@ impl Page {
     /// not skip over pending tails.
     fn flush_pending_contexts(&mut self) {
         if !self.graphics_context.ops_slice().is_empty() {
-            let drained = self.graphics_context.drain_ops();
-            self.page_ops.extend(drained);
+            self.graphics_context.append_ops_to(&mut self.page_ops);
         }
         if !self.text_context.ops_slice().is_empty() {
-            let drained = self.text_context.drain_ops();
-            self.page_ops.extend(drained);
+            self.text_context.append_ops_to(&mut self.page_ops);
         }
     }
 

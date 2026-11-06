@@ -1,0 +1,102 @@
+   Compiling oxidize-pdf v5.5.4 (/tmp/oxidize-perf854/oxidize-pdf-core)
+    Finished `test` profile [unoptimized] target(s) in 11.87s
+     Running tests/encryption_basic_test.rs (/tmp/issue851-investigation/target/debug/deps/encryption_basic_test-977e7935ff0b10ed)
+
+running 23 tests
+test test_aes_encryption_decryption_128 ... ok
+test test_aes_error_display ... ok
+test test_aes_encryption_decryption_256 ... ok
+test test_aes_invalid_iv_length ... ok
+test test_aes_key_creation_invalid_length ... ok
+test test_aes_key_creation_valid ... ok
+test test_aes_key_size_properties ... ok
+test test_full_aes_workflow ... ok
+test test_maximum_length_passwords ... ok
+test test_full_rc4_workflow ... ok
+test test_permission_flags_default ... ok
+test test_permissions_creation ... ok
+test test_permissions_raw_bits ... ok
+test test_rc4_different_keys ... ok
+test test_rc4_empty_data ... ok
+test test_rc4_encryption_decryption ... ok
+test test_rc4_key_creation ... ok
+test test_permissions_from_flags ... ok
+test test_rc4_stream_cipher_properties ... ok
+test test_rc4_variable_key_lengths ... ok
+test test_unicode_passwords ... ok
+test test_weak_passwords ... ok
+test test_aes_iv_generation ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/encryption_cross_validation_test.rs (/tmp/issue851-investigation/target/debug/deps/encryption_cross_validation_test-e62815e97cd9d861)
+
+running 7 tests
+test test_cross_validation_summary ... ok
+test test_pypdf_fixture_exists ... ok
+test test_pypdf_r6_unicode_password ... ignored, pypdf uses different Unicode normalization (SASLprep) - known limitation
+test test_pypdf_r6_perms_exists ... ok
+test test_pypdf_r6_empty_password ... ok
+test test_pypdf_r6_key_recovery ... ok
+test test_pypdf_r6_password_validation ... ok
+
+test result: ok. 6 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/encryption_real_pdf_test.rs (/tmp/issue851-investigation/target/debug/deps/encryption_real_pdf_test-fea329af756e92a3)
+
+running 9 tests
+test test_md5_verification ... ok
+test test_debug_password_validation_algorithm ... ok
+test test_decrypt_rc4_40bit_user_password ... ok
+test test_user_password_respects_permissions ... ok
+test test_unlock_is_idempotent ... ok
+test test_cannot_read_objects_before_unlock ... ok
+test test_wrong_password_returns_error ... ok
+test test_owner_password_grants_full_permissions ... ok
+test test_decrypt_rc4_128bit_user_password ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/issue_319_form_xobject_test.rs (/tmp/issue851-investigation/target/debug/deps/issue_319_form_xobject_test-e5ffde030e3f1ebd)
+
+running 3 tests
+test text_inside_form_xobject_is_extracted ... ok
+test form_xobject_matrix_offsets_position_without_losing_text ... ok
+test nested_form_xobjects_are_extracted ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/text_extraction_e2e_test.rs (/tmp/issue851-investigation/target/debug/deps/text_extraction_e2e_test-a0f4037fb6b201b7)
+
+running 4 tests
+test test_extraction_performance_is_reasonable ... ok
+test test_plaintext_extraction_end_to_end ... ok
+test test_structured_data_extraction_end_to_end ... ok
+test test_invoice_extraction_end_to_end ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/text_extraction_test.rs (/tmp/issue851-investigation/target/debug/deps/text_extraction_test-c6a79a4cc2b8e797)
+
+running 7 tests
+test test_extract_from_manual_pdf ... ok
+test test_extract_with_multiple_text_operations ... ok
+test test_extract_text_from_page_with_options ... ok
+test test_extract_text_from_generated_pdf ... ok
+test test_extract_with_layout_preservation ... ok
+test test_extract_multiple_pages ... ok
+test test_extract_empty_page ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/type0_font_parsing_security_test.rs (/tmp/issue851-investigation/target/debug/deps/type0_font_parsing_security_test-5e2b474f415e62f0)
+
+running 6 tests
+test test_circular_reference_cidfont_to_type0 ... ok
+test test_circular_reference_deep_chain ... ok
+test test_circular_reference_descriptor_to_cidfont ... ok
+test test_font_stream_size_normal ... ok
+test test_font_stream_size_at_limit ... ok
+test test_font_stream_size_exceeds_limit ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s

@@ -8,8 +8,7 @@
 //!
 //! The module uses a layered architecture:
 //! - **PdfDocument**: Main entry point with RefCell-based state management
-//! - **ResourceManager**: Centralized object caching with interior mutability
-//! - **PdfReader**: Low-level file access (wrapped in RefCell)
+//! - **PdfReader**: File access and parsed-object caching (wrapped in RefCell)
 //! - **PageTree**: Lazy-loaded page navigation
 //!
 //! # Key Features
@@ -61,29 +60,23 @@ use std::fs::File;
 use std::io::{Read, Seek};
 use std::path::Path;
 
-/// Resource manager for efficient PDF object caching.
+/// Standalone cache of PDF objects keyed by object and generation number.
 ///
-/// The ResourceManager provides centralized caching of PDF objects to avoid
-/// repeated parsing overhead. It is owned exclusively by a `PdfDocument` and uses
-/// `RefCell` for interior mutability, so cache writes can occur through a shared
-/// borrow of the document.
-///
-/// # Caching Strategy
-///
-/// - Objects are cached on first access
-/// - Cache persists for the lifetime of the document
-/// - Manual cache clearing is supported for memory management
+/// Callers explicitly insert objects and may clear the cache to release them.
+/// This public utility is independent of `PdfDocument`, whose parsed objects
+/// are cached by its `PdfReader`.
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```rust
 /// use oxidize_pdf::parser::document::ResourceManager;
+/// use oxidize_pdf::parser::PdfObject;
 ///
 /// let resources = ResourceManager::new();
-///
-/// // Objects are cached automatically when accessed through PdfDocument
-/// // Manual cache management:
-/// resources.clear_cache(); // Free memory when needed
+/// resources.cache_object((1, 0), PdfObject::Integer(42));
+/// assert_eq!(resources.get_cached((1, 0)), Some(PdfObject::Integer(42)));
+/// resources.clear_cache();
+/// assert!(resources.get_cached((1, 0)).is_none());
 /// ```
 pub struct ResourceManager {
     /// Cached objects indexed by (object_number, generation_number)
@@ -218,10 +211,6 @@ pub struct PdfDocument<R: Read + Seek> {
     reader: RefCell<PdfReader<R>>,
     /// Page tree navigator (lazily initialized)
     page_tree: RefCell<Option<PageTree>>,
-    /// Resource manager for object caching (owned; interior mutability via RefCell).
-    /// Not shared/cloned, so a plain owned field keeps `PdfDocument<R>: Send` for
-    /// `R: Send` without any locking overhead (issue #369).
-    resources: ResourceManager,
     /// Cached document metadata to avoid repeated parsing
     metadata_cache: RefCell<Option<super::reader::DocumentMetadata>>,
 }
@@ -263,7 +252,6 @@ impl<R: Read + Seek> PdfDocument<R> {
         Self {
             reader: RefCell::new(reader),
             page_tree: RefCell::new(None),
-            resources: ResourceManager::new(),
             metadata_cache: RefCell::new(None),
         }
     }
@@ -698,21 +686,12 @@ impl<R: Read + Seek> PdfDocument<R> {
     /// # }
     /// ```
     pub fn get_object(&self, obj_num: u32, gen_num: u16) -> ParseResult<PdfObject> {
-        // Check resource cache first
-        if let Some(obj) = self.resources.get_cached((obj_num, gen_num)) {
-            return Ok(obj);
-        }
-
-        // Load from reader
-        let obj = {
-            let mut reader = self.reader.borrow_mut();
-            reader.get_object(obj_num, gen_num)?.clone()
-        };
-
-        // Cache it
-        self.resources.cache_object((obj_num, gen_num), obj.clone());
-
-        Ok(obj)
+        // The reader owns the parsed-object cache. Return an independent value
+        // without retaining a second deep copy of every stream in the document.
+        self.reader
+            .borrow_mut()
+            .get_object(obj_num, gen_num)
+            .cloned()
     }
 
     /// Resolve structure owners without retaining null-padded arrays.
@@ -2278,9 +2257,6 @@ mod tests {
 
             // Objects should be identical
             assert_eq!(obj1, obj2);
-
-            // Verify it's cached
-            assert!(document.resources.get_cached((1, 0)).is_some());
         }
 
         #[test]
@@ -2291,14 +2267,14 @@ mod tests {
             let document = PdfDocument::new(reader);
 
             // Get object with generation 0
-            let _obj1 = document.get_object(1, 0).unwrap();
+            let obj1 = document.get_object(1, 0).unwrap();
 
             // Try to get same object with different generation (should fail)
             let result = document.get_object(1, 1);
             assert!(result.is_err());
 
-            // Original should still be cached
-            assert!(document.resources.get_cached((1, 0)).is_some());
+            // A failed generation lookup must not prevent reading the original.
+            assert_eq!(document.get_object(1, 0).unwrap(), obj1);
         }
 
         #[test]
@@ -2652,17 +2628,25 @@ mod tests {
             let reader = PdfReader::new(cursor).unwrap();
             let document = PdfDocument::new(reader);
 
-            // Get object and verify caching
+            // Read through both document and reader interfaces
             let obj1 = document.get_object(1, 0).unwrap();
-            let cached = document.resources.get_cached((1, 0)).unwrap();
+            let cached = document
+                .reader
+                .borrow_mut()
+                .get_object(1, 0)
+                .unwrap()
+                .clone();
 
             assert_eq!(obj1, cached);
 
-            // Clear cache and get object again
-            document.resources.clear_cache();
+            // Mutating a returned copy must not mutate the reader's cache.
+            let mut changed = obj1.clone();
+            if let PdfObject::Dictionary(dict) = &mut changed {
+                dict.insert("LocalMutation".to_string(), PdfObject::Boolean(true));
+            }
             let obj2 = document.get_object(1, 0).unwrap();
 
-            // Should be same content but loaded fresh
+            // The cached source remains unchanged.
             assert_eq!(obj1, obj2);
         }
     }
@@ -2996,8 +2980,7 @@ mod tests {
             let obj = document.get_object(1, 0);
             assert!(obj.is_ok());
 
-            // Object should be cached
-            assert!(document.resources.get_cached((1, 0)).is_some());
+
         }
 
 
