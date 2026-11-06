@@ -118,3 +118,60 @@ fn repeated_context_switches_preserve_order_and_repeatable_content() {
         previous = Some(content);
     }
 }
+
+#[test]
+fn pending_text_precedes_text_flow_and_later_text() {
+    use oxidize_pdf::page::Margins;
+    use oxidize_pdf::text::TextFlowContext;
+
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 700.0)
+        .write("Pending")
+        .unwrap();
+
+    let mut flow = TextFlowContext::new(595.0, 842.0, Margins::default());
+    flow.set_font(Font::Helvetica, 12.0);
+    flow.at(50.0, 700.0);
+    flow.write_wrapped("Flow").unwrap();
+    page.add_text_flow(&flow);
+
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 700.0)
+        .write("Tail")
+        .unwrap();
+
+    let mut document = Document::new();
+    document.set_compress(false);
+    document.add_page(page);
+    let mut previous = None;
+    for _ in 0..2 {
+        let bytes = document.to_bytes().unwrap();
+        let parsed = PdfReader::new(Cursor::new(bytes)).unwrap().into_document();
+        let content = parsed
+            .get_page_content_streams(&parsed.get_page(0).unwrap())
+            .unwrap()
+            .concat();
+        let text = std::str::from_utf8(&content).unwrap();
+        let mut positions = Vec::new();
+        for label in ["Pending", "Flow", "Tail"] {
+            let operator = format!("({label}) Tj");
+            assert_eq!(
+                text.matches(&operator).count(),
+                1,
+                "{label} must appear once"
+            );
+            positions.push(text.find(&operator).unwrap());
+        }
+        assert!(
+            positions.windows(2).all(|pair| pair[0] < pair[1]),
+            "pending text, flow and later text must retain painting order: {text}"
+        );
+        if let Some(previous) = &previous {
+            assert_eq!(&content, previous, "repeated serialization must be stable");
+        }
+        previous = Some(content);
+    }
+}
