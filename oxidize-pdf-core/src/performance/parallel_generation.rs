@@ -1,41 +1,28 @@
-//! Parallel page generation using Rayon for maximum throughput
+//! Ordered page generation with optional bounded Rayon execution.
 //!
-//! This module enables parallel processing of multiple PDF pages simultaneously,
-//! dramatically improving performance for multi-page documents.
+//! `generate_pdf_pages` runs a caller callback that returns real core `Page`s.
+//! `generate_pdf_pages_sequential` forces serial execution. The older
+//! `process_pages_parallel` API only estimates page descriptors; it does not
+//! render their content. There is no universal speedup or callback memory cap.
 //!
-//! # Performance Benefits
-//! - **3x throughput improvement** on 8-core systems
-//! - **Linear scaling** up to available CPU cores
-//! - **Optimal resource utilization** with work-stealing threads
-//! - **Memory-efficient parallel processing** with shared resources
-//!
-//! # Thread Safety
-//! - Immutable page content for parallel processing
-//! - Shared resource pools with Arc<RwLock<>> for thread safety
-//! - Lock-free data structures where possible
-//! - Memory pools per thread to avoid contention
-//!
-//! # Example
 //! ```rust
+//! use oxidize_pdf::Page;
 //! use oxidize_pdf::performance::{ParallelPageGenerator, ParallelGenerationOptions};
-//!
+//! use oxidize_pdf::performance::parallel_generation::PageSpec;
 //! let options = ParallelGenerationOptions::default()
-//!     .with_max_threads(8)
-//!     .with_chunk_size(4);
-//!
-//! let generator = ParallelPageGenerator::new(options);
-//!
-//! // Process 1000 pages in parallel
-//! let pages = generate_page_specs(1000);
-//! let results = generator.process_pages_parallel(pages)?;
-//!
-//! println!("Processed {} pages in parallel", results.len());
+//!     .with_max_threads(2).with_max_memory_per_thread(0);
+//! let generator = ParallelPageGenerator::new(options)?;
+//! let pages = generator.generate_pdf_pages(vec![PageSpec::new(0, 200.0, 300.0)],
+//!     |spec| Ok(Page::new(spec.width, spec.height)))?;
+//! assert_eq!(pages.len(), 1);
+//! # Ok::<(), oxidize_pdf::PdfError>(())
 //! ```
 
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
 use crate::error::Result;
+mod render;
 use crate::performance::{MemoryPool, PerformancePage, ResourcePool};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -44,15 +31,16 @@ use std::time::{Duration, Instant};
 /// Configuration for parallel page generation
 #[derive(Debug, Clone)]
 pub struct ParallelGenerationOptions {
-    /// Maximum number of threads to use
+    /// Maximum number of threads to use; must be positive.
     pub max_threads: usize,
     /// Number of pages to process in each chunk
     pub chunk_size: usize,
     /// Enable load balancing across threads
     pub load_balancing: bool,
-    /// Maximum memory usage per thread (bytes)
+    /// Legacy descriptor scratch-pool setting. Real-page callbacks require zero
+    /// because their allocations cannot be bounded by this executor.
     pub max_memory_per_thread: usize,
-    /// Enable progress reporting
+    /// Record completed-page statistics (no progress callback).
     pub progress_reporting: bool,
     /// Thread pool configuration
     pub thread_pool_config: ThreadPoolConfig,
@@ -178,16 +166,34 @@ pub struct ParallelPageGenerator {
 }
 
 impl ParallelPageGenerator {
-    /// Create a new parallel page generator
+    /// Create a page-specification processor and real-page callback executor.
     pub fn new(options: ParallelGenerationOptions) -> Result<Self> {
+        Self::with_parallel(options, true)
+    }
+
+    /// Construct an executor without creating any Rayon worker threads.
+    /// Both generation entry points run serially on this instance.
+    pub fn new_sequential(options: ParallelGenerationOptions) -> Result<Self> {
+        Self::with_parallel(options, false)
+    }
+
+    fn with_parallel(options: ParallelGenerationOptions, parallel: bool) -> Result<Self> {
+        if options.max_threads == 0 || options.chunk_size == 0 {
+            return Err(crate::PdfError::InvalidOperation(
+                "Generation requires a positive thread count and a positive chunk size".into(),
+            ));
+        }
         let resource_pool = Arc::new(ResourcePool::new());
         let stats = Arc::new(Mutex::new(ParallelStats::default()));
 
         #[cfg(feature = "rayon")]
-        let thread_pool = Self::create_thread_pool(&options)?;
-
+        let thread_pool = if parallel {
+            Self::create_thread_pool(&options)?
+        } else {
+            None
+        };
         #[cfg(not(feature = "rayon"))]
-        let thread_pool: Option<rayon::ThreadPool> = None;
+        let _ = parallel;
 
         Ok(Self {
             options,
@@ -216,7 +222,7 @@ impl ParallelPageGenerator {
         Ok(Some(pool))
     }
 
-    /// Process pages in parallel using Rayon
+    /// Estimate page descriptors using Rayon; this does not generate PDF content.
     #[cfg(feature = "rayon")]
     pub fn process_pages_parallel(&self, pages: Vec<PageSpec>) -> Result<Vec<ProcessedPage>> {
         let start_time = Instant::now();
@@ -275,7 +281,8 @@ impl ParallelPageGenerator {
         Ok(final_results)
     }
 
-    /// Process a chunk of pages
+    /// Process a chunk of page descriptors.
+    #[cfg(feature = "rayon")]
     fn process_chunk(
         &self,
         _chunk_idx: usize,
@@ -349,6 +356,7 @@ impl ParallelPageGenerator {
     }
 
     /// Get current thread identifier
+    #[cfg(feature = "rayon")]
     fn get_current_thread_id(&self) -> usize {
         #[cfg(feature = "rayon")]
         {
@@ -416,7 +424,8 @@ impl PageProcessor {
         }
     }
 
-    /// Process a single page specification
+    /// Estimate a legacy page specification; this does not render PDF content.
+    /// Use ParallelPageGenerator::generate_pdf_pages with a rendering callback.
     pub fn process_page(&self, spec: &PageSpec) -> Result<ProcessedPage> {
         let start = Instant::now();
 
@@ -502,7 +511,11 @@ pub struct ProcessedPage {
     pub memory_used: usize,
 }
 
-/// Statistics for parallel processing
+/// Statistics for page processing. `total_pages_processed` and
+/// `total_processing_time` describe the latest successful call. Other counters
+/// accumulate successful calls until reset_stats; page timing and thread usage
+/// are populated only when progress_reporting is enabled. Failed real-page
+/// callback attempts do not change these statistics.
 #[derive(Debug, Clone, Default)]
 pub struct ParallelStats {
     pub total_pages_processed: usize,

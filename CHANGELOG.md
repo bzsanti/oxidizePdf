@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- Make optional `HighPerformanceDocument::save` write a real PDF in both output
+  modes, preserving existing files on serialization or output failure (#858).
+- Bound memory-pool retained capacity by its configured budget (#858).
+
+### Added
+
+- Generate owned core pages through ordered serial or Rayon callbacks, preserving
+  page content, images and registered fonts. Unsupported generation controls
+  return explicit errors; no throughput improvement is claimed (#858).
+
 ### Performance
 
 - Share immutable parsed font data across pages and Form XObjects, avoiding
