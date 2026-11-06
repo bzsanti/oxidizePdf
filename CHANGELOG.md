@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Performance
+
+- Share immutable parsed font data across pages and Form XObjects, avoiding
+  deep copies of character maps and metrics during text extraction (#854).
+- Reuse small operator buffers when switching between text and graphics while
+  releasing large buffers (#854).
+- Remove duplicate parsed-object storage from `PdfDocument`; `PdfReader`
+  remains the cache owner and returned objects retain independent ownership.
+  The measured 256-page stream workload uses 46.6% less peak memory, with a
+  4.5% increase in traversal time. See the
+  [benchmark report](docs/reports/2026-11-06-issue-854-review.md) for workload,
+  variability and validation details (#854).
+
 ## [5.5.4] - 2026-10-28
 
 ### Security
