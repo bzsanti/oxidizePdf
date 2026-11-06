@@ -340,6 +340,7 @@ jobs:
       - name: Check real generation and resource contracts
         run: cargo test --locked -p oxidize-pdf --no-default-features --features "${{ matrix.features }}" --test issue_858_performance_generation_test
       - name: Check performance unit contracts
-        run: cargo test --locked -p oxidize-pdf --no-default-features --features "${{ matrix.features }}" --lib performance::
+        run: |
+          cargo test --locked -p oxidize-pdf --no-default-features --features "${{ matrix.features }}" --lib performance::
       - name: Check executable performance examples
         run: cargo test --locked -p oxidize-pdf --no-default-features --features "${{ matrix.features }}" --doc performance
