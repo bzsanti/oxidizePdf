@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make optional `HighPerformanceDocument::save` write a real PDF in both output
   modes, preserving existing files on serialization or output failure (#858).
 - Bound memory-pool retained capacity by its configured budget (#858).
+- Stop text extraction from emitting a double space when a fragment already
+  ends in a space glyph and the next fragment starts after a small positional
+  gap. The inferred separator is now skipped when either side already carries
+  whitespace, on both the flat and layout-preserving paths (#859).
 
 ### Added
 

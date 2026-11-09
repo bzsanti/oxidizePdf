@@ -1283,7 +1283,12 @@ impl TextExtractor {
             if i > 0 {
                 let prev = line[i - 1];
                 let gap = frag.x - (prev.x + prev.width);
-                if gap > self.space_gap_threshold(frag) {
+                // Skip the inferred space when either side already carries
+                // whitespace, so a literal space glyph is not doubled (#859).
+                if gap > self.space_gap_threshold(frag)
+                    && !text.ends_with(char::is_whitespace)
+                    && !frag.text.starts_with(char::is_whitespace)
+                {
                     text.push(' ');
                 }
             }
@@ -1835,11 +1840,15 @@ impl TextExtractor {
                                 );
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
-                                } else if positioned_run_boundary
-                                    || ((pending_tj_gap.is_some()
-                                        || dx > self.flat_space_gap_threshold(&state))
-                                        && !suppress_space)
+                                } else if !extracted_text.ends_with(char::is_whitespace)
+                                    && !decoded.starts_with(char::is_whitespace)
+                                    && (positioned_run_boundary
+                                        || ((pending_tj_gap.is_some()
+                                            || dx > self.flat_space_gap_threshold(&state))
+                                            && !suppress_space))
                                 {
+                                    // A literal separator on either side already covers
+                                    // this positional gap (#859).
                                     Some(' ')
                                 } else {
                                     None
@@ -3473,7 +3482,10 @@ impl TextExtractor {
             } else if !result.is_empty() {
                 // Check if we need a space
                 let x_gap = fragment.x - last_x;
-                if x_gap > self.options.space_threshold * fragment.font_size {
+                if x_gap > self.options.space_threshold * fragment.font_size
+                    && !result.ends_with(char::is_whitespace)
+                    && !fragment.text.starts_with(char::is_whitespace)
+                {
                     result.push(' ');
                 }
             }
@@ -3552,7 +3564,12 @@ impl TextExtractor {
             if should_merge {
                 // Merge this fragment into current, preserving word boundaries
                 // when the gap exceeds the font-anchored space threshold.
-                if x_gap > self.space_gap_threshold(fragment) {
+                // Skip it when either side already carries whitespace so a
+                // literal space glyph is not doubled (#859).
+                if x_gap > self.space_gap_threshold(fragment)
+                    && !current.text.ends_with(char::is_whitespace)
+                    && !fragment.text.starts_with(char::is_whitespace)
+                {
                     current.text.push(' ');
                 }
                 current.text.push_str(&fragment.text);
