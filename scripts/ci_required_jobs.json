@@ -43,6 +43,12 @@
     "Test (windows-latest, stable)",
     "Test (ubuntu-latest, stable)",
     "Optimized release tests",
-    "CI evidence contracts"
+    "CI evidence contracts",
+    "Performance generation (ubuntu-latest, performance)",
+    "Performance generation (ubuntu-latest, performance,rayon)",
+    "Performance generation (windows-latest, performance)",
+    "Performance generation (windows-latest, performance,rayon)",
+    "Performance generation (macos-latest, performance)",
+    "Performance generation (macos-latest, performance,rayon)"
   ]
 }

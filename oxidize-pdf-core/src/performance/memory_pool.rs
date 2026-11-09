@@ -23,7 +23,8 @@
 //! drop(buffer);
 //!
 //! // Reuse the same memory
-//! let buffer2 = pool.get_buffer(2048)?; // Gets recycled memory
+//! let buffer2 = pool.get_buffer(2048)?;
+//! # Ok::<(), oxidize_pdf::PdfError>(()) // Gets recycled memory
 //! ```
 
 use crate::error::Result;
@@ -36,8 +37,6 @@ pub struct MemoryPool {
     pools: Arc<Mutex<SizedPools>>,
     stats: Arc<Mutex<MemoryPoolStats>>,
     enabled: bool,
-    #[allow(dead_code)]
-    max_total_size: usize,
 }
 
 /// Internal storage for different-sized buffer pools
@@ -47,6 +46,7 @@ struct SizedPools {
     large_buffers: VecDeque<Vec<u8>>,  // 64KB - 1MB
     huge_buffers: VecDeque<Vec<u8>>,   // > 1MB
     current_size: usize,
+    max_total_size: usize,
 }
 
 /// Buffer size categories for optimal pooling
@@ -88,7 +88,8 @@ impl BufferSize {
 }
 
 impl MemoryPool {
-    /// Create a new memory pool with the specified maximum total size
+    /// Create a pool with a maximum retained buffer capacity. Checked-out buffers
+    /// and allocations by callers are not bounded by this limit.
     pub fn new(max_total_size: usize) -> Self {
         Self {
             pools: Arc::new(Mutex::new(SizedPools {
@@ -97,10 +98,10 @@ impl MemoryPool {
                 large_buffers: VecDeque::new(),
                 huge_buffers: VecDeque::new(),
                 current_size: 0,
+                max_total_size,
             })),
             stats: Arc::new(Mutex::new(MemoryPoolStats::default())),
             enabled: true,
-            max_total_size,
         }
     }
 
@@ -113,10 +114,10 @@ impl MemoryPool {
                 large_buffers: VecDeque::new(),
                 huge_buffers: VecDeque::new(),
                 current_size: 0,
+                max_total_size: 0,
             })),
             stats: Arc::new(Mutex::new(MemoryPoolStats::default())),
             enabled: false,
-            max_total_size: 0,
         }
     }
 
@@ -145,11 +146,12 @@ impl MemoryPool {
 
             // Try to find a suitable buffer in the pool
             if let Some(mut buffer) = pool.pop_front() {
+                pools.current_size -= buffer.capacity();
                 stats.pool_hits += 1;
 
                 // Resize if needed
                 if buffer.capacity() < min_size {
-                    buffer.reserve(min_size - buffer.capacity());
+                    buffer.reserve(min_size.saturating_sub(buffer.len()));
                 }
                 buffer.clear();
                 buffer.resize(min_size, 0);
@@ -186,28 +188,29 @@ impl MemoryPool {
 
         let mut pools = self.pools.lock().unwrap();
 
-        // Preallocate small buffers (most common)
-        for _ in 0..16 {
-            let buffer = vec![0; BufferSize::Small.typical_size()];
-            pools.small_buffers.push_back(buffer);
+        for (category, count) in [
+            (BufferSize::Small, 16),
+            (BufferSize::Medium, 8),
+            (BufferSize::Large, 4),
+        ] {
+            for _ in 0..count {
+                let size = category.typical_size();
+                if size > pools.max_total_size.saturating_sub(pools.current_size) {
+                    break;
+                }
+                let buffer = vec![0; size];
+                if buffer.capacity() > pools.max_total_size.saturating_sub(pools.current_size) {
+                    break;
+                }
+                pools.current_size += buffer.capacity();
+                match category {
+                    BufferSize::Small => pools.small_buffers.push_back(buffer),
+                    BufferSize::Medium => pools.medium_buffers.push_back(buffer),
+                    BufferSize::Large => pools.large_buffers.push_back(buffer),
+                    BufferSize::Huge => unreachable!(),
+                }
+            }
         }
-
-        // Preallocate some medium buffers
-        for _ in 0..8 {
-            let buffer = vec![0; BufferSize::Medium.typical_size()];
-            pools.medium_buffers.push_back(buffer);
-        }
-
-        // Preallocate a few large buffers
-        for _ in 0..4 {
-            let buffer = vec![0; BufferSize::Large.typical_size()];
-            pools.large_buffers.push_back(buffer);
-        }
-
-        // Update current size estimate
-        pools.current_size = 16 * BufferSize::Small.typical_size()
-            + 8 * BufferSize::Medium.typical_size()
-            + 4 * BufferSize::Large.typical_size();
 
         Ok(())
     }
@@ -227,7 +230,7 @@ impl MemoryPool {
         pools.current_size = 0;
     }
 
-    /// Estimate current memory usage
+    /// Capacity retained in idle pooled buffers, excluding checked-out buffers.
     pub fn memory_usage(&self) -> usize {
         let pools = self.pools.lock().unwrap();
         pools.current_size
@@ -236,89 +239,6 @@ impl MemoryPool {
     /// Returns true if the pool is enabled
     pub fn is_enabled(&self) -> bool {
         self.enabled
-    }
-
-    /// Internal method to return a buffer to the appropriate pool
-    #[allow(dead_code)]
-    fn return_buffer(&self, mut buffer: Vec<u8>, size_category: BufferSize) {
-        if !self.enabled {
-            return; // Just drop the buffer
-        }
-
-        let mut pools = self.pools.lock().unwrap();
-        let mut stats = self.stats.lock().unwrap();
-
-        // Extract values before borrowing mutably
-        let capacity = size_category.pool_capacity();
-        let buffer_size = buffer.capacity();
-        let current_size = pools.current_size;
-
-        match size_category {
-            BufferSize::Small => {
-                if pools.small_buffers.len() < capacity {
-                    if current_size + buffer_size <= self.max_total_size {
-                        buffer.clear(); // Clear contents but keep capacity
-                        pools.current_size += buffer_size;
-                        pools.small_buffers.push_back(buffer);
-                        stats.returns_to_pool += 1;
-                    } else {
-                        stats.pool_evictions += 1;
-                        // Drop the buffer (implicit)
-                    }
-                } else {
-                    stats.pool_evictions += 1;
-                    // Drop the buffer (implicit)
-                }
-            }
-            BufferSize::Medium => {
-                if pools.medium_buffers.len() < capacity {
-                    if current_size + buffer_size <= self.max_total_size {
-                        buffer.clear(); // Clear contents but keep capacity
-                        pools.current_size += buffer_size;
-                        pools.medium_buffers.push_back(buffer);
-                        stats.returns_to_pool += 1;
-                    } else {
-                        stats.pool_evictions += 1;
-                        // Drop the buffer (implicit)
-                    }
-                } else {
-                    stats.pool_evictions += 1;
-                    // Drop the buffer (implicit)
-                }
-            }
-            BufferSize::Large => {
-                if pools.large_buffers.len() < capacity {
-                    if current_size + buffer_size <= self.max_total_size {
-                        buffer.clear(); // Clear contents but keep capacity
-                        pools.current_size += buffer_size;
-                        pools.large_buffers.push_back(buffer);
-                        stats.returns_to_pool += 1;
-                    } else {
-                        stats.pool_evictions += 1;
-                        // Drop the buffer (implicit)
-                    }
-                } else {
-                    stats.pool_evictions += 1;
-                    // Drop the buffer (implicit)
-                }
-            }
-            BufferSize::Huge => {
-                if pools.huge_buffers.len() < capacity {
-                    if current_size + buffer_size <= self.max_total_size {
-                        buffer.clear(); // Clear contents but keep capacity
-                        pools.current_size += buffer_size;
-                        pools.huge_buffers.push_back(buffer);
-                        stats.returns_to_pool += 1;
-                    } else {
-                        stats.pool_evictions += 1;
-                        // Drop the buffer (implicit)
-                    }
-                } else {
-                    stats.pool_evictions += 1;
-                    // Drop the buffer (implicit)
-                }
-            }
-        }
     }
 }
 
@@ -403,8 +323,11 @@ impl Drop for PooledBuffer {
             self.stats.take(),
             self.size_category,
         ) {
-            // Return to pool in a separate thread context to avoid deadlocks
+            // Never block during drop; discard a buffer if another operation holds the pool.
             if let Ok(mut pools) = pool.try_lock() {
+                if buffer.capacity() > pools.max_total_size.saturating_sub(pools.current_size) {
+                    return;
+                }
                 let pool_queue = match size_category {
                     BufferSize::Small => &mut pools.small_buffers,
                     BufferSize::Medium => &mut pools.medium_buffers,

@@ -28,7 +28,8 @@
 //!
 //! // Get comprehensive stats
 //! let stats = monitor.get_stats();
-//! println!("Average generation time: {:?}", stats.average_duration(Operation::PdfGeneration));
+//! let generation = stats.operation_stats.get(&Operation::PdfGeneration).unwrap();
+//! println!("Average generation time: {:?}", generation.average_duration());
 //! ```
 
 use std::collections::HashMap;

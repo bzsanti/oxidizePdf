@@ -1,46 +1,39 @@
-//! Performance optimization module for extreme PDF processing speed
+//! Optional PDF generation using the core page model and writer.
 //!
-//! This module provides advanced performance features including:
-//! - **Parallel Page Generation**: Process multiple pages concurrently using Rayon
-//! - **Streaming Writer**: Write PDF data incrementally without buffering entire document
-//! - **Resource Deduplication**: Share fonts, images, and patterns across pages
-//! - **Intelligent Compression**: Choose optimal compression per content type
-//! - **Memory Pools**: Reuse allocated memory to reduce GC pressure
-//! - **Performance Metrics**: Built-in monitoring and benchmarking
-//!
-//! # Performance Goals
-//!
-//! | Metric | Current | Target | Improvement |
-//! |--------|---------|--------|-------------|
-//! | PDF Creation | 2,830/s | 8,000+/s | 2.8x |
-//! | PDF Parsing | 215/s | 400+/s | 1.9x |
-//! | Memory Usage | 2.1MB | <1.5MB | 30% reduction |
-//! | Parallel Scaling | N/A | Linear to 8 cores | New feature |
-//!
-//! # Example
+//! `add_pdf_page` accepts real pages, including their fonts and images.
+//! `generate_pages` builds pages through a caller callback, with bounded Rayon
+//! workers when both requested and compiled; otherwise it runs serially.
+//! Saving streams encoded output to a temporary file or buffers it in memory,
+//! then publishes the completed PDF. Source pages remain resident in either mode.
+//! No universal speedup or process-wide memory bound is promised.
 //!
 //! ```rust
+//! use oxidize_pdf::{Page, text::Font};
 //! use oxidize_pdf::performance::{HighPerformanceDocument, PerformanceOptions};
-//!
-//! let options = PerformanceOptions::default()
-//!     .with_parallel_generation(true)
-//!     .with_resource_deduplication(true)
-//!     .with_streaming_writer(true);
-//!
-//! let mut doc = HighPerformanceDocument::new(options);
-//!
-//! // Add pages - these will be processed in parallel
-//! for i in 0..100 {
-//!     let page = create_page(i);
-//!     doc.add_page_async(page)?;
-//! }
-//!
-//! // Save with streaming - no memory buffering
-//! doc.save_streaming("large_report.pdf")?;
+//! let mut doc = HighPerformanceDocument::new(PerformanceOptions::default())?;
+//! let mut page = Page::a4();
+//! page.text().set_font(Font::Helvetica, 12.0).at(40.0, 700.0).write("Real PDF content")?;
+//! doc.add_pdf_page(page)?;
+//! # let dir = tempfile::tempdir()?;
+//! doc.save(dir.path().join("report.pdf"))?;
+//! # Ok::<(), oxidize_pdf::PdfError>(())
 //! ```
 
 use crate::error::Result;
-use std::time::Instant;
+mod generation;
+
+fn validate_page(page: &crate::Page) -> Result<()> {
+    if !page.width().is_finite()
+        || !page.height().is_finite()
+        || page.width() <= 0.0
+        || page.height() <= 0.0
+    {
+        return Err(crate::PdfError::InvalidOperation(
+            "Page dimensions must be finite and positive".into(),
+        ));
+    }
+    Ok(())
+}
 
 pub mod compression;
 pub mod memory_pool;
@@ -62,12 +55,13 @@ pub struct HighPerformanceDocument {
     options: PerformanceOptions,
     resource_pool: ResourcePool,
     memory_pool: MemoryPool,
-    #[allow(dead_code)]
     metrics: PerformanceMonitor,
-    pages: Vec<PerformancePage>,
+    pages: Vec<crate::Page>,
+    font_data: std::collections::BTreeMap<String, Vec<u8>>,
 }
 
-/// Performance-optimized page representation
+/// Legacy page descriptor. Without content_refs it represents a blank page.
+/// Use HighPerformanceDocument::add_pdf_page to supply real content and resources.
 #[derive(Debug, Clone)]
 pub struct PerformancePage {
     pub index: u32,
@@ -84,17 +78,18 @@ pub struct PerformanceOptions {
     pub parallel_generation: bool,
     /// Maximum number of worker threads
     pub max_threads: usize,
-    /// Enable resource deduplication
+    /// Use the core writer's shared resources. Disabling this is unsupported.
     pub resource_deduplication: bool,
-    /// Enable streaming writer
+    /// Write encoded output directly to a buffered file instead of a full-PDF buffer.
+    /// Source pages and writer resource tables remain resident.
     pub streaming_writer: bool,
     /// Buffer size for streaming (bytes)
     pub stream_buffer_size: usize,
-    /// Enable intelligent compression
+    /// Enable core stream compression (legacy field name; not an adaptive codec).
     pub intelligent_compression: bool,
-    /// Enable memory pooling
+    /// Reuse full-PDF buffers in buffered output mode.
     pub memory_pooling: bool,
-    /// Memory pool size (bytes)
+    /// Maximum retained buffer capacity in buffered mode; not a process memory cap.
     pub memory_pool_size: usize,
     /// Enable performance metrics collection
     pub collect_metrics: bool,
@@ -186,6 +181,17 @@ impl PerformanceOptions {
 impl HighPerformanceDocument {
     /// Create a new high-performance document
     pub fn new(options: PerformanceOptions) -> Result<Self> {
+        if options.max_threads == 0 || options.stream_buffer_size == 0 {
+            return Err(crate::PdfError::InvalidOperation(
+                "Generation requires a positive thread count and a positive output buffer size"
+                    .into(),
+            ));
+        }
+        if !options.resource_deduplication {
+            return Err(crate::PdfError::InvalidOperation(
+                "Disabling core writer resource sharing is unsupported".into(),
+            ));
+        }
         let resource_pool = ResourcePool::new();
         let memory_pool = if options.memory_pooling {
             MemoryPool::new(options.memory_pool_size)
@@ -204,13 +210,17 @@ impl HighPerformanceDocument {
             memory_pool,
             metrics,
             pages: Vec::new(),
+            font_data: std::collections::BTreeMap::new(),
         })
     }
 
-    /// Add a page to the document (will be processed in parallel if enabled)
+    /// Add a legacy blank-page descriptor in insertion order. Unresolved resource
+    /// references are rejected; descriptors do not contain rendering instructions.
     pub fn add_page(&mut self, page: PerformancePage) -> Result<()> {
-        self.pages.push(page);
-        Ok(())
+        if !page.content_refs.is_empty() {
+            return Err(crate::PdfError::InvalidOperation("Page descriptors cannot resolve content_refs; use add_pdf_page with owned content/resources".into()));
+        }
+        self.add_pdf_page(crate::Page::new(page.width, page.height))
     }
 
     /// Get performance statistics
@@ -220,38 +230,13 @@ impl HighPerformanceDocument {
             resource_pool_stats: self.resource_pool.stats(),
             memory_pool_stats: self.memory_pool.stats(),
             compression_stats: CompressionStats::default(),
-            operation_stats: Vec::new(), // TODO: Extract operation stats from metrics
+            operation_stats: self
+                .metrics
+                .get_stats()
+                .operation_stats
+                .into_values()
+                .collect(),
         }
-    }
-
-    /// Save document with performance optimizations
-    pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> Result<()> {
-        let start = Instant::now();
-
-        if self.options.streaming_writer {
-            self.save_streaming(path)?;
-        } else {
-            self.save_buffered(path)?;
-        }
-
-        let duration = start.elapsed();
-        tracing::debug!(
-            "Performance: Saved {} pages in {:.2}ms",
-            self.pages.len(),
-            duration.as_secs_f64() * 1000.0
-        );
-
-        Ok(())
-    }
-
-    fn save_streaming<P: AsRef<std::path::Path>>(&self, _path: P) -> Result<()> {
-        // TODO: Implement streaming save
-        Ok(())
-    }
-
-    fn save_buffered<P: AsRef<std::path::Path>>(&self, _path: P) -> Result<()> {
-        // TODO: Implement buffered save
-        Ok(())
     }
 }
 
