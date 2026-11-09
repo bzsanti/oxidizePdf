@@ -182,13 +182,13 @@ fn glyph_origins_follow_declared_widths_kerns_and_horizontal_scale() {
 #[test]
 fn ordinary_tj_gap_threshold_is_strict_for_both_signs() {
     for (adjustment, expected) in [
-        (-201, "AB C"),
-        (-200, "ABC"),
-        (-199, "ABC"),
+        (-171, "AB C"),
+        (-170, "ABC"),
+        (-169, "ABC"),
         (0, "ABC"),
-        (199, "ABC"),
-        (200, "ABC"),
-        (201, "ABC"),
+        (169, "ABC"),
+        (170, "ABC"),
+        (171, "ABC"),
     ] {
         matrix(Some(500.), "", &format!("(A)0(B){adjustment}(C)"), expected);
     }
@@ -196,7 +196,7 @@ fn ordinary_tj_gap_threshold_is_strict_for_both_signs() {
 
 #[test]
 fn tracking_outlier_compares_only_excess_against_strict_threshold() {
-    for (advance, expected) in [(799, "ABCD"), (800, "ABCD"), (801, "AB CD")] {
+    for (advance, expected) in [(769, "ABCD"), (770, "ABCD"), (771, "AB CD")] {
         matrix(
             Some(0.),
             "",
@@ -214,7 +214,7 @@ fn nonuniform_advances_without_a_majority_keep_ordinary_gaps() {
 
 #[test]
 fn tracking_threshold_and_backward_kern_controls() {
-    for (advance, expected) in [(199, "ABC"), (200, "ABC"), (201, "ABC")] {
+    for (advance, expected) in [(169, "ABC"), (170, "ABC"), (171, "ABC")] {
         matrix(
             Some(0.),
             "",

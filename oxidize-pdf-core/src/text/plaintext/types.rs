@@ -41,7 +41,8 @@ pub struct PlainTextConfig {
     /// many PDFs encode inter-word gaps purely as wide negative kerns
     /// rather than literal spaces. When the advance exceeds
     /// `tj_space_threshold * font_size`, one `U+0020` is inserted.
-    /// Default `0.2` (200 milli-em). Separate from `space_threshold`
+    /// Default `0.17` (170 milli-em), including tightly justified word gaps.
+    /// Set `0.2` explicitly for the previous sensitivity. Separate from `space_threshold`
     /// because the TJ kern carries no glyph-advance baseline (issue #272).
     pub tj_space_threshold: f64,
 
@@ -88,7 +89,7 @@ impl Default for PlainTextConfig {
     fn default() -> Self {
         Self {
             space_threshold: 0.3,
-            tj_space_threshold: 0.2,
+            tj_space_threshold: crate::text::ExtractionOptions::default().tj_space_threshold,
             newline_threshold: 10.0,
             preserve_layout: false,
             line_break_mode: LineBreakMode::Auto,
@@ -171,11 +172,9 @@ impl PlainTextConfig {
     /// ```
     pub fn preserve_layout() -> Self {
         Self {
-            space_threshold: 0.3,
-            tj_space_threshold: 0.2,
-            newline_threshold: 10.0,
             preserve_layout: true,
             line_break_mode: LineBreakMode::PreserveAll,
+            ..Self::default()
         }
     }
 }

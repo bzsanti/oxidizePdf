@@ -311,7 +311,7 @@ mod tests {
         assert!(config.preserve_layout);
         assert_eq!(config.line_break_mode, "PreserveAll");
         assert_eq!(config.space_threshold, 0.3);
-        assert_eq!(config.tj_space_threshold, 0.2);
+        assert_eq!(config.tj_space_threshold, 0.17);
         assert_eq!(config.newline_threshold, 10.0);
     }
 }
