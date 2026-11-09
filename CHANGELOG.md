@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- Stop text extraction from emitting a double space when a fragment already
+  ends in a space glyph and the next fragment starts after a small positional
+  gap. The inferred separator is now skipped when either side already carries
+  whitespace, on both the flat and layout-preserving paths (#859).
+
 ### Performance
 
 - Share immutable parsed font data across pages and Form XObjects, avoiding
