@@ -364,6 +364,7 @@ fn read_pdf_line<R: BufRead>(reader: &mut R, buf: &mut String) -> std::io::Resul
         // Find the first CR or LF
         let mut found_terminator = false;
         let mut consume_len = 0;
+        let mut cr_ends_buffer = false;
 
         for (i, &byte) in available.iter().enumerate() {
             if byte == b'\r' || byte == b'\n' {
@@ -377,6 +378,7 @@ fn read_pdf_line<R: BufRead>(reader: &mut R, buf: &mut String) -> std::io::Resul
                 if byte == b'\r' && i + 1 < available.len() && available[i + 1] == b'\n' {
                     consume_len += 1; // Also consume the LF
                 }
+                cr_ends_buffer = byte == b'\r' && i + 1 == available.len();
 
                 found_terminator = true;
                 break;
@@ -386,6 +388,13 @@ fn read_pdf_line<R: BufRead>(reader: &mut R, buf: &mut String) -> std::io::Resul
         if found_terminator {
             reader.consume(consume_len);
             total_bytes += consume_len;
+            // A CR that is the last byte of the buffer may be the first half of a
+            // CRLF split across two fills: take the LF from the next fill, so it
+            // is not read back as an empty line of its own.
+            if cr_ends_buffer && reader.fill_buf()?.first() == Some(&b'\n') {
+                reader.consume(1);
+                total_bytes += 1;
+            }
             break;
         } else {
             // No terminator found in buffer, consume all and continue
@@ -1925,6 +1934,222 @@ mod tests {
                 },
             ]
         );
+    }
+
+    // ---- CR LF line ends split across a buffer fill ----
+    //
+    // `read_pdf_line` reads from a `BufReader`. When a CR LF pair is split so
+    // the CR is the last byte of one fill and the LF the first byte of the
+    // next, the LF must still end the same line: otherwise it is read back as
+    // an empty line of its own.
+
+    #[test]
+    fn test_read_pdf_line_crlf_split_across_buffer_fill() {
+        // A 4-byte buffer: the first fill is "abc\r", the LF opens the second.
+        let mut reader = BufReader::with_capacity(4, Cursor::new(b"abc\r\ndef\n".to_vec()));
+        let mut line = String::new();
+
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 5);
+        assert_eq!(line, "abc");
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 4);
+        assert_eq!(
+            line, "def",
+            "the LF of a split CR LF is not a line of its own"
+        );
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_read_pdf_line_cr_only_across_buffer_fill() {
+        // CR-only line ends: the byte after a CR that ends a fill starts the next line.
+        let mut reader = BufReader::with_capacity(4, Cursor::new(b"abc\rdef\r".to_vec()));
+        let mut line = String::new();
+
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 4);
+        assert_eq!(line, "abc");
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 4);
+        assert_eq!(line, "def");
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_read_pdf_line_cr_at_end_of_input() {
+        let mut reader = BufReader::with_capacity(4, Cursor::new(b"abc\r".to_vec()));
+        let mut line = String::new();
+
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 4);
+        assert_eq!(line, "abc");
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 0);
+        assert_eq!(line, "");
+    }
+
+    #[test]
+    fn test_read_pdf_line_lf_at_end_of_buffer_fill() {
+        // The LF is the last byte of the first fill.
+        let mut reader = BufReader::with_capacity(4, Cursor::new(b"abc\ndef\n".to_vec()));
+        let mut line = String::new();
+
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 4);
+        assert_eq!(line, "abc");
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 4);
+        assert_eq!(line, "def");
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_read_pdf_line_lf_at_start_of_buffer_fill() {
+        // The first fill holds no line end; the LF opens the second.
+        let mut reader = BufReader::with_capacity(4, Cursor::new(b"abcd\nef\n".to_vec()));
+        let mut line = String::new();
+
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 5);
+        assert_eq!(line, "abcd");
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 3);
+        assert_eq!(line, "ef");
+        assert_eq!(read_pdf_line(&mut reader, &mut line).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_read_pdf_line_crlf_at_end_of_input() {
+        // The input ends in a CR LF split across two fills, and in one that
+        // ends the first fill.
+        for (input, content) in [(&b"abc\r\n"[..], "abc"), (&b"ab\r\n"[..], "ab")] {
+            let mut reader = BufReader::with_capacity(4, Cursor::new(input.to_vec()));
+            let mut line = String::new();
+
+            let read = read_pdf_line(&mut reader, &mut line).unwrap();
+            assert_eq!((read, line.as_str()), (input.len(), content), "{input:?}");
+            assert_eq!(
+                read_pdf_line(&mut reader, &mut line).unwrap(),
+                0,
+                "{input:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_read_pdf_line_no_line_end_at_end_of_input() {
+        // The input ends without a line end, at a fill boundary and past one.
+        for input in ["abcd", "abcdef"] {
+            let mut reader = BufReader::with_capacity(4, Cursor::new(input.as_bytes().to_vec()));
+            let mut line = String::new();
+
+            let read = read_pdf_line(&mut reader, &mut line).unwrap();
+            assert_eq!((read, line.as_str()), (input.len(), input));
+            assert_eq!(
+                read_pdf_line(&mut reader, &mut line).unwrap(),
+                0,
+                "{input:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_read_pdf_line_blank_line_after_a_line_end_at_a_fill_boundary() {
+        // A blank line after a line end at or near a fill boundary is a line of
+        // its own: only a split CR LF's own LF is taken from the next fill.
+        let cases: [(&[u8], &[&str]); 4] = [
+            (b"abc\n\nde\n", &["abc", "", "de"]), // an LF ends the fill, an LF opens the next
+            (b"ab\r\n\nde\n", &["ab", "", "de"]), // a CR LF ends the fill, an LF opens the next
+            (b"abc\r\rde\r", &["abc", "", "de"]), // a CR ends the fill, a CR opens the next
+            (b"a\r\n\nbc\n", &["a", "", "bc"]),   // a CR LF inside the fill, an LF after it
+        ];
+        for (input, lines) in cases {
+            let mut reader = BufReader::with_capacity(4, Cursor::new(input.to_vec()));
+            let mut line = String::new();
+            let mut read = Vec::new();
+            while read_pdf_line(&mut reader, &mut line).unwrap() != 0 {
+                read.push(line.clone());
+            }
+            assert_eq!(read, lines, "{input:?}");
+        }
+    }
+
+    /// A PDF of `size` objects (`size - 1` empty dictionaries after the free
+    /// entry) with one classic cross-reference table, whose 20-byte entries end
+    /// in `entry_end` and whose other lines end in `line_end`. Returns the bytes
+    /// and each object's offset, indexed by object number.
+    fn pdf_with_xref_entries(size: u32, entry_end: &[u8], line_end: &[u8]) -> (Vec<u8>, Vec<u64>) {
+        let mut pdf = b"%PDF-1.7\n".to_vec();
+        let mut offsets = vec![0u64];
+        for number in 1..size {
+            offsets.push(pdf.len() as u64);
+            pdf.extend_from_slice(format!("{number} 0 obj\n<<>>\nendobj\n").as_bytes());
+        }
+        let xref = pdf.len();
+        pdf.extend_from_slice(b"xref");
+        pdf.extend_from_slice(line_end);
+        pdf.extend_from_slice(format!("0 {size}").as_bytes());
+        pdf.extend_from_slice(line_end);
+        pdf.extend_from_slice(b"0000000000 65535 f");
+        pdf.extend_from_slice(entry_end);
+        for offset in &offsets[1..] {
+            pdf.extend_from_slice(format!("{offset:010} 00000 n").as_bytes());
+            pdf.extend_from_slice(entry_end);
+        }
+        let trailer = format!("trailer\n<< /Size {size} >>\nstartxref\n{xref}\n%%EOF\n");
+        let line_end = std::str::from_utf8(line_end).unwrap();
+        pdf.extend_from_slice(trailer.replace('\n', line_end).as_bytes());
+        (pdf, offsets)
+    }
+
+    /// Parses `pdf` strictly and checks each in-use entry against `offsets`.
+    fn assert_xref_parses_strictly(pdf: Vec<u8>, offsets: &[u64]) {
+        let size = offsets.len();
+        let mut reader = BufReader::new(Cursor::new(pdf));
+        let table = XRefTable::parse_with_options(&mut reader, &ParseOptions::strict())
+            .unwrap_or_else(|error| panic!("{size} entries: {error:?}"));
+
+        assert_eq!(table.len(), size, "{size} entries");
+        for (number, offset) in offsets.iter().enumerate().skip(1) {
+            let entry = table
+                .get_entry(number as u32)
+                .unwrap_or_else(|| panic!("{size} entries: no entry {number}"));
+            assert_eq!(entry.offset, *offset, "{size} entries: entry {number}");
+            assert!(entry.in_use, "{size} entries: entry {number}");
+        }
+    }
+
+    #[test]
+    fn test_xref_crlf_entries_split_across_buffer_fill_parse_strictly() {
+        // With the table's other lines ending in CR LF, an entry's CR lands on
+        // the last byte of an 8 KiB fill for every size from 410 to 999; with
+        // LF, for every size from 10,000 to 99,999. 409 and 1,000 never do.
+        let cases: [(u32, &[u8]); 6] = [
+            (409, b"\r\n"),
+            (410, b"\r\n"),
+            (700, b"\r\n"),
+            (999, b"\r\n"),
+            (1_000, b"\r\n"),
+            (10_000, b"\n"),
+        ];
+        for (size, line_end) in cases {
+            let (pdf, offsets) = pdf_with_xref_entries(size, b"\r\n", line_end);
+            assert_xref_parses_strictly(pdf, &offsets);
+        }
+    }
+
+    #[test]
+    fn test_xref_cr_only_lines_parse_strictly_across_buffer_fill() {
+        // CR-only line ends, with entries ending in SP CR, as some scanners
+        // write them. With 1,000 entries an entry's CR is the last byte of the
+        // first 8 KiB fill, and the next fill starts with the next entry; with
+        // 2,457 the last entry's CR ends the sixth fill, and the next fill
+        // starts with "trailer".
+        let cases: [(u32, usize, &[u8]); 2] =
+            [(1_000, 8_192, b"00"), (2_457, 6 * 8_192, b"trailer")];
+        for (size, fill_end, next) in cases {
+            let (pdf, offsets) = pdf_with_xref_entries(size, b" \r", b"\r");
+            let xref = find_byte_pattern(&pdf, b"xref").unwrap();
+            assert_eq!(
+                &pdf[xref + fill_end - 2..xref + fill_end],
+                b" \r",
+                "{size} entries"
+            );
+            assert!(pdf[xref + fill_end..].starts_with(next), "{size} entries");
+
+            assert_xref_parses_strictly(pdf, &offsets);
+        }
     }
 
     #[test]
