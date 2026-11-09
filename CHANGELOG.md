@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve word boundaries in tightly justified `TJ` text by lowering the default
+  gap threshold from 0.2 to 0.17 em. Explicit thresholds remain supported; callers
+  can retain the previous sensitivity with `tj_space_threshold: 0.2` (#864).
+  Account for compensating negative character spacing when inferring flat-text
+  gaps, including consecutive TJ adjustments and text-show boundaries.
 - Make optional `HighPerformanceDocument::save` write a real PDF in both output
   modes, preserving existing files on serialization or output failure (#858).
 - Bound memory-pool retained capacity by its configured budget (#858).

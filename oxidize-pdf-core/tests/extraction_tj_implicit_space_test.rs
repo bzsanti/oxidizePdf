@@ -239,7 +239,7 @@ fn tj_wide_kerning_inside_actualtext_does_not_inflate_pending_run() {
 /// glyph) must suppress the implicit space even for the `-300` kern
 /// that the default threshold accepts. Conversely, a very low threshold
 /// (0.01 = 10 milli-em) must emit spaces for kerns that the default
-/// (0.20) would ignore. This guards the public field semantics.
+/// (0.17) would ignore. This guards the public field semantics.
 #[test]
 fn tj_space_threshold_custom_value_affects_emission() {
     let content = b"BT\n/F1 12 Tf\n100 700 Td\n[(Hello)-300(World)] TJ\nET\n";

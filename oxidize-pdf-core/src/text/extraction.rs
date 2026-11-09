@@ -53,14 +53,22 @@ pub struct ExtractionOptions {
     /// kerned typography) encode inter-word gaps purely as wide negative
     /// kerns rather than literal space bytes. When the synthesised advance
     /// exceeds `tj_space_threshold * font_size`, the extractor inserts one
-    /// `U+0020`. Default `0.2` (200 milli-em) sits well between typical
-    /// intra-word kerning (10-50 milli-em) and the width of a `space`
-    /// glyph in most fonts (250-300 milli-em). Lower values catch tighter
-    /// spaces; higher values reduce false positives in fonts with unusually
-    /// wide kerning. Separate from `space_threshold` (which governs the
+    /// `U+0020`. Default `0.17` (170 milli-em) also admits word gaps in
+    /// tightly justified text, which can be narrower than a font's natural
+    /// space advance (#864). Smaller adjustments remain within a word.
+    /// This is a geometric heuristic: wide letter spacing can be ambiguous.
+    /// Set `0.2` explicitly for the previous, less sensitive threshold, or
+    /// choose a higher value for wider tracking. Separate from
+    /// `space_threshold` (which governs the
     /// post-glyph gap between separate text-show operators) because the TJ
-    /// numeric kern is measured without any glyph advance baseline and
-    /// needs a more sensitive threshold (issue #272).
+    /// numeric kern normally carries no glyph advance baseline and needs
+    /// a more sensitive threshold (issue #272).
+    ///
+    /// Negative character spacing (`Tc`) can compensate a TJ advance. In that
+    /// case, flat-text inference measures the cumulative numeric run from the
+    /// preceding glyph end before its negative Tc contribution. Positive Tc
+    /// remains tracking, not evidence of a word boundary. Choosing `0.2` changes
+    /// the threshold only; it does not disable this compensation.
     /// For alternating single-glyph TJ arrays with explicitly zero source
     /// widths and a repeated forward advance, the inferred advance is first
     /// subtracted; only the excess is compared with this threshold (#649).
@@ -151,7 +159,7 @@ impl Default for ExtractionOptions {
         Self {
             preserve_layout: false,
             space_threshold: 0.3,
-            tj_space_threshold: 0.2,
+            tj_space_threshold: 0.17,
             newline_threshold: 10.0,
             sort_by_position: true,
             detect_columns: false,
@@ -452,6 +460,8 @@ struct TextState {
     pending_actualtext: Option<PendingActualText>,
     /// A trailing TJ gap is text only if a later glyph uses its final origin.
     pending_tj_origin: Option<PendingTjGap>,
+    /// End of the preceding glyph before a negative Tc contribution.
+    negative_spacing_origin: Option<(f64, f64)>,
 }
 
 impl TextState {
@@ -479,6 +489,9 @@ impl TextState {
             .chain(self.ctm.iter())
             .chain(scalars.iter())
             .all(|v| v.is_finite())
+            && self
+                .negative_spacing_origin
+                .is_none_or(|(x, y)| x.is_finite() && y.is_finite())
         {
             Ok(())
         } else {
@@ -645,6 +658,7 @@ impl Default for TextState {
             mc_stack: Vec::new(),
             pending_actualtext: None,
             pending_tj_origin: None,
+            negative_spacing_origin: None,
         }
     }
 }
@@ -1719,6 +1733,7 @@ impl TextExtractor {
             }
             match op {
                 ContentOperation::BeginText => {
+                    state.negative_spacing_origin = None;
                     in_text_object = true;
                     at_text_object_start = true;
                     // Reset text matrix to identity
@@ -1731,6 +1746,7 @@ impl TextExtractor {
                 }
 
                 ContentOperation::SetTextMatrix(a, b, c, d, e, f) => {
+                    state.negative_spacing_origin = None;
                     state.text_matrix =
                         [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
                     state.text_line_matrix =
@@ -1738,6 +1754,7 @@ impl TextExtractor {
                 }
 
                 ContentOperation::MoveText(tx, ty) => {
+                    state.negative_spacing_origin = None;
                     // Update text matrix by translation
                     let new_matrix = multiply_matrix(
                         &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
@@ -1754,6 +1771,7 @@ impl TextExtractor {
                 // 0` at the boundary) and every later `T*` inherited a stale
                 // leading (issue #451).
                 ContentOperation::MoveTextSetLeading(tx, ty) => {
+                    state.negative_spacing_origin = None;
                     state.leading = -(ty as f64);
                     let new_matrix = multiply_matrix(
                         &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
@@ -1764,6 +1782,7 @@ impl TextExtractor {
                 }
 
                 ContentOperation::NextLine => {
+                    state.negative_spacing_origin = None;
                     // Move to next line using current leading
                     let new_matrix = multiply_matrix(
                         &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
@@ -1802,6 +1821,10 @@ impl TextExtractor {
                                 // to raw Δx/Δy for axis-aligned matrices,
                                 // rotation-normalized otherwise.
                                 let (dx, dy_signed) = pen_delta(&state, (last_x, last_y), (x, y));
+                                let space_dx = state.negative_spacing_origin.map_or(dx, |origin| {
+                                    pen_delta(&state, origin, (x, y)).0
+                                        * state.horizontal_scale.signum()
+                                });
                                 let dy = dy_signed.abs();
 
                                 // A large backward jump in x is a line wrap: the
@@ -1844,7 +1867,7 @@ impl TextExtractor {
                                     && !decoded.starts_with(char::is_whitespace)
                                     && (positioned_run_boundary
                                         || ((pending_tj_gap.is_some()
-                                            || dx > self.flat_space_gap_threshold(&state))
+                                            || space_dx > self.flat_space_gap_threshold(&state))
                                             && !suppress_space))
                                 {
                                     // A literal separator on either side already covers
@@ -1985,7 +2008,10 @@ impl TextExtractor {
                         let last_text = array.iter().rposition(
                             |item| matches!(item, TextElement::Text(bytes) if !bytes.is_empty()),
                         );
-                        for (item_index, item) in array.into_iter().enumerate() {
+                        let mut items = array.into_iter().enumerate()
+                            .filter(|(_, item)| !matches!(item, TextElement::Text(bytes) if bytes.is_empty()))
+                            .peekable();
+                        while let Some((item_index, item)) = items.next() {
                             match item {
                                 TextElement::Text(text_bytes) => {
                                     if text_bytes.is_empty() {
@@ -2028,6 +2054,11 @@ impl TextExtractor {
                                     // projection rounding noise.
                                     let (dx, dy_signed) =
                                         pen_delta(&state, (last_x, last_y), (x, y));
+                                    let space_dx =
+                                        state.negative_spacing_origin.map_or(dx, |origin| {
+                                            pen_delta(&state, origin, (x, y)).0
+                                                * state.horizontal_scale.signum()
+                                        });
                                     let dy = dy_signed.abs();
                                     let same_y_wrap =
                                         dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
@@ -2118,7 +2149,7 @@ impl TextExtractor {
                                             );
                                         let boundary_space = at_array_start
                                             && (pending_tj_gap.is_some()
-                                                || dx > boundary_threshold)
+                                                || space_dx > boundary_threshold)
                                             && !extracted_text.ends_with(' ')
                                             && !suppress_space;
                                         let separator = if extracted_text.is_empty() {
@@ -2261,6 +2292,25 @@ impl TextExtractor {
                                     // only the excess gap beyond the tracking baseline is tested.
                                     let tx = -(adjustment as f64) / 1000.0 * state.font_size;
                                     let gap_tx = tx - tracking_baseline_em * state.font_size;
+                                    // Negative Tc can cancel a TJ advance. Measure from the
+                                    // glyph end, once over the numeric run, without changing
+                                    // the physical pen or treating positive tracking as a space.
+                                    let compensated_gap =
+                                        state.negative_spacing_origin.map(|origin| {
+                                            let next = text_origin_after_advance(&state, tx);
+                                            pen_delta(&state, origin, next).0
+                                                * state.horizontal_scale.signum()
+                                        });
+                                    let gap_is_word = if let Some(gap) = compensated_gap {
+                                        !matches!(items.peek(), Some((_, TextElement::Spacing(_))))
+                                            && gap
+                                                > self.tj_space_gap_threshold(
+                                                    &state,
+                                                    self.options.tj_space_threshold,
+                                                )
+                                    } else {
+                                        gap_tx > self.options.tj_space_threshold * state.font_size
+                                    };
 
                                     let skip_tj_space =
                                         skip_artifact_text(&state, self.options.include_artifacts);
@@ -2272,8 +2322,7 @@ impl TextExtractor {
                                     if !skip_tj_space
                                         && !vertical
                                         && last_text.is_some_and(|last| item_index < last)
-                                        && gap_tx
-                                            > self.options.tj_space_threshold * state.font_size
+                                        && gap_is_word
                                         && !extracted_text.is_empty()
                                         && !extracted_text.ends_with(' ')
                                     {
@@ -2323,11 +2372,24 @@ impl TextExtractor {
                                             // x-jump. Width = the kern advance so the next
                                             // text fragment begins flush against it.
                                             let skip_text = self.should_skip_text(&state);
-                                            let (sx, sy) = text_origin(&state);
+                                            let (sx, sy, space_width) = if compensated_gap.is_some()
+                                            {
+                                                let next = text_origin_after_advance(&state, tx);
+                                                let advance =
+                                                    pen_delta(&state, (last_x, last_y), next).0
+                                                        * state.horizontal_scale.signum();
+                                                let (scale, _) = combined_text_scale(&state);
+                                                let scale =
+                                                    scale * (state.horizontal_scale / 100.0).abs();
+                                                (last_x, last_y, advance / scale)
+                                            } else {
+                                                let (x, y) = text_origin(&state);
+                                                (x, y, tx)
+                                            };
                                             emit_text_fragment(
                                                 &mut fragments,
                                                 " ",
-                                                tx,
+                                                space_width,
                                                 sx,
                                                 sy,
                                                 &mut state,
@@ -2354,12 +2416,17 @@ impl TextExtractor {
                                     {
                                         let origin = text_origin(&state);
                                         let (dx, dy) = pen_delta(&state, (last_x, last_y), origin);
+                                        let classification_dx =
+                                            state.negative_spacing_origin.map_or(dx, |glyph_end| {
+                                                pen_delta(&state, glyph_end, origin).0
+                                                    * state.horizontal_scale.signum()
+                                            });
                                         state.pending_tj_origin = (!skip_tj_space && !vertical)
                                             .then_some(PendingTjGap {
                                                 origin,
                                                 width: dx,
                                                 is_word_gap: dy.abs() <= SAME_LINE_EPS
-                                                    && dx
+                                                    && classification_dx
                                                         > self.tj_space_gap_threshold(
                                                             &state,
                                                             self.options.tj_space_threshold,
@@ -3705,8 +3772,15 @@ impl TextExtractor {
             .as_ref()
             .and_then(|name| self.font_cache.get(name).map(Arc::as_ref));
         let Some(font) = font.filter(|font| is_vertical_font(font)) else {
-            return advance_pen(state, horizontal_width);
+            let origin = advance_pen(state, horizontal_width);
+            state.negative_spacing_origin = if state.char_space < 0.0 && !codes.is_empty() {
+                Some(text_origin_after_advance(state, -state.char_space))
+            } else {
+                None
+            };
+            return origin;
         };
+        state.negative_spacing_origin = None;
         let metrics = font
             .descendant_font
             .as_deref()
@@ -4358,6 +4432,14 @@ fn text_origin(state: &TextState) -> (f64, f64) {
     // Text rise (`Ts`) shifts the glyph origin up the text-space y-axis before
     // the text/CTM transform (ISO 32000-1 §9.4.4). For an axis-aligned matrix
     // this moves the user-space y by exactly `Ts`.
+    transform_point(0.0, state.text_rise, &combined)
+}
+
+/// Project an advance without changing the physical pen.
+fn text_origin_after_advance(state: &TextState, width: f64) -> (f64, f64) {
+    let tx = width * state.horizontal_scale / 100.0;
+    let matrix = multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
+    let combined = multiply_matrix(&matrix, &state.ctm);
     transform_point(0.0, state.text_rise, &combined)
 }
 
