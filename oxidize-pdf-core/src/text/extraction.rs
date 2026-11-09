@@ -1841,15 +1841,14 @@ impl TextExtractor {
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
                                 } else if !extracted_text.ends_with(char::is_whitespace)
+                                    && !decoded.starts_with(char::is_whitespace)
                                     && (positioned_run_boundary
                                         || ((pending_tj_gap.is_some()
                                             || dx > self.flat_space_gap_threshold(&state))
                                             && !suppress_space))
                                 {
-                                    // An inferred separator is only needed when the text
-                                    // does not already end in whitespace; otherwise a
-                                    // fragment ending in a literal space glyph plus a
-                                    // positional gap would yield a double space (#859).
+                                    // A literal separator on either side already covers
+                                    // this positional gap (#859).
                                     Some(' ')
                                 } else {
                                     None

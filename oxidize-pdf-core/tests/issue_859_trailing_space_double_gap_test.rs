@@ -62,7 +62,7 @@ fn two_tj_fragments(first: &str, second_x: f64, second: &str) -> String {
     )
 }
 
-fn extract(content: &str, preserve_layout: bool) -> String {
+fn extract(content: &str, preserve_layout: bool, reconstruct_paragraphs: bool) -> String {
     let doc = PdfReader::new_with_options(
         std::io::Cursor::new(build_pdf(content)),
         ParseOptions::lenient(),
@@ -72,6 +72,7 @@ fn extract(content: &str, preserve_layout: bool) -> String {
 
     let options = ExtractionOptions {
         preserve_layout,
+        reconstruct_paragraphs,
         ..Default::default()
     };
     TextExtractor::with_options(options)
@@ -80,13 +81,13 @@ fn extract(content: &str, preserve_layout: bool) -> String {
         .text
 }
 
-/// Assert the same text on both the flat and the layout-preserving path.
+/// Exercise flat extraction and layout with and without paragraph reconstruction.
 fn assert_both_paths(content: &str, expected: &str) {
-    for preserve_layout in [false, true] {
+    for (preserve_layout, reconstruct_paragraphs) in [(false, false), (true, false), (true, true)] {
         assert_eq!(
-            extract(content, preserve_layout),
+            extract(content, preserve_layout, reconstruct_paragraphs),
             expected,
-            "preserve_layout = {preserve_layout}"
+            "preserve_layout = {preserve_layout}, reconstruct_paragraphs = {reconstruct_paragraphs}"
         );
     }
 }
@@ -131,4 +132,36 @@ fn chain_of_fragments_each_ending_in_a_space_collapses_to_single_spaces() {
         10 0 0 10 164 700 Tm (end) Tj\n\
         ET";
     assert_both_paths(content, "Tel. one two end");
+}
+
+#[test]
+fn leading_space_does_not_add_an_inferred_space() {
+    assert_both_paths(&two_tj_fragments("Tel.", 119.67, " (21)"), "Tel. (21)");
+}
+
+#[test]
+fn trailing_space_across_unmerged_gap_is_preserved() {
+    // A 6 pt gap exceeds the 5 pt close-fragment merge threshold.
+    assert_both_paths(&two_tj_fragments("Tel. ", 125.45, "(21)"), "Tel. (21)");
+}
+
+#[test]
+fn leading_space_across_unmerged_gap_is_preserved() {
+    assert_both_paths(&two_tj_fragments("Tel.", 122.67, " (21)"), "Tel. (21)");
+}
+
+#[test]
+fn unmerged_gap_without_literal_space_still_inserts_separator() {
+    assert_both_paths(&two_tj_fragments("Tel.", 122.67, "(21)"), "Tel. (21)");
+}
+
+#[test]
+fn two_literal_spaces_are_not_collapsed() {
+    assert_both_paths(&two_tj_fragments("Tel. ", 122.45, " (21)"), "Tel.  (21)");
+}
+
+#[test]
+fn trailing_space_does_not_suppress_newline() {
+    let content = "BT /F1 1 Tf 10 0 0 10 100 700 Tm (Tel. ) Tj                    10 0 0 10 100 680 Tm (next) Tj ET";
+    assert_both_paths(content, "Tel. \nnext");
 }
