@@ -760,6 +760,10 @@ pub struct TextExtractor {
     /// is a non-breaking method addition for downstream users of that public
     /// struct (issue #584).
     include_link_annotations: bool,
+    /// Extract text drawn by annotation normal appearance streams (`/AP /N`),
+    /// such as signature widgets and filled form fields (issue #861). Held
+    /// here for the same non-breaking reason as `include_link_annotations`.
+    include_annotation_appearances: bool,
     /// Reorder the flat `.text` line groups into reading order (issue #448).
     /// Off by default; set via [`TextExtractor::with_reading_order`]. Held here,
     /// not on the public [`ExtractionOptions`], so enabling it is a
@@ -794,6 +798,7 @@ impl TextExtractor {
             options: ExtractionOptions::default(),
             include_unreliable_figure_text: false,
             include_link_annotations: false,
+            include_annotation_appearances: false,
             reading_order: false,
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
@@ -812,6 +817,7 @@ impl TextExtractor {
             options,
             include_unreliable_figure_text: false,
             include_link_annotations: false,
+            include_annotation_appearances: false,
             reading_order: false,
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
@@ -858,6 +864,25 @@ impl TextExtractor {
     /// on a new line.
     pub fn with_link_annotation_extraction(mut self, enable: bool) -> Self {
         self.include_link_annotations = enable;
+        self
+    }
+
+    /// Enable (or disable) extracting text drawn by annotation appearance
+    /// streams, such as signature widgets, filled form fields and free-text
+    /// notes (issue #861).
+    ///
+    /// Disabled by default. When enabled, each annotation's normal appearance
+    /// (`/AP /N`, or the `/AS` state of an appearance subdictionary) is run
+    /// through the same Form XObject machinery as page content, placed at the
+    /// annotation's `/Rect` (ISO 32000-1 §12.5.5). Appearance text follows
+    /// the page text in `/Annots` order, each annotation on a new line, and
+    /// counts against `max_extracted_bytes`.
+    ///
+    /// `/Link` and `/Popup` annotations and annotations flagged `Hidden` are
+    /// skipped. `NoView` annotations are included because they still print.
+    /// Malformed appearances are skipped rather than failing the page.
+    pub fn with_annotation_appearance_extraction(mut self, enable: bool) -> Self {
+        self.include_annotation_appearances = enable;
         self
     }
 
@@ -1540,6 +1565,10 @@ impl TextExtractor {
                 page_index,
                 0,
             )?;
+        }
+
+        if self.include_annotation_appearances {
+            run = self.append_annotation_appearances(document, page_index, run)?;
         }
 
         let OpRunState {
@@ -3094,6 +3123,132 @@ impl TextExtractor {
         Ok(Some((ops, xobj_res, matrix, stream.dict)))
     }
 
+    /// Run each annotation's normal appearance stream after the page content
+    /// (issue #861) and append its text to `run`.
+    ///
+    /// Every appearance starts a fresh line and is extracted from a clean text
+    /// state, so annotations cannot inherit or leak page text state. The page's
+    /// accumulators (text, fragments, reading-order groups, byte budget) are
+    /// threaded through unchanged, so layout and budget handling stay uniform.
+    fn append_annotation_appearances<R: Read + Seek>(
+        &mut self,
+        document: &PdfDocument<R>,
+        page_index: u32,
+        mut run: OpRunState,
+    ) -> ParseResult<OpRunState> {
+        let Ok(annotations) = document.get_page_annotations(page_index) else {
+            return Ok(run);
+        };
+
+        for annotation in annotations {
+            if run.truncated {
+                break;
+            }
+            let Some(appearance) = resolve_annotation_appearance(document, &annotation) else {
+                continue;
+            };
+            let AnnotationAppearance {
+                stream,
+                object,
+                matrix,
+            } = appearance;
+
+            let Some(data) = self.decode_content_for_recovery(
+                document,
+                &stream,
+                RecoveryLocation::AnnotationAppearance { object },
+            )?
+            else {
+                continue;
+            };
+            let Ok(operations) = ContentParser::parse_content(&data) else {
+                continue;
+            };
+            let resources = match stream.dict.get("Resources") {
+                Some(PdfObject::Dictionary(d)) => Some(d.clone()),
+                Some(PdfObject::Reference(n, g)) => document
+                    .get_object(*n, *g)
+                    .ok()
+                    .and_then(|o| o.as_dict().cloned()),
+                _ => None,
+            };
+
+            // The appearance is accumulated on its own, from a clean text state,
+            // and joined to the page afterwards with a newline. Page text state,
+            // pen position and hyphen fusion therefore never cross the boundary.
+            // It gets whatever is left of the page budget after that newline.
+            let base = run.extracted_text.len();
+            let separator_len = usize::from(base > 0);
+            let page_limit = self.options.max_extracted_bytes;
+            let remaining = page_limit.map(|limit| limit.saturating_sub(base + separator_len));
+
+            let saved_fonts = self.font_cache.clone();
+            let out = (|| {
+                if let Some(ref res) = resources {
+                    self.cache_fonts_from_resources::<R>(res, document)?;
+                }
+                let mut structure_actual_text =
+                    resolve_structure_actual_text(&stream.dict, document);
+                let sub = OpRunState {
+                    state: TextState {
+                        ctm: matrix,
+                        ..TextState::default()
+                    },
+                    in_text_object: false,
+                    at_text_object_start: false,
+                    last_x: 0.0,
+                    last_y: 0.0,
+                    last_shown_font_name: None,
+                    extracted_text: String::new(),
+                    fragments: Vec::new(),
+                    truncated: false,
+                    line_groups: Vec::new(),
+                    cur_group: None,
+                };
+                self.options.max_extracted_bytes = remaining;
+                self.process_operations(
+                    operations,
+                    document,
+                    resources.as_ref(),
+                    &mut structure_actual_text,
+                    sub,
+                    page_index,
+                    1,
+                )
+            })();
+            // Restored on every exit from the closure, including errors.
+            self.options.max_extracted_bytes = page_limit;
+            self.font_cache = saved_fonts;
+            let sub = out?;
+
+            run.truncated |= sub.truncated;
+            run.fragments.extend(sub.fragments);
+            if sub.extracted_text.is_empty() {
+                continue;
+            }
+            if separator_len > 0 {
+                run.extracted_text.push('\n');
+            }
+            let offset = base + separator_len;
+            run.extracted_text.push_str(&sub.extracted_text);
+            // Reading-order groups record byte ranges into the page text, so
+            // close the page's open group and shift the appearance's groups.
+            if let Some(group) = run.cur_group.take() {
+                run.line_groups.push(group);
+            }
+            let shift = |mut group: LineGroupGeom| {
+                group.start += offset;
+                group.end += offset;
+                group
+            };
+            run.line_groups
+                .extend(sub.line_groups.into_iter().map(shift));
+            run.cur_group = sub.cur_group.map(shift);
+        }
+
+        Ok(run)
+    }
+
     /// Fuse a hyphen-ended fragment with its line-wrap continuation while
     /// fragments are still in emission (content-stream) order, before any
     /// Y-coordinate sort runs.
@@ -3990,6 +4145,138 @@ fn append_link_annotation_uris<R: Read + Seek>(
         extracted_text.push_str(separator);
         extracted_text.push_str(&uri);
     }
+}
+
+/// Normal appearance stream of one annotation, ready to run as page content.
+struct AnnotationAppearance {
+    stream: crate::parser::PdfStream,
+    object: (u32, u16),
+    /// Form space to page space: the form `/Matrix` followed by the mapping
+    /// of its transformed `/BBox` onto the annotation `/Rect` (§12.5.5).
+    matrix: [f64; 6],
+}
+
+/// Annotation flag bit 2, `Hidden` (ISO 32000-1 Table 165): neither displayed
+/// nor printed.
+const ANNOTATION_FLAG_HIDDEN: i64 = 1 << 1;
+
+/// Select the normal appearance stream to extract for `annotation`, or `None`
+/// when it has none, is not rendered, or is malformed. Never fails: appearances
+/// are optional, so bad ones are skipped rather than failing the page.
+fn resolve_annotation_appearance<R: Read + Seek>(
+    document: &PdfDocument<R>,
+    annotation: &PdfDictionary,
+) -> Option<AnnotationAppearance> {
+    // Link appearances are decoration and their targets are handled by
+    // `with_link_annotation_extraction`; a Popup only displays its parent's text.
+    let subtype = annotation.get("Subtype").and_then(PdfObject::as_name);
+    if subtype.is_some_and(|s| s.0 == "Link" || s.0 == "Popup") {
+        return None;
+    }
+    let flags = annotation
+        .get("F")
+        .and_then(PdfObject::as_integer)
+        .unwrap_or(0);
+    if flags & ANNOTATION_FLAG_HIDDEN != 0 {
+        return None;
+    }
+
+    let appearances = resolve_annotation_dictionary(document, annotation.get("AP")?)?;
+    let (number, generation) = match appearances.get("N")? {
+        PdfObject::Reference(n, g) => (*n, *g),
+        PdfObject::Dictionary(states) => {
+            // Appearance subdictionary: the `/AS` entry picks the state.
+            let state = annotation.get("AS").and_then(PdfObject::as_name)?;
+            states.get(&state.0)?.as_reference()?
+        }
+        _ => return None,
+    };
+    let PdfObject::Stream(stream) = document.get_object(number, generation).ok()? else {
+        return None;
+    };
+
+    let rect = read_rectangle(annotation.get("Rect")?)?;
+    let bbox = read_rectangle(stream.dict.get("BBox")?)?;
+    let form_matrix = stream
+        .dict
+        .get("Matrix")
+        .and_then(read_matrix)
+        .unwrap_or([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]);
+    let matrix = appearance_matrix(&form_matrix, bbox, rect)?;
+
+    Some(AnnotationAppearance {
+        stream,
+        object: (number, generation),
+        matrix,
+    })
+}
+
+/// Read a rectangle as normalised `[x_min, y_min, x_max, y_max]`.
+fn read_rectangle(object: &PdfObject) -> Option<[f64; 4]> {
+    let values = object.as_array()?;
+    if values.0.len() != 4 {
+        return None;
+    }
+    let mut r = [0.0; 4];
+    for (slot, value) in r.iter_mut().zip(&values.0) {
+        *slot = value.as_real().filter(|v| v.is_finite())?;
+    }
+    Some([
+        r[0].min(r[2]),
+        r[1].min(r[3]),
+        r[0].max(r[2]),
+        r[1].max(r[3]),
+    ])
+}
+
+fn read_matrix(object: &PdfObject) -> Option<[f64; 6]> {
+    let values = object.as_array()?;
+    if values.0.len() != 6 {
+        return None;
+    }
+    let mut m = [0.0; 6];
+    for (slot, value) in m.iter_mut().zip(&values.0) {
+        *slot = value.as_real().filter(|v| v.is_finite())?;
+    }
+    Some(m)
+}
+
+/// Appearance-to-page matrix per ISO 32000-1 §12.5.5: transform `/BBox` by the
+/// form `/Matrix`, then scale and translate the resulting box onto `/Rect`. A
+/// zero-extent box axis keeps unit scale so degenerate forms still place their
+/// origin at the rectangle. Returns `None` for non-finite results.
+fn appearance_matrix(form_matrix: &[f64; 6], bbox: [f64; 4], rect: [f64; 4]) -> Option<[f64; 6]> {
+    let corners = [
+        (bbox[0], bbox[1]),
+        (bbox[2], bbox[1]),
+        (bbox[0], bbox[3]),
+        (bbox[2], bbox[3]),
+    ]
+    .map(|(x, y)| transform_point(x, y, form_matrix));
+    let min_x = corners.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
+    let max_x = corners
+        .iter()
+        .map(|p| p.0)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let min_y = corners.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
+    let max_y = corners
+        .iter()
+        .map(|p| p.1)
+        .fold(f64::NEG_INFINITY, f64::max);
+
+    let scale = |target: f64, source: f64| {
+        if source.abs() <= f64::EPSILON {
+            1.0
+        } else {
+            target / source
+        }
+    };
+    let sx = scale(rect[2] - rect[0], max_x - min_x);
+    let sy = scale(rect[3] - rect[1], max_y - min_y);
+    let fit = [sx, 0.0, 0.0, sy, rect[0] - min_x * sx, rect[1] - min_y * sy];
+
+    let matrix = multiply_matrix(form_matrix, &fit);
+    matrix.iter().all(|v| v.is_finite()).then_some(matrix)
 }
 
 /// Resolve a direct or indirect action dictionary. The caller intentionally
