@@ -136,7 +136,13 @@ jobs:
       # class (issues #390/#441/#443/#447). Ratchets against a committed
       # baseline; see differential_fusion_test.rs. Skips if poppler absent.
       - name: Install poppler (pdftotext) for differential gate
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        timeout-minutes: 5
+        run: |
+          . /etc/os-release
+          curl --fail --location --connect-timeout 10 --max-time 30 --output /dev/null "https://mirrors.edge.kernel.org/ubuntu/dists/${VERSION_CODENAME}/InRelease"
+          printf '%s\n' 'https://mirrors.edge.kernel.org/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
+          sudo apt-get update -o APT::Update::Error-Mode=any -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
+          sudo apt-get install -y -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 poppler-utils
 
       # OXIDIZE_DIFF_REQUIRE_CORPUS turns the gates' skip paths into failures.
       # They skip by design when poppler or the corpus is missing, which keeps
