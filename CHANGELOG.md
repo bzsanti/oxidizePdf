@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve word spaces between separate text-show operators using available
+  font metrics, including a bounded width-derived fallback for simple fonts
+  without a space-glyph width (#869).
+- Keep closely spaced form rows separate when text resets horizontally in
+  layout and column extraction (#868).
+
 - Read a cross-reference table whose CR LF line end is split across two
   buffer fills: the LF no longer comes back as an empty line, which ended the
   subsection one entry early and failed the table with `InvalidXRef` (strict
@@ -30,6 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whitespace, on both the flat and layout-preserving paths (#859).
 
 ### Added
+
+- `TextExtractor::with_visual_line_order(true)` orders horizontal single-column
+  text by baseline and x position while preserving the default stream order.
+  Hebrew and Arabic lines retain source run order; this is not bidi conversion
+  or multi-column analysis (#868).
+- `TextExtractor::with_incomplete_tounicode_encoding_fallback(true)` recovers
+  missing ToUnicode entries using a supported explicitly declared simple-font
+  encoding and its Differences. Existing mappings take precedence; default
+  extraction remains strict (#870).
 
 - Opt-in extraction of text drawn by annotation appearance streams, such as
   signature widgets, filled form fields and free-text notes, via
