@@ -29,9 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   signature widgets, filled form fields and free-text notes, via
   `TextExtractor::with_annotation_appearance_extraction`. Each annotation's
   normal appearance (`/AP /N`, or its `/AS` state) is placed at the annotation
-  `/Rect` and appended after the page text in `/Annots` order. `/Link`,
-  `/Popup` and `Hidden` annotations are skipped; malformed appearances are
-  ignored. Disabled by default (#861).
+  `/Rect` and finalized independently before appending after the page text in
+  `/Annots` order, including in layout mode. Direct and indirect appearance-state
+  dictionaries are supported. `/Link`, `/Popup` and `Hidden` annotations are
+  skipped; `NoView` is included independently of `Print`. Invalid appearance
+  entries are ignored; stream decoding errors follow the selected strict or
+  explicit recovery API, preserving resource-limit errors. Font resources and
+  spacing state are isolated between appearances. Disabled by default (#861).
 - Generate owned core pages through ordered serial or Rayon callbacks, preserving
   page content, images and registered fonts. Unsupported generation controls
   return explicit errors; no throughput improvement is claimed (#858).
