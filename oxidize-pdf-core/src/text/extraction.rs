@@ -3136,9 +3136,11 @@ impl TextExtractor {
         page_index: u32,
         mut run: OpRunState,
     ) -> ParseResult<OpRunState> {
-        let Ok(annotations) = document.get_page_annotations(page_index) else {
-            return Ok(run);
-        };
+        // The page was already loaded, so this only fails if its tree changed
+        // underneath us; annotations are optional, so treat that as none.
+        let annotations = document
+            .get_page_annotations(page_index)
+            .unwrap_or_default();
 
         for annotation in annotations {
             if run.truncated {
@@ -3153,25 +3155,21 @@ impl TextExtractor {
                 matrix,
             } = appearance;
 
-            let Some(data) = self.decode_content_for_recovery(
+            // Undecodable appearances are skipped rather than failing the page:
+            // they are optional decoration on top of the page content.
+            let Ok(Some(data)) = self.decode_content_for_recovery(
                 document,
                 &stream,
                 RecoveryLocation::AnnotationAppearance { object },
-            )?
-            else {
+            ) else {
                 continue;
             };
-            let Ok(operations) = ContentParser::parse_content(&data) else {
-                continue;
-            };
-            let resources = match stream.dict.get("Resources") {
-                Some(PdfObject::Dictionary(d)) => Some(d.clone()),
-                Some(PdfObject::Reference(n, g)) => document
-                    .get_object(*n, *g)
-                    .ok()
-                    .and_then(|o| o.as_dict().cloned()),
-                _ => None,
-            };
+            // The parser recovers best-effort; a hard failure yields no text.
+            let operations = ContentParser::parse_content(&data).unwrap_or_default();
+            let resources = stream
+                .dict
+                .get("Resources")
+                .and_then(|res| resolve_annotation_dictionary(document, res));
 
             // The appearance is accumulated on its own, from a clean text state,
             // and joined to the page afterwards with a newline. Page text state,
@@ -4200,7 +4198,7 @@ fn resolve_annotation_appearance<R: Read + Seek>(
     let form_matrix = stream
         .dict
         .get("Matrix")
-        .and_then(read_matrix)
+        .and_then(read_numbers::<6>)
         .unwrap_or([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]);
     let matrix = appearance_matrix(&form_matrix, bbox, rect)?;
 
@@ -4211,34 +4209,22 @@ fn resolve_annotation_appearance<R: Read + Seek>(
     })
 }
 
-/// Read a rectangle as normalised `[x_min, y_min, x_max, y_max]`.
-fn read_rectangle(object: &PdfObject) -> Option<[f64; 4]> {
-    let values = object.as_array()?;
-    if values.0.len() != 4 {
-        return None;
-    }
-    let mut r = [0.0; 4];
-    for (slot, value) in r.iter_mut().zip(&values.0) {
+/// Read a numeric array of exactly `N` finite values (`/Rect`, `/BBox`,
+/// `/Matrix`). Any other shape is treated as absent.
+fn read_numbers<const N: usize>(object: &PdfObject) -> Option<[f64; N]> {
+    let values: &[PdfObject] = &object.as_array()?.0;
+    let values: &[PdfObject; N] = values.try_into().ok()?;
+    let mut out = [0.0; N];
+    for (slot, value) in out.iter_mut().zip(values) {
         *slot = value.as_real().filter(|v| v.is_finite())?;
     }
-    Some([
-        r[0].min(r[2]),
-        r[1].min(r[3]),
-        r[0].max(r[2]),
-        r[1].max(r[3]),
-    ])
+    Some(out)
 }
 
-fn read_matrix(object: &PdfObject) -> Option<[f64; 6]> {
-    let values = object.as_array()?;
-    if values.0.len() != 6 {
-        return None;
-    }
-    let mut m = [0.0; 6];
-    for (slot, value) in m.iter_mut().zip(&values.0) {
-        *slot = value.as_real().filter(|v| v.is_finite())?;
-    }
-    Some(m)
+/// Read a rectangle as normalised `[x_min, y_min, x_max, y_max]`.
+fn read_rectangle(object: &PdfObject) -> Option<[f64; 4]> {
+    let [x0, y0, x1, y1] = read_numbers::<4>(object)?;
+    Some([x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1)])
 }
 
 /// Appearance-to-page matrix per ISO 32000-1 §12.5.5: transform `/BBox` by the

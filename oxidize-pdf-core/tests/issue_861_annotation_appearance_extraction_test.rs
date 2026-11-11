@@ -6,7 +6,7 @@ mod common;
 
 use common::pdf_assembler::{assemble_pdf, stream_obj};
 use oxidize_pdf::parser::PdfReader;
-use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
+use oxidize_pdf::text::{ExtractionOptions, RecoveryLocation, TextExtractor};
 use std::io::Cursor;
 
 const HELVETICA: &[u8] =
@@ -229,4 +229,192 @@ fn appearance_is_placed_at_the_annotation_rect_in_layout_mode() {
         "size = {}",
         placed.font_size
     );
+}
+
+#[test]
+fn stops_at_the_first_annotation_once_the_budget_is_spent() {
+    // The first appearance fills the budget exactly; the second is never run.
+    let pdf = fixture(
+        "<< /Subtype /FreeText /Rect [20 100 120 120] /AP << /N 6 0 R >> >> \
+         << /Subtype /FreeText /Rect [20 200 120 220] /AP << /N 7 0 R >> >>",
+        &[
+            appearance(b"BT /F1 10 Tf 2 5 Td (First) Tj 0 -12 Td (overflow) Tj ET"),
+            appearance(b"BT /F1 10 Tf 2 5 Td (Second) Tj ET"),
+        ],
+    );
+    let extracted = extract(
+        pdf,
+        TextExtractor::with_options(ExtractionOptions {
+            max_extracted_bytes: Some("Body\nFirst".len()),
+            ..Default::default()
+        })
+        .with_annotation_appearance_extraction(true),
+    );
+
+    assert_eq!(extracted.text, "Body\nFirst");
+    assert!(extracted.truncated);
+}
+
+#[test]
+fn undecodable_appearance_stream_is_skipped() {
+    // Declared FlateDecode, but the bytes are not a zlib stream.
+    let pdf = fixture(
+        "<< /Subtype /FreeText /Rect [20 100 120 120] /AP << /N 6 0 R >> >> \
+         << /Subtype /FreeText /Rect [20 200 120 220] /AP << /N 7 0 R >> >>",
+        &[
+            stream_obj(
+                "/Type /XObject /Subtype /Form /BBox [0 0 100 20] /Filter /FlateDecode",
+                b"definitely not zlib data",
+            ),
+            appearance(b"BT /F1 10 Tf 2 5 Td (Readable) Tj ET"),
+        ],
+    );
+
+    assert_eq!(extract(pdf.clone(), enabled()).text, "Body\nReadable");
+
+    // The recovery API reports the omitted appearance instead of failing.
+    let document = PdfReader::new(Cursor::new(pdf))
+        .expect("parse fixture")
+        .into_document();
+    let recovered = enabled()
+        .extract_from_page_with_recovery(&document, 0, 1 << 20)
+        .expect("extract with recovery");
+    assert_eq!(recovered.text.text, "Body\nReadable");
+    assert!(recovered.diagnostics.iter().any(|d| matches!(
+        d.location,
+        RecoveryLocation::AnnotationAppearance { object: (6, 0) }
+    )));
+}
+
+#[test]
+fn indirect_appearance_resources_are_resolved() {
+    let pdf = fixture(
+        "<< /Subtype /FreeText /Rect [20 100 120 120] /AP << /N 6 0 R >> >>",
+        &[
+            stream_obj(
+                "/Type /XObject /Subtype /Form /BBox [0 0 100 20] /Resources 7 0 R",
+                b"BT /F1 10 Tf 2 5 Td (Indirect resources) Tj ET",
+            ),
+            b"<< /Font << /F1 5 0 R >> >>".to_vec(),
+        ],
+    );
+
+    assert_eq!(extract(pdf, enabled()).text, "Body\nIndirect resources");
+}
+
+#[test]
+fn reading_order_keeps_appearance_groups_after_the_page() {
+    // Two page lines and a two-line appearance: the appearance's line groups
+    // must be shifted to its position in the page text.
+    let pdf = assemble_pdf(&[
+        b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_vec(),
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] \
+          /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R \
+          /Annots [<< /Subtype /FreeText /Rect [20 40 120 80] /AP << /N 6 0 R >> >>] >>"
+            .to_vec(),
+        stream_obj(
+            "",
+            b"BT /F1 12 Tf 20 250 Td (Page one) Tj 0 -20 Td (Page two) Tj ET",
+        ),
+        HELVETICA.to_vec(),
+        stream_obj(
+            "/Type /XObject /Subtype /Form /BBox [0 0 100 40] /Resources << /Font << /F1 5 0 R >> >>",
+            b"BT /F1 10 Tf 2 25 Td (Note one) Tj 0 -15 Td (Note two) Tj ET",
+        ),
+    ]);
+
+    let text = extract(pdf, enabled().with_reading_order(true)).text;
+    assert_eq!(text, "Page one\nPage two\nNote one\nNote two");
+}
+
+#[test]
+fn malformed_geometry_and_appearance_entries_are_skipped() {
+    let pdf = fixture(
+        // /N is neither a stream reference nor a state dictionary.
+        "<< /Subtype /FreeText /Rect [0 0 10 10] /AP << /N /NotAStream >> >> \
+         << /Subtype /FreeText /Rect [0 0 10] /AP << /N 7 0 R >> >> \
+         << /Subtype /FreeText /Rect [0 0 10 (x)] /AP << /N 7 0 R >> >> \
+         << /Subtype /FreeText /Rect [20 100 120 120] /AP << /N 6 0 R >> >>",
+        &[
+            // /Matrix with the wrong arity is ignored (identity), and a
+            // zero-width /BBox keeps unit scale instead of dividing by zero.
+            stream_obj(
+                "/Type /XObject /Subtype /Form /BBox [0 0 0 20] /Matrix [1 0 0 1] \
+                 /Resources << /Font << /F1 5 0 R >> >>",
+                b"BT /F1 10 Tf 2 5 Td (Degenerate box) Tj ET",
+            ),
+            appearance(b"BT /F1 10 Tf 2 5 Td (Never shown) Tj ET"),
+        ],
+    );
+
+    let extracted = extract(
+        pdf,
+        TextExtractor::with_options(ExtractionOptions {
+            preserve_layout: true,
+            ..Default::default()
+        })
+        .with_annotation_appearance_extraction(true),
+    );
+    assert!(
+        !extracted.text.contains("Never shown"),
+        "{:?}",
+        extracted.text
+    );
+    let placed = extracted
+        .fragments
+        .iter()
+        .find(|f| f.text.contains("Degenerate box"))
+        .expect("degenerate appearance still extracted");
+    // Unit x-scale: form x=2 lands at rect x0 + 2.
+    assert!((placed.x - 22.0).abs() < 0.01, "x = {}", placed.x);
+}
+
+#[test]
+fn form_matrix_is_applied_before_fitting_to_the_rect() {
+    // /Matrix rotates the form 90°: the BBox [0 0 100 20] becomes a 20x100
+    // box, which is then fitted onto a 20x100 /Rect without scaling.
+    let pdf = fixture(
+        "<< /Subtype /FreeText /Rect [200 100 220 200] /AP << /N 6 0 R >> >>",
+        &[stream_obj(
+            "/Type /XObject /Subtype /Form /BBox [0 0 100 20] /Matrix [0 1 -1 0 0 0] \
+             /Resources << /Font << /F1 5 0 R >> >>",
+            b"BT /F1 10 Tf 0 0 Td (Rotated) Tj ET",
+        )],
+    );
+    let extracted = extract(
+        pdf,
+        TextExtractor::with_options(ExtractionOptions {
+            preserve_layout: true,
+            ..Default::default()
+        })
+        .with_annotation_appearance_extraction(true),
+    );
+
+    let placed = extracted
+        .fragments
+        .iter()
+        .find(|f| f.text.contains("Rotated"))
+        .expect("rotated appearance fragment");
+    // Form origin (0,0) maps to (0,0) under the rotation, then the rotated box
+    // x-range [-20, 0] shifts onto [200, 220]: origin lands at (220, 100).
+    assert!((placed.x - 220.0).abs() < 0.01, "x = {}", placed.x);
+    assert!((placed.y - 100.0).abs() < 0.01, "y = {}", placed.y);
+}
+
+#[test]
+fn appearance_without_resources_contributes_no_text() {
+    // No /Resources: the font is unknown, so nothing is decoded, but the page
+    // text is unaffected and extraction does not fail.
+    let pdf = fixture(
+        "<< /Subtype /FreeText /Rect [20 100 120 120] /AP << /N 6 0 R >> >>",
+        &[stream_obj(
+            "/Type /XObject /Subtype /Form /BBox [0 0 100 20]",
+            b"0 0 1 rg 0 0 100 20 re f",
+        )],
+    );
+
+    let extracted = extract(pdf, enabled());
+    assert_eq!(extracted.text, "Body");
+    assert!(!extracted.truncated);
 }
