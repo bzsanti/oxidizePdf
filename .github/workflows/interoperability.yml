@@ -38,8 +38,9 @@ jobs:
       - name: Install qpdf and poppler
         timeout-minutes: 5
         run: |
-          sudo apt-get update -o Acquire::Retries=3
-          sudo apt-get install -y --no-install-recommends qpdf poppler-utils
+          sudo sed -i 's|https\?://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          sudo apt-get update -o APT::Update::Error-Mode=any -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
+          sudo apt-get install -y -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 --no-install-recommends qpdf poppler-utils
 
       - uses: actions/setup-java@v5
         with:
@@ -264,7 +265,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
       - name: Install OCR and independent readers
         run: |
-          sudo apt-get update -o Acquire::Retries=3
-          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa poppler-utils qpdf
+          sudo sed -i 's|https\?://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          sudo apt-get update -o APT::Update::Error-Mode=any -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
+          sudo apt-get install -y -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 --no-install-recommends tesseract-ocr tesseract-ocr-spa poppler-utils qpdf
       - name: Test real Spanish recognition and rotated scans
         run: cargo test --locked -p oxidize-pdf --features ocr-tesseract --test issue_708_tesseract_test --test issue_708_ocr_geometry_test -- --include-ignored
