@@ -261,12 +261,7 @@ jobs:
 
       - name: Install PDF tools
         timeout-minutes: 5
-        run: |
-          . /etc/os-release
-          curl --fail --location --connect-timeout 10 --max-time 30 --output /dev/null "https://mirrors.edge.kernel.org/ubuntu/dists/${VERSION_CODENAME}/InRelease"
-          printf '%s\n' 'https://mirrors.edge.kernel.org/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
-          sudo apt-get update -o APT::Update::Error-Mode=any -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
-          sudo apt-get install -y -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 poppler-utils qpdf tesseract-ocr tesseract-ocr-spa
+        run: bash scripts/ci_install_apt.sh poppler-utils qpdf tesseract-ocr tesseract-ocr-spa
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@671164c891d3e20f5b8ece04798d0154d1262d65 # cargo-llvm-cov

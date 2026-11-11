@@ -37,12 +37,7 @@ jobs:
 
       - name: Install qpdf and poppler
         timeout-minutes: 5
-        run: |
-          . /etc/os-release
-          curl --fail --location --connect-timeout 10 --max-time 30 --output /dev/null "https://mirrors.edge.kernel.org/ubuntu/dists/${VERSION_CODENAME}/InRelease"
-          printf '%s\n' 'https://mirrors.edge.kernel.org/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
-          sudo apt-get update -o APT::Update::Error-Mode=any -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
-          sudo apt-get install -y -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 --no-install-recommends qpdf poppler-utils
+        run: bash scripts/ci_install_apt.sh --no-install-recommends qpdf poppler-utils
 
       - uses: actions/setup-java@v5
         with:
@@ -266,11 +261,6 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
       - name: Install OCR and independent readers
-        run: |
-          . /etc/os-release
-          curl --fail --location --connect-timeout 10 --max-time 30 --output /dev/null "https://mirrors.edge.kernel.org/ubuntu/dists/${VERSION_CODENAME}/InRelease"
-          printf '%s\n' 'https://mirrors.edge.kernel.org/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
-          sudo apt-get update -o APT::Update::Error-Mode=any -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
-          sudo apt-get install -y -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 --no-install-recommends tesseract-ocr tesseract-ocr-spa poppler-utils qpdf
+        run: bash scripts/ci_install_apt.sh --no-install-recommends tesseract-ocr tesseract-ocr-spa poppler-utils qpdf
       - name: Test real Spanish recognition and rotated scans
         run: cargo test --locked -p oxidize-pdf --features ocr-tesseract --test issue_708_tesseract_test --test issue_708_ocr_geometry_test -- --include-ignored
