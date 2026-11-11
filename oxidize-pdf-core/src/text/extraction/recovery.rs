@@ -10,6 +10,8 @@ pub enum RecoveryLocation {
     PageContents(usize),
     /// Resource name and object identity of an invoked Form XObject.
     FormXObject { name: String, object: (u32, u16) },
+    /// Object identity of an annotation appearance stream (issue #861).
+    AnnotationAppearance { object: (u32, u16) },
 }
 /// A recovery action taken while extracting this page.
 #[derive(Debug, Clone, PartialEq, Eq)]

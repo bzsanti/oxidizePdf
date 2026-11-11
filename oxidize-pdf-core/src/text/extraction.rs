@@ -3,7 +3,11 @@
 //! This module provides functionality to extract text from PDF pages,
 //! handling text positioning, transformations, and basic encodings.
 
+mod annotations;
 mod recovery;
+mod streams;
+
+use streams::{FontScope, PreparedStream};
 
 use std::collections::HashMap;
 use std::io::{Read, Seek};
@@ -760,6 +764,10 @@ pub struct TextExtractor {
     /// is a non-breaking method addition for downstream users of that public
     /// struct (issue #584).
     include_link_annotations: bool,
+    /// Extract text drawn by annotation normal appearance streams (`/AP /N`),
+    /// such as signature widgets and filled form fields (issue #861). Held
+    /// here for the same non-breaking reason as `include_link_annotations`.
+    include_annotation_appearances: bool,
     /// Reorder the flat `.text` line groups into reading order (issue #448).
     /// Off by default; set via [`TextExtractor::with_reading_order`]. Held here,
     /// not on the public [`ExtractionOptions`], so enabling it is a
@@ -794,6 +802,7 @@ impl TextExtractor {
             options: ExtractionOptions::default(),
             include_unreliable_figure_text: false,
             include_link_annotations: false,
+            include_annotation_appearances: false,
             reading_order: false,
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
@@ -812,6 +821,7 @@ impl TextExtractor {
             options,
             include_unreliable_figure_text: false,
             include_link_annotations: false,
+            include_annotation_appearances: false,
             reading_order: false,
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
@@ -858,6 +868,30 @@ impl TextExtractor {
     /// on a new line.
     pub fn with_link_annotation_extraction(mut self, enable: bool) -> Self {
         self.include_link_annotations = enable;
+        self
+    }
+
+    /// Enable (or disable) extracting text drawn by annotation appearance
+    /// streams, such as signature widgets, filled form fields and free-text
+    /// notes (issue #861).
+    ///
+    /// Disabled by default. When enabled, each annotation's normal appearance
+    /// (`/AP /N`, or the `/AS` state of an appearance subdictionary) is run
+    /// through the same Form XObject machinery as page content, placed at the
+    /// annotation's `/Rect` (ISO 32000-1 §12.5.5). Appearance text follows
+    /// the page text in `/Annots` order, each annotation on a new line, and
+    /// counts against `max_extracted_bytes`.
+    ///
+    /// `/Link` and `/Popup` annotations and annotations flagged `Hidden` are
+    /// skipped. `NoView` annotations are included independently of `Print`.
+    /// Invalid appearance entries are skipped. Stream decoding errors propagate;
+    /// use [`Self::extract_from_page_with_recovery`] for diagnostic recovery.
+    /// Each appearance is finalized independently, including in layout mode,
+    /// so hyphen repair and reading-order sorting never cross source boundaries.
+    /// Missing font resources use the existing unknown-font decoding fallback;
+    /// page-local font names are not inherited by appearances.
+    pub fn with_annotation_appearance_extraction(mut self, enable: bool) -> Self {
+        self.include_annotation_appearances = enable;
         self
     }
 
@@ -1539,9 +1573,28 @@ impl TextExtractor {
                 run,
                 page_index,
                 0,
+                self.options.max_extracted_bytes,
             )?;
         }
 
+        let mut text = self.finish_run(run, self.options.max_extracted_bytes)?;
+        if self.include_annotation_appearances {
+            text = self.append_annotation_appearances(document, page_index, text)?;
+        }
+        if self.include_link_annotations {
+            append_link_annotation_uris(
+                &mut text.text,
+                document,
+                page_index,
+                self.options.max_extracted_bytes,
+                &mut text.truncated,
+            );
+        }
+        Ok(text)
+    }
+
+    /// Finalize one content source without allowing layout merges across sources.
+    fn finish_run(&self, run: OpRunState, budget: Option<usize>) -> ParseResult<ExtractedText> {
         let OpRunState {
             mut extracted_text,
             mut fragments,
@@ -1665,21 +1718,7 @@ impl TextExtractor {
             // above rebuilds `.text` with its own separators, so guarantee the
             // `text.len() <= max_extracted_bytes` invariant for every path here.
             // No-op for the flat path (already bounded) and when no limit is set.
-            clamp_to_budget(
-                &mut extracted_text,
-                self.options.max_extracted_bytes,
-                &mut truncated,
-            );
-
-            if self.include_link_annotations {
-                append_link_annotation_uris(
-                    &mut extracted_text,
-                    document,
-                    page_index,
-                    self.options.max_extracted_bytes,
-                    &mut truncated,
-                );
-            }
+            clamp_to_budget(&mut extracted_text, budget, &mut truncated);
         }
 
         Ok(ExtractedText {
@@ -1701,6 +1740,7 @@ impl TextExtractor {
         run: OpRunState,
         page_index: u32,
         depth: u8,
+        budget: Option<usize>,
     ) -> ParseResult<OpRunState> {
         let allow_damaged_type0_recovery = !document.options().strict_mode;
         let OpRunState {
@@ -1896,7 +1936,7 @@ impl TextExtractor {
                                 } else {
                                     &decoded
                                 },
-                                self.options.max_extracted_bytes,
+                                budget,
                                 &mut truncated,
                                 self.options.merge_hyphenated,
                             );
@@ -2176,7 +2216,7 @@ impl TextExtractor {
                                             } else {
                                                 &decoded
                                             },
-                                            self.options.max_extracted_bytes,
+                                            budget,
                                             &mut truncated,
                                             self.options.merge_hyphenated,
                                         );
@@ -2335,7 +2375,7 @@ impl TextExtractor {
                                             &mut extracted_text,
                                             Some(' '),
                                             "",
-                                            self.options.max_extracted_bytes,
+                                            budget,
                                             &mut truncated,
                                             self.options.merge_hyphenated,
                                         )
@@ -2481,7 +2521,7 @@ impl TextExtractor {
                                 } else {
                                     &decoded
                                 },
-                                self.options.max_extracted_bytes,
+                                budget,
                                 &mut truncated,
                                 self.options.merge_hyphenated,
                             );
@@ -2589,7 +2629,7 @@ impl TextExtractor {
                                 } else {
                                     &decoded
                                 },
-                                self.options.max_extracted_bytes,
+                                budget,
                                 &mut truncated,
                                 self.options.merge_hyphenated,
                             );
@@ -2753,11 +2793,7 @@ impl TextExtractor {
                     let actual_text = if inline_actual_text.is_some() {
                         inline_actual_text
                     } else if let Some(id) = mcid {
-                        match structure_actual_text.get(
-                            id,
-                            document,
-                            self.options.max_extracted_bytes,
-                        ) {
+                        match structure_actual_text.get(id, document, budget) {
                             Ok(value) => value,
                             Err(()) => {
                                 truncated = true;
@@ -2851,7 +2887,7 @@ impl TextExtractor {
                                         &mut extracted_text,
                                         None,
                                         &run.text,
-                                        self.options.max_extracted_bytes,
+                                        budget,
                                         &mut truncated,
                                         self.options.merge_hyphenated,
                                     )
@@ -2898,18 +2934,20 @@ impl TextExtractor {
                     // is never extracted.
                     const MAX_XOBJECT_DEPTH: u8 = 12;
                     if depth < MAX_XOBJECT_DEPTH {
-                        if let Some((xobj_ops, xobj_res, matrix, xobj_dict)) =
+                        if let Some((prepared, matrix)) =
                             self.load_form_xobject(resources, &name, document)?
                         {
-                            let mut form_structure_actual_text =
-                                resolve_structure_actual_text(&xobj_dict, document);
+                            let PreparedStream {
+                                operations: xobj_ops,
+                                resources: xobj_res,
+                                mut structure_actual_text,
+                            } = prepared;
                             // `Do` paints inside an IMPLICIT q/Q (§8.10.1),
                             // so the whole graphics state — text state included
                             // (issue #452) — comes back afterwards. Same
                             // snapshot the `q` arm takes, so the two cannot
                             // disagree about what that state is.
                             let outer = SavedGraphicsState::capture(&state);
-                            let saved_fonts = self.font_cache.clone();
                             // The form gets its own save-state stack: a stray
                             // `Q` inside it must not pop the page's snapshots.
                             // Truncating afterwards could not undo that — a
@@ -2936,9 +2974,6 @@ impl TextExtractor {
                                     e * b0 + f * d0 + f0,
                                 ];
                             }
-                            if let Some(ref xr) = xobj_res {
-                                self.cache_fonts_from_resources::<R>(xr, document)?;
-                            }
 
                             let sub = OpRunState {
                                 state,
@@ -2956,18 +2991,23 @@ impl TextExtractor {
                                 line_groups,
                                 cur_group,
                             };
-                            let out = self.process_operations(
-                                xobj_ops,
+                            let mut out = self.with_font_scope(
                                 document,
                                 xobj_res.as_ref(),
-                                &mut form_structure_actual_text,
-                                sub,
-                                page_index,
-                                depth + 1,
-                            );
-                            // Restore shared font state even when a nested form fails.
-                            self.font_cache = saved_fonts;
-                            let mut out = out?;
+                                FontScope::Inherited,
+                                |extractor| {
+                                    extractor.process_operations(
+                                        xobj_ops,
+                                        document,
+                                        xobj_res.as_ref(),
+                                        &mut structure_actual_text,
+                                        sub,
+                                        page_index,
+                                        depth + 1,
+                                        budget,
+                                    )
+                                },
+                            )?;
 
                             outer.restore_into(&mut out.state);
                             out.state.saved_states = outer_stack;
@@ -3015,14 +3055,7 @@ impl TextExtractor {
         resources: Option<&crate::parser::objects::PdfDictionary>,
         name: &str,
         document: &PdfDocument<R>,
-    ) -> ParseResult<
-        Option<(
-            Vec<ContentOperation>,
-            Option<crate::parser::objects::PdfDictionary>,
-            Option<[f64; 6]>,
-            crate::parser::objects::PdfDictionary,
-        )>,
-    > {
+    ) -> ParseResult<Option<(PreparedStream, Option<[f64; 6]>)>> {
         use crate::parser::objects::PdfObject;
         let stream = (|| {
             let res = resources?;
@@ -3052,28 +3085,6 @@ impl TextExtractor {
         let Some((stream, object)) = stream else {
             return Ok(None);
         };
-        let Some(data) = self.decode_content_for_recovery(
-            document,
-            &stream,
-            RecoveryLocation::FormXObject {
-                name: name.to_owned(),
-                object,
-            },
-        )?
-        else {
-            return Ok(None);
-        };
-        let Ok(ops) = ContentParser::parse_content(&data) else {
-            return Ok(None);
-        };
-        let xobj_res = match stream.dict.get("Resources") {
-            Some(PdfObject::Dictionary(d)) => Some(d.clone()),
-            Some(PdfObject::Reference(rn, rg)) => document
-                .get_object(*rn, *rg)
-                .ok()
-                .and_then(|o| o.as_dict().cloned()),
-            _ => None,
-        };
         let matrix = stream
             .dict
             .get("Matrix")
@@ -3091,7 +3102,16 @@ impl TextExtractor {
                     None
                 }
             });
-        Ok(Some((ops, xobj_res, matrix, stream.dict)))
+        Ok(self
+            .prepare_stream(
+                document,
+                stream,
+                RecoveryLocation::FormXObject {
+                    name: name.to_owned(),
+                    object,
+                },
+            )?
+            .map(|prepared| (prepared, matrix)))
     }
 
     /// Fuse a hyphen-ended fragment with its line-wrap continuation while
@@ -3811,6 +3831,7 @@ impl TextExtractor {
 
     /// Add a parsed font to page-local caches and derive its Type0 fallback width.
     fn cache_page_font(&mut self, font_name: &str, font_info: Arc<FontInfo>) {
+        self.type0_implicit_space_widths.remove(font_name);
         if font_info.font_type == "Type0" || font_info.descendant_font.is_some() {
             let cid_font = font_info.descendant_font.as_deref().unwrap_or(&font_info);
             if let Some(width) = cid_font

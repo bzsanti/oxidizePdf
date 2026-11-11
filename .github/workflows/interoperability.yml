@@ -37,9 +37,7 @@ jobs:
 
       - name: Install qpdf and poppler
         timeout-minutes: 5
-        run: |
-          sudo apt-get update -o Acquire::Retries=3
-          sudo apt-get install -y --no-install-recommends qpdf poppler-utils
+        run: bash scripts/ci_install_apt.sh --no-install-recommends qpdf poppler-utils
 
       - uses: actions/setup-java@v5
         with:
@@ -263,8 +261,6 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
       - name: Install OCR and independent readers
-        run: |
-          sudo apt-get update -o Acquire::Retries=3
-          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa poppler-utils qpdf
+        run: bash scripts/ci_install_apt.sh --no-install-recommends tesseract-ocr tesseract-ocr-spa poppler-utils qpdf
       - name: Test real Spanish recognition and rotated scans
         run: cargo test --locked -p oxidize-pdf --features ocr-tesseract --test issue_708_tesseract_test --test issue_708_ocr_geometry_test -- --include-ignored
