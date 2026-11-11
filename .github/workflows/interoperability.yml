@@ -38,7 +38,9 @@ jobs:
       - name: Install qpdf and poppler
         timeout-minutes: 5
         run: |
-          sudo sed -i 's|https\?://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          . /etc/os-release
+          curl --fail --location --connect-timeout 10 --max-time 30 --output /dev/null "https://mirrors.edge.kernel.org/ubuntu/dists/${VERSION_CODENAME}/InRelease"
+          printf '%s\n' 'https://mirrors.edge.kernel.org/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
           sudo apt-get update -o APT::Update::Error-Mode=any -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
           sudo apt-get install -y -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 --no-install-recommends qpdf poppler-utils
 
@@ -265,7 +267,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
       - name: Install OCR and independent readers
         run: |
-          sudo sed -i 's|https\?://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          . /etc/os-release
+          curl --fail --location --connect-timeout 10 --max-time 30 --output /dev/null "https://mirrors.edge.kernel.org/ubuntu/dists/${VERSION_CODENAME}/InRelease"
+          printf '%s\n' 'https://mirrors.edge.kernel.org/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
           sudo apt-get update -o APT::Update::Error-Mode=any -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
           sudo apt-get install -y -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 --no-install-recommends tesseract-ocr tesseract-ocr-spa poppler-utils qpdf
       - name: Test real Spanish recognition and rotated scans
