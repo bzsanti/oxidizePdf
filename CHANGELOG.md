@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Read a cross-reference table whose CR LF line end is split across two
+  buffer fills: the LF no longer comes back as an empty line, which ended the
+  subsection one entry early and failed the table with `InvalidXRef` (strict
+  parsing) or sent it to recovery. A table of one subsection was affected
+  when it had 10,000 to 99,999 entries ending in CR LF while its other lines
+  ended in LF, or 410 to 999 entries with CR LF throughout (#863).
 - Preserve word boundaries in tightly justified `TJ` text by lowering the default
   gap threshold from 0.2 to 0.17 em. Explicit thresholds remain supported; callers
   can retain the previous sensitivity with `tj_space_threshold: 0.2` (#864).
