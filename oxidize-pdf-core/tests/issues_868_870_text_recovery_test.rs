@@ -79,6 +79,56 @@ fn incomplete_tounicode_recovery_is_explicit() {
 }
 
 #[test]
+fn recovery_without_tounicode_preserves_encoding_and_differences() {
+    let font = HELV.replace(
+        "/Encoding /WinAnsiEncoding",
+        "/Encoding << /BaseEncoding /WinAnsiEncoding /Differences [65 /Z] >>",
+    );
+    for recover in [false, true] {
+        assert_eq!(
+            text(
+                pdf(&font, "BT /F1 10 Tf (A\\351) Tj ET", None),
+                TextExtractor::new().with_incomplete_tounicode_encoding_fallback(recover)
+            ),
+            "Zé"
+        );
+    }
+}
+
+#[test]
+fn visual_order_keeps_literal_hyphen_in_wrapped_numbers() {
+    let bytes = pdf(
+        HELV,
+        "BT /F1 10 Tf 100 700 Td (123-  ) Tj 0 -14 Td (456) Tj ET",
+        None,
+    );
+    for (merge, expected) in [(true, "123-456"), (false, "123- \n456")] {
+        let ext = TextExtractor::with_options(ExtractionOptions {
+            merge_hyphenated: merge,
+            ..Default::default()
+        })
+        .with_visual_line_order(true);
+        assert_eq!(text(bytes.clone(), ext), expected);
+    }
+}
+
+#[test]
+fn visual_rtl_forward_runs_use_previous_extent_for_spacing() {
+    let cmap = "begincmap 1 begincodespacerange <00> <FF> endcodespacerange 2 beginbfchar <41> <05D0> <42> <05D1> endbfchar endcmap";
+    for (x, expected) in [(360, "אאב"), (370, "אא ב")] {
+        let content =
+            format!("BT /F1 10 Tf 350 700 Td (AA) Tj ET BT /F1 10 Tf {x} 700 Td (B) Tj ET");
+        assert_eq!(
+            text(
+                pdf(&stub_font(), &content, Some(cmap)),
+                TextExtractor::new().with_visual_line_order(true)
+            ),
+            expected
+        );
+    }
+}
+
+#[test]
 fn recovery_preserves_tounicode_and_encoding_differences() {
     let cmap = STUB
         .replace("1 beginbfchar", "2 beginbfchar")
