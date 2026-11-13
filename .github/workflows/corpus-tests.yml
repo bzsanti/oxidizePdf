@@ -136,7 +136,8 @@ jobs:
       # class (issues #390/#441/#443/#447). Ratchets against a committed
       # baseline; see differential_fusion_test.rs. Skips if poppler absent.
       - name: Install poppler (pdftotext) for differential gate
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        timeout-minutes: 5
+        run: bash scripts/ci_install_apt.sh poppler-utils
 
       # OXIDIZE_DIFF_REQUIRE_CORPUS turns the gates' skip paths into failures.
       # They skip by design when poppler or the corpus is missing, which keeps

@@ -8,6 +8,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.6.0] - 2026-11-13
+
+### Fixed
+
+- Preserve word spaces between separate text-show operators using available
+  font metrics, including a bounded width-derived fallback for simple fonts
+  without a space-glyph width (#869).
+- Keep closely spaced form rows separate when text resets horizontally in
+  layout and column extraction (#868).
+
+- Read a cross-reference table whose CR LF line end is split across two
+  buffer fills: the LF no longer comes back as an empty line, which ended the
+  subsection one entry early and failed the table with `InvalidXRef` (strict
+  parsing) or sent it to recovery. A table of one subsection was affected
+  when it had 10,000 to 99,999 entries ending in CR LF while its other lines
+  ended in LF, or 410 to 999 entries with CR LF throughout (#863).
+- Preserve word boundaries in tightly justified `TJ` text by lowering the default
+  gap threshold from 0.2 to 0.17 em. Explicit thresholds remain supported; callers
+  can retain the previous sensitivity with `tj_space_threshold: 0.2` (#864).
+  Account for compensating negative character spacing when inferring flat-text
+  gaps, including consecutive TJ adjustments and text-show boundaries.
+- Make optional `HighPerformanceDocument::save` write a real PDF in both output
+  modes, preserving existing files on serialization or output failure (#858).
+- Bound memory-pool retained capacity by its configured budget (#858).
+- Stop text extraction from emitting a double space when a fragment already
+  ends in a space glyph and the next fragment starts after a small positional
+  gap. The inferred separator is now skipped when either side already carries
+  whitespace, on both the flat and layout-preserving paths (#859).
+
+### Added
+
+- `TextExtractor::with_visual_line_order(true)` orders horizontal single-column
+  text by baseline and x position while preserving the default stream order.
+  Hebrew and Arabic lines retain source run order; this is not bidi conversion
+  or multi-column analysis (#868).
+- `TextExtractor::with_incomplete_tounicode_encoding_fallback(true)` recovers
+  missing ToUnicode entries using a supported explicitly declared simple-font
+  encoding and its Differences. Existing mappings take precedence; default
+  extraction remains strict (#870).
+
+- Opt-in extraction of text drawn by annotation appearance streams, such as
+  signature widgets, filled form fields and free-text notes, via
+  `TextExtractor::with_annotation_appearance_extraction`. Each annotation's
+  normal appearance (`/AP /N`, or its `/AS` state) is placed at the annotation
+  `/Rect` and finalized independently before appending after the page text in
+  `/Annots` order, including in layout mode. Direct and indirect appearance-state
+  dictionaries are supported. `/Link`, `/Popup` and `Hidden` annotations are
+  skipped; `NoView` is included independently of `Print`. Invalid appearance
+  entries are ignored; stream decoding errors follow the selected strict or
+  explicit recovery API, preserving resource-limit errors. Font resources and
+  spacing state are isolated between appearances. Disabled by default (#861).
+- Generate owned core pages through ordered serial or Rayon callbacks, preserving
+  page content, images and registered fonts. Unsupported generation controls
+  return explicit errors; no throughput improvement is claimed (#858).
+
+See [5.6.0 release notes](docs/releases/5.6.0.md) for compatibility and scope.
+
 ## [5.5.7] - 2026-11-06
 
 ### Fixed

@@ -22,16 +22,13 @@
 //! ```rust
 //! use oxidize_pdf::performance::{IntelligentCompressor, ContentType, CompressionStrategy};
 //!
-//! let compressor = IntelligentCompressor::new();
+//! let mut compressor = IntelligentCompressor::new();
 //!
 //! // Compress text content with high ratio
 //! let text_data = b"This is repeated text content...".to_vec();
 //! let compressed = compressor.compress(text_data, ContentType::Text)?;
 //!
-//! // Images are handled intelligently
-//! let jpeg_data = load_jpeg_data();
-//! let result = compressor.compress(jpeg_data, ContentType::ImageJpeg)?;
-//! // JPEG data is stored as-is to avoid double compression
+//! # Ok::<(), oxidize_pdf::PdfError>(())
 //! ```
 
 use crate::error::Result;

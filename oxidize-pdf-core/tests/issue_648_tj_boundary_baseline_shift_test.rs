@@ -1,25 +1,8 @@
-//! Issue #648 — ShowTextArray boundary space threshold (0.7 em) suppresses
-//! word separator when baseline shifts across text runs.
-//!
-//! When two `TJ` operators are drawn on the same line, issue #458 introduced a
-//! 0.7 em boundary threshold to avoid fusing table cells while protecting
-//! intra-word positioned fragments from being split.
-//!
-//! However, when a `TJ` operator begins after an explicit pen repositioning
-//! (`Td`/`TD`/`Tm`) that shifts the baseline (`dy > vertical_shift_guard`),
-//! the text runs are not intra-word fragments of a single horizontal word.
-//! In this case, using the 0.7 em threshold erroneously suppressed the word
-//! space for gaps between ~0.3 em and 0.7 em. The boundary threshold must drop
-//! to `flat_space_gap_threshold`, matching the behavior of `ShowText` (`Tj`).
-//!
-//! At the same time:
-//! 1. Small vertical jitter from text-matrix arithmetic (sub-pixel, <= 0.1 em)
-//!    must continue to be treated as same-baseline to avoid splitting intra-word
-//!    fragments (#458).
-//! 2. Superscripts and subscripts (`dy > 0`, but `dx ≈ 0`) must not have an
-//!    artificial space inserted.
-//! 3. Same-baseline runs (`dy == 0`) must still respect the calibrated 0.7 em
-//!    threshold.
+//! Issue #648: baseline shifts must not suppress word spaces between TJ runs.
+//! #869 extends metric-based spacing to same-baseline runs when font metrics
+//! are available. Small gaps remain joined even with vertical jitter; ordinary
+//! word gaps are preserved on stable and shifted baselines. Superscripts and
+//! subscripts with zero horizontal gap remain attached.
 
 use oxidize_pdf::parser::{ParseOptions, PdfReader};
 use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
@@ -56,8 +39,7 @@ fn two_tj_runs(gap_em: f64, dy_pt: f64) -> String {
 #[test]
 fn issue_648_baseline_shift_emits_space_at_moderate_gap() {
     // 0.4 em gap (4.0pt at 10pt) with a 2.0pt baseline shift.
-    // 0.4 em is below 0.7 em (which would suppress space if same baseline),
-    // but above flat_space_gap_threshold (~0.14-0.28 em).
+    // This exceeds half the known Helvetica space width.
     let text = extract(&two_tj_runs(0.4, 2.0));
     assert!(
         text.contains("alpha beta"),
@@ -108,10 +90,8 @@ fn issue_648_table_cells_with_shifted_baselines_are_not_fused() {
 
 #[test]
 fn issue_648_subpixel_vertical_jitter_leaves_same_baseline_runs_welded() {
-    // Sub-pixel vertical jitter (0.05pt at 10pt type = 0.005 em) with 0.4 em gap.
-    // This is within the jitter guard (0.1 * font_size = 1.0pt), so it is treated
-    // as same-baseline text: 0.4 em < 0.7 em threshold leaves runs welded.
-    let text = extract(&two_tj_runs(0.4, 0.05));
+    // A 0.1 em positioning residue is below half the known space width.
+    let text = extract(&two_tj_runs(0.1, 0.05));
     assert!(
         text.contains("alphabeta"),
         "sub-pixel vertical jitter must not trigger baseline-shift threshold: {text:?}"
@@ -155,18 +135,18 @@ fn issue_648_superscript_citation_following_word_stays_attached() {
 }
 
 #[test]
-fn issue_648_same_baseline_runs_retain_conservative_threshold() {
-    // At dy == 0, 0.5 em stays welded, 0.9 em splits (issue #458).
-    let below = extract(&two_tj_runs(0.5, 0.0));
+fn issue_648_same_baseline_runs_use_known_space_metrics() {
+    // Known Helvetica metrics distinguish a 0.1 em residue from a 0.5 em word gap.
+    let below = extract(&two_tj_runs(0.1, 0.0));
     assert!(
         below.contains("alphabeta"),
-        "same-baseline 0.5 em gap must remain welded: {below:?}"
+        "same-baseline 0.1 em gap must remain welded: {below:?}"
     );
 
-    let above = extract(&two_tj_runs(0.9, 0.0));
+    let above = extract(&two_tj_runs(0.5, 0.0));
     assert!(
         above.contains("alpha beta"),
-        "same-baseline 0.9 em gap must split: {above:?}"
+        "same-baseline 0.5 em gap must split: {above:?}"
     );
 }
 

@@ -3,7 +3,12 @@
 //! This module provides functionality to extract text from PDF pages,
 //! handling text positioning, transformations, and basic encodings.
 
+mod annotations;
 mod recovery;
+mod streams;
+mod visual_lines;
+
+use streams::{FontScope, PreparedStream};
 
 use std::collections::HashMap;
 use std::io::{Read, Seek};
@@ -53,14 +58,22 @@ pub struct ExtractionOptions {
     /// kerned typography) encode inter-word gaps purely as wide negative
     /// kerns rather than literal space bytes. When the synthesised advance
     /// exceeds `tj_space_threshold * font_size`, the extractor inserts one
-    /// `U+0020`. Default `0.2` (200 milli-em) sits well between typical
-    /// intra-word kerning (10-50 milli-em) and the width of a `space`
-    /// glyph in most fonts (250-300 milli-em). Lower values catch tighter
-    /// spaces; higher values reduce false positives in fonts with unusually
-    /// wide kerning. Separate from `space_threshold` (which governs the
+    /// `U+0020`. Default `0.17` (170 milli-em) also admits word gaps in
+    /// tightly justified text, which can be narrower than a font's natural
+    /// space advance (#864). Smaller adjustments remain within a word.
+    /// This is a geometric heuristic: wide letter spacing can be ambiguous.
+    /// Set `0.2` explicitly for the previous, less sensitive threshold, or
+    /// choose a higher value for wider tracking. Separate from
+    /// `space_threshold` (which governs the
     /// post-glyph gap between separate text-show operators) because the TJ
-    /// numeric kern is measured without any glyph advance baseline and
-    /// needs a more sensitive threshold (issue #272).
+    /// numeric kern normally carries no glyph advance baseline and needs
+    /// a more sensitive threshold (issue #272).
+    ///
+    /// Negative character spacing (`Tc`) can compensate a TJ advance. In that
+    /// case, flat-text inference measures the cumulative numeric run from the
+    /// preceding glyph end before its negative Tc contribution. Positive Tc
+    /// remains tracking, not evidence of a word boundary. Choosing `0.2` changes
+    /// the threshold only; it does not disable this compensation.
     /// For alternating single-glyph TJ arrays with explicitly zero source
     /// widths and a repeated forward advance, the inferred advance is first
     /// subtracted; only the excess is compared with this threshold (#649).
@@ -151,7 +164,7 @@ impl Default for ExtractionOptions {
         Self {
             preserve_layout: false,
             space_threshold: 0.3,
-            tj_space_threshold: 0.2,
+            tj_space_threshold: 0.17,
             newline_threshold: 10.0,
             sort_by_position: true,
             detect_columns: false,
@@ -345,6 +358,7 @@ struct PendingActualText {
     /// Whether a `Tj`/`TJ`/`'`/`"` has been observed yet inside the scope.
     /// Until the first one fires, the run has no origin to record.
     populated: bool,
+    space_threshold: f64,
 }
 
 #[derive(Default)]
@@ -452,6 +466,8 @@ struct TextState {
     pending_actualtext: Option<PendingActualText>,
     /// A trailing TJ gap is text only if a later glyph uses its final origin.
     pending_tj_origin: Option<PendingTjGap>,
+    /// End of the preceding glyph before a negative Tc contribution.
+    negative_spacing_origin: Option<(f64, f64)>,
 }
 
 impl TextState {
@@ -479,6 +495,9 @@ impl TextState {
             .chain(self.ctm.iter())
             .chain(scalars.iter())
             .all(|v| v.is_finite())
+            && self
+                .negative_spacing_origin
+                .is_none_or(|(x, y)| x.is_finite() && y.is_finite())
         {
             Ok(())
         } else {
@@ -607,6 +626,7 @@ struct OpRunState {
     /// The group currently being accumulated (opens on the first glyph after a
     /// newline separator). Flushed into `line_groups` at page end.
     cur_group: Option<LineGroupGeom>,
+    visual_space_thresholds: Vec<f64>,
 }
 
 /// One flat-path line group for the reading-order option (issue #448): the byte
@@ -645,6 +665,7 @@ impl Default for TextState {
             mc_stack: Vec::new(),
             pending_actualtext: None,
             pending_tj_origin: None,
+            negative_spacing_origin: None,
         }
     }
 }
@@ -719,15 +740,10 @@ fn same_paragraph_style(a: &TextFragment, b: &TextFragment) -> bool {
     (a.font_size - b.font_size).abs() / scale <= PARAGRAPH_STYLE_SIZE_TOLERANCE
 }
 
-/// Whether `next` is plausibly the wrapped continuation of `prev` on a new
-/// line, using the exact same Y-gap test `reconstruct_text_from_fragments`
-/// already uses to decide "new line vs. same line" (`|Δy| > newline_threshold`).
-///
-/// Deliberately mirrors that threshold rather than inventing a stricter one:
-/// this function's only job is to protect an already-correct merge decision
-/// from being corrupted by an unrelated fragment sorting in between the two
-/// halves (issue #482) — not to second-guess which pairs `merge_hyphenated`
-/// would otherwise join. Used by `merge_hyphenated_line_wraps_in_emission_order`.
+/// Whether the configured Y gap permits removing a line-wrap hyphen.
+/// Close horizontal row resets may add a newline, but do not establish that
+/// a literal hyphen is soft. This legacy threshold is shared with final text
+/// reconstruction; the early pass protects fusion from later fragment sorting.
 fn is_line_wrap_geometry(prev: &TextFragment, next: &TextFragment, newline_threshold: f64) -> bool {
     (prev.y - next.y).abs() > newline_threshold
 }
@@ -746,11 +762,16 @@ pub struct TextExtractor {
     /// is a non-breaking method addition for downstream users of that public
     /// struct (issue #584).
     include_link_annotations: bool,
+    /// Extract text drawn by annotation normal appearance streams (`/AP /N`),
+    /// such as signature widgets and filled form fields (issue #861). Held
+    /// here for the same non-breaking reason as `include_link_annotations`.
+    include_annotation_appearances: bool,
     /// Reorder the flat `.text` line groups into reading order (issue #448).
     /// Off by default; set via [`TextExtractor::with_reading_order`]. Held here,
     /// not on the public [`ExtractionOptions`], so enabling it is a
     /// non-breaking method addition rather than a breaking struct-field addition.
     reading_order: bool,
+    visual_line_order: bool,
     /// PlainTextConfig uses only its explicit vertical threshold for line breaks.
     infer_backward_line_wraps: bool,
     /// Policy for CR bytes decoded from text-showing strings. Held outside the
@@ -762,12 +783,13 @@ pub struct TextExtractor {
     /// Resolve symbolic simple TrueType codes through the embedded font
     /// program instead of U+FFFD (issue #715).
     symbolic_truetype_fallback: bool,
+    incomplete_tounicode_encoding_fallback: bool,
     /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, Arc<FontInfo>>,
-    /// Narrowest usable CID width for Type0 fonts in the current page. Derived
-    /// once when the font is cached so flat extraction does not rescan a
-    /// potentially large attacker-controlled `/W` table for every glyph.
-    type0_implicit_space_widths: HashMap<String, f64>,
+    /// Spacing proxies derived once per cached font: the narrowest positive CID
+    /// width for Type0, or half the mean positive simple-font width. Avoids
+    /// scanning attacker-controlled width tables for each text operation.
+    implicit_space_widths: HashMap<String, f64>,
     /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
     /// object across pages. Most multi-page PDFs reuse the same font objects.
     font_object_cache: HashMap<(u32, u16), Arc<FontInfo>>,
@@ -780,13 +802,16 @@ impl TextExtractor {
             options: ExtractionOptions::default(),
             include_unreliable_figure_text: false,
             include_link_annotations: false,
+            include_annotation_appearances: false,
             reading_order: false,
+            visual_line_order: false,
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
             normalize_non_breaking_spaces: false,
             symbolic_truetype_fallback: false,
+            incomplete_tounicode_encoding_fallback: false,
             font_cache: HashMap::new(),
-            type0_implicit_space_widths: HashMap::new(),
+            implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
             recovery: None,
         }
@@ -798,13 +823,16 @@ impl TextExtractor {
             options,
             include_unreliable_figure_text: false,
             include_link_annotations: false,
+            include_annotation_appearances: false,
             reading_order: false,
+            visual_line_order: false,
             infer_backward_line_wraps: true,
             carriage_return_handling: CarriageReturnHandling::default(),
             normalize_non_breaking_spaces: false,
             symbolic_truetype_fallback: false,
+            incomplete_tounicode_encoding_fallback: false,
             font_cache: HashMap::new(),
-            type0_implicit_space_widths: HashMap::new(),
+            implicit_space_widths: HashMap::new(),
             font_object_cache: HashMap::new(),
             recovery: None,
         }
@@ -830,6 +858,31 @@ impl TextExtractor {
         self
     }
 
+    /// Order horizontal text by visual baseline, then left-to-right within it.
+    ///
+    /// Disabled by default; the default retains content-stream order. This
+    /// flat-output mode takes precedence over `with_reading_order`, and leaves
+    /// layout/column modes to their own ordering. It is intended for horizontal
+    /// single-column forms, not multi-column or rotated writing. Lines containing
+    /// Hebrew or Arabic characters retain their source run order. It does not
+    /// perform a bidirectional-text conversion or reverse characters.
+    pub fn with_visual_line_order(mut self, enable: bool) -> Self {
+        self.visual_line_order = enable;
+        self
+    }
+
+    /// Recover unmapped ToUnicode codes through an explicit simple-font encoding.
+    ///
+    /// Disabled by default. Applies only to Type1, MMType1 and TrueType fonts
+    /// with WinAnsi, MacRoman, Standard or MacExpert encoding. Existing ToUnicode
+    /// mappings win; missing codes use that encoding and its Differences. This
+    /// recovery cannot establish that a damaged producer intended those glyphs.
+    /// Type0, Type3 and fonts without a supported declared encoding stay strict.
+    pub fn with_incomplete_tounicode_encoding_fallback(mut self, enable: bool) -> Self {
+        self.incomplete_tounicode_encoding_fallback = enable;
+        self
+    }
+
     pub(crate) fn with_backward_line_wraps(mut self, enable: bool) -> Self {
         self.infer_backward_line_wraps = enable;
         self
@@ -844,6 +897,30 @@ impl TextExtractor {
     /// on a new line.
     pub fn with_link_annotation_extraction(mut self, enable: bool) -> Self {
         self.include_link_annotations = enable;
+        self
+    }
+
+    /// Enable (or disable) extracting text drawn by annotation appearance
+    /// streams, such as signature widgets, filled form fields and free-text
+    /// notes (issue #861).
+    ///
+    /// Disabled by default. When enabled, each annotation's normal appearance
+    /// (`/AP /N`, or the `/AS` state of an appearance subdictionary) is run
+    /// through the same Form XObject machinery as page content, placed at the
+    /// annotation's `/Rect` (ISO 32000-1 §12.5.5). Appearance text follows
+    /// the page text in `/Annots` order, each annotation on a new line, and
+    /// counts against `max_extracted_bytes`.
+    ///
+    /// `/Link` and `/Popup` annotations and annotations flagged `Hidden` are
+    /// skipped. `NoView` annotations are included independently of `Print`.
+    /// Invalid appearance entries are skipped. Stream decoding errors propagate;
+    /// use [`Self::extract_from_page_with_recovery`] for diagnostic recovery.
+    /// Each appearance is finalized independently, including in layout mode,
+    /// so hyphen repair and reading-order sorting never cross source boundaries.
+    /// Missing font resources use the existing unknown-font decoding fallback;
+    /// page-local font names are not inherited by appearances.
+    pub fn with_annotation_appearance_extraction(mut self, enable: bool) -> Self {
+        self.include_annotation_appearances = enable;
         self
     }
 
@@ -906,7 +983,7 @@ impl TextExtractor {
             // FontInfo includes the decoded name layer, which depends on this policy.
             self.font_object_cache.clear();
             self.font_cache.clear();
-            self.type0_implicit_space_widths.clear();
+            self.implicit_space_widths.clear();
             self.symbolic_truetype_fallback = enable;
         }
         self
@@ -1075,18 +1152,17 @@ impl TextExtractor {
         standard_14_space_width(&info.name).map(|em| em / 1000.0 * font_size)
     }
 
-    /// Font-derived proxy used only when a Type0 font has CID widths but no
-    /// discoverable U+0020 mapping. The narrowest declared positive advance is
-    /// a lower bound, not a guessed space CID: narrow punctuation and spacing
-    /// glyphs define how small a meaningful inter-word gap can be (#500).
-    fn type0_implicit_space_advance(&self, font_name: Option<&str>, font_size: f64) -> Option<f64> {
-        let width = self.type0_implicit_space_widths.get(font_name?)?;
+    /// Font-derived spacing proxy when no space-glyph advance is available.
+    /// Type0 retains its narrowest positive CID width (#500); simple fonts use
+    /// half the mean positive width. Neither proxy claims a Unicode space code.
+    fn implicit_space_advance(&self, font_name: Option<&str>, font_size: f64) -> Option<f64> {
+        let width = self.implicit_space_widths.get(font_name?)?;
         Some(width / 1000.0 * font_size.abs())
     }
 
     /// `dx` (from [`pen_delta`]) is measured in *user space* — the pen's
     /// `text_matrix × CTM` origin already folds in any scale the PDF puts in
-    /// `Tm`/CTM rather than `Tf`. `font_space_advance`/`type0_implicit_space_advance`
+    /// `Tm`/CTM rather than `Tf`. `font_space_advance`/`implicit_space_advance`
     /// compute a *text-space* advance from the nominal `Tf` font size alone,
     /// so a document that draws at `Tf 1` with its real point size baked into
     /// `Tm` (a common generator technique) would otherwise compare a
@@ -1113,8 +1189,7 @@ impl TextExtractor {
             Some(advance) if advance > 0.0 => 0.5 * advance,
             _ => {
                 let legacy = self.options.space_threshold * state.font_size.abs();
-                match self.type0_implicit_space_advance(state.font_name.as_deref(), state.font_size)
-                {
+                match self.implicit_space_advance(state.font_name.as_deref(), state.font_size) {
                     Some(advance) if advance > 0.0 && legacy > 0.0 => {
                         // Do not let a malformed near-zero `/W` entry make every
                         // positioning residue a word gap. Conversely, never make
@@ -1133,7 +1208,17 @@ impl TextExtractor {
     /// the active text matrix, CTM, and horizontal text scale so both sides of
     /// the comparison use page-space units (issue #586).
     fn tj_boundary_space_gap_threshold(&self, state: &TextState) -> f64 {
-        self.tj_space_gap_threshold(state, TJ_BOUNDARY_SPACE_EM)
+        if self
+            .font_space_advance(state.font_name.as_deref(), state.font_size)
+            .is_some()
+            || self
+                .implicit_space_advance(state.font_name.as_deref(), state.font_size)
+                .is_some()
+        {
+            self.flat_space_gap_threshold(state)
+        } else {
+            self.tj_space_gap_threshold(state, TJ_BOUNDARY_SPACE_EM)
+        }
     }
 
     /// Infer a repeated advance only when the source font explicitly gives
@@ -1229,11 +1314,9 @@ impl TextExtractor {
         (matching >= 2 && matching > (array.len() / 2) / 2).then_some(baseline)
     }
 
-    /// A font switch between adjacent show-text operators is evidence that a
-    /// short gap separates an inline styled token from prose, rather than
-    /// splitting one word. Keep this below the ordinary boundary threshold so
-    /// documents such as the QMF manual can retain its 0.333em code/prose
-    /// spaces, while unchanged-font runs keep the conservative 0.7em gate.
+    /// Preserve the separate font-switch rule for inline styled tokens, such
+    /// as the QMF manual's 0.333em code/prose gaps. Same-font runs use their
+    /// space metrics when available and the conservative fallback otherwise.
     fn tj_font_change_space_gap_threshold(&self, state: &TextState) -> f64 {
         self.tj_space_gap_threshold(state, TJ_FONT_CHANGE_BOUNDARY_SPACE_EM)
     }
@@ -1283,7 +1366,12 @@ impl TextExtractor {
             if i > 0 {
                 let prev = line[i - 1];
                 let gap = frag.x - (prev.x + prev.width);
-                if gap > self.space_gap_threshold(frag) {
+                // Skip the inferred space when either side already carries
+                // whitespace, so a literal space glyph is not doubled (#859).
+                if gap > self.space_gap_threshold(frag)
+                    && !text.ends_with(char::is_whitespace)
+                    && !frag.text.starts_with(char::is_whitespace)
+                {
                     text.push(' ');
                 }
             }
@@ -1486,6 +1574,7 @@ impl TextExtractor {
             last_shown_font_name: None,
             extracted_text,
             fragments,
+            visual_space_thresholds: Vec::new(),
             truncated: false,
             line_groups: Vec::new(),
             cur_group: None,
@@ -1520,17 +1609,56 @@ impl TextExtractor {
                 run,
                 page_index,
                 0,
+                self.options.max_extracted_bytes,
             )?;
         }
 
+        let mut text = self.finish_run(run, self.options.max_extracted_bytes)?;
+        if self.include_annotation_appearances {
+            text = self.append_annotation_appearances(document, page_index, text)?;
+        }
+        if self.include_link_annotations {
+            append_link_annotation_uris(
+                &mut text.text,
+                document,
+                page_index,
+                self.options.max_extracted_bytes,
+                &mut text.truncated,
+            );
+        }
+        Ok(text)
+    }
+
+    fn collect_positioned_runs(&self) -> bool {
+        self.options.preserve_layout || self.options.reorder_columns || self.visual_line_order
+    }
+
+    /// Finalize one content source without allowing layout merges across sources.
+    fn finish_run(&self, run: OpRunState, budget: Option<usize>) -> ParseResult<ExtractedText> {
         let OpRunState {
             mut extracted_text,
             mut fragments,
+            visual_space_thresholds,
             mut truncated,
             mut line_groups,
             cur_group,
             ..
         } = run;
+        if self.visual_line_order && !self.options.preserve_layout && !self.options.reorder_columns
+        {
+            validate_fragment_geometry(&fragments)?;
+            extracted_text = visual_lines::reconstruct(
+                &fragments,
+                &visual_space_thresholds,
+                self.options.merge_hyphenated,
+            );
+            clamp_to_budget(&mut extracted_text, budget, &mut truncated);
+            return Ok(ExtractedText {
+                text: extracted_text,
+                fragments: Vec::new(),
+                truncated,
+            });
+        }
         {
             let _span = tracing::info_span!("layout_finalize").entered();
 
@@ -1646,21 +1774,7 @@ impl TextExtractor {
             // above rebuilds `.text` with its own separators, so guarantee the
             // `text.len() <= max_extracted_bytes` invariant for every path here.
             // No-op for the flat path (already bounded) and when no limit is set.
-            clamp_to_budget(
-                &mut extracted_text,
-                self.options.max_extracted_bytes,
-                &mut truncated,
-            );
-
-            if self.include_link_annotations {
-                append_link_annotation_uris(
-                    &mut extracted_text,
-                    document,
-                    page_index,
-                    self.options.max_extracted_bytes,
-                    &mut truncated,
-                );
-            }
+            clamp_to_budget(&mut extracted_text, budget, &mut truncated);
         }
 
         Ok(ExtractedText {
@@ -1682,6 +1796,7 @@ impl TextExtractor {
         run: OpRunState,
         page_index: u32,
         depth: u8,
+        budget: Option<usize>,
     ) -> ParseResult<OpRunState> {
         let allow_damaged_type0_recovery = !document.options().strict_mode;
         let OpRunState {
@@ -1693,6 +1808,7 @@ impl TextExtractor {
             mut last_shown_font_name,
             mut extracted_text,
             mut fragments,
+            mut visual_space_thresholds,
             mut truncated,
             mut line_groups,
             mut cur_group,
@@ -1714,6 +1830,7 @@ impl TextExtractor {
             }
             match op {
                 ContentOperation::BeginText => {
+                    state.negative_spacing_origin = None;
                     in_text_object = true;
                     at_text_object_start = true;
                     // Reset text matrix to identity
@@ -1726,6 +1843,7 @@ impl TextExtractor {
                 }
 
                 ContentOperation::SetTextMatrix(a, b, c, d, e, f) => {
+                    state.negative_spacing_origin = None;
                     state.text_matrix =
                         [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
                     state.text_line_matrix =
@@ -1733,6 +1851,7 @@ impl TextExtractor {
                 }
 
                 ContentOperation::MoveText(tx, ty) => {
+                    state.negative_spacing_origin = None;
                     // Update text matrix by translation
                     let new_matrix = multiply_matrix(
                         &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
@@ -1749,6 +1868,7 @@ impl TextExtractor {
                 // 0` at the boundary) and every later `T*` inherited a stale
                 // leading (issue #451).
                 ContentOperation::MoveTextSetLeading(tx, ty) => {
+                    state.negative_spacing_origin = None;
                     state.leading = -(ty as f64);
                     let new_matrix = multiply_matrix(
                         &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
@@ -1759,6 +1879,7 @@ impl TextExtractor {
                 }
 
                 ContentOperation::NextLine => {
+                    state.negative_spacing_origin = None;
                     // Move to next line using current leading
                     let new_matrix = multiply_matrix(
                         &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
@@ -1797,6 +1918,10 @@ impl TextExtractor {
                                 // to raw Δx/Δy for axis-aligned matrices,
                                 // rotation-normalized otherwise.
                                 let (dx, dy_signed) = pen_delta(&state, (last_x, last_y), (x, y));
+                                let space_dx = state.negative_spacing_origin.map_or(dx, |origin| {
+                                    pen_delta(&state, origin, (x, y)).0
+                                        * state.horizontal_scale.signum()
+                                });
                                 let dy = dy_signed.abs();
 
                                 // A large backward jump in x is a line wrap: the
@@ -1835,11 +1960,15 @@ impl TextExtractor {
                                 );
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
-                                } else if positioned_run_boundary
-                                    || ((pending_tj_gap.is_some()
-                                        || dx > self.flat_space_gap_threshold(&state))
-                                        && !suppress_space)
+                                } else if !extracted_text.ends_with(char::is_whitespace)
+                                    && !decoded.starts_with(char::is_whitespace)
+                                    && (positioned_run_boundary
+                                        || ((pending_tj_gap.is_some()
+                                            || space_dx > self.flat_space_gap_threshold(&state))
+                                            && !suppress_space))
                                 {
+                                    // A literal separator on either side already covers
+                                    // this positional gap (#859).
                                     Some(' ')
                                 } else {
                                     None
@@ -1864,7 +1993,7 @@ impl TextExtractor {
                                 } else {
                                     &decoded
                                 },
-                                self.options.max_extracted_bytes,
+                                budget,
                                 &mut truncated,
                                 self.options.merge_hyphenated,
                             );
@@ -1898,12 +2027,11 @@ impl TextExtractor {
                             )
                         };
 
-                        if self.options.preserve_layout
-                            || self.options.reorder_columns
-                            || state.pending_actualtext.is_some()
-                        {
+                        if self.collect_positioned_runs() || state.pending_actualtext.is_some() {
                             emit_text_fragment(
                                 &mut fragments,
+                                &mut visual_space_thresholds,
+                                self.flat_space_gap_threshold(&state),
                                 &decoded,
                                 text_width,
                                 x,
@@ -1976,7 +2104,10 @@ impl TextExtractor {
                         let last_text = array.iter().rposition(
                             |item| matches!(item, TextElement::Text(bytes) if !bytes.is_empty()),
                         );
-                        for (item_index, item) in array.into_iter().enumerate() {
+                        let mut items = array.into_iter().enumerate()
+                            .filter(|(_, item)| !matches!(item, TextElement::Text(bytes) if bytes.is_empty()))
+                            .peekable();
+                        while let Some((item_index, item)) = items.next() {
                             match item {
                                 TextElement::Text(text_bytes) => {
                                     if text_bytes.is_empty() {
@@ -2019,6 +2150,11 @@ impl TextExtractor {
                                     // projection rounding noise.
                                     let (dx, dy_signed) =
                                         pen_delta(&state, (last_x, last_y), (x, y));
+                                    let space_dx =
+                                        state.negative_spacing_origin.map_or(dx, |origin| {
+                                            pen_delta(&state, origin, (x, y)).0
+                                                * state.horizontal_scale.signum()
+                                        });
                                     let dy = dy_signed.abs();
                                     let same_y_wrap =
                                         dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
@@ -2070,8 +2206,9 @@ impl TextExtractor {
                                         // (or sub-point vertical jitter from text-
                                         // matrix arithmetic, bounded by
                                         // `0.1 * font_size`), retain the
-                                        // conservative 0.7em boundary threshold
-                                        // (#458) or 0.3em on font change (#602).
+                                        // font-derived boundary threshold (#869),
+                                        // falling back to 0.7em without metrics
+                                        // (#458), or 0.3em on font change (#602).
                                         // When the baseline shifts past the
                                         // vertical jitter guard, use the same
                                         // `flat_space_gap_threshold` as `Tj`.
@@ -2109,7 +2246,7 @@ impl TextExtractor {
                                             );
                                         let boundary_space = at_array_start
                                             && (pending_tj_gap.is_some()
-                                                || dx > boundary_threshold)
+                                                || space_dx > boundary_threshold)
                                             && !extracted_text.ends_with(' ')
                                             && !suppress_space;
                                         let separator = if extracted_text.is_empty() {
@@ -2136,7 +2273,7 @@ impl TextExtractor {
                                             } else {
                                                 &decoded
                                             },
-                                            self.options.max_extracted_bytes,
+                                            budget,
                                             &mut truncated,
                                             self.options.merge_hyphenated,
                                         );
@@ -2165,12 +2302,13 @@ impl TextExtractor {
                                         )
                                     };
 
-                                    if self.options.preserve_layout
-                                        || self.options.reorder_columns
+                                    if self.collect_positioned_runs()
                                         || state.pending_actualtext.is_some()
                                     {
                                         emit_text_fragment(
                                             &mut fragments,
+                                            &mut visual_space_thresholds,
+                                            self.flat_space_gap_threshold(&state),
                                             &decoded,
                                             text_width,
                                             x,
@@ -2186,8 +2324,7 @@ impl TextExtractor {
                                     gap_fragment = if !decoded.is_empty()
                                         && !skip_text
                                         && state.pending_actualtext.is_none()
-                                        && (self.options.preserve_layout
-                                            || self.options.reorder_columns)
+                                        && self.collect_positioned_runs()
                                     {
                                         fragments.len().checked_sub(1)
                                     } else {
@@ -2252,6 +2389,25 @@ impl TextExtractor {
                                     // only the excess gap beyond the tracking baseline is tested.
                                     let tx = -(adjustment as f64) / 1000.0 * state.font_size;
                                     let gap_tx = tx - tracking_baseline_em * state.font_size;
+                                    // Negative Tc can cancel a TJ advance. Measure from the
+                                    // glyph end, once over the numeric run, without changing
+                                    // the physical pen or treating positive tracking as a space.
+                                    let compensated_gap =
+                                        state.negative_spacing_origin.map(|origin| {
+                                            let next = text_origin_after_advance(&state, tx);
+                                            pen_delta(&state, origin, next).0
+                                                * state.horizontal_scale.signum()
+                                        });
+                                    let gap_is_word = if let Some(gap) = compensated_gap {
+                                        !matches!(items.peek(), Some((_, TextElement::Spacing(_))))
+                                            && gap
+                                                > self.tj_space_gap_threshold(
+                                                    &state,
+                                                    self.options.tj_space_threshold,
+                                                )
+                                    } else {
+                                        gap_tx > self.options.tj_space_threshold * state.font_size
+                                    };
 
                                     let skip_tj_space =
                                         skip_artifact_text(&state, self.options.include_artifacts);
@@ -2263,8 +2419,7 @@ impl TextExtractor {
                                     if !skip_tj_space
                                         && !vertical
                                         && last_text.is_some_and(|last| item_index < last)
-                                        && gap_tx
-                                            > self.options.tj_space_threshold * state.font_size
+                                        && gap_is_word
                                         && !extracted_text.is_empty()
                                         && !extracted_text.ends_with(' ')
                                     {
@@ -2277,7 +2432,7 @@ impl TextExtractor {
                                             &mut extracted_text,
                                             Some(' '),
                                             "",
-                                            self.options.max_extracted_bytes,
+                                            budget,
                                             &mut truncated,
                                             self.options.merge_hyphenated,
                                         )
@@ -2303,8 +2458,7 @@ impl TextExtractor {
                                         // even though no real `Tj` has fired yet. The
                                         // EMC flush will supply the canonical fragment
                                         // text from the override (Phase 1 #269 contract).
-                                        if (self.options.preserve_layout
-                                            || self.options.reorder_columns)
+                                        if self.collect_positioned_runs()
                                             && state.pending_actualtext.is_none()
                                         {
                                             // Emit a synthetic single-space fragment at the
@@ -2314,11 +2468,26 @@ impl TextExtractor {
                                             // x-jump. Width = the kern advance so the next
                                             // text fragment begins flush against it.
                                             let skip_text = self.should_skip_text(&state);
-                                            let (sx, sy) = text_origin(&state);
+                                            let (sx, sy, space_width) = if compensated_gap.is_some()
+                                            {
+                                                let next = text_origin_after_advance(&state, tx);
+                                                let advance =
+                                                    pen_delta(&state, (last_x, last_y), next).0
+                                                        * state.horizontal_scale.signum();
+                                                let (scale, _) = combined_text_scale(&state);
+                                                let scale =
+                                                    scale * (state.horizontal_scale / 100.0).abs();
+                                                (last_x, last_y, advance / scale)
+                                            } else {
+                                                let (x, y) = text_origin(&state);
+                                                (x, y, tx)
+                                            };
                                             emit_text_fragment(
                                                 &mut fragments,
+                                                &mut visual_space_thresholds,
+                                                self.flat_space_gap_threshold(&state),
                                                 " ",
-                                                tx,
+                                                space_width,
                                                 sx,
                                                 sy,
                                                 &mut state,
@@ -2345,12 +2514,17 @@ impl TextExtractor {
                                     {
                                         let origin = text_origin(&state);
                                         let (dx, dy) = pen_delta(&state, (last_x, last_y), origin);
+                                        let classification_dx =
+                                            state.negative_spacing_origin.map_or(dx, |glyph_end| {
+                                                pen_delta(&state, glyph_end, origin).0
+                                                    * state.horizontal_scale.signum()
+                                            });
                                         state.pending_tj_origin = (!skip_tj_space && !vertical)
                                             .then_some(PendingTjGap {
                                                 origin,
                                                 width: dx,
                                                 is_word_gap: dy.abs() <= SAME_LINE_EPS
-                                                    && dx
+                                                    && classification_dx
                                                         > self.tj_space_gap_threshold(
                                                             &state,
                                                             self.options.tj_space_threshold,
@@ -2363,6 +2537,7 @@ impl TextExtractor {
                         }
                         if tracking_baseline_em > 0.0 {
                             coalesce_tracked_array(&mut fragments, first_array_fragment)?;
+                            visual_space_thresholds.truncate(fragments.len());
                         }
                     }
                 }
@@ -2405,7 +2580,7 @@ impl TextExtractor {
                                 } else {
                                     &decoded
                                 },
-                                self.options.max_extracted_bytes,
+                                budget,
                                 &mut truncated,
                                 self.options.merge_hyphenated,
                             );
@@ -2430,12 +2605,11 @@ impl TextExtractor {
                             )
                         };
 
-                        if self.options.preserve_layout
-                            || self.options.reorder_columns
-                            || state.pending_actualtext.is_some()
-                        {
+                        if self.collect_positioned_runs() || state.pending_actualtext.is_some() {
                             emit_text_fragment(
                                 &mut fragments,
+                                &mut visual_space_thresholds,
+                                self.flat_space_gap_threshold(&state),
                                 &decoded,
                                 text_width,
                                 x,
@@ -2513,7 +2687,7 @@ impl TextExtractor {
                                 } else {
                                     &decoded
                                 },
-                                self.options.max_extracted_bytes,
+                                budget,
                                 &mut truncated,
                                 self.options.merge_hyphenated,
                             );
@@ -2538,12 +2712,11 @@ impl TextExtractor {
                             )
                         };
 
-                        if self.options.preserve_layout
-                            || self.options.reorder_columns
-                            || state.pending_actualtext.is_some()
-                        {
+                        if self.collect_positioned_runs() || state.pending_actualtext.is_some() {
                             emit_text_fragment(
                                 &mut fragments,
+                                &mut visual_space_thresholds,
+                                self.flat_space_gap_threshold(&state),
                                 &decoded,
                                 text_width,
                                 x,
@@ -2677,11 +2850,7 @@ impl TextExtractor {
                     let actual_text = if inline_actual_text.is_some() {
                         inline_actual_text
                     } else if let Some(id) = mcid {
-                        match structure_actual_text.get(
-                            id,
-                            document,
-                            self.options.max_extracted_bytes,
-                        ) {
+                        match structure_actual_text.get(id, document, budget) {
                             Ok(value) => value,
                             Err(()) => {
                                 truncated = true;
@@ -2722,6 +2891,7 @@ impl TextExtractor {
                             render_mode: state.render_mode,
                             stack_depth: state.mc_stack.len(), // BEFORE the push below
                             populated: false,
+                            space_threshold: 0.0,
                         });
                     }
 
@@ -2775,7 +2945,7 @@ impl TextExtractor {
                                         &mut extracted_text,
                                         None,
                                         &run.text,
-                                        self.options.max_extracted_bytes,
+                                        budget,
                                         &mut truncated,
                                         self.options.merge_hyphenated,
                                     )
@@ -2788,8 +2958,8 @@ impl TextExtractor {
                                             group.end = extracted_text.len();
                                         }
                                     }
-                                    if self.options.preserve_layout || self.options.reorder_columns
-                                    {
+                                    if self.collect_positioned_runs() {
+                                        visual_space_thresholds.push(run.space_threshold);
                                         fragments.push(TextFragment {
                                             text: run.text,
                                             x: run.first_x,
@@ -2822,18 +2992,20 @@ impl TextExtractor {
                     // is never extracted.
                     const MAX_XOBJECT_DEPTH: u8 = 12;
                     if depth < MAX_XOBJECT_DEPTH {
-                        if let Some((xobj_ops, xobj_res, matrix, xobj_dict)) =
+                        if let Some((prepared, matrix)) =
                             self.load_form_xobject(resources, &name, document)?
                         {
-                            let mut form_structure_actual_text =
-                                resolve_structure_actual_text(&xobj_dict, document);
+                            let PreparedStream {
+                                operations: xobj_ops,
+                                resources: xobj_res,
+                                mut structure_actual_text,
+                            } = prepared;
                             // `Do` paints inside an IMPLICIT q/Q (§8.10.1),
                             // so the whole graphics state — text state included
                             // (issue #452) — comes back afterwards. Same
                             // snapshot the `q` arm takes, so the two cannot
                             // disagree about what that state is.
                             let outer = SavedGraphicsState::capture(&state);
-                            let saved_fonts = self.font_cache.clone();
                             // The form gets its own save-state stack: a stray
                             // `Q` inside it must not pop the page's snapshots.
                             // Truncating afterwards could not undo that — a
@@ -2860,9 +3032,6 @@ impl TextExtractor {
                                     e * b0 + f * d0 + f0,
                                 ];
                             }
-                            if let Some(ref xr) = xobj_res {
-                                self.cache_fonts_from_resources::<R>(xr, document)?;
-                            }
 
                             let sub = OpRunState {
                                 state,
@@ -2876,22 +3045,28 @@ impl TextExtractor {
                                 last_shown_font_name,
                                 extracted_text,
                                 fragments,
+                                visual_space_thresholds,
                                 truncated,
                                 line_groups,
                                 cur_group,
                             };
-                            let out = self.process_operations(
-                                xobj_ops,
+                            let mut out = self.with_font_scope(
                                 document,
                                 xobj_res.as_ref(),
-                                &mut form_structure_actual_text,
-                                sub,
-                                page_index,
-                                depth + 1,
-                            );
-                            // Restore shared font state even when a nested form fails.
-                            self.font_cache = saved_fonts;
-                            let mut out = out?;
+                                FontScope::Inherited,
+                                |extractor| {
+                                    extractor.process_operations(
+                                        xobj_ops,
+                                        document,
+                                        xobj_res.as_ref(),
+                                        &mut structure_actual_text,
+                                        sub,
+                                        page_index,
+                                        depth + 1,
+                                        budget,
+                                    )
+                                },
+                            )?;
 
                             outer.restore_into(&mut out.state);
                             out.state.saved_states = outer_stack;
@@ -2903,6 +3078,7 @@ impl TextExtractor {
                             last_shown_font_name = out.last_shown_font_name;
                             extracted_text = out.extracted_text;
                             fragments = out.fragments;
+                            visual_space_thresholds = out.visual_space_thresholds;
                             truncated = out.truncated;
                             line_groups = out.line_groups;
                             cur_group = out.cur_group;
@@ -2925,6 +3101,7 @@ impl TextExtractor {
             last_shown_font_name,
             extracted_text,
             fragments,
+            visual_space_thresholds,
             truncated,
             line_groups,
             cur_group,
@@ -2939,14 +3116,7 @@ impl TextExtractor {
         resources: Option<&crate::parser::objects::PdfDictionary>,
         name: &str,
         document: &PdfDocument<R>,
-    ) -> ParseResult<
-        Option<(
-            Vec<ContentOperation>,
-            Option<crate::parser::objects::PdfDictionary>,
-            Option<[f64; 6]>,
-            crate::parser::objects::PdfDictionary,
-        )>,
-    > {
+    ) -> ParseResult<Option<(PreparedStream, Option<[f64; 6]>)>> {
         use crate::parser::objects::PdfObject;
         let stream = (|| {
             let res = resources?;
@@ -2976,28 +3146,6 @@ impl TextExtractor {
         let Some((stream, object)) = stream else {
             return Ok(None);
         };
-        let Some(data) = self.decode_content_for_recovery(
-            document,
-            &stream,
-            RecoveryLocation::FormXObject {
-                name: name.to_owned(),
-                object,
-            },
-        )?
-        else {
-            return Ok(None);
-        };
-        let Ok(ops) = ContentParser::parse_content(&data) else {
-            return Ok(None);
-        };
-        let xobj_res = match stream.dict.get("Resources") {
-            Some(PdfObject::Dictionary(d)) => Some(d.clone()),
-            Some(PdfObject::Reference(rn, rg)) => document
-                .get_object(*rn, *rg)
-                .ok()
-                .and_then(|o| o.as_dict().cloned()),
-            _ => None,
-        };
         let matrix = stream
             .dict
             .get("Matrix")
@@ -3015,7 +3163,16 @@ impl TextExtractor {
                     None
                 }
             });
-        Ok(Some((ops, xobj_res, matrix, stream.dict)))
+        Ok(self
+            .prepare_stream(
+                document,
+                stream,
+                RecoveryLocation::FormXObject {
+                    name: name.to_owned(),
+                    object,
+                },
+            )?
+            .map(|prepared| (prepared, matrix)))
     }
 
     /// Fuse a hyphen-ended fragment with its line-wrap continuation while
@@ -3451,19 +3608,32 @@ impl TextExtractor {
 
         let mut result = String::new();
         let mut last_y = f64::INFINITY;
+        let mut line_height = 0.0_f64;
         let mut last_x = 0.0;
+        let mut last_run_x = f64::NEG_INFINITY;
         let mut last_line_ended_with_hyphen = false;
 
         for fragment in &merged_fragments {
             // Check if we need a newline
             let y_diff = (last_y - fragment.y).abs();
-            if !result.is_empty() && y_diff > self.options.newline_threshold {
+            // Close form rows also reset horizontally. A raised/lowered glyph
+            // continuing to the right, or a vertical glyph column, does not.
+            let close_row_reset = fragment.x < last_run_x - SAME_LINE_EPS
+                && y_diff > (0.2 * line_height.min(fragment.height)).max(SAME_LINE_EPS);
+            let legacy_line_break = y_diff > self.options.newline_threshold;
+            let new_line = legacy_line_break || close_row_reset;
+            if !result.is_empty() && new_line {
                 // Handle hyphenation
                 if self.options.merge_hyphenated && last_line_ended_with_hyphen {
                     if let Some(prefix_len) = hyphen_wrap_prefix_len(&result) {
                         match hyphen_fusion_action(&result, &fragment.text) {
-                            HyphenFusionAction::DropHyphen => result.truncate(prefix_len),
-                            HyphenFusionAction::KeepHyphen => result.truncate(prefix_len + 1),
+                            HyphenFusionAction::DropHyphen if legacy_line_break => {
+                                result.truncate(prefix_len);
+                            }
+                            // A close-row reset does not establish a soft hyphen.
+                            HyphenFusionAction::DropHyphen | HyphenFusionAction::KeepHyphen => {
+                                result.truncate(prefix_len + 1);
+                            }
                             HyphenFusionAction::NoFusion => result.push('\n'),
                         }
                     }
@@ -3473,7 +3643,10 @@ impl TextExtractor {
             } else if !result.is_empty() {
                 // Check if we need a space
                 let x_gap = fragment.x - last_x;
-                if x_gap > self.options.space_threshold * fragment.font_size {
+                if x_gap > self.options.space_threshold * fragment.font_size
+                    && !result.ends_with(char::is_whitespace)
+                    && !fragment.text.starts_with(char::is_whitespace)
+                {
                     result.push(' ');
                 }
             }
@@ -3481,6 +3654,8 @@ impl TextExtractor {
             result.push_str(&fragment.text);
             last_line_ended_with_hyphen = hyphen_wrap_prefix_len(&fragment.text).is_some();
             last_y = fragment.y;
+            line_height = fragment.height;
+            last_run_x = fragment.x;
             last_x = fragment.x + fragment.width;
         }
 
@@ -3552,7 +3727,12 @@ impl TextExtractor {
             if should_merge {
                 // Merge this fragment into current, preserving word boundaries
                 // when the gap exceeds the font-anchored space threshold.
-                if x_gap > self.space_gap_threshold(fragment) {
+                // Skip it when either side already carries whitespace so a
+                // literal space glyph is not doubled (#859).
+                if x_gap > self.space_gap_threshold(fragment)
+                    && !current.text.ends_with(char::is_whitespace)
+                    && !fragment.text.starts_with(char::is_whitespace)
+                {
                     current.text.push(' ');
                 }
                 current.text.push_str(&fragment.text);
@@ -3580,7 +3760,7 @@ impl TextExtractor {
     ) -> ParseResult<()> {
         // Clear per-page name mapping (font names like /F1 are page-local)
         self.font_cache.clear();
-        self.type0_implicit_space_widths.clear();
+        self.implicit_space_widths.clear();
 
         // Try to get resources manually from page dictionary first
         // This is necessary because ParsedPage.get_resources() may not always work
@@ -3688,8 +3868,15 @@ impl TextExtractor {
             .as_ref()
             .and_then(|name| self.font_cache.get(name).map(Arc::as_ref));
         let Some(font) = font.filter(|font| is_vertical_font(font)) else {
-            return advance_pen(state, horizontal_width);
+            let origin = advance_pen(state, horizontal_width);
+            state.negative_spacing_origin = if state.char_space < 0.0 && !codes.is_empty() {
+                Some(text_origin_after_advance(state, -state.char_space))
+            } else {
+                None
+            };
+            return origin;
         };
+        state.negative_spacing_origin = None;
         let metrics = font
             .descendant_font
             .as_deref()
@@ -3718,8 +3905,9 @@ impl TextExtractor {
         text_origin(state)
     }
 
-    /// Add a parsed font to page-local caches and derive its Type0 fallback width.
+    /// Cache font metrics and a bounded proxy when no space width is available.
     fn cache_page_font(&mut self, font_name: &str, font_info: Arc<FontInfo>) {
+        self.implicit_space_widths.remove(font_name);
         if font_info.font_type == "Type0" || font_info.descendant_font.is_some() {
             let cid_font = font_info.descendant_font.as_deref().unwrap_or(&font_info);
             if let Some(width) = cid_font
@@ -3728,8 +3916,30 @@ impl TextExtractor {
                 .as_ref()
                 .and_then(|widths| widths.narrowest_positive_width())
             {
-                self.type0_implicit_space_widths
+                self.implicit_space_widths
                     .insert(font_name.to_string(), width);
+            }
+        }
+        if matches!(
+            font_info.font_type.as_str(),
+            "Type1" | "MMType1" | "TrueType" | "Type3"
+        ) {
+            if let Some(widths) = &font_info.metrics.widths {
+                let usable: Vec<f64> = widths
+                    .iter()
+                    .copied()
+                    .filter(|width| width.is_finite() && *width > 0.0)
+                    .collect();
+                if !usable.is_empty() {
+                    let mean = usable
+                        .iter()
+                        .map(|width| width / usable.len() as f64)
+                        .sum::<f64>();
+                    if mean.is_finite() {
+                        self.implicit_space_widths
+                            .insert(font_name.to_owned(), mean * 0.5);
+                    }
+                }
             }
         }
         self.font_cache.insert(font_name.to_string(), font_info);
@@ -3769,9 +3979,11 @@ impl TextExtractor {
         if let Some(ref font_name) = state.font_name {
             if let Some(font_info) = self.font_cache.get(font_name) {
                 // Try CMap-based decoding first (free function — no allocation)
-                if let Ok(decoded) =
-                    crate::text::extraction_cmap::decode_text_with_font(text, font_info)
-                {
+                if let Ok(decoded) = crate::text::extraction_cmap::decode_text_with_font_recovery(
+                    text,
+                    font_info,
+                    self.incomplete_tounicode_encoding_fallback,
+                ) {
                     // Only accept if we got meaningful text (not all null bytes
                     // or garbage). Whitespace counts as meaningful: a decode
                     // that is exactly a space is a space, not a failed decode
@@ -4236,6 +4448,8 @@ fn geometry_error() -> crate::parser::ParseError {
 
 fn emit_text_fragment(
     fragments: &mut Vec<TextFragment>,
+    visual_space_thresholds: &mut Vec<f64>,
+    space_threshold: f64,
     decoded: &str,
     text_width: f64,
     x: f64,
@@ -4289,6 +4503,7 @@ fn emit_text_fragment(
     let local_render_mode = state.render_mode;
     if let Some(pending) = state.pending_actualtext.as_mut() {
         if !pending.populated {
+            pending.space_threshold = space_threshold;
             pending.first_x = x;
             pending.first_y = y;
             pending.font_size = effective_size;
@@ -4308,6 +4523,7 @@ fn emit_text_fragment(
 
     let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
 
+    visual_space_thresholds.push(space_threshold);
     fragments.push(TextFragment {
         text: decoded.to_owned(),
         x,
@@ -4341,6 +4557,14 @@ fn text_origin(state: &TextState) -> (f64, f64) {
     // Text rise (`Ts`) shifts the glyph origin up the text-space y-axis before
     // the text/CTM transform (ISO 32000-1 §9.4.4). For an axis-aligned matrix
     // this moves the user-space y by exactly `Ts`.
+    transform_point(0.0, state.text_rise, &combined)
+}
+
+/// Project an advance without changing the physical pen.
+fn text_origin_after_advance(state: &TextState, width: f64) -> (f64, f64) {
+    let tx = width * state.horizontal_scale / 100.0;
+    let matrix = multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
+    let combined = multiply_matrix(&matrix, &state.ctm);
     transform_point(0.0, state.text_rise, &combined)
 }
 
@@ -4385,7 +4609,9 @@ const READING_ORDER_CFG: flat_reading_order::CutConfig = flat_reading_order::Cut
     vertical_k: 1.5,
 };
 
-/// Minimum forward pen jump, in em, that reads as a word break at the boundary
+/// Fallback forward pen jump, in em, when font space metrics are unavailable.
+/// Known font metrics take precedence (#869). Historical calibration follows.
+/// This reads as a word break at the boundary
 /// between two show-text operators — the first element of a `TJ` array whose
 /// pen jumped forward from the previous operator (a `Tm` reposition, or the
 /// prior operator's advance). Without it, two `TJ` operators drawn side by side
@@ -4418,7 +4644,7 @@ const READING_ORDER_CFG: flat_reading_order::CutConfig = flat_reading_order::Cut
 /// fire more cleanly).
 const TJ_BOUNDARY_SPACE_EM: f64 = 0.7;
 
-/// A narrower boundary rule for an adjacent `Tj`/`TJ` font switch. The
+/// A separate boundary rule for an adjacent `Tj`/`TJ` font switch. The
 /// preceding run's font distinguishes inline styling from the same-font
 /// producer repositioning protected by [`TJ_BOUNDARY_SPACE_EM`] (issue #602).
 /// 0.3em is the documented lower edge of the corpus-calibrated plateau.

@@ -3,23 +3,14 @@
 //! This module provides intelligent resource deduplication to significantly reduce
 //! PDF file sizes by sharing common resources between pages.
 //!
-//! # Performance Impact
-//! - **30-40% size reduction** for documents with repeated fonts/images
-//! - **50% faster generation** by avoiding redundant resource encoding
-//! - **Lower memory usage** through shared resource instances
-//!
 //! # Example
 //! ```rust
-//! use oxidize_pdf::performance::{ResourcePool, FontResource};
-//!
-//! let mut pool = ResourcePool::new();
-//!
-//! // Add a font - it gets a unique key
-//! let font_key = pool.add_font_resource(font_data, "Arial", 12.0)?;
-//!
-//! // Reuse the same font on multiple pages - no duplication
-//! let same_key = pool.add_font_resource(font_data, "Arial", 12.0)?;
-//! assert_eq!(font_key, same_key);
+//! use oxidize_pdf::{Font, performance::{ResourcePool, FontResource}};
+//! let pool = ResourcePool::new();
+//! let key = pool.add_font_resource(FontResource::new(Font::Helvetica, 12.0))?;
+//! let same = pool.add_font_resource(FontResource::new(Font::Helvetica, 12.0))?;
+//! assert_eq!(key, same);
+//! # Ok::<(), oxidize_pdf::PdfError>(())
 //! ```
 
 use crate::error::Result;
