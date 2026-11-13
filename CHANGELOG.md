@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.6.0] - 2026-11-13
+
 ### Fixed
 
 - Preserve word spaces between separate text-show operators using available
@@ -61,18 +63,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   page content, images and registered fonts. Unsupported generation controls
   return explicit errors; no throughput improvement is claimed (#858).
 
+See [5.6.0 release notes](docs/releases/5.6.0.md) for compatibility and scope.
+
+## [5.5.7] - 2026-11-06
+
+### Fixed
+
+- Decode explicit `/ToUnicode /Identity-H` and `/Identity-V` names in Type0
+  fonts, including indirect references and UTF-16 surrogate pairs. Preserve
+  glyph identities and advances; `/Encoding /Identity-H` alone does not imply
+  a Unicode map (#851).
+
 ### Performance
 
-- Share immutable parsed font data across pages and Form XObjects, avoiding
-  deep copies of character maps and metrics during text extraction (#854).
-- Reuse small operator buffers when switching between text and graphics while
-  releasing large buffers (#854).
+- Share immutable parsed font maps and metrics across pages and Form XObjects
+  during text extraction (#854).
+- Reuse small operator buffers during text/graphics switches and release large
+  buffers, preserving painting order and repeatable serialization (#854).
 - Remove duplicate parsed-object storage from `PdfDocument`; `PdfReader`
   remains the cache owner and returned objects retain independent ownership.
-  The measured 256-page stream workload uses 46.6% less peak memory, with a
-  4.5% increase in traversal time. See the
-  [benchmark report](docs/reports/2026-11-06-issue-854-review.md) for workload,
-  variability and validation details (#854).
+  The measured 256-page stream workload uses 46.6% less peak memory with a
+  4.5% increase in traversal time (#854).
+
+See [5.5.7 release notes](docs/releases/5.5.7.md) for compatibility, measurement
+scope and the memory/time tradeoff.
+
+
+## [5.5.6] - 2026-11-02
+
+### Fixed
+
+- Enforce signed field Lock/P permissions across incremental revisions, including
+  inherited and indirect field definitions. Later revisions cannot relax an
+  earlier signed restriction. The dedicated invisible document-timestamp path
+  now permits timestamps under P1; ordinary signatures remain restricted (#843).
+- Measure semantic chunk joins and overlap with the selected token counter.
+  Overlap must fit both its own budget and the next chunk; oversized flags reflect
+  the final text. Indivisible sentences and structures can still exceed the
+  configured limit and are marked accordingly (#847).
+
+### Documentation
+
+- Add the Rust Docs7 site, quickstart and Context7 library configuration (#845).
+  These introductory guides do not provide a complete API reference.
+
+See [5.5.6 release notes](docs/releases/5.5.6.md) for compatibility and binding scope.
+
+## [5.5.5] - 2026-10-30
+
+### Security
+
+- Require rustls-webpki 0.103.16 and webpki-roots 1.0.10 or later in their
+  compatible series, addressing RUSTSEC-2026-0381 and RUSTSEC-2026-0382.
+  Existing consumer lockfiles cannot retain versions below these minimums (#831).
+
+### Fixed
+
+- Avoid decrypting strings inside object streams a second time, preserving
+  extraction of encrypted PDFs while retaining password and ciphertext checks (#832).
+- Preserve nonzero Pages object generations when resolving the page tree,
+  including incremental signature and document-timestamp preparation (#836).
+- Defer spaces inferred from trailing TJ adjustments until another glyph uses
+  the resulting position. Repositioned letters and digits remain joined, while
+  consumed word gaps and ActualText fragment ownership are preserved (#833).
+- Separate compact year headings from indented table labels using font-relative
+  geometry, preserving legitimate adjacent words and numbers (#834).
+
+Public APIs and Rust 1.88 remain unchanged. See [5.5.5 release notes](docs/releases/5.5.5.md)
+for validation scope and binding adoption.
 
 ## [5.5.4] - 2026-10-28
 
