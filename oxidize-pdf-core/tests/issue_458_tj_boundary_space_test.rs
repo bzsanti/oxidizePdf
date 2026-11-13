@@ -159,11 +159,7 @@ const ARRAY_STARTING_WITH_A_KERN: &str = concat!(
     "ET"
 );
 
-/// Both sides of the calibrated threshold, pinned at the unit level so a change
-/// to the constant cannot pass unnoticed. The corpus sweep behind the value is
-/// in the doc comment of `TJ_BOUNDARY_SPACE_EM`; what these two tests add is
-/// that the rule has teeth in both directions rather than firing everywhere or
-/// nowhere.
+/// Known Helvetica spacing distinguishes word gaps from small positioning residue.
 fn two_runs_with_gap(gap_em: f64) -> String {
     let size = 10.0;
     // `alpha` in 10pt Helvetica advances 24.45pt (widths 556+278+556+278+500 of
@@ -179,11 +175,10 @@ fn two_runs_with_gap(gap_em: f64) -> String {
 
 #[test]
 fn a_gap_below_the_threshold_leaves_the_runs_welded() {
-    let text = extract(&two_runs_with_gap(0.5));
+    let text = extract(&two_runs_with_gap(0.1));
     assert!(
         text.contains("alphabeta"),
-        "half an em is inside the range where a producer just repositions \
-         mid-word, so it must not split: {text:?}"
+        "a 0.1em residue is below half the Helvetica space width: {text:?}"
     );
 }
 
@@ -220,14 +215,15 @@ fn font_change_runs(gap_em: f64) -> String {
 
 /// The same decision must survive a Form XObject recursion. The form's F2
 /// run is the actual predecessor of the page-level F2 TJ; treating it as a
-/// font change would incorrectly split this 0.5em residue.
+/// font change would incorrectly retain the separate 0.3em fallback and omit
+/// this 0.25em word gap, despite Helvetica's known space width.
 #[test]
 fn form_xobject_preserves_the_last_shown_font_for_tj_boundaries() {
-    let page = b"/Fm Do\nBT\n/F2 10 Tf\n1 0 0 1 129.45 700 Tm\n[(beta)] TJ\nET";
+    let page = b"/Fm Do\nBT\n/F2 10 Tf\n1 0 0 1 126.95 700 Tm\n[(beta)] TJ\nET";
     let form = b"BT\n/F2 10 Tf\n1 0 0 1 100 700 Tm\n(alpha) Tj\nET";
     let text = extract_bytes(synthetic_pdf::build_pdf_with_form_xobject(page, form));
     assert_eq!(
-        text, "alphabeta",
+        text, "alpha beta",
         "a Form XObject must carry its last font into the next TJ boundary: {text:?}"
     );
 }
@@ -250,8 +246,8 @@ fn scaled_tj_boundary_runs(prefix: &str, tm: &str, first_x: f64, second_x: f64) 
     // Helvetica at Tf 1: "3030-" advances (4 * 556 + 333) / 1000 em.
     // With a 9x effective horizontal scale its page-space advance is 23.013.
     // The second run is only 0.75pt beyond that natural pen position: below
-    // the intended 0.7em threshold (6.3pt before any Tz expansion), but above
-    // the old, unscaled 0.7pt comparison.
+    // half the scaled Helvetica space width (1.251pt), but above
+    // an unscaled comparison.
     format!(
         "{prefix}BT\n/F1 1 Tf\n{tm} {first_x} 700 Tm\n[(3030-)] TJ\n\
          {tm} {second_x} 700 Tm\n[(7160)] TJ\nET\n"
@@ -271,7 +267,7 @@ fn tm_scaling_does_not_turn_a_small_tj_boundary_residue_into_a_space() {
 fn tm_scaling_preserves_a_real_tj_boundary_space() {
     // "3030-" naturally ends at x=73.013 in page space.  The next run starts
     // 8.1pt later, i.e. 0.9em at the effective 9pt size, which is above the
-    // 0.7em boundary threshold and must remain a word boundary.
+    // font-derived boundary threshold and must remain a word boundary.
     let text = extract(&scaled_tj_boundary_runs("", "9 0 0 9", 50.0, 81.113));
     assert_eq!(
         text, "3030- 7160",

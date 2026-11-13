@@ -497,7 +497,7 @@ fn regression_probe_type0_width_cache_is_scoped_to_each_appearance() {
         ),
         stream_obj(
             "/Type /XObject /Subtype /Form /BBox [0 0 100 20] /Resources << /Font << /F1 10 0 R >> >>",
-            b"BT /F1 10 Tf 0 5 Td (ab) Tj 12 0 Td (cd) Tj ET",
+            b"BT /F1 10 Tf 0 5 Td (ab) Tj 11.1 0 Td (cd) Tj ET",
         ),
         b"<< /Type /Font /Subtype /Type0 /BaseFont /Synthetic /Encoding /Identity-H /DescendantFonts [9 0 R] /ToUnicode 12 0 R >>".to_vec(),
         b"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Synthetic /CIDToGIDMap /Identity /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /W [1 [500] 9 [200]] /DW 1000 /FontDescriptor 11 0 R >>".to_vec(),
@@ -509,7 +509,7 @@ fn regression_probe_type0_width_cache_is_scoped_to_each_appearance() {
     let alone = extract(fixture(target, &extra), enabled()).text;
     assert_eq!(
         alone, "Body\nabcd",
-        "control: ordinary 0.3em fallback without a space width"
+        "control: 0.11em is below the simple-font proxy but above the narrow Type0 proxy"
     );
     let with_preceding =
         format!("<< /Subtype /FreeText /Rect [20 200 120 220] /AP << /N 6 0 R >> >> {target}");

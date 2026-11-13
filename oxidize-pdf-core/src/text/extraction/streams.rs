@@ -46,10 +46,10 @@ impl TextExtractor {
         run: impl FnOnce(&mut Self) -> ParseResult<T>,
     ) -> ParseResult<T> {
         let fonts = std::mem::take(&mut self.font_cache);
-        let widths = std::mem::take(&mut self.type0_implicit_space_widths);
+        let widths = std::mem::take(&mut self.implicit_space_widths);
         if matches!(scope, FontScope::Inherited) {
             self.font_cache = fonts.clone();
-            self.type0_implicit_space_widths = widths.clone();
+            self.implicit_space_widths = widths.clone();
         }
         let result = (|| {
             if let Some(resources) = resources {
@@ -58,7 +58,7 @@ impl TextExtractor {
             run(self)
         })();
         self.font_cache = fonts;
-        self.type0_implicit_space_widths = widths;
+        self.implicit_space_widths = widths;
         result
     }
 }

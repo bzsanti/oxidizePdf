@@ -1637,8 +1637,36 @@ fn decode_with_cid_table(
     result
 }
 
+pub(crate) fn decode_text_with_font_recovery(
+    bytes: &[u8],
+    font: &FontInfo,
+    recover: bool,
+) -> ParseResult<String> {
+    if recover
+        && matches!(font.font_type.as_str(), "Type1" | "MMType1" | "TrueType")
+        && matches!(
+            font.encoding.as_deref(),
+            Some("WinAnsiEncoding" | "MacRomanEncoding" | "StandardEncoding" | "MacExpertEncoding")
+        )
+    {
+        if let Some(map) = &font.to_unicode {
+            return decode_with_cmap_and_fallback(bytes, map, true, Some(font));
+        }
+    }
+    decode_text_with_font(bytes, font)
+}
+
 /// Decode text using a CMap — free function (no allocations).
 fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap, simple_font: bool) -> ParseResult<String> {
+    decode_with_cmap_and_fallback(text_bytes, cmap, simple_font, None)
+}
+
+fn decode_with_cmap_and_fallback(
+    text_bytes: &[u8],
+    cmap: &CMap,
+    simple_font: bool,
+    fallback: Option<&FontInfo>,
+) -> ParseResult<String> {
     if !simple_font && cmap.is_unicode_identity() {
         return Ok(crate::text::encoding_cmap::decode_utf16be(text_bytes));
     }
@@ -1708,7 +1736,11 @@ fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap, simple_font: bool) -> ParseR
                     })
                     .unwrap_or(if inherited.is_some() { 2 } else { 1 })
             };
-            result.push('\u{FFFD}');
+            if let Some(font) = fallback {
+                result.push_str(&decode_with_encoding(&text_bytes[i..i + 1], font)?);
+            } else {
+                result.push('\u{FFFD}');
+            }
             i += len.min(remaining.len());
         }
     }

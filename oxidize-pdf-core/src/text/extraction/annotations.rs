@@ -176,6 +176,7 @@ impl TextExtractor {
                 last_shown_font_name: None,
                 extracted_text: String::new(),
                 fragments: Vec::new(),
+                visual_space_thresholds: Vec::new(),
                 truncated: false,
                 line_groups: Vec::new(),
                 cur_group: None,
