@@ -419,12 +419,11 @@ impl<R: Read + Seek> PdfReader<R> {
     /// Create a new PDF reader from a reader
     ///
     /// Uses default parsing options with `lenient_streams` enabled for
-    /// compatibility with real-world PDFs that use indirect references for
-    /// stream lengths. Use `new_with_options` with `ParseOptions::strict()`
-    /// if you need fully strict validation.
+    /// recovery of malformed stream lengths. Use `new_with_options` with
+    /// `ParseOptions::strict()` for strict validation, including resolution
+    /// of valid indirect stream lengths.
     pub fn new(reader: R) -> ParseResult<Self> {
-        // Enable lenient_streams by default to handle indirect Length references
-        // This is consistent with PdfReader::open() behavior
+        // Keep stream recovery enabled for the default compatibility reader.
         let mut options = super::ParseOptions::default();
         options.lenient_streams = true;
         Self::new_with_options(reader, options)
@@ -676,6 +675,9 @@ impl<R: Read + Seek> PdfReader<R> {
                     })?;
             if being_loaded.contains(&obj_num) {
                 drop(being_loaded);
+                if !self.options.lenient_streams {
+                    return Err(ParseError::InvalidReference(obj_num, gen_num));
+                }
                 if self.options.collect_warnings {}
                 self.object_cache.insert(key, PdfObject::Null);
                 return Ok(&self.object_cache[&key]);
@@ -752,6 +754,9 @@ impl<R: Read + Seek> PdfReader<R> {
         // Check if this is a compressed object
         if let Some(ext_entry) = self.xref.get_extended_entry(obj_num) {
             if let Some((stream_obj_num, index_in_stream)) = ext_entry.compressed_info {
+                if gen_num != 0 && !self.options.lenient_syntax {
+                    return Err(ParseError::InvalidReference(obj_num, gen_num));
+                }
                 // This is a compressed object - need to extract from object stream
                 return self.get_compressed_object(
                     obj_num,
@@ -837,7 +842,7 @@ impl<R: Read + Seek> PdfReader<R> {
             // Read object number with recovery
             let token = lexer.next_token()?;
             let read_obj_num = match token {
-                super::lexer::Token::Integer(n) => n as u32,
+                super::lexer::Token::Integer(n) if (0..=u32::MAX as i64).contains(&n) => n as u32,
                 _ => {
                     // Try fallback recovery (simplified implementation)
                     if self.options.lenient_syntax {
@@ -869,8 +874,8 @@ impl<R: Read + Seek> PdfReader<R> {
 
             // Read generation number with recovery
             let token = lexer.next_token()?;
-            let _read_gen_num = match token {
-                super::lexer::Token::Integer(n) => n as u16,
+            let read_gen_num = match token {
+                super::lexer::Token::Integer(n) if (0..=u16::MAX as i64).contains(&n) => n as u16,
                 _ => {
                     // Try fallback recovery
                     if self.options.lenient_syntax {
@@ -888,6 +893,10 @@ impl<R: Read + Seek> PdfReader<R> {
                     }
                 }
             };
+
+            if read_gen_num != gen_num && !self.options.lenient_syntax {
+                return Err(ParseError::InvalidReference(obj_num, gen_num));
+            }
 
             // Read 'obj' keyword
             let token = lexer.next_token()?;
@@ -912,15 +921,47 @@ impl<R: Read + Seek> PdfReader<R> {
         // Check recursion depth and parse object
         self.parse_context.enter()?;
 
-        let obj = match PdfObject::parse_with_options(&mut lexer, &self.options) {
-            Ok(obj) => {
-                self.parse_context.exit();
-                // Debug: Print what object we actually parsed
-                obj
+        let parsed = PdfObject::parse_for_reader(&mut lexer, &self.options);
+        self.parse_context.exit();
+        let obj = match parsed {
+            Ok(super::objects::ReaderObject::Complete(obj)) => obj,
+            Ok(super::objects::ReaderObject::PendingStream(dict)) => {
+                // Resolving another object seeks the underlying reader. Preserve
+                // the lexer's buffered byte as well as its absolute position.
+                let resume = lexer.save_position()?;
+                drop(lexer);
+                let length = self
+                    .resolve_stream_length(
+                        dict.get("Length")
+                            .ok_or_else(|| ParseError::MissingKey("Length".into()))?,
+                    )?
+                    .ok_or_else(|| ParseError::SyntaxError {
+                        position: resume.0 as usize,
+                        message: "Indirect stream Length must resolve to a non-negative integer"
+                            .into(),
+                    })?;
+                let file_end = self.reader.seek(std::io::SeekFrom::End(0))?;
+                if length > isize::MAX as usize || length as u64 > file_end.saturating_sub(resume.0)
+                {
+                    return Err(ParseError::SyntaxError {
+                        position: resume.0 as usize,
+                        message:
+                            "Indirect stream Length exceeds addressable or remaining file bytes"
+                                .into(),
+                    });
+                }
+                lexer =
+                    super::lexer::Lexer::new_with_options(&mut self.reader, self.options.clone());
+                lexer.restore_position(resume)?;
+                let data = PdfObject::parse_stream_data_with_length(
+                    &mut lexer,
+                    &dict,
+                    &self.options,
+                    length,
+                )?;
+                PdfObject::Stream(super::objects::PdfStream { dict, data })
             }
             Err(e) => {
-                self.parse_context.exit();
-
                 // Attempt manual reconstruction as fallback for known problematic objects
                 if self.is_reconstructible_object(obj_num)
                     && self.can_attempt_manual_reconstruction(&e)
@@ -983,7 +1024,7 @@ impl<R: Read + Seek> PdfReader<R> {
         match obj {
             PdfObject::Integer(len) => {
                 if *len >= 0 {
-                    Ok(Some(*len as usize))
+                    Ok(usize::try_from(*len).ok())
                 } else {
                     // Negative lengths are invalid, treat as missing
                     Ok(None)
@@ -994,7 +1035,7 @@ impl<R: Read + Seek> PdfReader<R> {
                 match resolved {
                     PdfObject::Integer(len) => {
                         if *len >= 0 {
-                            Ok(Some(*len as usize))
+                            Ok(usize::try_from(*len).ok())
                         } else {
                             Ok(None)
                         }
