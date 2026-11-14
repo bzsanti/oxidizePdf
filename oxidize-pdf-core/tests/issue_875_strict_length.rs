@@ -133,7 +133,7 @@ fn strict_zero_length_and_crlf_streams() {
     }
 }
 
-fn compressed_length_fixture(generation: u16, cycle: bool) -> Vec<u8> {
+fn compressed_length_fixture(generation: u16, cycle: bool, object_stream_length: &str) -> Vec<u8> {
     let mut pdf = fixture(
         &format!("5 {generation} R"),
         "6",
@@ -143,7 +143,7 @@ fn compressed_length_fixture(generation: u16, cycle: bool) -> Vec<u8> {
     );
     let offset = pdf.windows(7).position(|w| w == b"5 0 obj").unwrap();
     pdf.truncate(offset);
-    let length = if cycle { "5 0 R" } else { "6" };
+    let length = if cycle { "5 0 R" } else { object_stream_length };
     pdf.extend_from_slice(format!("6 0 obj\n<< /Type /ObjStm /N 1 /First 4 /Length {length} >>\nstream\n5 0 6\nendstream\nendobj\n").as_bytes());
     let xref_offset = pdf.len();
     let mut xref = Vec::new();
@@ -184,7 +184,7 @@ fn compressed_length_fixture(generation: u16, cycle: bool) -> Vec<u8> {
 #[test]
 fn strict_compressed_length_validates_generation_and_cycles() {
     for (generation, cycle) in [(0, false), (1, false), (0, true)] {
-        let bytes = compressed_length_fixture(generation, cycle);
+        let bytes = compressed_length_fixture(generation, cycle, "6");
         let mut reader =
             PdfReader::new_with_options(Cursor::new(bytes), ParseOptions::strict()).unwrap();
         for _ in 0..2 {
@@ -199,4 +199,39 @@ fn strict_compressed_length_validates_generation_and_cycles() {
             }
         }
     }
+}
+
+#[test]
+fn indirect_length_target_stream_with_oversized_body_fails_closed() {
+    for value in [
+        "<< /Length 9223372036854775807 >>\nstream\nx\nendstream",
+        "[<< /Length 9223372036854775807 >>\nstream\nx\nendstream\n]",
+        "<< /Nested << /Length 9223372036854775807 >>\nstream\nx\nendstream\n >>",
+    ] {
+        let bytes = fixture("5 0 R", value, b"BT ET\n", "endstream\nendobj\n", "5 0");
+        let mut reader =
+            PdfReader::new_with_options(Cursor::new(bytes), ParseOptions::strict()).unwrap();
+        assert!(reader.get_object(4, 0).is_err());
+        assert!(reader.get_object(4, 0).is_err());
+        assert!(reader.get_object(3, 0).is_ok());
+    }
+}
+
+#[test]
+fn strict_direct_lengths_share_bounds_and_negative_validation() {
+    for length in ["-1", "-2", "9223372036854775807"] {
+        let bytes = fixture(length, "6", b"BT ET\n", "endstream\nendobj\n", "5 0");
+        let mut reader =
+            PdfReader::new_with_options(Cursor::new(bytes), ParseOptions::strict()).unwrap();
+        assert!(reader.get_object(4, 0).is_err());
+    }
+}
+
+#[test]
+fn compressed_length_container_rejects_oversized_stream() {
+    let bytes = compressed_length_fixture(0, false, "9223372036854775807");
+    let mut reader =
+        PdfReader::new_with_options(Cursor::new(bytes), ParseOptions::strict()).unwrap();
+    assert!(reader.get_object(4, 0).is_err());
+    assert!(reader.get_object(4, 0).is_err());
 }

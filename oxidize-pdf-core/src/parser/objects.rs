@@ -391,17 +391,7 @@ impl PdfObject {
             return Self::parse_from_token_with_options(lexer, token, options)
                 .map(ReaderObject::Complete);
         }
-        match Self::parse_dictionary_or_stream_header(lexer, options)? {
-            ReaderObject::PendingStream(dict)
-                if matches!(dict.get("Length"), Some(Self::Reference(..))) =>
-            {
-                Ok(ReaderObject::PendingStream(dict))
-            }
-            ReaderObject::PendingStream(dict) => {
-                Self::finish_stream(lexer, dict, options).map(ReaderObject::Complete)
-            }
-            complete => Ok(complete),
-        }
+        Self::parse_dictionary_or_stream_header(lexer, options)
     }
 
     /// Parse a PDF object starting from a specific token
@@ -705,6 +695,15 @@ impl PdfObject {
         // its logical position is then relative, whereas seeks are absolute.
         let (reader_position, buffered) = lexer.save_position()?;
         let stream_start = reader_position - u64::from(buffered.is_some());
+
+        if !options.lenient_streams
+            && (length > isize::MAX as usize || length as u64 > lexer.remaining_bytes()?)
+        {
+            return Err(ParseError::SyntaxError {
+                position: lexer.position(),
+                message: "Stream Length exceeds addressable or remaining file bytes".into(),
+            });
+        }
 
         // Read the actual stream data
         let mut stream_data = if length == usize::MAX || length == usize::MAX - 1 {

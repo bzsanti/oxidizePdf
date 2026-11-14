@@ -937,19 +937,8 @@ impl<R: Read + Seek> PdfReader<R> {
                     )?
                     .ok_or_else(|| ParseError::SyntaxError {
                         position: resume.0 as usize,
-                        message: "Indirect stream Length must resolve to a non-negative integer"
-                            .into(),
+                        message: "Stream Length must resolve to a non-negative integer".into(),
                     })?;
-                let file_end = self.reader.seek(std::io::SeekFrom::End(0))?;
-                if length > isize::MAX as usize || length as u64 > file_end.saturating_sub(resume.0)
-                {
-                    return Err(ParseError::SyntaxError {
-                        position: resume.0 as usize,
-                        message:
-                            "Indirect stream Length exceeds addressable or remaining file bytes"
-                                .into(),
-                    });
-                }
                 lexer =
                     super::lexer::Lexer::new_with_options(&mut self.reader, self.options.clone());
                 lexer.restore_position(resume)?;
