@@ -318,6 +318,12 @@ pub enum PdfObject {
     Reference(u32, u16),
 }
 
+/// Object header parsed without consuming a following stream body.
+pub(crate) enum ReaderObject {
+    Complete(PdfObject),
+    PendingStream(PdfDictionary),
+}
+
 impl PdfObject {
     /// Parse a PDF object from a lexer.
     ///
@@ -366,6 +372,26 @@ impl PdfObject {
     ) -> ParseResult<Self> {
         let token = lexer.next_token()?;
         Self::parse_from_token_with_options(lexer, token, options)
+    }
+
+    pub(crate) fn parse_for_reader<R: Read + std::io::Seek>(
+        lexer: &mut Lexer<R>,
+        options: &super::ParseOptions,
+    ) -> ParseResult<ReaderObject> {
+        if options.lenient_streams {
+            return Self::parse_with_options(lexer, options).map(ReaderObject::Complete);
+        }
+        let token = loop {
+            let token = lexer.next_token()?;
+            if !matches!(token, Token::Comment(_)) {
+                break token;
+            }
+        };
+        if token != Token::DictStart {
+            return Self::parse_from_token_with_options(lexer, token, options)
+                .map(ReaderObject::Complete);
+        }
+        Self::parse_dictionary_or_stream_header(lexer, options)
     }
 
     /// Parse a PDF object starting from a specific token
@@ -507,38 +533,33 @@ impl PdfObject {
         lexer: &mut Lexer<R>,
         options: &super::ParseOptions,
     ) -> ParseResult<Self> {
-        let dict = Self::parse_dictionary_inner_with_options(lexer, options)?;
+        match Self::parse_dictionary_or_stream_header(lexer, options)? {
+            ReaderObject::Complete(obj) => Ok(obj),
+            ReaderObject::PendingStream(dict) => Self::finish_stream(lexer, dict, options),
+        }
+    }
 
-        // Check if this is followed by a stream
+    fn finish_stream<R: Read + std::io::Seek>(
+        lexer: &mut Lexer<R>,
+        dict: PdfDictionary,
+        options: &super::ParseOptions,
+    ) -> ParseResult<Self> {
+        let data = Self::parse_stream_data_with_options(lexer, &dict, options)?;
+        Ok(Self::Stream(PdfStream { dict, data }))
+    }
+
+    fn parse_dictionary_or_stream_header<R: Read + std::io::Seek>(
+        lexer: &mut Lexer<R>,
+        options: &super::ParseOptions,
+    ) -> ParseResult<ReaderObject> {
+        let dict = Self::parse_dictionary_inner_with_options(lexer, options)?;
         loop {
-            let token = lexer.next_token()?;
-            // Check for stream
-            match token {
-                Token::Stream => {
-                    // Parse stream data
-                    let stream_data = Self::parse_stream_data_with_options(lexer, &dict, options)?;
-                    return Ok(PdfObject::Stream(PdfStream {
-                        dict,
-                        data: stream_data,
-                    }));
-                }
-                Token::Comment(_) => {
-                    // Skip comment and continue checking
-                    continue;
-                }
-                Token::StartXRef => {
-                    // This is the end of the PDF structure, not a stream
-                    // Push the token back for later processing
-                    // Push back StartXRef token
+            match lexer.next_token()? {
+                Token::Stream => return Ok(ReaderObject::PendingStream(dict)),
+                Token::Comment(_) => continue,
+                token => {
                     lexer.push_token(token);
-                    return Ok(PdfObject::Dictionary(dict));
-                }
-                _ => {
-                    // Not a stream, just a dictionary
-                    // Push the token back for later processing
-                    // Push back token
-                    lexer.push_token(token);
-                    return Ok(PdfObject::Dictionary(dict));
+                    return Ok(ReaderObject::Complete(Self::Dictionary(dict)));
                 }
             }
         }
@@ -658,12 +679,31 @@ impl PdfObject {
             }
         };
 
+        Self::parse_stream_data_with_length(lexer, dict, options, length)
+    }
+
+    /// Read a stream using a validated length, preserving its original dictionary.
+    pub(crate) fn parse_stream_data_with_length<R: Read + std::io::Seek>(
+        lexer: &mut Lexer<R>,
+        dict: &PdfDictionary,
+        options: &super::ParseOptions,
+        length: usize,
+    ) -> ParseResult<Vec<u8>> {
         // Skip the newline after 'stream' keyword
         lexer.read_newline()?;
         // The lexer can start at an object offset in the underlying file;
         // its logical position is then relative, whereas seeks are absolute.
         let (reader_position, buffered) = lexer.save_position()?;
         let stream_start = reader_position - u64::from(buffered.is_some());
+
+        if !options.lenient_streams
+            && (length > isize::MAX as usize || length as u64 > lexer.remaining_bytes()?)
+        {
+            return Err(ParseError::SyntaxError {
+                position: lexer.position(),
+                message: "Stream Length exceeds addressable or remaining file bytes".into(),
+            });
+        }
 
         // Read the actual stream data
         let mut stream_data = if length == usize::MAX || length == usize::MAX - 1 {
