@@ -9,7 +9,7 @@ fn base_pdf() -> Vec<u8> {
     build_pdf(&[
         (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
         (2, b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
-        (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots 6 0 R >>"),
+        (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Resources << >> /Annots 6 0 R >>"),
         (4, b"<< /Type /Annot /Subtype /Text /Rect [10 20 30 40] /Contents (old) /Name /Comment /CustomKey (preserve-me) >>"),
         (5, b"<< /Type /Annot /Subtype /Link /Rect [50 50 80 70] /CustomLinkKey 99 >>"),
         (6, b"[4 0 R 5 0 R]"),

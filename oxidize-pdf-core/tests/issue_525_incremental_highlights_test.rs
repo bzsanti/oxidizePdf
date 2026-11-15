@@ -12,7 +12,7 @@ fn classic_base() -> Vec<u8> {
     build_classic(&[
         (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
         (2, b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
-        (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots [4 0 R 5 0 R 6 0 R 7 0 R] /CustomPageKey 42 >>"),
+        (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Resources << >> /Annots [4 0 R 5 0 R 6 0 R 7 0 R] /CustomPageKey 42 >>"),
         (4, b"<< /Type /Annot /Subtype /Highlight /Rect [10 10 90 30] /QuadPoints [10 30 90 30 10 10 90 10] /C [1 1 0] /CA 0.5 /Contents (old) /CustomHighlightKey /Keep >>"),
         (5, b"<< /Type /Annot /Subtype /Link /Rect [0 0 5 5] /CustomLinkKey 99 >>"),
         (6, b"<< /Type /Annot /Subtype /Text /Rect [100 100 120 120] /Contents (note) >>"),
@@ -70,7 +70,7 @@ fn xref_stream_base() -> Vec<u8> {
     let bodies: [&[u8]; 3] = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Resources << >> >>",
     ];
     let mut offsets = vec![0u32];
     for (index, body) in bodies.iter().enumerate() {
