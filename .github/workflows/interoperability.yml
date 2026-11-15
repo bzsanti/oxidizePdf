@@ -41,12 +41,7 @@ jobs:
 
       - name: Install pinned qpdf
         timeout-minutes: 5
-        run: |
-          curl --fail --location --retry 3 https://github.com/qpdf/qpdf/releases/download/v12.4.2/qpdf-12.4.2-bin-linux-x86_64.zip -o "$RUNNER_TEMP/qpdf.zip"
-          echo "db367d897829f22c4198ce1094143c9d467bd6ee7dfabc44ba6f02056b24f8b1  $RUNNER_TEMP/qpdf.zip" | sha256sum --check
-          unzip -q "$RUNNER_TEMP/qpdf.zip" -d "$RUNNER_TEMP/qpdf"
-          "$RUNNER_TEMP/qpdf/bin/qpdf" --version
-          echo "$RUNNER_TEMP/qpdf/bin" >> "$GITHUB_PATH"
+        run: bash scripts/ci_install_qpdf.sh
 
       - uses: actions/setup-java@v5
         with:
