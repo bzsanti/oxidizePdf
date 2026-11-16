@@ -404,8 +404,11 @@ mod tests {
 
         match validate_with_qpdf(path) {
             Ok(passed) => {
-                // qpdf is available and validated successfully
-                assert!(passed);
+                assert!(
+                    passed,
+                    "positive qpdf control failed: {:?}",
+                    Command::new("qpdf").arg("--check").arg(path).output()
+                );
             }
             Err(e) => {
                 // qpdf not installed - verify error message

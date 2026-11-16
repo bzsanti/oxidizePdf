@@ -866,6 +866,18 @@ impl<R: Read> Lexer<R> {
         Ok((pos, self.peek_buffer))
     }
 
+    /// Bytes remaining at the logical cursor, including any peeked byte.
+    pub(crate) fn remaining_bytes(&mut self) -> ParseResult<u64>
+    where
+        R: Seek,
+    {
+        let saved = self.save_position()?;
+        let end = self.reader.seek(SeekFrom::End(0))?;
+        self.reader.seek(SeekFrom::Start(saved.0))?;
+        let logical_position = saved.0.saturating_sub(u64::from(saved.1.is_some()));
+        Ok(end.saturating_sub(logical_position))
+    }
+
     /// Restore a previously saved position
     pub fn restore_position(&mut self, saved: (u64, Option<u8>)) -> ParseResult<()>
     where

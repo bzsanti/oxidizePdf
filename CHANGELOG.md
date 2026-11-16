@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [5.6.1] - 2026-11-16
+
+### Fixed
+
+- Resolve indirect stream lengths through the public strict reader, preserving
+  exact stream bytes and rejecting invalid references and cycles. Bound nested
+  stream reads before allocation (#875).
+- Allocate compressed object-stream IDs from the document object namespace
+  instead of a fixed high-number range, avoiding sparse IDs rejected by external
+  validators (#880).
+
+### Tests and CI
+
+- Supply required page resources in independent annotation and signature
+  fixtures; regenerate the DocMDP fixture while preserving a verifiable CMS
+  signature (#878).
+- Pin checksum-verified qpdf 12.4.2 for coverage and interoperability. Validate
+  zero-page output through separate structural controls and corrupted-xref
+  negatives; nonempty documents still require a clean conformance check (#881).
+
 ## [5.6.0] - 2026-11-13
 
 ### Fixed

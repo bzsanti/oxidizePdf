@@ -3610,7 +3610,8 @@ impl<W: Write> PdfWriter<W> {
 
         // Write each object stream to the PDF
         for mut stream in streams {
-            let stream_id = stream.stream_id;
+            let stream_id = self.allocate_object_id()?;
+            stream.stream_id = stream_id;
 
             // Generate compressed stream data
             let compressed_data = stream.generate_stream_data(6)?;

@@ -39,6 +39,10 @@ jobs:
         timeout-minutes: 5
         run: bash scripts/ci_install_apt.sh --no-install-recommends qpdf poppler-utils
 
+      - name: Install pinned qpdf
+        timeout-minutes: 5
+        run: bash scripts/ci_install_qpdf.sh
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin

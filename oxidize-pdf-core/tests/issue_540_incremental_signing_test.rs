@@ -179,7 +179,7 @@ fn classic_with_fields(fields: &[(u32, u16, &str)]) -> Vec<u8> {
             3,
             0,
             format!(
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots [{references}] >>"
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Resources << >> /Annots [{references}] >>"
             ),
         ),
     ];
@@ -210,7 +210,7 @@ fn hierarchical_field() -> Vec<u8> {
         (
             3,
             0,
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots [9 0 R] >>".to_string(),
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Resources << >> /Annots [9 0 R] >>".to_string(),
         ),
         (4, 0, "[5 0 R]".to_string()),
         (5, 0, "<< /FT /Sig /T (Parent) /Kids 6 0 R >>".to_string()),
@@ -245,7 +245,7 @@ fn rotated_cropped_pdf() -> Vec<u8> {
         (
             3,
             0,
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /CropBox [20 10 280 180] /Rotate 90 >>".to_string(),
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << >> /CropBox [20 10 280 180] /Rotate 90 >>".to_string(),
         ),
     ])
 }

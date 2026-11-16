@@ -211,11 +211,43 @@ fn qpdf_check(path: &std::path::Path) -> std::process::Output {
         .expect("qpdf required")
 }
 
+// Zero-page output is a supported intermediate document, not a conformance claim.
+// qpdf 12.4 reports this explicitly; older versions accepted the same structure.
+fn empty_structure_is_readable(path: &std::path::Path) -> bool {
+    let check = qpdf_check(path);
+    let empty_only = check.status.code() == Some(2)
+        && check.stderr == b"ERROR: file does not contain any pages\nqpdf: errors detected\n";
+    if !(check.status.success() && check.stderr.is_empty() || empty_only) {
+        return false;
+    }
+    for flag in ["--show-npages", "--show-xref"] {
+        let output = Command::new("qpdf").arg(flag).arg(path).output().unwrap();
+        if !output.status.success() || !output.stderr.is_empty() {
+            return false;
+        }
+        if flag == "--show-npages" && output.stdout != b"0\n" {
+            return false;
+        }
+        if flag == "--show-xref" && output.stdout.is_empty() {
+            return false;
+        }
+    }
+    true
+}
+
 #[test]
 #[ignore = "requires qpdf; explicitly executed in interoperability CI"]
 fn independent_output_oracle() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("output.pdf");
+    let control = dir.path().join("qpdf-empty.pdf");
+    assert!(Command::new("qpdf")
+        .arg("--empty")
+        .arg(&control)
+        .status()
+        .unwrap()
+        .success());
+    assert!(empty_structure_is_readable(&control));
     for compression in [false, true] {
         for xref in [false, true] {
             for counts in [vec![], vec![0], vec![1], vec![2], vec![0, 3, 1]] {
@@ -228,11 +260,36 @@ fn independent_output_oracle() {
                 );
                 let check = qpdf_check(&path);
                 assert!(
-                    check.status.success(),
+                    if counts.is_empty() {
+                        empty_structure_is_readable(&path)
+                    } else {
+                        check.status.success()
+                    },
                     "{} {}",
                     String::from_utf8_lossy(&check.stdout),
                     String::from_utf8_lossy(&check.stderr)
                 );
+                if counts.is_empty() {
+                    let bytes = std::fs::read(&path).unwrap();
+                    let mut damaged = bytes.clone();
+                    let start = damaged
+                        .windows(10)
+                        .rposition(|w| w == b"startxref\n")
+                        .unwrap()
+                        + 10;
+                    let end = start
+                        + damaged[start..]
+                            .iter()
+                            .position(|&byte| byte == b'\n')
+                            .unwrap();
+                    damaged.splice(start..end, b"0".iter().copied());
+                    std::fs::write(&path, damaged).unwrap();
+                    assert!(
+                        !empty_structure_is_readable(&path),
+                        "corrupt empty xref must fail"
+                    );
+                    std::fs::write(&path, bytes).unwrap();
+                }
                 let count = Command::new("qpdf")
                     .arg("--show-npages")
                     .arg(&path)
