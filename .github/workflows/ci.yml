@@ -263,6 +263,10 @@ jobs:
         timeout-minutes: 5
         run: bash scripts/ci_install_apt.sh poppler-utils qpdf tesseract-ocr tesseract-ocr-spa
 
+      - name: Install pinned qpdf
+        timeout-minutes: 5
+        run: bash scripts/ci_install_qpdf.sh
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@671164c891d3e20f5b8ece04798d0154d1262d65 # cargo-llvm-cov
 

@@ -33,7 +33,7 @@ fn base() -> Vec<u8> {
     build_pdf(&[
         (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
         (2, b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
-        (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Annots [4 0 R 5 0 R 6 0 R 7 0 R 8 0 R 9 0 R] /KeepPage true >>"),
+        (3, b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Resources << >> /Annots [4 0 R 5 0 R 6 0 R 7 0 R 8 0 R 9 0 R] /KeepPage true >>"),
         (4, b"<< /Type /Annot /Subtype /Line /Rect [2 2 98 98] /L [10 10 90 90] /LE [/OpenArrow /ClosedArrow] /C [1 0 0] /IC [1 1 0] /BS << /W 2 /S /D /D [3 2] /KeepBS true >> /CA 0.5 /AP << /N 10 0 R /R 10 0 R >> /KeepLine true >>"),
         (5, b"<< /Type /Annot /Subtype /Square /Rect [100 10 180 80] /C [0 1 0] /IC [0.5] /BS << /W 1 >> >>"),
         (6, b"<< /Type /Annot /Subtype /Circle /Rect [190 10 270 80] /C [0 0 1] /BS << /W 1 >> >>"),
@@ -49,7 +49,7 @@ fn xref_stream_base() -> Vec<u8> {
     let bodies: [&[u8]; 3] = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Resources << >> >>",
     ];
     let mut offsets = vec![0u32];
     for (index, body) in bodies.iter().enumerate() {

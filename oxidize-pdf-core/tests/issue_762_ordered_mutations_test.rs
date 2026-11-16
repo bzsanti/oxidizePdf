@@ -59,7 +59,7 @@ fn fixture_with_content(permission: Option<u8>, content: &str) -> Vec<u8> {
     let mut objects = vec![
         &catalog,
         "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /StructParents 0 /Contents 4 0 R >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << >> /StructParents 0 /Contents 4 0 R >>",
         &stream,
         "<< /Type /StructTreeRoot /K [8 0 R 9 0 R] /ParentTree 7 0 R /RoleMap << /CustomP /P >> >>",
         "<< /Type /StructElem /S /CustomP /P 8 0 R /Pg 3 0 R /Lang (es) /T (title) /Vendor << /Raw <00ff> /Flag true >> /K << /Type /MCR /Pg 3 0 R /MCID 0 >> >>",

@@ -17,7 +17,7 @@ fn base(permission: &str) -> Vec<u8> {
     pdf_assembler::assemble_pdf_with_version("2.0", &[
         b"<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>".to_vec(),
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_vec(),
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Annots [4 0 R] >>".to_vec(),
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << >> /Annots [4 0 R] >>".to_vec(),
         format!("<< /Type /Annot /Subtype /Widget /FT /Sig /T (First) /P 3 0 R /Rect [0 0 0 0] /Lock << /Type /SigFieldLock {permission} /Action /Include /Fields [(Unrelated)] >> >>").into_bytes(),
     ])
 }

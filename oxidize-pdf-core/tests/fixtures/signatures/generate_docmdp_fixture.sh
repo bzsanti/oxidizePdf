@@ -21,7 +21,7 @@ objects = [
     b"<< /Fields [3 0 R] /SigFlags 3 >>",
     b"<< /Type /Annot /Subtype /Widget /FT /Sig /T (Certification1) /Rect [0 0 0 0] /V 6 0 R /P 5 0 R >>",
     b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
-    b"<< /Type /Page /Parent 4 0 R /MediaBox [0 0 612 792] /Annots [3 0 R] >>",
+    b"<< /Type /Page /Parent 4 0 R /MediaBox [0 0 612 792] /Resources << >> /Annots [3 0 R] >>",
     b"<< /Type /Sig /Filter /Adobe.PPKLite /SubFilter /adbe.pkcs7.detached "
     b"/ByteRange [0 0000000000 0000000000 0000000000] /Contents <" + placeholder +
     b"> /Reference [<< /Type /SigRef /TransformMethod /DocMDP "
